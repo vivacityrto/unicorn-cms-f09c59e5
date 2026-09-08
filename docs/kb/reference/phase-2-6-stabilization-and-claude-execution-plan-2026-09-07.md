@@ -2,15 +2,45 @@
 
 > **Status:** execution plan; no packet below authorizes a production migration, production-data deletion, Edge deployment, permission change, or PR merge by itself
 >
-> **Prepared:** 2026-09-07
+> **Prepared:** 2026-09-07 · **Truth-sync reviewed:** 2026-09-08
 >
-> **Evidence base:** `origin/main@b24bbca57`, the four-initiative audit supplied on 2026-09-07, current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase MCP checks of production plus the `tenant-isolation-qa` preview branch
+> **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against `origin/main@afafe1f5a` (code state unchanged from `e1a0013ee`), current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](codebase-optimization-plan-2026-08-28.md)
 >
 > **Phase 2.6 source:** [Dead Code, Feature Consolidation, and Architecture Redesign Investigation](dead-code-feature-consolidation-investigation-2026-09-04.md)
 >
 > **Related bug register:** [L10 real bugs found](l10-real-bugs-found-2026-09-04.md)
+
+## Current truth-sync (2026-09-08)
+
+This addendum is the present-tense source of truth; dated progress entries below
+remain intact as historical evidence. Phase 2.5 is closed as a prerequisite
+gate at PR #953. Phase 2.6 stabilization/retirement is active and partly
+shipped; Phase 3 is not started. The dedicated QA target is `unicorn-qa`
+(`qfpxvumcrnzrjyvqkicq`), not the earlier failed `tenant-isolation-qa` branch.
+P1-C live proof completed in protected workflow run `34179875080`; the
+administrative secret-move/repeat-run tail was intentionally waived and is not
+an open implementation blocker (see session 23 and the QA coverage strategy).
+
+Current repository measurements, taken from the merged code state at
+`origin/main@afafe1f5a`, are: 1,702 tracked product files; 480,206 physical
+lines (407,168 excluding generated types; 395,650 excluding generated types and
+tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
+lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
+The committed lint baseline is 2 errors and 40 rule-attributed warnings (full
+lint prints 2 errors and 44 warnings, including four rule-less unused-disable
+notices). The two errors are the reviewed `InviteUserDialog.tsx` exception and
+the deferred `generate-meeting-recurrence` typing boundary. These measurements
+supersede the historical snapshots embedded in the original packet text.
+
+The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
+direct per-PR shortstat summation is approximately 8,867, with the difference
+coming from rounded/cohort accounting. Treat the dead-code register and current
+architecture metrics as authoritative; do not use 9,209 as an exact present
+LOC total. Remaining work is the P3-A client-health consumer graph, P4-D #18,
+the bounded InviteUser adapter, the SeatCard/P6-B tail and P7, followed by the
+separately gated Phase 3 architecture work.
 
 ## Progress log
 
@@ -856,8 +886,8 @@ work.
   instead of failing — disclosed, not fixed. No allowlist entry needed
   (pure DDL, no risk-category match in `audit-migrations.mjs`). Audit
   entry: `docs/audit-log/entries/2026-09-08-retire-document-links.md`.
-- **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), the rest of P3-A item 1 (the wider consumer graph
+- **Not yet started:** P2 (not blocked by P1-C; its broader layered-QA scope
+  is separately scheduled after the proof), the rest of P3-A item 1 (the wider consumer graph
   above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
   compliance-assistant, executive views), the remaining P4-D item
   (#18 — #3/#4/#10/#14/#15/#16 done 2026-09-08), `InviteUserDialog.tsx`'s
@@ -903,6 +933,11 @@ reconciliation against §2's original 173/166/39 baseline table, and
 `AGENTS.md`'s now-corrected "~4,100 pre-existing eslint errors" line, is
 recorded in §2's own reconciliation note. `AddWorkboardItemDialog.tsx`'s
 resolution above still stands.
+
+> **Lint-status reconciliation:** the 128-error paragraph above is retained as
+> a historical checkpoint from the pre-P5-A merge sequence. The current
+> 2-error/44-warning result is authoritative; `AddWorkboardItemDialog.tsx` is
+> retired, not residual debt.
 
 ## 1. Outcome and operating principles
 
@@ -1419,10 +1454,17 @@ authorizes a production change by itself.
 
 ### Current evidence and safety boundary
 
+> **Supersession note (2026-09-08):** the QA bullet below is retained as the
+> failed-branch investigation record. The current P1-C target is the dedicated
+> `unicorn-qa` project (`qfpxvumcrnzrjyvqkicq`), with a verified schema-only,
+> cron-free baseline and completed live proof. Do not read the historical
+> `tenant-isolation-qa` status as an outstanding blocker.
+
 - Production has 24 active `pg_cron` jobs after M2 retired three legacy audit
   schedules. The remaining jobs are a mixture of healthy maintenance and
   partially working forecast/health jobs.
-- The persistent `tenant-isolation-qa` preview branch is reusable, but it is
+- **Historical only:** the `tenant-isolation-qa` preview branch was reusable in
+  the original investigation, but it is
   currently unhealthy: it has no `pg_cron` extension, only 17 of production's
   329 migrations applied, and stops at
   `20260714074920_enable_retention_and_risk_forecast_cron.sql` with
@@ -1574,6 +1616,12 @@ are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
+> **Historical packet note:** Session 12 below records the implementation
+> preflight. It is superseded for current status by Sessions 21–22: stage-health
+> job 15 was paused and workload forecast job 14 was retired. No deployment
+> decision remains open for those retired schedules; replacement metric work is
+> owned by the Client Health plan.
+
 **Session 12 status (2026-09-07): H0.0 containment implemented; jobs 14/15
 output-health checks implemented; deployment and dashboard Playwright evidence
 remain open.** The affected frontend surfaces now show an explicit
@@ -1596,6 +1644,12 @@ deployment was performed for this M4 code in this session.
   seed or mutate dashboard data.
 
 ### Packet M5 — environment-safe migration replay
+
+> **Historical packet note:** Session 12 below concerns the failed
+> `tenant-isolation-qa` branch and is retained for auditability. The current
+> target is the dedicated `unicorn-qa` project (`qfpxvumcrnzrjyvqkicq`), whose
+> schema-only baseline and parity evidence are recorded in Session 15 and the
+> QA baseline cutover document. The failed branch is not a replay target.
 
 **Session 12 preflight (2026-09-07): blocked at strategy selection, with
 read-only evidence captured.** The dashboard-created `tenant-isolation-qa`
@@ -1663,6 +1717,12 @@ the known cron/production-URL failure again.
 jobs by default, and cannot call production as a side effect of replay.
 
 ### Packet M6 — P1-C QA authorization and isolation proof
+
+> **Current status (2026-09-08):** M6 is technically complete for the live
+> proof. The protected workflow exercised all 15 RLS tests with unique-run
+> cleanup and zero residue. The repository-to-environment secret move and
+> repeat-run administrative tail were intentionally waived by Carl (session
+> 23); this is a recorded governance exception, not an untracked blocker.
 
 Only after M0–M5:
 

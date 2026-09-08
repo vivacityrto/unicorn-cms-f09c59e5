@@ -1,5 +1,13 @@
 # Temporary Codex Session Handoff — QA Baseline and Phase 2.6 Stabilization
 
+> **Historical/superseded (2026-09-08):** this handoff captures the pre-QA
+> decision state. The active target is the dedicated `unicorn-qa` project
+> (`qfpxvumcrnzrjyvqkicq`); P1-C live proof completed in workflow run
+> `34179875080`, and the administrative secret-move/repeat-run tail was
+> intentionally waived. Use the [stabilization execution plan](../reference/phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md)
+> and [QA coverage strategy](../reference/qa-environment-and-coverage-strategy-2026-09-08.md)
+> for current status.
+
 **Date:** 2026-09-07  
 **Repository:** `unicorn-cms-f09c59e5`  
 **Purpose:** Resume this investigation from a new Codex chat without losing context.

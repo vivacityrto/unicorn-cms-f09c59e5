@@ -805,12 +805,14 @@ actually run `npm run test:edge` (renamed from `test:edge-functions` in
 P0.2) before considering the change done — don't rely on the file existing
 as proof it still passes.
 
-**CI/lint follow-up (not yet implemented, worth adding):** a check that
+**CI auth guardrail (implemented):** `.github/workflows/edge-function-auth-guardrails.yml`
 flags any new or modified file under `supabase/functions/*/index.ts` with no
 `requireCaller`/`requireSharedSecret`/`requireInternalEmailSecret`/cron-auth
 import, and a check that rejects a second `_shared/requireCaller*.ts` or
 `_shared/auth-helpers*.ts`-named file (duplicate implementations of the same
-auth gate are how a fix lands in one copy and not the other).
+auth gate are how a fix lands in one copy and not the other). Same-file
+documented opt-outs are required where a function intentionally uses a
+different auth model; this control is active in CI, not a future follow-up.
 
 **Trigger-based authorization caveat:** a Postgres trigger that checks
 `current_setting('request.jwt.claim.role', true)` to distinguish "browser

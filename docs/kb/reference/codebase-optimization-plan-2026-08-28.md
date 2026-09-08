@@ -6,11 +6,38 @@
 
 > **Phase 2.5 notification-queue Edge checkpoint (2026-09-06, PR #884 merged):** Fresh source/config reachability confirmed `process-notification-queue` is configured as a cron-only worker with no frontend caller. Eighteen explicit-any queue, quiet-hours, notification-data, and error boundaries were replaced with bounded local types and unknown-safe messages; cron authorization, queue status transitions, email/in-app dispatch, and all write contracts are unchanged. Lint ratchet passed (18→0), frontend (298/15 skipped), Edge (260), build passed; typecheck retained only the five documented baseline errors. No Playwright route exists for this cron-only/write-capable function, so it was not invoked. Supabase confirms the function ACTIVE (v147), but the deployed source is still the pre-typing revision; production log querying reproduced the known schema-field error, so live invocation parity is not claimed. Regenerated baseline after merge: 566 total errors (559 `no-explicit-any`), 39 warnings across 132 files. No new L10 bug; deployment/source parity remains a follow-up.
 
-> **Last updated:** 2026-08-28 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
+> **Last updated:** 2026-09-08 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
 >
-> **Reflects commit:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458).
+> **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
-> **Status:** Planning only. This document authorizes no production deployment, migration, branch deletion, or feature retirement. Execute one bounded PR at a time, with a fresh blast-radius check and normal review.
+> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 is not started. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+
+## Current reconciliation (2026-09-08)
+
+The current execution/status record is [Phase 2.6 Stabilization and Claude Code
+Execution Plan](phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md).
+It supersedes the planning-only wording and stale snapshots below without
+removing their historical evidence. Current code is `origin/main@afafe1f5a`
+(the code state is unchanged from `e1a0013ee` by the intervening docs-only
+commit). Phase 2.5 closed at PR #953; Phase 2.6 retirements continued through
+the P5-A/P6-B/P4-B/P4-C cohorts; Phase 3 remains unstarted.
+
+Current measurements are 1,702 tracked product files; 480,206 physical lines
+(407,168 excluding generated types; 395,650 excluding generated types and
+tests); 115 files over 600 lines; 32 over 1,000; six wrapper files (105 lines);
+240 routes with zero duplicate paths; and typecheck at zero errors. The
+committed lint baseline is 2 errors and 40 rule-attributed warnings (full lint
+prints 2 errors and 44 warnings, including four rule-less unused-disable
+notices). The remaining errors are the reviewed `InviteUserDialog.tsx`
+cross-schema exception and deferred `generate-meeting-recurrence` typing.
+
+The frequently cited **9,209 retired lines** is an approximate Phase 2.6
+aggregate. Direct per-PR shortstat summation is approximately 8,867, with a
+roughly 342-line difference caused by rounded/cohort accounting. Use the dead-
+code investigation's per-cohort evidence and the current metrics above for
+exact comparisons; do not treat 9,209 as an exact current LOC total. P1-C live
+proof is complete on the dedicated `unicorn-qa` project (run `34179875080`),
+and the administrative secret-move/repeat-run tail was intentionally waived.
 
 ## 1. Executive decision
 
@@ -253,7 +280,13 @@ First-wave clone target: 800–1,500 net lines removed with parity tests. Simila
 
 The pilot succeeds if the page becomes easier to read, domain behavior is independently testable, direct data access moves behind a small adapter, and total feature LOC does not grow materially. If it produces ceremony without simplification, revise the convention before rolling it out.
 
-### Post-Phase 2 — lint-debt retirement (planned)
+### Historical Phase 2.5 opening lint-debt baseline
+
+> The baseline and sequencing narrative in this section is historical. Phase
+> 2.5 subsequently closed at PR #953 and later stabilization packets reduced
+> the remaining `no-explicit-any` errors to the two exceptions recorded in the
+> current reconciliation above. Keep this section for the original rationale;
+> use the linked stabilization plan for active execution status.
 
 The full ESLint baseline was re-measured on 2026-09-03 from the clean shared
 checkout with `npx eslint . --format json`: **4,059 findings across 651 files**
@@ -1204,7 +1237,11 @@ Phase 2 exit gate (from §8): route count and guards unchanged except intentiona
 
 A full LOC re-measurement (per the methodology above — disposable detached worktree, `scripts/architecture-metrics.mjs`) has not been re-run since the P1.1 checkpoint; the mechanical-wrapper PRs' own descriptions record their individual file/line deltas, which is treated as sufficient until the next natural checkpoint (either Phase 2's close, or a specific request for an updated whole-repo table) rather than re-running the full measurement after every single merge.
 
-### Phase 2.5 — lint-debt retirement (in progress)
+### Phase 2.5 — lint-debt retirement (historical execution record)
+
+> **Superseded status:** the execution record below describes the opening and
+> mid-phase sequence. Phase 2.5 closed at PR #953; current residual work is
+> tracked by the stabilization plan linked in the current reconciliation.
 
 The DashboardLayout direct-composition migration (Phase 2's own prerequisite exit gate for this phase, tracked in [`dashboard-direct-layout-migration-plan-2026-09-01.md`](dashboard-direct-layout-migration-plan-2026-09-01.md)) had its 19-PR core sequence land at PR [#518](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/518), unblocking this phase per §8's ordering rule. A 2026-09-03 verification (see that document's §12) found this was 113/115 planned files, not 115/115 — `ProcessDetail.tsx`/`ProcessForm.tsx` were missed and still directly composed `DashboardLayout`. Fixed same day in [#525](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/525); the migration is now genuinely 115/115.
 
@@ -1327,7 +1364,13 @@ found.
 
 > **Phase 2.5 governance-document cluster checkpoint (2026-09-06):** `GovernanceDocumentEditDialog.tsx` and `GovernancePackageAssignments.tsx` are live from `GovernanceDocumentDetail.tsx` on the Documents surface. Fresh importer and generated-schema checks confirmed the `documents`, `stages`, `stage_instances`, `package_instances`, and `packages` read/update contracts. Eight explicit-any findings were removed (4→0 in each file) using generated row types and keyed form-state updates; document editing and assignment grouping behavior is unchanged. Lint ratchet passed (4→0 per file), frontend 298/15 skipped, Edge 260, build, and KB links 672/672 passed; typecheck retains only the documented `ClientLayout.tsx` and `useKpiSummary.tsx` baseline errors. Authenticated SuperAdmin Playwright passed 1/1 after a cold-start retry, with no application console errors on the passing run; temporary auth/junction/spec/config artifacts and the Vite process were removed. No new L10 bug was found.
 
-### Phase 2.6 — verified retirement and bounded consolidation (council-planned 2026-09-04)
+### Phase 2.6 — verified retirement and bounded consolidation (historical preparation; current status linked above)
+
+> The preparation wording below predates the Phase 2.5 closeout and the later
+> retirement cohorts. Preserve it as design history; execute against the
+> current stabilization plan, which records delivered retirements, the
+> approximate LOC accounting, P1-C proof, and remaining P3-A/P4-D/P6-B/P7
+> packets.
 
 **Parallel preparation checkpoint (2026-09-04):** while Phase 2.5 remains
 active, read-only characterization for the next boundary and reliability
@@ -1519,3 +1562,11 @@ Later batches diff against `lint-baseline.json`'s `byFile`/`byRule` data, not ag
 > **Phase 2.5 usage-audit hooks checkpoint (PR #950, merged 2026-09-07):** Fresh generated-contract and reachability checks covered `useEngagementAudit` and the legacy `usePackageUsage` hook. Four unsafe Supabase/row casts were replaced with the generated `engagement_audit_log` and `package_instances` contracts; audit inserts, package filtering/mapping, RPC calls, and public exports are unchanged. Lint ratchet 2/2→0, frontend 298/15 skipped, Edge 260, build passed; typecheck retained the five documented pre-existing errors. Authenticated SuperAdmin Playwright passed 4/4 with zero page/console errors and zero writes. No schema, RLS, RPC, Edge, or migration changes. Baseline refresh follows in PR #951.
 > **Phase 2.5 usage-audit baseline checkpoint (PR #951, merged 2026-09-07):** Regenerated `lint-baseline.json` from commit `fdc0c90c` after PR #950: **166 explicit-any / 173 total errors / 39 warnings across 50 finding files**. Architecture metrics recorded 1,732 tracked product files, 419,558 lines excluding generated types, 408,841 product lines excluding generated/tests, and 462 any-keyword hits. Fresh residual disposition leaves `AddWorkboardItemDialog.tsx` as a Phase 2.6 dead-code candidate (zero inbound imports), `InviteUserDialog.tsx` as a reviewed `unicorn1` cross-schema exception, the live-RLS isolation suite as a service-role/test-fixture follow-up, and remaining Edge findings as auth/write/schema-sensitive follow-ups. No compensating lint increase.
 > **Phase 2.5 closeout checkpoint (2026-09-07, PR #953):** Exit-gate reconciliation is complete against `origin/main` at `ddd2fec78`. The targeted baseline is lower than the Phase 2.5 opening baseline, no changed cohort introduced a lint regression, every shipped cohort has fresh reachability evidence plus the required static gates and authenticated read-only Playwright evidence, and all Edge cohorts have production deployment/caller/log dispositions. Remaining findings are explicitly queued or excepted: Phase 2.6 dead-code review (`AddWorkboardItemDialog`), cross-schema (`InviteUserDialog`), live-RLS service-role wiring, and auth/write/schema-sensitive Edge follow-ups. Phase 2.5 is formally closed as a prerequisite; these residual workstreams remain open and are not silently treated as safe typing cleanup.
+
+### Post-closeout reconciliation (2026-09-08)
+
+The closeout row above is retained as the Phase 2.5 exit record. Subsequent
+stabilization work retired `AddWorkboardItemDialog`, completed P1-C's live RLS
+proof against `unicorn-qa`, and retired/paused the forecast and stage-health
+cron schedules under the M3/M4 track. The active packet order and remaining
+Phase 2.6 work are maintained in the [stabilization execution plan](phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md).

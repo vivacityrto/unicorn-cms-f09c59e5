@@ -618,6 +618,18 @@ Fresh `origin/main` baseline regeneration after #950 measured 166 explicit-any, 
 ### 2026-09-07 — Phase 2.5 formal closeout (PR #953)
 Reconciled the complete Phase 2.5 exit gate against `origin/main` at `ddd2fec78`. Confirmed the lower 166 explicit-any / 173 total / 39 warning baseline, no compensating lint increase, per-cohort reachability and static-gate evidence, authenticated read-only Playwright evidence, and production dispositions for Edge cohorts. Remaining work is explicitly partitioned into Phase 2.6 dead-code, cross-schema, live-RLS, and auth/write/schema-sensitive Edge follow-ups. Documentation-only PR; KB links and lint ratchet passed.
 
+### 2026-09-08 — stabilization/optimization truth reconciliation (docs-only)
+Reconciled the parent optimization plan, stabilization plan, cron inventory,
+QA cutover record and handoff against `origin/main@afafe1f5a`. Current metrics
+are 1,702 tracked product files, 480,206 physical lines, 240 routes with no
+duplicates, typecheck 0, and lint 2 errors/44 warnings (2 errors/40
+rule-attributed warnings in the committed baseline). The 9,209 Phase 2.6
+retirement headline is explicitly approximate; direct per-PR shortstat totals
+are approximately 8,867. P1-C live proof on `unicorn-qa` is complete, M3/M4
+retirements are complete, and the P1-C administrative tail is a recorded
+governance waiver. Historical checkpoints remain unchanged and are labelled
+where their status is superseded.
+
 ### 2026-09-08 — `no-explicit-any` elimination effort reconciled (docs-only, no PR yet)
 The 166-baseline `no-explicit-any` figure carried in this log since PR #951/#953 is now stale — it's been driven to 2 through work this log doesn't otherwise track (Phase 2.6 stabilization plan packets, not this Phase 2.5 log's cohort format): P5-A batches 1-3 (PRs #967/#968/#970, 6+43+76=125 findings) and P1-C steps 1-5 by Codex (PRs #962/#963, typed the 38-finding live-RLS isolation suite against generated schema). Fresh `npm run lint` + `npm run lint:baseline` at `origin/main@e5930f908` (2026-09-08): **2 errors, 44 warnings** (46 problems; `lint-baseline.json` tracks 42 rule-attributed — 2 errors/40 warnings — the other 4 warnings are ruleId-less "unused eslint-disable directive" notices). Both remaining errors are `@typescript-eslint/no-explicit-any`: `InviteUserDialog.tsx` (deliberate reviewed exception) and `supabase/functions/generate-meeting-recurrence/index.ts` (auth gate shipped PR #979; typing cleanup explicitly deferred, not forgotten). `AddWorkboardItemDialog.tsx` — the other file named in PR #951's residual review — was retired outright as dead code in Phase 2.6 P6-B, not fixed. Full reconciliation recorded in `phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md` §2 and `AGENTS.md`'s lint NOTE (both corrected in the same pass). No code changed by this entry; `lint-baseline.json` was regenerated.
 Used one isolated lane and shared dependency junction. Fresh reachability confirmed EOS AISidebar and completion-summary/compliance-score consumers. Four explicit-any boundaries were typed; lint ratchet 2/2/1→0, typecheck retained five baseline errors, frontend 298 passed/15 skipped, Edge 260 passed, build passed, and authenticated SuperAdmin Playwright 4/4 passed with zero page/console errors and zero writes. PR #948 auto-merged; baseline refresh is PR #949. Temporary auth/server/reports/worktree artifacts were cleaned.

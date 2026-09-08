@@ -4,9 +4,10 @@
 >
 > **Captured:** 2026-09-08
 >
-> **Evidence:** production Supabase project `yxkgdalkbrriasiyyrwk`, persistent
-> preview branch `tenant-isolation-qa` (`iqichbimamlyjpaguddl`), repository
-> `origin/main@b5c79c9b4`
+> **Evidence:** production Supabase project `yxkgdalkbrriasiyyrwk`, dedicated
+> QA project `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`), repository
+> `origin/main@afafe1f5a`. The earlier `tenant-isolation-qa` preview branch is
+> historical and is not a current replay target.
 >
 > **Machine-readable companion:**
 > [cron-and-migration-inventory-2026-09-07.json](cron-and-migration-inventory-2026-09-07.json)
@@ -72,7 +73,7 @@ request; it is not an application-level success assertion.
 | Table | Rows | Latest generated value | Finding |
 |---|---:|---|---|
 | `stage_health_snapshots` | 357,471 | 2026-09-06 15:00 UTC | 0 rows with non-zero progress |
-| `workload_snapshots` | 2,539 | 2026-09-07 16:00 UTC | Workload output exists, but deployed function lacks M4 output-health safeguards |
+| `workload_snapshots` | 2,539 | 2026-09-07 16:00 UTC | Job 14 was retired by M4; retained snapshots remain, while forecast replacement belongs to Client Health |
 | `tenant_risk_forecasts` | 0 | — | No forecast output |
 | `tenant_retention_forecasts` | 0 | — | No forecast output |
 | `tenant_package_burn_forecast` | 0 | — | No burn output |
@@ -190,34 +191,27 @@ The filename is only a classification signal: each file must be inspected to
 determine whether it executes DML immediately or only defines a later-called
 function. The complete list is in the JSON companion.
 
-## QA branch state
+## QA target state (current)
 
 | Field | Value |
 |---|---|
-| Branch | `tenant-isolation-qa` |
-| Project ref | `iqichbimamlyjpaguddl` |
-| Branch id | `a3727ad5-3ea0-4189-9eab-ec60f2f420d6` |
-| Parent | production `yxkgdalkbrriasiyyrwk` |
-| Data copy | none (`with_data=false`) |
-| Status | `MIGRATIONS_FAILED` |
-| Applied migrations | 17 |
-| `pg_cron` | not installed; `cron` schema absent |
-| `pg_net` | installed |
-| Required action | select replay-safe baseline/patch strategy before reset or rebase |
+| Project | `unicorn-qa` |
+| Project ref | `qfpxvumcrnzrjyvqkicq` |
+| Purpose | dedicated schema-only QA target for P1-C and future read-only contract tests |
+| Status | verified application-scope baseline; no application rows; cron-free by design |
+| Safety | production ref/URL rejected by the harness allowlist; no production service-role key |
+| Forward sync | controlled, reviewed migration subset only; future migrations require replay-safety review |
+| Historical target | `tenant-isolation-qa` (`iqichbimamlyjpaguddl`) — failed replay, deleted/not a target |
 
-## M0 disposition and next packet
+## Current disposition and next packet
 
-M0 is complete as an evidence pass. M2 is now applied: only the three approved
-legacy audit schedules were unscheduled; no extension, table, function, or
-production data was changed.
+M0–M4 are complete for the inventory/retirement track. M3 retired the legacy
+notification routines/table, M4 paused/retired the invalid forecast and
+stage-health schedules, and P1-C live proof completed on the dedicated QA
+target. Historical run records remain available for audit.
 
-Next implementation order:
-
-1. M3 — decide whether the retained legacy notification objects are migrated
-   to the current outbox path or retired after dependency/retention sign-off;
-2. M4 — contain and repair/retire the forecast and stage-health jobs after the
-   product metric decision;
-3. select the QA replay strategy and execute the remaining migration packets;
-   and
-4. unblock the live P1-C isolation suite. M2 is complete; its historical run
-   records remain available for audit.
+Next implementation order is the P3-A client-health consumer graph, P4-D item
+#18, the bounded InviteUser adapter/P6-B tail, and Phase 3 preparation. Future
+QA schema changes are governed by the baseline cutover and forward-sync rules;
+do not replay the historical migration tree blindly or add cron/HTTP/backfill
+side effects to the QA baseline.

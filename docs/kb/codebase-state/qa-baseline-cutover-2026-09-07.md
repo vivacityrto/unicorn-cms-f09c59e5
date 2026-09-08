@@ -63,6 +63,14 @@ environment decision and a separate parity review.
 The validator is a metadata guard only. It does not connect to Supabase,
 apply migrations, reset a branch, or prove schema parity.
 
+> **Current status (2026-09-08):** P1-C live proof has completed against the
+> dedicated `unicorn-qa` project. The later repository-to-environment secret
+> move and repeat-run administrative tail were intentionally waived (see the
+> stabilization plan's session 23), so the procedural instruction below to
+> move/delete temporary repository secrets is a recorded governance exception,
+> not a pending implementation blocker. Keep the QA-only secret protected and
+> never substitute the production service-role key.
+
 The parity checker consumes two read-only catalog captures and compares the
 application-scope schema counts/fingerprints, the P1-C critical columns and
 foreign keys, migration failures, cron relation absence and production URL
