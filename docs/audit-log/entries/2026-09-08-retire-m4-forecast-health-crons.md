@@ -5,7 +5,8 @@
 - **Decision owner:** Carl
 - **Change:** Unschedule production cron jobs 20 and 21:
   `run-tenant-risk-forecast-nightly` and `run-retention-forecast-nightly`.
-- **Migration:** `20260908080000_retire_forecast_health_crons.sql`
+- **Migration:** `20260908080000_retire_forecast_health_crons.sql` (recorded
+  by Supabase as `20260908074316`)
 - **Reason:** Both jobs have executed without producing forecast rows. The
   stage-health and workload schedules (jobs 15 and 14) were already paused or
   retired after H0.0 containment. The replacement metric contract belongs to
@@ -20,9 +21,11 @@
   jobs 20 and 21 were active at schedules `0 13 * * *` and `0 14 * * *`, and
   that `tenant_risk_forecasts` and `tenant_retention_forecasts` both contained
   zero rows. Jobs 14 and 15 were already absent.
-- **Verification required after merge/apply:** confirm both names are absent
-  from `cron.job`, neighboring schedules are unchanged, and all retained
-  forecast/health tables and Edge Functions still exist.
+- **Postflight:** both names are absent from `cron.job`; active jobs fell to
+  20; neighboring jobs 19 and 22 retain their original schedules; all six
+  forecast/health tables remain present with 357,471 stage snapshots, 2,539
+  workload snapshots and zero forecast outputs; and the four retained Edge
+  Functions remain `ACTIVE`. No rows were deleted.
 
 This closes M4's stabilization lane. Future metric repair or scheduling must
 be authorized under the Client Health plan with a new contract, tests, and

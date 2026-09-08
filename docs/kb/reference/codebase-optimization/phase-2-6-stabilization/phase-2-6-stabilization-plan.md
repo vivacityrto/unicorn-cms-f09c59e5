@@ -506,16 +506,17 @@ authorizes a production change by itself.
 | `audit-flag-overdue-chcs` (#6) | Repeatedly fails because `notification_schedule.payload` no longer exists | Retire after owner confirmation |
 | `audit-evidence-reminders` (#5) | Legacy/half-shipped path; its status filter does not match the current evidence contract | Retire or formally migrate |
 | `audit-24hr-confirmation` (#4) | Legacy path using the removed `notification_schedule.payload` contract | Retire or formally migrate |
-| `run-tenant-risk-forecast` (#20) and `run-retention-forecast` (#21) | Active requests but zero forecast rows | Product decision: repair and prove output, or retire |
-| `run-stage-health-monitor` (#15) | Writes snapshots, but progress is universally zero and health is not trustworthy | Contain and fix; do not silently retire |
-| `run-workload-forecast` (#14) | Workload snapshots exist, but burn-forecast output is empty | Fix and add output-health checks |
+| `run-tenant-risk-forecast` (#20) and `run-retention-forecast` (#21) | Retired after zero forecast rows | Retain functions/tables/rows for Client Health replacement; do not restart silently |
+| `run-stage-health-monitor` (#15) | Retired after H0.0 containment; retained snapshots are not trustworthy | Define replacement under Client Health; do not restart silently |
+| `run-workload-forecast` (#14) | Retired after snapshots accumulated but burn output stayed empty | Define replacement under Client Health; do not restart silently |
 | `regulator-watch-check` (#29) | Active function with no current repository owner/reference found | Ownership review |
 | Bulk-document reclaim/purge (#18/#19) | Current maintenance functions exist | Keep unless a usage audit proves they are obsolete |
 | Notifications, calendar, invites, Ask Viv, Xero, activity digest, locks, and stalled-job recovery | Current consumers or operational evidence exist | Keep |
 
 M2 retired the former immediate retirement candidate group (jobs 4, 5, and 6).
-Jobs 20 and 21 still require an explicit repair-or-retire decision; they must
-not remain active as apparently successful no-op jobs.
+M4 then retired jobs 14, 15, 20 and 21; they must not be reactivated as
+apparently successful no-op jobs without a new Client Health contract and
+explicit authorization.
 
 ### Packet M0 — read-only cron and migration inventory
 
