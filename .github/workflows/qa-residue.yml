@@ -1,0 +1,44 @@
+name: QA residue (no leftover fixture data in unicorn-qa)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * *"
+
+# Cross-run project lock, distinct from P1-C's and the other P2-QA suites'
+# groups so a scheduled run of one suite never blocks on another.
+concurrency:
+  group: unicorn-qa-p2-residue
+  cancel-in-progress: false
+
+jobs:
+  qa-residue:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Require QA-only credentials
+        env:
+          QA_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          QA_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          test -n "$QA_PUBLISHABLE_KEY" || { echo "QA_SUPABASE_PUBLISHABLE_KEY is not configured"; exit 1; }
+          test -n "$QA_SERVICE_ROLE_KEY" || { echo "QA_SUPABASE_SERVICE_ROLE_KEY is not configured"; exit 1; }
+      - name: Run qa:residue suite
+        run: npx vitest run src/test/qa/residue.test.ts --pool=forks --maxWorkers=1
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          QA_SUPABASE_PROJECT_REF: qfpxvumcrnzrjyvqkicq

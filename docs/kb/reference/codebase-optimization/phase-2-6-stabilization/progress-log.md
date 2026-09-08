@@ -4,6 +4,42 @@
 
 ## Progress log
 
+**2026-09-09, session 37 — `qa:residue`'s first target written:
+independent fixture-leftover sweep (`feat/qa-residue`; live-proof
+pending):** Continuing the same-session P2-QA sweep. Read
+`qa-environment-and-coverage-strategy.md`'s existing note that `qa:residue`
+was "partially covered by `qa:rls`'s own residue assertions" — verified by
+reading `isolation.test.tsx` directly: it has fail-closed cleanup
+(`cleanupFixtures`/`throwCleanupFailures`, delete-error aware) but no
+standalone assertion that independently re-queries the database afterward.
+The "post-run query found zero run-scoped rows" claim recorded for P1-C's
+live proof was a one-time manual check via Supabase MCP, not an automated
+test — a real gap between what was claimed live-proven and what a suite
+itself asserts on every run.
+
+Wrote `src/test/qa/residue.test.ts`: 5 tests, using a fresh service-role
+client (a separate code path from each fixture suite's own cleanup, so a
+bug in one suite's delete logic can't hide behind its own cleanup step
+reporting success). Anchors on two conventions already shared by every
+fixture-producing suite (confirmed by reading both `isolation.test.tsx` and
+`data-lifecycle-tenant.test.ts` rather than assuming): every fixture
+persona uses the `@example.test` email domain, and every RUN_ID starts
+with `vitest` (`vitest-<uuid>`, `vitest-dl-<uuid>`), which then shows up in
+every fixture tenant's slug, conversation subject, and message body. Checks
+`public.users` and `auth.users` (via paginated `admin.listUsers`) for any
+`@example.test` email, and `tenants`/`tenant_conversations`/
+`tenant_messages` for any row matching `%vitest%`.  Documented, not
+silently assumed: true orphan detection for `tenant_members`/
+`conversation_participants`/`audit_events`/`client_audit_log` isn't checked
+directly in this first version, only transitively through their parent
+rows being clean.
+`.github/workflows/qa-residue.yml` follows the established shape (its own
+`unicorn-qa-p2-residue` concurrency group).
+
+Verified locally: lint, typecheck, `test:frontend`, build, KB links (see
+verification chain below). **Not yet live-proven** — same honest gap as
+every other suite before its first live run.
+
 **2026-09-09, session 36 — `qa:cron-safety`'s first target written and
 live-proven: `unicorn-qa` remains schedule-free (`feat/qa-cron-safety`,
 PR #1043; live-proof workflow run `34291546797`, 2/2 passing):** Continuing the same-session sweep through remaining P2-QA
