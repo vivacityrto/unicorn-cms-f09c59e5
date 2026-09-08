@@ -63,16 +63,16 @@ step. Blind historical `supabase db push` is prohibited.
 
 P1-C is one protected suite in a layered QA programme:
 
-| Suite | Primary contract | Typical trigger |
-| --- | --- | --- |
-| `qa:rls` | Tenant boundaries, grants, staff access and negative authorization | RLS policy, grant, tenant-scoped table or auth helper change |
-| `qa:contract` | Generated types, columns, enums, FKs and RPC return shapes | Schema or RPC migration |
-| `qa:edge` | Auth, CORS, request/response and external-contract behavior | Edge Function change |
-| `qa:data-lifecycle` | Create/update/archive/delete workflows and invariants | Feature workflow or trigger change |
-| `qa:residue` | Run-scoped rows, Auth users, storage objects and orphan records | Any fixture-producing suite |
-| `qa:migrations` | Replay safety and absence of production URLs, cron, HTTP or hidden backfills | Migration change |
-| `qa:e2e` | Authenticated read-only route and workflow smoke checks | Route, auth or query-behavior change |
-| `qa:cron-safety` | QA remains schedule-free unless explicitly enabled | Cron or scheduling change |
+| Suite | Primary contract | Typical trigger | Status |
+| --- | --- | --- | --- |
+| `qa:rls` | Tenant boundaries, grants, staff access and negative authorization | RLS policy, grant, tenant-scoped table or auth helper change | Live-proven (workflow run `34179875080`) |
+| `qa:contract` | Generated types, columns, enums, FKs and RPC return shapes | Schema or RPC migration | Written, unit-tested locally, **not yet live-proven** — see `progress-log.md` session 29 and `.github/workflows/qa-contract.yml` |
+| `qa:edge` | Auth, CORS, request/response and external-contract behavior | Edge Function change | Not started — needs Edge Functions deployed to `unicorn-qa` first (no such deployment exists today) |
+| `qa:data-lifecycle` | Create/update/archive/delete workflows and invariants | Feature workflow or trigger change | Not started |
+| `qa:residue` | Run-scoped rows, Auth users, storage objects and orphan records | Any fixture-producing suite | Partially covered — `qa:rls`'s own residue assertions; not a standalone suite yet |
+| `qa:migrations` | Replay safety and absence of production URLs, cron, HTTP or hidden backfills | Migration change | Not started (the changed-only migration scanner described below is a prerequisite) |
+| `qa:e2e` | Authenticated read-only route and workflow smoke checks | Route, auth or query-behavior change | Not started |
+| `qa:cron-safety` | QA remains schedule-free unless explicitly enabled | Cron or scheduling change | Not started |
 
 P1-C remains a focused gate. It is not replaced by Playwright, and a green
 frontend suite cannot substitute for a real RLS assertion.
