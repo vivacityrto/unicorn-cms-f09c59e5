@@ -677,6 +677,30 @@ icon button) and every one of its features was either disconnected from
 the real data model or a strictly less-capable duplicate of a live,
 actively-used equivalent elsewhere. No separate fix was made or is needed.
 
+### 28. `tga-rto-import`'s `handleImport`/`handleStatus` reference an out-of-scope `req` — DOCUMENTED, NOT FIXED (2026-09-07)
+
+`supabase/functions/tga-rto-import/index.ts`'s `handleImport(supabase, userId,
+body, correlationId)` and `handleStatus(supabase, correlationId)` both call
+`jsonResponse(req, {...})` internally on every return path, but neither
+function receives `req` as a parameter — `req` only exists in the outer
+`serve(async (req) => {...})` closure. Every real invocation of the
+`action=import` or default/status path throws `ReferenceError: req is not
+defined` at the `jsonResponse(req, ...)` call, so the function cannot
+successfully return a response on any code path through either handler.
+Confirmed pre-existing (not introduced by this session) via
+`git log --oneline -5 -- supabase/functions/tga-rto-import/index.ts` — the
+last substantive edit was PR #303 (`fix(security): replace wildcard CORS
+with an APP_BASE_URL allowlist`), long before Phase 2.6. Found while
+byte-for-byte-verifying a manual deploy of this function during P5-A's
+Edge Function auto-deploy recovery (see
+`docs/kb/reference/execution-efficiency-log.md`'s 2026-09-07 entry) — the
+manual deploy shipped the file exactly as it exists on `origin/main`
+(pre-existing bug included, not a transcription error), so
+**tga-rto-import is currently non-functional on both actions** until this
+is fixed. Not fixed here — out of scope for a deploy-recovery task; needs
+`req` threaded into both function signatures as a parameter and both call
+sites updated.
+
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
@@ -687,4 +711,7 @@ first assumed — see the correction in that item). Six more (items 3,
 4, 5, 8, 10 above, plus the two `tenant_users`→`users` FK gaps outside
 Package Builder) are confirmed real and written up with enough detail to
 scope a fix, deliberately left alone because the correct fix is a
-schema/migration decision, not a type-only code change.
+schema/migration decision, not a type-only code change. Item 28 was found
+by a completely separate mechanism (Edge Function deploy-fidelity
+verification, not TypeScript strictness) and is a full functional outage
+on its two actions, not a silent degradation.
