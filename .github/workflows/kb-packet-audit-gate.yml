@@ -1,0 +1,21 @@
+name: KB packet status/audit-entry gate
+
+on:
+  pull_request:
+    paths:
+      - "docs/kb/reference/codebase-optimization-plan-2026-08-28.md"
+      - "docs/kb/reference/rbac-v6-authorization-implementation-plan-2026-09-01.md"
+      - "docs/kb/reference/tenant-operating-model-data-architecture-plan-2026-09-02.md"
+      - "docs/kb/reference/client-health-activity-analytics-plan-2026-09-03.md"
+      - "docs/kb/reference/codebase-optimization/**"
+      - "scripts/check-packet-status-audit-gate.mjs"
+
+jobs:
+  check-packet-status-audit-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail if a packet closed without a correlated audit entry
+        run: node scripts/check-packet-status-audit-gate.mjs "origin/${{ github.base_ref }}"

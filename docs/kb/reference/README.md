@@ -13,26 +13,51 @@ Every long-form plan, handoff, and codebase-state doc in `docs/kb/` gets a lifec
 
 This mirrors — and doesn't replace — the KB's own precedence rule (`reference/source-precedence.md`): when a KB doc and the codebase disagree, the codebase wins regardless of what's marked here.
 
+## Program Map
+
+This registry tracks the lifecycle status of *every* doc in `docs/kb/`.
+For the four active cross-cutting initiatives specifically (Codebase
+Optimization, RBAC v6, Tenant Operating Model, Client Health Activity
+Analytics) — current status, phase, dependencies, and gates — start at
+[`program-index.md`](program-index.md) instead. Phase/execution-branch
+docs for the Codebase Optimization Plan live under
+[`codebase-optimization/`](codebase-optimization/), not flat in this
+folder — see `docs/kb/pinned/kb-hygiene.md` → "Program/phase folder
+hierarchy" for the full convention.
+
 ## `docs/kb/reference/`
 
 | File | Status | Why |
 |---|---|---|
+| `program-index.md` | active | New 2026-09-08. Thin canonical glue across the four initiatives — status/phase/dependencies/gates/links only. |
 | `ai-audit-stack.md` | active | Reference for a shipped feature (7 AI audit Edge Functions); factually stable even though its reconsider-by date has passed. |
 | `ai-use-principles.md` | active | Standing principles, not time-bound. |
 | `brainstorm-log.md` | active | A running log by design — entries close out individually, the doc itself doesn't. |
 | `cadence.md` | active | Needs a content refresh (cites stale `05-product-decisions.md`-era cross-references, now fixed to `decisions.md`) but the cadence description itself isn't wrong. |
 | `clean-architecture-refactor.md` | superseded | Says so explicitly: "superseded as the active plan" by `codebase-optimization-plan-2026-08-28.md`. |
 | `client-portal-qa-protocol.md` | active | Living QA protocol reference. |
-| `codebase-optimization-plan-2026-08-28.md` | active | Phases 0, 1, and 2 are complete; Phase 2.5 is actively retiring lint/type debt and Phase 2.6 is now a council-reviewed retirement/consolidation proposal. The plan remains the live execution ledger and authorizes no production mutation or merge by itself. |
+| `codebase-optimization-plan-2026-08-28.md` | active | Phases 0, 1, and 2 are complete; Phase 2.5 is closed; Phase 2.6 stabilization is active. The plan remains the live execution ledger and authorizes no production mutation or merge by itself. Progress narrative extracted to `codebase-optimization-plan-progress-log.md` (2026-09-08). |
+| `codebase-optimization-plan-progress-log.md` | active | New 2026-09-08. Extracted execution history for the optimization plan — see the plan's own header. |
 | `dashboard-overhaul-mockup.md` | historical | One-off analysis snapshot (2026-07-03); its companion `.html` mockup is missing from the repo (noted in the doc itself). |
-| `dead-code-feature-consolidation-investigation-2026-09-04.md` | planning | Council-reviewed candidate register and cross-program Phase 2.6 proposal; explicitly authorizes no deletion, database mutation, permission change, deployment, or merge. |
-| `phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md` | planning | Current stabilization ledger and Claude Code execution packets for open-PR closeout, L10 bugs, lint/typecheck gates, safe test-data handling, remaining Phase 2.6 work, and the Phase 3 pilot. |
+| `codebase-optimization/cross-cutting/dead-code-feature-consolidation-investigation.md` | planning | Moved 2026-09-08 (was flat, `-2026-09-04` suffix dropped). Council-reviewed candidate register and cross-program Phase 2.6 proposal; explicitly authorizes no deletion, database mutation, permission change, deployment, or merge. |
+| `codebase-optimization/phase-2-6-stabilization/phase-2-6-stabilization-plan.md` | active | Moved 2026-09-08 (was `phase-2-6-stabilization-and-claude-execution-plan-2026-09-07.md`, flat). Current stabilization ledger and execution packets — P4-D (all 7 items) and P3-A closed 2026-09-08. Progress narrative extracted to the folder's own `progress-log.md`. |
+| `codebase-optimization/phase-2-6-stabilization/progress-log.md` | active | New 2026-09-08. Extracted execution history for the stabilization plan. |
+| `codebase-optimization/phase-2-6-stabilization/l10-real-bugs-found.md` | active | Moved 2026-09-08 (was flat, `-2026-09-04` suffix dropped). Bug evidence register — 28 items, all P4-D items now FIXED. |
+| `codebase-optimization/phase-2-6-stabilization/task-dialog-characterization.md` | completed | Moved 2026-09-08 (was flat, `-2026-09-04` suffix dropped). Merged in PR #592. |
+| `codebase-optimization/phase-2-6-stabilization/preparation-status.md` | historical | Moved 2026-09-08 (was flat, `-2026-09-04` suffix dropped). Superseded in practice by the stabilization plan's own truth-sync section. |
+| `codebase-optimization/phase-2-6-stabilization/next-candidate-packets.md` | planning | Moved 2026-09-08 (was flat, `-2026-09-04` suffix dropped). Preparation-only, no runtime/database changes. |
+| `codebase-optimization/phase-2-6-stabilization/qa-environment-and-coverage-strategy.md` | active | Moved 2026-09-08 (was flat, `-2026-09-08` suffix dropped). Live QA environment strategy, gates P1-C. |
+| `codebase-optimization/phase-3/parallel-preparation-packets.md` | planning | Moved 2026-09-08 (was flat, `-2026-09-04` suffix dropped). Read-only characterization/sequencing packet. |
+| `codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md` | completed | Moved 2026-09-08 (was flat, `-2026-09-08` suffix dropped). P3-A consumer containment closed via PR #1024. |
 | `decision-trail.md` | active | Living ADR log — individual ADRs carry their own Decided/Superseded/Reversed status inline; the doc as a whole is the current canonical decision record. |
 | `dev-guardrails.md` | active | Standing guardrails. |
+| `execution-efficiency-log.md` | active | Cross-cutting cycle-time/findings data per batch across all initiatives — a running log, not a plan. |
 | `flow-patterns.md` | active | Living pattern reference. |
 | `migration-1to2.md` | active | Living reference for 1.0→2.0 questions; the "user ID bridge" section was corrected from "open" to "closed" in this pass. |
 | `notification-system-behavior.md` | active | Living behavior reference. |
 | `rbac-v6-authorization-implementation-plan-2026-09-01.md` | planning | Says so explicitly: "Implementation plan only. It authorizes no production migration..." |
+| `tenant-operating-model-data-architecture-plan-2026-09-02.md` | planning | Council-reviewed implementation plan; no implementation or production mutation authorized in the planning session itself. |
+| `client-health-activity-analytics-plan-2026-09-03.md` | planning | Architecturally a child of the Tenant Operating Model plan (see its own "Parent architecture" header). P3-A consumer containment closed 2026-09-08. |
 | `source-precedence.md` | active | Defines the precedence rule this registry itself relies on. |
 | `ui-explainer.md` | historical | Its companion `.html` walkthrough is missing from the repo (noted in the doc itself); "Regeneration" section explains how to rebuild it. |
 

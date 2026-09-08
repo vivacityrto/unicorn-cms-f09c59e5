@@ -1,5 +1,7 @@
 # Unicorn QA environment and coverage strategy
 
+**Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
+
 ## Purpose
 
 `unicorn-qa` is the reusable hosted integration-testing environment for the
@@ -30,7 +32,7 @@ ordinary pull-request CI.
 
 The target is `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`) at
 `https://qfpxvumcrnzrjyvqkicq.supabase.co`. The application-scope baseline is
-loaded and verified by the [QA baseline cutover record](../codebase-state/qa-baseline-cutover-2026-09-07.md).
+loaded and verified by the [QA baseline cutover record](../../../codebase-state/qa-baseline-cutover-2026-09-07.md).
 
 The verified contract proves matching application-scope extension, table and
 view fingerprints; matching function, trigger and policy counts; matching

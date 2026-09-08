@@ -9,6 +9,11 @@
 > **Related authorization program:** [RBAC v6 Authorization Plan](./rbac-v6-authorization-implementation-plan-2026-09-01.md)
 > **Implementation owner:** Claude Code, one bounded PR at a time, only after Carl approves the phase
 > **Production rule:** every schema, RLS, function, trigger, grant, cron, backfill, model-processing, or data correction change requires a dated audit entry and separate explicit production authority
+> **Program index:** [Program Index](program-index.md)
+> **Scope:** client health/activity metrics, consultant triage, and intervention analytics surfaced on the triage dashboard, main dashboard, client-activity view, tenant detail, and staff Ask Viv
+> **Exit criteria:** not yet defined at the program level — tracked per phase (see P3-A in [`codebase-optimization/phase-3/`](codebase-optimization/phase-3/))
+> **Evidence:** "Current implementation reconciliation" below, plus [`codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md`](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md)
+> **Audit entry:** none at the program level — implementation PRs record their own per the Production rule above
 
 ---
 
@@ -23,7 +28,7 @@ explicit unavailable state. The triage attention views remain available for
 operational drivers (tasks, risk, gaps, activity and deadlines), but their
 stage-health fields are `unavailable` and `attention_score` is not a health
 score. The full consumer matrix and next safe boundary are recorded in
-[`p3-a-client-health-consumer-characterization-2026-09-08.md`](p3-a-client-health-consumer-characterization-2026-09-08.md).
+[`p3-a-client-health-consumer-characterization.md`](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md).
 
 No Client Health H1 metric definition, schema projection, forecast repair,
 production data correction or cron restart is authorized by this update.

@@ -1,5 +1,7 @@
 # Phase 2.6 task-dialog consolidation characterization
 
+**Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
+
 **Branch cut:** `origin/main` at `1f8c557f` (PR #592 merged)
 
 **Disposition:** implementation-ready after the Phase 2.5 exit checkpoint; no

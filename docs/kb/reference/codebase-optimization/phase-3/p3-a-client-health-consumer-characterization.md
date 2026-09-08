@@ -10,6 +10,12 @@
 > contract, contain the obsolete Main Dashboard reads, and define the next
 > safe replacement boundary. This document authorizes no schema, RLS, RPC,
 > metric-definition, production-data, or cron change.
+>
+> **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md)
+>
+> **Program index:** [Program Index](../../program-index.md)
+>
+> **Dependencies:** [Client Health Activity Analytics Plan](../../client-health-activity-analytics-plan-2026-09-03.md) — this packet's consumer graph is Client Health territory even though the packet itself is tracked under Codebase Optimization's Phase 3
 
 ## Result
 

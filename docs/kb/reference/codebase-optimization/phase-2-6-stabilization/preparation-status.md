@@ -1,5 +1,7 @@
 # Phase 2.6 preparation status
 
+**Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
+
 **Checkpoint:** `origin/main` at `dd083ece` (PR #593)
 
 This is a preparation-only checkpoint. No runtime, schema, RBAC, tenant,
@@ -17,7 +19,7 @@ RLS, RPC, Edge, or database behavior was changed.
 ## Completed preparation
 
 - Task-dialog characterization is recorded in
-  [`phase-2-6-task-dialog-characterization-2026-09-04.md`](phase-2-6-task-dialog-characterization-2026-09-04.md)
+  [`task-dialog-characterization.md`](task-dialog-characterization.md)
   and merged in PR #593.
 - Three-seat council sequencing is recorded in the optimization plan and
   shared `MEMORY.md`.

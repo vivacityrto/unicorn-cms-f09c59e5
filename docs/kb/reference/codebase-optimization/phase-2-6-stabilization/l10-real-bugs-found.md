@@ -12,6 +12,8 @@
 > NOT FIXED** = confirmed real, deliberately left alone because the correct
 > fix needs a schema decision/migration or is out of scope for a type-only
 > change — tracked here as a backlog item, not silently dropped.
+>
+> **Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
 
 ## Package Builder (`/admin/manage-packages`, `/admin/package-builder/:id`)
 
@@ -825,7 +827,7 @@ explicit unavailable state. Those reads are now removed; the database RPC is
 retained until a separate schema/RBAC dependency review. The remaining Ask
 Viv and Compliance Assistant attention consumers are documented as
 operational-attention inputs, not Client Health evidence, in
-`docs/kb/reference/p3-a-client-health-consumer-characterization-2026-09-08.md`.
+`docs/kb/reference/codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md`.
 
 ### 27. `PackageDetail.tsx` Manager-field lookup 406 — RESOLVED VIA RETIREMENT (2026-09-07)
 
