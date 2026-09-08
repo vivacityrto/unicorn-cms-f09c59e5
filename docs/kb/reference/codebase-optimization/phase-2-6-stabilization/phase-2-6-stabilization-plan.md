@@ -46,22 +46,27 @@ Current repository measurements, taken from the merged code state at
 lines (407,168 excluding generated types; 395,650 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
-As of `hotfix/p5a-invite-user-unicorn1-adapter` (2026-09-08), the lint
-baseline is down to 1 error and 40 rule-attributed warnings (full lint
-prints 1 error and 44 warnings, including four rule-less unused-disable
-notices) — the `InviteUserDialog.tsx` `any` exception is retired (P5-A item
-3, bounded typed adapter); the deferred `generate-meeting-recurrence` typing
-boundary is the sole remaining error. These measurements supersede the
+As of `hotfix/generate-meeting-recurrence-typing` (2026-09-08), the lint
+baseline is down to **0 errors** and 40 rule-attributed warnings (full lint
+prints 0 errors and 44 warnings, including four rule-less unused-disable
+notices) — both deliberate `any` exceptions are retired: `InviteUserDialog.tsx`
+(P5-A item 3, bounded typed adapter) and `generate-meeting-recurrence/index.ts`
+(its auth gate shipped with negative tests in PR #979, satisfying Packet
+P3-A item 3's deferral condition; fixed with the same `error instanceof
+Error` narrowing used throughout `supabase/functions/**`). The
+`no-explicit-any` retirement program begun in Phase 2.5 is complete with
+zero known residual exceptions. These measurements supersede the
 historical snapshots embedded in the original packet text.
 
 The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
-LOC total. Remaining work is: the P2 layered-QA scope; the one remaining
-deliberate lint exception (deferred `generate-meeting-recurrence` typing);
-the SeatCard display-core prerequisite; and the P7 Phase 3
-preparation/implementation sequence. The separate RBAC correctness hotfix
+LOC total. Remaining work is: the P2 layered-QA scope; and the P7 Phase 3
+preparation/implementation sequence (gated on RBAC v6's vocabulary decision).
+The SeatCard display-core prerequisite is resolved (dead code, retired
+outright) and the last deliberate lint exception is closed — see above. The
+separate RBAC correctness hotfix
 remains security-owned and is not a Phase 2.6 refactor. M4's forecast
 decision queue for jobs 20/21 is retired (jobs 14 and 15 were already
 retired/paused) — see progress-log.md sessions 21-22 and this repo's
