@@ -1,0 +1,13 @@
+---
+description: Keep implementation, knowledge-base, and audit documentation synchronized
+alwaysApply: true
+---
+
+# Documentation synchronization
+
+- Treat documentation updates as part of every implementation task, not as optional cleanup.
+- Before finishing a change, identify the authoritative plan, codebase-state, handoff, or operational document affected by the change and update it with the current status, evidence, and remaining work.
+- For production, schema, migration, cron, security, or operational changes, add or update the corresponding `docs/audit-log/entries/` record and `docs/audit-log/INDEX.md` when the event is material.
+- Preserve existing document content when rebasing or resolving conflicts. Inspect the resulting diff for lost entries, claims, links, and evidence before committing.
+- Run the relevant documentation checks (at minimum `node scripts/check-kb-links.mjs` for KB changes) and report any intentionally unchanged documents.
+- Never overwrite, truncate, or replace a document wholesale when a focused patch can preserve its history and context.
