@@ -66,7 +66,7 @@ P1-C is one protected suite in a layered QA programme:
 | Suite | Primary contract | Typical trigger | Status |
 | --- | --- | --- | --- |
 | `qa:rls` | Tenant boundaries, grants, staff access and negative authorization | RLS policy, grant, tenant-scoped table or auth helper change | Live-proven (workflow run `34179875080`) |
-| `qa:contract` | Generated types, columns, enums, FKs and RPC return shapes | Schema or RPC migration | Written, unit-tested locally, **not yet live-proven** — see `progress-log.md` session 29 and `.github/workflows/qa-contract.yml` |
+| `qa:contract` | Generated types, columns, enums, FKs and RPC return shapes | Schema or RPC migration | Live-proven (workflow runs `34238305046`, `34238555502` diagnostic, `34238835701` — see `progress-log.md` session 29/30) |
 | `qa:edge` | Auth, CORS, request/response and external-contract behavior | Edge Function change | Not started — needs Edge Functions deployed to `unicorn-qa` first (no such deployment exists today) |
 | `qa:data-lifecycle` | Create/update/archive/delete workflows and invariants | Feature workflow or trigger change | Not started |
 | `qa:residue` | Run-scoped rows, Auth users, storage objects and orphan records | Any fixture-producing suite | Partially covered — `qa:rls`'s own residue assertions; not a standalone suite yet |

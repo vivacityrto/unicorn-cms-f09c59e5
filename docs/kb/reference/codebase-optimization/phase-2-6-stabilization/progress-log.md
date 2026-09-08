@@ -4,6 +4,35 @@
 
 ## Progress log
 
+**2026-09-08, session 30 — `qa:contract` live-proven, RPC check promoted
+from soft to hard (`chore/qa-contract-diagnostic`):** with `qa-contract.yml`
+now on `main` (session 29's PR merged) and its `unicorn-qa` environment
+confirmed to have no protection rules, ran the real workflow via
+`gh workflow run` (workflow run `34238305046`). All 4 tests passed,
+including the two meaningful hard assertions (no table/column drift between
+generated types.ts and the live `unicorn-qa` schema) — genuine proof, not
+just "the request succeeded."
+
+The soft RPC-argument check surfaced 447 identical-shaped findings
+("exists but no matching entry in definitions") — every single generated
+function, not a mix of pass/fail, which is the signature of a parsing-shape
+bug rather than 447 real drifts. Added a one-off diagnostic test
+(`chore/qa-contract-diagnostic`, dispatched directly against the branch
+ref — confirmed `workflow_dispatch` works against any ref once the workflow
+file exists on `main`, no merge needed to iterate) and confirmed via its raw
+payload (workflow run `34238555502`): `definitions[functionName]` is
+table-only; an RPC's actual argument shape lives at
+`paths['/rpc/<name>'].post.parameters[].schema` (a body-parameter object
+schema with `properties` per arg and a `required` array). Rewrote
+`extractRpcArgs` to the confirmed-correct shape, removed the diagnostic
+test, and promoted the RPC check from soft/warn-only to a real hard
+assertion (arg-name match plus required/optional-drift comparison).
+Re-dispatched (workflow run `34238835701`): all 4 tests passed clean,
+confirming no RPC argument drift either. `qa:contract` is now fully
+live-proven, not just locally unit-tested. Full local verification chain
+also re-confirmed green after the fix: lint (0 errors, 44 warnings),
+typecheck, `test:frontend` (330/19 skipped), `test:edge` (276/276), build.
+
 **2026-09-08, session 29 — P2-QA's first suite, `qa:contract`, written
 (`feat/qa-contract-suite`; not yet live-proven):** built the first suite
 beyond `qa:rls` in the layered-QA coverage programme
