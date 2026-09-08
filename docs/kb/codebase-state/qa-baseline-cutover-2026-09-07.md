@@ -152,6 +152,25 @@ The P1-C harness now enforces the allowlisted QA project when a service-role
 key is present and serializes same-host runs with an atomic lock. The protected
 workflow adds the cross-run GitHub Actions concurrency group. Configure the
 `unicorn-qa` environment with `QA_SUPABASE_PUBLISHABLE_KEY` and
-`QA_SUPABASE_SERVICE_ROLE_KEY` only after the owner approves secret storage;
-until then, the live suite must remain skipped and no credential should be
-added to repository or ordinary PR CI.
+`QA_SUPABASE_SERVICE_ROLE_KEY` once owner access is available. During the
+initial proof, those two QA-only secrets were temporarily stored at repository
+scope because the environment page was unavailable to the operator; the
+workflow remained manual/nightly-only and QA-target-allowlisted. Delete the
+repository copies after moving the secrets to the protected environment.
+
+## 2026-09-08 live P1-C proof
+
+Workflow run
+[`34179875080`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34179875080)
+executed all 15 tenant-isolation RLS tests against `unicorn-qa`; all passed.
+The suite's `finally` cleanup and post-cleanup assertions were exercised, and a
+direct QA query confirmed zero run-scoped tenants, profiles, memberships,
+conversations, messages, audit rows or Auth users remained.
+
+The zero-row baseline required four QA-only parity repairs discovered by this
+run: standard `service_role`/API-role grants and defaults; the non-sensitive
+`dd_access_status` and `dd_lifecycle_status` lookup values; the identity lookup
+values used by the production user-normalization trigger (including `Client
+Child` and `Vivacity Team`); and a fixture-only manual consultant-assignment
+mode to avoid unrelated capacity automation. These are recorded in the QA
+migration ledger and were not applied to production.
