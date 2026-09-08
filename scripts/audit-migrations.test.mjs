@@ -62,6 +62,35 @@ test("matches an allowlist entry by file, category, and target project", () => {
   }]), true);
 });
 
+test("allowlists a data-mutation/destructive-mutation finding even though it never carries a targetProject (plain INSERT/UPDATE/DELETE/TRUNCATE matches never set one)", () => {
+  const dataMutationFinding = { file: "supabase/migrations/new.sql", category: "data-mutation" };
+  const destructiveMutationFinding = { file: "supabase/migrations/new.sql", category: "destructive-mutation" };
+  const entries = [{
+    id: "fn-body-dml",
+    file: "supabase/migrations/new.sql",
+    categories: ["data-mutation", "destructive-mutation"],
+    targetProject: "qa-project-ref",
+    owner: "platform",
+    reason: "DML only inside a CREATE FUNCTION body, not migration-time",
+    expires: "2026-09-20",
+  }];
+  assert.equal(isAllowlisted(dataMutationFinding, entries), true);
+  assert.equal(isAllowlisted(destructiveMutationFinding, entries), true);
+});
+
+test("still requires an exact targetProject match for categories that do carry one (production-url/cron/http-call) - the fix does not weaken cross-project scoping", () => {
+  const finding = { file: "supabase/migrations/new.sql", category: "cron-registration", targetProject: "prod-project-ref" };
+  assert.equal(isAllowlisted(finding, [{
+    id: "qa-cron",
+    file: "supabase/migrations/new.sql",
+    categories: ["cron-registration"],
+    targetProject: "qa-project-ref",
+    owner: "platform",
+    reason: "QA-only schedule, wrong project on purpose for this test",
+    expires: "2026-09-20",
+  }]), false);
+});
+
 test("does not treat SQL comments as executable data mutation", () => {
   const report = scanMigration(
     "supabase/migrations/20990101000001_comment_only.sql",

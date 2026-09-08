@@ -45,6 +45,15 @@
       "owner": "Carl",
       "reason": "Manual, disabled-by-default rollback for M4 schedule retirement; requires explicit session settings and an operator decision before restoring the workload cron.",
       "expires": "2026-10-08"
+    },
+    {
+      "id": "p4d-18-allow-tenant-less-notification-prefs",
+      "file": "supabase/migrations/20260908070000_allow_tenant_less_notification_prefs.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive: the flagged INSERT/UPDATE statements are inside CREATE OR REPLACE FUNCTION bodies for get_user_notification_prefs/update_user_notification_prefs (only executed later, per-caller, when those RPCs run) - the migration itself performs no direct data mutation, only ALTER COLUMN DROP NOT NULL, CREATE UNIQUE INDEX, and two function redefinitions. Carl explicitly authorized proceeding with the not-null fix after reviewing the tenant-assignment question separately (L10 #18, parked to docs/kb/reference/tenant-operating-model-data-architecture-plan-2026-09-02.md §18 item 14).",
+      "expires": "2026-10-08"
     }
   ]
 }
