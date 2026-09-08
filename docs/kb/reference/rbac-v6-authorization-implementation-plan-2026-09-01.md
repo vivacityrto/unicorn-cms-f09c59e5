@@ -5,6 +5,20 @@
 > **Reflects:** the original `origin/main@853c9e18` and read-only production metadata snapshot from 2026-09-01; a fresh operational-regression council review against `origin/main@73a61b2f9` on 2026-09-03; the historical [RBAC v6 gate-closure handoff](../handoffs/rbac-v6-gate-closure-plan.md); the [tenant operating-model architecture plan](tenant-operating-model-data-architecture-plan-2026-09-02.md); and the assumed completed target state of the [codebase optimization plan](codebase-optimization-plan-2026-08-28.md).
 >
 > **Status:** Implementation plan only. It authorizes no production migration, Edge Function deployment, permission grant, or user-role change. Execute as small PRs. Every schema, RLS, RPC, trigger, or data-backfill PR also requires an audit entry under `docs/audit-log/entries/`.
+>
+> **Program index:** [Program Index](program-index.md)
+>
+> **Owner:** Carl/Vivacity decide, Claude Code implements one small PR at a time
+>
+> **Scope:** one canonical `authorize(subject, action, resource, tenant_context)` decision path, replacing scattered raw role checks and duplicated database policy logic
+>
+> **Dependencies:** blocks wider Tenant Operating Model rollout (see [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md)'s own "Stop gate"); assumes the [Codebase Optimization Plan](codebase-optimization-plan-2026-08-28.md)'s route/guard composition work reaches a stable checkpoint first
+>
+> **Exit criteria:** see §14 "Definition of program completion"
+>
+> **Evidence:** §3 "Evidence snapshot" and §15 "Council amendment ledger" within this doc
+>
+> **Audit entry:** none at the program level — implementation PRs record their own per `docs/audit-log/entries/`, required for every schema/RLS/RPC/trigger/data-backfill change
 
 ## 1. Executive decision
 

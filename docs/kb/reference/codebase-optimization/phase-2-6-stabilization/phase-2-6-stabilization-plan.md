@@ -11,6 +11,22 @@
 > **Phase 2.6 source:** [Dead Code, Feature Consolidation, and Architecture Redesign Investigation](../cross-cutting/dead-code-feature-consolidation-investigation.md)
 >
 > **Related bug register:** [L10 real bugs found](l10-real-bugs-found.md)
+>
+> **Program index:** [Program Index](../../program-index.md)
+>
+> **Status:** active
+>
+> **Owner:** Carl authorizes each packet, Claude Code/Codex execute
+>
+> **Scope:** open-PR closeout, gate restoration (lint/typecheck/isolation), L10 bug-fix packets, residual lint/retirement, and the Phase 3 pilot — see §3 "Execution order and dependency graph"
+>
+> **Dependencies:** P1-C (isolation-suite hardening) depends on the QA environment strategy; P4-D items may depend on RBAC v6/Tenant Operating Model decisions — see each packet
+>
+> **Exit criteria:** see §13 "Definition of done"
+>
+> **Evidence:** [Progress log](progress-log.md)
+>
+> **Audit entry:** none at the phase level — individual packets record their own per `docs/audit-log/entries/`
 
 ## Current truth-sync (2026-09-08)
 

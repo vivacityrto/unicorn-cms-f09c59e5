@@ -1,5 +1,7 @@
 # Phase 2.6 next-candidate preparation packets
 
+**Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
+
 Preparation-only follow-up to the task-dialog packet. No runtime or database
 changes are included.
 

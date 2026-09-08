@@ -8,6 +8,7 @@
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md)
 > **Alignment:** [RBAC v6 Authorization Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md),
 > [Tenant Operating Model](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
+> **Program index:** [Program Index](../../program-index.md)
 
 ## Purpose
 

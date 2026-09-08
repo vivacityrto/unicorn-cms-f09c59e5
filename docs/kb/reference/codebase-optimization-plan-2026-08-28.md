@@ -5,6 +5,20 @@
 > **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
 > **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 is not started. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+>
+> **Program index:** [Program Index](program-index.md)
+>
+> **Owner:** Carl, executed by Claude Code (one bounded PR at a time)
+>
+> **Scope:** structural codebase health — routing/layout simplification, lint/type debt, dead-code retirement, Edge Function convergence, and the bounded consolidation work tracked in `codebase-optimization/`
+>
+> **Dependencies:** cross-links with [RBAC v6](rbac-v6-authorization-implementation-plan-2026-09-01.md) and [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md) where retirement/consolidation candidates touch their scope; see each phase folder's own header for specifics
+>
+> **Exit criteria:** see §21 "Definition of done for each implementation PR" — there is no single program-level exit, phases close individually
+>
+> **Evidence:** [Progress log](codebase-optimization-plan-progress-log.md); phase-level evidence lives in each `codebase-optimization/<phase>/` folder
+>
+> **Audit entry:** none at the program level — individual packets record their own per `docs/audit-log/entries/`
 
 ## 1. Executive decision
 

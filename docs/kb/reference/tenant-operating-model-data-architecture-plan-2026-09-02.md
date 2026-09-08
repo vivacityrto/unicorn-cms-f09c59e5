@@ -8,6 +8,11 @@
 > **Related programs:** [Codebase Optimization and KB Renewal Plan](./codebase-optimization-plan-2026-08-28.md), [RBAC v6 Authorization Plan](./rbac-v6-authorization-implementation-plan-2026-09-01.md), and [Client Health, Client Activity, Consultant Triage, and Intervention Analytics Plan](./client-health-activity-analytics-plan-2026-09-03.md)
 > **Implementation owner:** Claude Code, one small PR at a time, only after Carl approves the phase
 > **Production rule:** every schema, RLS, function, trigger, grant, constraint, backfill, or data correction needs a dated audit entry and separate explicit production authority
+> **Program index:** [Program Index](program-index.md)
+> **Scope:** Manage Tenants directory performance, tenant data-model correctness (`tenants`/`tenant_users`/`tenant_members`/`package_instances` and related tables), ERP-readiness principles, and Ask Viv's tenant-context architecture
+> **Exit criteria:** see §22 "Definition of program completion"
+> **Evidence:** §5 "Live data-model findings" and §23 "Evidence and primary guidance index" within this doc
+> **Audit entry:** none at the program level — implementation PRs record their own per the Production rule above
 
 ---
 

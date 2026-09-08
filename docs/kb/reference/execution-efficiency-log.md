@@ -1,5 +1,11 @@
 # Execution efficiency log
 
+**Program index:** [Program Index](program-index.md)
+
+Cross-cutting cycle-time/findings data per batch across all active plan
+initiatives — data, not principles. Companion to the Builder Manifest's
+efficiency-checkpoints practice.
+
 ### 2026-09-07 — M4 H0.0 containment and output-health guardrails
 The M4 stabilization batch reused the existing dependency junction instead of
 installing dependencies in the worktree. A shared unavailable state replaced

@@ -5,6 +5,7 @@
 > **Repository evidence:** council import-graph snapshot at `main@55366a59c`; highest-confidence cohorts, routes, current plan state, and recent Phase 2.5 evidence rechecked against `origin/main@944ad7627`
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md)
 > **Required architecture:** [RBAC v6 Authorization Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) and [Tenant Operating Model and Data Architecture Plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
+> **Program index:** [Program Index](../../program-index.md)
 
 ## 1. Council decision
 

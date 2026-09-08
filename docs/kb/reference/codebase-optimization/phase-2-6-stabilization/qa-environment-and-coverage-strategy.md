@@ -1,5 +1,7 @@
 # Unicorn QA environment and coverage strategy
 
+**Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
+
 ## Purpose
 
 `unicorn-qa` is the reusable hosted integration-testing environment for the

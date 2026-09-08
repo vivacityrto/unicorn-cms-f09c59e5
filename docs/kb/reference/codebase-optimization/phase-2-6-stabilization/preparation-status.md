@@ -1,5 +1,7 @@
 # Phase 2.6 preparation status
 
+**Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
+
 **Checkpoint:** `origin/main` at `dd083ece` (PR #593)
 
 This is a preparation-only checkpoint. No runtime, schema, RBAC, tenant,

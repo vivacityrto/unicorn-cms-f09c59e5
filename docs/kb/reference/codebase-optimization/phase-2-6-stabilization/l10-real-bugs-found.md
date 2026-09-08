@@ -12,6 +12,8 @@
 > NOT FIXED** = confirmed real, deliberately left alone because the correct
 > fix needs a schema decision/migration or is out of scope for a type-only
 > change — tracked here as a backlog item, not silently dropped.
+>
+> **Parent plan:** [Phase 2.6 Stabilization Plan](phase-2-6-stabilization-plan.md) · **Program index:** [Program Index](../../program-index.md)
 
 ## Package Builder (`/admin/manage-packages`, `/admin/package-builder/:id`)
 
