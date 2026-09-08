@@ -4,8 +4,9 @@
 
 ## Progress log
 
-**2026-09-09, session 35 — `qa:edge`'s first target written: tenant-lifecycle
-(`feat/qa-edge-tenant-lifecycle`; live-proof pending):** Carl asked to
+**2026-09-09, session 35 — `qa:edge`'s first target written and live-proven:
+tenant-lifecycle (`feat/qa-edge-tenant-lifecycle`, PR #1041; live-proof
+workflow run `34290824352`, 6/6 passing):** Carl asked to
 dedicate the session to finishing the remaining P2-QA suites in parallel
 with Codex's separate work on Phase 3 prerequisites. Picked `qa:edge` next
 since its blocking prerequisite (an Edge Function actually deployed to
@@ -26,8 +27,11 @@ consistent "only runs in the protected environment" story.
 
 Verified locally: lint (0 errors), typecheck, `test:frontend` (330/36
 skipped, up from 330/30 — this suite's own 6 tests correctly skip without a
-service-role key), build, KB links. **Not yet live-proven** — same honest
-gap as every other suite before its first live run.
+service-role key), build, KB links. PR #1041 merged; dispatched
+`qa-edge.yml` against `main` post-merge (workflow run
+[`34290824352`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34290824352)),
+all 6 tests passed against the live `unicorn-qa` `tenant-lifecycle`
+deployment in 3.41s.
 
 **2026-09-09, session 34 — real production bug found and fixed while
 live-verifying `qa:data-lifecycle` (`hotfix/tenant-lifecycle-close-fk-bug`;
