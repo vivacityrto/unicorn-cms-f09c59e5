@@ -176,12 +176,14 @@ export function useStageDuplication() {
         }
       }
 
-      // 5. Log audit event
+      // 5. Log audit event. entity_id is a strict uuid column and stage.id is
+      // a plain integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: newStage.id.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.duplicated',
         details: {
+          stage_id: newStage.id,
           source_stage_id: sourceStageId,
           new_stage_id: newStage.id,
           source_package_id: sourcePackageId || null,

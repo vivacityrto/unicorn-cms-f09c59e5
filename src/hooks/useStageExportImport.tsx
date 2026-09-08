@@ -184,12 +184,14 @@ export function useStageExportImport() {
         })),
       };
 
-      // Log export
+      // Log export. entity_id is a strict uuid column and stage.id is a plain
+      // integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: stageId.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.exported',
         details: {
+          stage_id: stageId,
           package_id: packageId || null,
           task_count: teamTasks.length + clientTasks.length,
           email_count: emails.length,
@@ -376,12 +378,14 @@ export function useStageExportImport() {
         if (!error) counts.documents = data.documents.length;
       }
 
-      // Log import
+      // Log import. entity_id is a strict uuid column and stage.id is a plain
+      // integer, so we use a random uuid here and keep the real id in details.
       await supabase.from('audit_events').insert({
         entity: 'stage',
-        entity_id: newStage.id.toString(),
+        entity_id: crypto.randomUUID(),
         action: 'stage.imported',
         details: {
+          stage_id: newStage.id,
           original_title: data.stage.title,
           imported_title: newTitle,
           source_package_context: data.package_context,
