@@ -4,6 +4,31 @@
 
 ## Progress log
 
+**2026-09-08, session 27 — SeatCard display-core "prerequisite" resolved as
+dead-code retirement, not an extraction (`hotfix/retire-dead-seatcard-cluster`):**
+before starting the documented prerequisite (building independent
+authenticated drag/drop Playwright coverage for `SeatCard`/`DraggableSeatCard`),
+a fresh reachability trace of the actual live consumer chain
+(`/eos/accountability` → `EosAccountabilityChart.tsx` → `ChartBuilder` →
+`OrgChartView`/`EosChartGrid`) found neither rendered view references
+`SeatCard`, `FunctionColumn`, `DraggableSeatCard`, or
+`DraggableFunctionColumn` at all — seats are rendered by a separate,
+independent `EosFunctionCard.tsx`. Confirmed zero importers of those four
+names (plus their shared `SwimlaneDragDropProvider.tsx` dnd-kit context)
+anywhere in `src/` outside the cluster itself, and no test references them.
+Git history shows `EosFunctionCard.tsx` was created ~14 hours after
+`FunctionColumn.tsx` on the same day (2026-02-03) — an apparent same-day
+replacement that was never cleaned up, so this cluster (1,633 LOC across 5
+files) has been dead for about 7 months. Retired outright rather than
+extracted; `SeatHealthBadge`/`SeatCoverageIndicator` (used inside the dead
+cluster) were kept since both have independent live callers
+(`SeatHealthSection`, `SeatDetailPanel`) reachable from `ChartBuilder`.
+`@dnd-kit/*` stays a live dependency (used by 9 other unrelated files) — no
+package.json change. Full verification chain green: lint:ratchet,
+typecheck, `test:frontend` (323/15 skipped), `test:edge` (276/276), build.
+Updated `next-candidate-packets.md` Candidate 4 and this plan's SeatCard
+references accordingly.
+
 **2026-09-08, session 26 — P5-A item 3 closed, `InviteUserDialog.tsx`
 `unicorn1` adapter shipped (`hotfix/p5a-invite-user-unicorn1-adapter`):**
 replaced the reviewed `(supabase as any).schema('unicorn1')...` cross-schema
