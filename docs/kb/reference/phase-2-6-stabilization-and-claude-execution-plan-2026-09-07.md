@@ -340,6 +340,36 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   fix would risk silently changing AI-generated content or executive
   reporting behavior without the evidence base the plan requires. Left as
   a properly scoped follow-up, not guessed at.
+- **P3-A item 2 (dashboard timeout) done, and it closes part of the
+  "deliberately not touched" gap immediately above.** L10 #26 (Attention
+  Ranking/Priority Inbox/Behavioural Prompts/Labour Efficiency returning
+  HTTP 500) was root-caused via `EXPLAIN (ANALYZE, BUFFERS)` against the
+  real authenticated-role query — not the suspected RLS performance
+  cliff (the actual filter columns already had indexes and were pushed
+  down correctly), but 97% of query time in a per-tenant `DISTINCT ON`
+  scan of `stage_health_snapshots` inside `v_dashboard_tenant_portfolio`
+  — `v_dashboard_attention_ranked`'s own base view, named above as one of
+  the wider consumers deliberately deferred. Carl authorized extending
+  H0.0 containment here too (same "unavailable, not relabeled as
+  trustworthy" principle as `PortfolioHealthWidget.tsx` above): the `sh`
+  LATERAL join is now a fixed `'unavailable'`/0/0 stub instead of a real
+  computation; `v_dashboard_priority_inbox` had an independent, equally
+  expensive instance (a global stage_health scan generating misleading
+  inbox items), also fixed the same way. `EXPLAIN` confirmed 1129.6ms →
+  13.9ms (~81x), clear of both the 3s (`anon`) and 8s (`authenticated`)
+  timeouts. `v_dashboard_behavioural_prompts`/`v_dashboard_labour_efficiency`
+  inherit the fix (both read `v_dashboard_tenant_portfolio`), no separate
+  change needed. Added an explicit "Unavailable" badge/color state to 3
+  frontend components that previously fell back to a green "Healthy"
+  badge for any unrecognized value — the same relabeling risk H0.0
+  warned against. **Still not touched, matching the note above's own
+  scope boundary:** `rpc_portfolio_client_health()`, the Ask Viv
+  portfolio fact builder, `compliance-assistant`, and executive
+  health/consultant-distribution views — this pass fixed the urgent
+  timeout via the same containment principle already decided for H0.0,
+  it did not do the full H0.1-style characterization across every
+  consumer. Audit entry:
+  `docs/audit-log/entries/2026-09-08-dashboard-timeout-h00-containment.md`.
 - **P6-B `useStageQualityCheck` evaluator cohort done.** Extracted the
   shared A-E structure/team-task/client-task/email/document checks from
   `useStageQualityCheck.tsx` (745 LOC, two near-duplicated pipelines) into
@@ -679,13 +709,14 @@ merge, after which the native Supabase GitHub sync will deploy the Edge change.
   (pure DDL, no risk-category match in `audit-migrations.mjs`). Audit
   entry: `docs/audit-log/entries/2026-09-08-retire-document-links.md`.
 - **Not yet started:** P2 (depends on P1-C steps 6–7, blocked on Carl's
-  infra decision), P3-A item 2, the rest of P3-A item 1 (the wider
-  consumer graph above), P4-D, `InviteUserDialog.tsx`'s bounded
-  cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard display
-  core — blocked on missing Playwright coverage), P7 — several of these
-  require live-schema investigation,
-  product/security decisions, or their own separately
-  authorized packets per §1's rules.
+  infra decision), the rest of P3-A item 1 (the wider consumer graph
+  above — `rpc_portfolio_client_health()`, Ask Viv fact builder,
+  compliance-assistant, executive views), the remaining five P4-D items
+  (#10, #14, #15, #16, #18 — #3/#4 done 2026-09-08), `InviteUserDialog.tsx`'s
+  bounded cross-schema adapter (P5-A item 3), the rest of P6-B (SeatCard
+  display core — blocked on missing Playwright coverage), P7 — several of
+  these require live-schema investigation, product/security decisions, or
+  their own separately authorized packets per §1's rules.
 
 Current `origin/main` state after all merges to date (P0/P1/P4-A/P6-A/P1-C
 steps 1–5): 128 errors (all `no-explicit-any`), 43 warnings, 240 routes/0

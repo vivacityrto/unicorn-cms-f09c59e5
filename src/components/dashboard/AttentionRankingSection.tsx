@@ -18,6 +18,10 @@ const healthBadge: Record<string, { class: string; label: string }> = {
   at_risk: { class: 'bg-orange-500 text-white', label: 'At Risk' },
   monitoring: { class: 'bg-amber-500 text-white', label: 'Monitor' },
   healthy: { class: 'bg-emerald-500 text-white', label: 'Healthy' },
+  // Client Health H0.0 containment (2026-09-08): the real signal is
+  // currently unavailable, not "healthy" — do not fall back to the
+  // healthy badge for this value.
+  unavailable: { class: 'bg-muted text-muted-foreground', label: 'Unavailable' },
 };
 
 function AttentionScorePill({ score }: { score: number }) {

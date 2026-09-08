@@ -46,7 +46,10 @@ const riskColors: Record<string, string> = {
   high: 'text-destructive', elevated: 'text-orange-500', emerging: 'text-amber-500', stable: 'text-emerald-500'
 };
 const healthColors: Record<string, string> = {
-  critical: 'text-destructive', at_risk: 'text-orange-500', monitoring: 'text-amber-500', healthy: 'text-emerald-500'
+  critical: 'text-destructive', at_risk: 'text-orange-500', monitoring: 'text-amber-500', healthy: 'text-emerald-500',
+  // Client Health H0.0 containment (2026-09-08): explicit neutral styling
+  // so "unavailable" doesn't render unstyled/ambiguous.
+  unavailable: 'text-muted-foreground',
 };
 
 function AttentionDriversSection({ tenant }: { tenant: PortfolioTenant }) {

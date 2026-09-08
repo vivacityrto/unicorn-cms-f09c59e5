@@ -674,7 +674,7 @@ Fresh Phase 2.5 reachability review confirmed `generate-meeting-recurrence` is i
 
 ## Main staff dashboard (`/triage-dashboard`)
 
-### 26. Attention Ranking / Priority Inbox / Labour Efficiency sections are down in production — URGENT, NOT FIXED
+### 26. Attention Ranking / Priority Inbox / Labour Efficiency sections are down in production — FIXED (Phase 2.6 Packet P3-A item 2, 2026-09-08)
 
 Preserved from PR #612 (opened 2026-09-04, closed without merge 2026-09-07 per
 the Phase 2.6 stabilization plan's Packet P0-B — this entry is the retained
@@ -723,6 +723,26 @@ containment messaging should also cover these four views until the timeout
 is resolved. This is an active production issue on the primary staff
 dashboard, not a backlog item; see Phase 2.6 stabilization plan Packet P3-A
 item 2 for the containment/fix packet.
+
+**Fixed 2026-09-08.** The prediction above was exactly right, and
+`pg_stat_statements`/`EXPLAIN (ANALYZE, BUFFERS)` against the real
+authenticated-role query shape confirmed it precisely: not an RLS
+performance cliff (the actual filter columns — `assigned_consultant_user_id`,
+`tenants.status` — already had indexes and were pushed down correctly),
+but 97% of query time (1100ms of 1129ms) spent in a per-tenant `DISTINCT
+ON` scan of `stage_health_snapshots` inside `v_dashboard_tenant_portfolio`
+(the shared base view for all four affected views), computing
+`worst_stage_health_status` from the exact same known-defective data H0.0
+already flagged. A second, independent instance was found and fixed in
+`v_dashboard_priority_inbox`'s own "stage_health" inbox-item branch.
+Carl authorized extending H0.0 containment to both views — output is now
+a fixed `'unavailable'` stub instead of a real (but untrustworthy)
+computation. `EXPLAIN` confirmed 1129.6ms → 13.9ms (~81x). See
+`docs/audit-log/entries/2026-09-08-dashboard-timeout-h00-containment.md`
+for full detail, including a disclosed side effect (the dashboard's
+"low attention"/"Critical stages" logic, which required `=== 'healthy'`/
+`=== 'critical'`, now correctly never matches instead of trusting stale
+data).
 
 ### 27. `PackageDetail.tsx` Manager-field lookup 406 — RESOLVED VIA RETIREMENT (2026-09-07)
 
