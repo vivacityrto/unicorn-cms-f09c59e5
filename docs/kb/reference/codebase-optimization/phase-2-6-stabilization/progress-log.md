@@ -4,6 +4,31 @@
 
 ## Progress log
 
+**2026-09-09, session 35 — `qa:edge`'s first target written: tenant-lifecycle
+(`feat/qa-edge-tenant-lifecycle`; live-proof pending):** Carl asked to
+dedicate the session to finishing the remaining P2-QA suites in parallel
+with Codex's separate work on Phase 3 prerequisites. Picked `qa:edge` next
+since its blocking prerequisite (an Edge Function actually deployed to
+`unicorn-qa`) was already satisfied by `tenant-lifecycle`'s deployment for
+`qa:data-lifecycle` — no new deployment decision needed.
+
+Wrote `src/test/qa/edge-tenant-lifecycle.test.ts` (6 tests): unauthenticated
+call gets a clean 401 (not a stack trace), malformed bearer token gets 401,
+non-POST method gets 405 before any auth check, CORS preflight echoes
+`Access-Control-Allow-Origin` only for an allowlisted origin and never a
+wildcard, a non-allowlisted origin gets no CORS header at all, and a
+malformed-JSON body still gets a structured JSON error response. Unlike
+every other P2-QA suite so far, none of these tests write data or need
+service-role privileges — kept the same secret-gating pattern anyway for a
+consistent "only runs in the protected environment" story.
+`.github/workflows/qa-edge.yml` follows the established shape (its own
+`unicorn-qa-p2-edge` concurrency group).
+
+Verified locally: lint (0 errors), typecheck, `test:frontend` (330/36
+skipped, up from 330/30 — this suite's own 6 tests correctly skip without a
+service-role key), build, KB links. **Not yet live-proven** — same honest
+gap as every other suite before its first live run.
+
 **2026-09-09, session 34 — real production bug found and fixed while
 live-verifying `qa:data-lifecycle` (`hotfix/tenant-lifecycle-close-fk-bug`;
 `docs/audit-log/entries/2026-09-09-tenant-lifecycle-close-fk-bug.md`,
