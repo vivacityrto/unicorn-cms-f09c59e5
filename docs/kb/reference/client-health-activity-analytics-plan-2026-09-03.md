@@ -32,6 +32,10 @@ score. The full consumer matrix and next safe boundary are recorded in
 
 No Client Health H1 metric definition, schema projection, forecast repair,
 production data correction or cron restart is authorized by this update.
+The Phase 2.6 M4 decision now retires the legacy forecast/health cron lane
+(jobs 14, 15, 20 and 21); its tables, historical rows and Edge Functions are
+retained as evidence, and any replacement schedule requires a new Client
+Health contract, tests and audit entry.
 
 ---
 

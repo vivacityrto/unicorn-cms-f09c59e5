@@ -643,18 +643,14 @@ are blocking correctness defects, not typing cleanup.
 
 ### Packet M4 — forecast and health output integrity
 
-**Status:** in progress — H0.0 containment is complete; jobs 15 (stage health)
-and 14 (workload forecast) are paused/retired. The remaining decision queue is
-jobs 20/21 (`run-tenant-risk-forecast` and `run-retention-forecast`), which
-still require an explicit repair-and-prove or retire decision.
+**Status:** retired 2026-09-08 — H0.0 containment and the forecast retirement
+path are complete. Jobs 14/15/20/21 are unscheduled; their functions, tables,
+and historical rows remain retained for the Client Health replacement.
 
 - Add Client Health H0.0 containment so invalid stage-health data is shown as
   unavailable/data-repair-in-progress rather than relabelled as trustworthy.
-- For jobs 14 and 15, define freshness, row-count and non-zero-output
-  expectations; make violations fail visibly instead of recording a successful
-  no-op.
-- For jobs 20 and 21, repair and prove forecast inserts, or unschedule them
-  after the product decision.
+- Jobs 14/15/20/21 are retired rather than repaired; their output-health work
+  is superseded by the Client Health metric contract.
 - Run authenticated, read-only Playwright checks for `/dashboard`,
   `/executive`, `/triage-dashboard` and the affected Ask Viv surface. Do not
   seed or mutate dashboard data.
