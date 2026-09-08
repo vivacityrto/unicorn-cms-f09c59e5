@@ -67,6 +67,16 @@ repository-level QA secrets are temporary while Angela enables the protected
 environment; they must be moved to `unicorn-qa` and deleted from repository
 scope afterward.
 
+**2026-09-08, session 23 — P1-C administrative tail intentionally skipped:**
+Carl accepted the successful protected-workflow proof as the P1-C exit evidence
+and explicitly waived moving the QA-only secrets into the protected
+`unicorn-qa` environment or repeating the run afterward. This is recorded as a
+deliberate governance exception, not an outstanding implementation task. The
+workflow remains manual/nightly, concurrency-locked, allowlisted to
+`unicorn-qa`, and unavailable to forked pull requests; the repository-level
+secrets must never be referenced by ordinary pull-request workflows or pointed
+at production.
+
 **2026-09-08, session 19 — M3-B/M3-C cross-check:** M3-B was already complete
 in both source and production. Production currently lists
 `process-notification-queue` and `send-automated-email` at version 175; the
