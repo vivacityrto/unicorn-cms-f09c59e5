@@ -67,6 +67,20 @@ repository-level QA secrets are temporary while Angela enables the protected
 environment; they must be moved to `unicorn-qa` and deleted from repository
 scope afterward.
 
+**2026-09-08, session 19 — M3-B/M3-C cross-check:** M3-B was already complete
+in both source and production. Production currently lists
+`process-notification-queue` and `send-automated-email` at version 175; the
+queue source is the credential-free `FUNCTION_RETIRED` 410 stub and the email
+source contains no `notification_schedule` writer. A read-only production
+check found `notification_schedule` present but empty (0 rows), with zero
+database-function, view, trigger, or cron references. No queue or automated-
+email Edge log events appeared after the latest deployment observed at
+`2026-09-07T23:57:35Z`. M3-C is therefore not yet complete: using a
+conservative 24-hour quiet-period window, the earliest drop gate is
+`2026-09-08T23:57:35Z`; the table, indexes, and policies remain untouched
+until that evidence is re-checked and the separately authorized migration is
+applied. No hosted state changed in this cross-check.
+
 **2026-09-07, session 2 — Packet M0 completed:** read-only production cron and
 migration inventory captured in [cron-and-migration-inventory-2026-09-07.md](../codebase-state/cron-and-migration-inventory-2026-09-07.md)
 and its JSON companion. No hosted state changed. M1 is next.

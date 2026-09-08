@@ -116,11 +116,11 @@ dropped in production under migration `retire_legacy_audit_functions`
 (`20260907052028`), with postflight confirming they are absent.
 `notification_audit_log` must remain because the
 active `process-notification-outbox` worker writes delivery success/failure
-records to it. `notification_schedule` is not yet removable: the deployed but
-unscheduled `process-notification-queue` worker reads it and
-`send-automated-email` contains three unreachable audit-only writers. Those
-code paths must be retired before a quiet-period proof and a separately
-authorized table-drop migration.
+records to it. `notification_schedule` is now past the M3-B dependency gate:
+the deployed `process-notification-queue` is a credential-free 410 retirement
+stub and `send-automated-email` contains no remaining writer. The table is
+still not removable until the conservative 24-hour quiet-period proof
+completes and a separately authorized table-drop migration is applied.
 
 ## Migration replay inventory
 
