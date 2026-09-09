@@ -62,10 +62,13 @@ The often-quoted **9,209 retired lines** is an approximate Phase 2.6 aggregate:
 direct per-PR shortstat summation is approximately 8,867, with the difference
 coming from rounded/cohort accounting. Treat the dead-code register and current
 architecture metrics as authoritative; do not use 9,209 as an exact present
-LOC total. Remaining work is: the P2-QA layered-QA coverage-programme scope
-(see [qa-environment-and-coverage-strategy.md](qa-environment-and-coverage-strategy.md) —
-not the master plan's unrelated "Packet P2: feature boundary pilot"); and
-the P7 Phase 3
+LOC total. The P2-QA layered-QA coverage-programme scope (see
+[qa-environment-and-coverage-strategy.md](qa-environment-and-coverage-strategy.md) —
+not the master plan's unrelated "Packet P2: feature boundary pilot") is now
+closed: all 8 suites addressed (`qa:rls`, `qa:contract`, `qa:edge`,
+`qa:data-lifecycle`, `qa:residue`, `qa:cron-safety`, `qa:e2e` live-proven;
+`qa:migrations` static half live in CI, dynamic half demonstrated —
+2026-09-09, `progress-log.md` session 39). Remaining work is the P7 Phase 3
 preparation/implementation sequence (gated on RBAC v6's vocabulary decision).
 The SeatCard display-core prerequisite is resolved (dead code, retired
 outright) and the last deliberate lint exception is closed — see above. The
