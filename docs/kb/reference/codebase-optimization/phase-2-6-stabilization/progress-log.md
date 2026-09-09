@@ -15,6 +15,24 @@ described a priority including a real "end_date column" that doesn't exist
 on `tenant_rto_scope` at all; corrected the comment only (no behavior
 change). No other code touched.
 
+**2026-09-09, session 43 — L10 #31 self-swap guard: resolved `audit-migrations` false positive via the standard allowlist path:**
+PR #1056's fix for L10 #31 (`swap_tenant_user_to_contact` self-swap guard,
+see the L10 entry and `docs/audit-log/entries/2026-09-09-swap-tenant-user-to-contact-self-guard.md`
+for the fix itself) initially failed CI's `audit-migrations` check with 5
+blocking findings. All 5 were the pre-existing INSERT/UPDATE/DELETE
+statements inside the `swap_tenant_user_to_contact` function body
+(unchanged, only executed later per-caller when the RPC runs) — the
+migration's new text is a full `CREATE OR REPLACE FUNCTION`, so the
+scanner's conservative regex-based approach (documented in its own header
+as intentionally not a SQL parser) flagged the whole body as new. Same
+false-positive shape as the existing `p4d-18-allow-tenant-less-notification-prefs`
+allowlist entry. Resolved by adding a matching entry
+(`l10-31-swap-tenant-user-to-contact-self-guard`) to
+`supabase/migration-safety-allowlist.json` rather than altering the guard,
+the audit entry, or the scanner itself. Reran `node scripts/audit-migrations.mjs
+--changed-only --base-ref origin/main` locally (0 blocking, 5 allowlisted)
+and `node scripts/check-kb-links.mjs` (0 broken) before pushing.
+
 **2026-09-09, session 45 — L10 #29 (package stage task edit/delete) investigated, not reproduced:**
 Checked both admin surfaces that edit/delete stage tasks: the stage template
 editor (`/admin/stages/:id`) and the package-specific override editor
