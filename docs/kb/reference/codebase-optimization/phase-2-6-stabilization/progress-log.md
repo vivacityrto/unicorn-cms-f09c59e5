@@ -2079,3 +2079,16 @@ entry `2026-09-09-auth-provider-cancellation-membership-reset.md` records it.
 Metrics at the branch state are 1,712 product files / 480,331 physical lines
 / 394,329 excluding generated types/tests; direct Supabase call counts remain
 unchanged.
+
+### Packet P7-D — profile and membership query-loader seam
+
+**Session 54 (2026-09-09):** Added `src/auth/types.ts` for the narrow profile
+contract and `src/auth/loaders.ts` for the two existing profile and active
+membership reads. `useAuth` retains session lifecycle, cancellation guards,
+error presentation, and authorization predicates; the loader module owns only
+the Supabase query boundary. Characterization coverage now proves that an
+existing session still loads the CSC profile and one active Admin membership;
+the focused authentication suite passes 8/8 after the extraction. No query,
+route, schema, RLS, Edge Function, or production-data behavior changed, so no
+audit entry was needed. Remaining work is the broader session/profile/
+membership contract, which stays intentionally out of this bounded slice.
