@@ -2,7 +2,7 @@
 
 > **Status:** execution plan; no packet below authorizes a production migration, production-data deletion, Edge deployment, permission change, or PR merge by itself
 >
-> **Prepared:** 2026-09-07 · **Truth-sync reviewed:** 2026-09-08
+> **Prepared:** 2026-09-07 · **Truth-sync reviewed:** 2026-09-09
 >
 > **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against current `origin/main@99e3ea998`, current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
 >
@@ -42,8 +42,8 @@ administrative secret-move/repeat-run tail was intentionally waived and is not
 an open implementation blocker.
 
 Current repository measurements, taken from the merged code state at
-`origin/main@99e3ea998`, are: 1,702 tracked product files; 480,206 physical
-lines (407,168 excluding generated types; 395,650 excluding generated types and
+`origin/main@81cef2ac0`, are: 1,711 tracked product files; 480,168 physical
+lines (407,130 excluding generated types; 394,245 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
 As of `hotfix/generate-meeting-recurrence-typing` (2026-09-08), the lint
@@ -68,8 +68,8 @@ not the master plan's unrelated "Packet P2: feature boundary pilot") is now
 closed: all 8 suites addressed (`qa:rls`, `qa:contract`, `qa:edge`,
 `qa:data-lifecycle`, `qa:residue`, `qa:cron-safety`, `qa:e2e` live-proven;
 `qa:migrations` static half live in CI, dynamic half demonstrated —
-2026-09-09, `progress-log.md` session 39). Remaining work is the P7 Phase 3
-preparation/implementation sequence (gated on RBAC v6's vocabulary decision).
+2026-09-09, `progress-log.md` session 39). P7-B's minimal lifecycle type
+boundary is implemented in the current PR; P7-C and P7-D remain follow-ons.
 The SeatCard display-core prerequisite is resolved (dead code, retired
 outright) and the last deliberate lint exception is closed — see above. The
 separate RBAC correctness hotfix
@@ -411,7 +411,10 @@ Characterize `/admin/lifecycle-checklists` for list, filter, create, edit, deact
 
 ### Packet P7-B — minimal feature boundary
 
-Extract only the smallest useful feature API/query/domain boundary. Keep the existing `requireSuperAdmin` route guard and server enforcement. The success measure is testability and neutral/negative LOC, not a four-layer template.
+**Status:** implemented in the current PR — a feature-local generated-type
+boundary with hook compatibility re-exports. Existing route/server enforcement
+is unchanged; no query adapter was justified because the page has no direct
+Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-C — architecture and scoped lint boundary
 
