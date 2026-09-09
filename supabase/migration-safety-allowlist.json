@@ -81,6 +81,15 @@
       "owner": "Carl",
       "reason": "False positive, same shape as p4d-18-allow-tenant-less-notification-prefs above: all 5 flagged INSERT/UPDATE/DELETE statements are inside the CREATE OR REPLACE FUNCTION body for swap_tenant_user_to_contact (tenant_contacts insert/update, tenant_users delete, audit_eos_events insert, client_timeline_events insert) - unchanged from the function's existing production behavior, only executed later, per-caller, when a tenant admin actually calls the RPC. The migration itself performs no direct data mutation; it only adds one new guard clause (reject p_user_id = auth.uid()) ahead of the existing, unmodified body. Carl explicitly authorized this scoped self-swap-guard hotfix (L10 #31) for review via the standard allowlist path after the scanner flagged the pre-existing function body as new text.",
       "expires": "2026-10-09"
+    },
+    {
+      "id": "l10-33-mark-unicorn1-user-mapped-rpc",
+      "file": "supabase/migrations/20260909050000_mark_unicorn1_user_mapped_rpc.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive, same shape as l10-31-swap-tenant-user-to-contact-self-guard and p4d-18-allow-tenant-less-notification-prefs above: the flagged 'UPDATE unicorn1.users' statement is inside the CREATE OR REPLACE FUNCTION body for the new mark_unicorn1_user_mapped(bigint, uuid) RPC - it is not executed at migration-apply time, only later, per-caller, when the mark-unicorn1-user-mapped Edge Function invokes the RPC (gated on FeatureKeys.adminUnicorn1 via requireCaller, same as the existing search_unicorn1_users read-side function this mirrors). The migration itself performs no direct data mutation; it only creates the function and revokes PUBLIC/authenticated/anon EXECUTE. Carl explicitly authorized this L10 #33 hotfix in-session (directed applying the migration, reviewing the follow-up PUBLIC-grant-revoke fix, and instructing the merge) before this allowlist entry was added for the standard CI review path.",
+      "expires": "2026-10-09"
     }
   ]
 }
