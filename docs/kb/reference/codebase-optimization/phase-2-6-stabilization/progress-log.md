@@ -4,6 +4,17 @@
 
 ## Progress log
 
+**2026-09-09, session 47 — L10 #32 (meeting summary cascade messages) confirmed already fixed:**
+`MeetingSummaryCard.tsx` already renders a "Cascade Messages" fallback card
+for pre-One-Phrase-Close summaries, shipped in the same PR #423
+(2026-08-27) that fixed L10 #31's UI half — again before Carl's 2026-09-07
+report. Confirmed against real production data (old `eos_meeting_summaries`
+rows have `cascades` populated with zero `one_phrase_closes`) and
+live-verified read-only with a SuperAdmin session against a real pre-25-Aug
+meeting summary: the "Cascade Messages" heading renders correctly, zero
+errors. No code change. Closes out the 4-item Carl-reported regression
+batch (#31 fixed for real, #29/#30/#32 investigated and not reproduced).
+
 **2026-09-09, session 44 — RBAC vocabulary baseline proposed for review
 (documentation-only):** Added a narrowly scoped baseline proposal to the
 [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).

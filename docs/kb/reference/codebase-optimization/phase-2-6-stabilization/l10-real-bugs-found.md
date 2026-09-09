@@ -1019,13 +1019,29 @@ convert themselves into a contact and instantly lose their own Unicorn
 login and seat — the equivalent staff-side screen deliberately hides this
 action for the signed-in user's own account.
 
-### 32. Past meeting summaries no longer show cascade messages
+### 32. Past meeting summaries no longer show cascade messages — ALREADY FIXED (found stale 2026-09-09, fixed 2026-08-27 in PR #423)
 
 "One Phrase Close" reportedly replaced the old cascade messages in meeting
 summaries, but summaries recorded before the change still hold cascade
 text that is now hidden — so someone opening an older meeting summary
 sees that section vanish and loses the key messages recorded at that
 meeting.
+
+**Investigated 2026-09-09:** `MeetingSummaryCard.tsx` already renders a
+dedicated "Cascade Messages" card as a fallback specifically for this case
+— `{onePhraseCloses.length === 0 && cascades.length > 0 && (...)}` — with a
+comment explaining the exact same reasoning as this report. This was added
+in the same PR #423 (2026-08-27) that also fixed L10 #31's UI half, again
+*before* Carl's 2026-09-07 report. Confirmed against real production data:
+old `eos_meeting_summaries` rows (pre-25 Aug 2026) have `cascades`
+populated with zero `one_phrase_closes`, exactly the condition the fallback
+checks for. **Live-verified** (SuperAdmin persona, read-only): opened a
+real pre-25-Aug meeting summary
+(`/eos/meetings/053fd12b-df96-46e1-b5f9-2b73896945a0/summary`) and
+confirmed the "Cascade Messages" heading renders, with zero page errors and
+zero failed HTTP responses. No code change needed — same pattern as L10
+#31 and #29: symptoms reported 2026-09-07 that a 2026-08-27 fix (or, for
+#29, live testing) shows no longer reproduce.
 
 Nothing above was caused by tonight's work — every one of these bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
