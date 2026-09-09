@@ -4,6 +4,20 @@
 
 ## Progress log
 
+**2026-09-09, session 45 — L10 #29 (package stage task edit/delete) investigated, not reproduced:**
+Checked both admin surfaces that edit/delete stage tasks: the stage template
+editor (`/admin/stages/:id`) and the package-specific override editor
+(`/admin/package-builder/:id` → `StageDetailPanel.tsx`). Source review found
+no ID-space mismatch in either — each fetches and mutates its own table by
+that table's own `id`. Live-verified the stage template editor (SuperAdmin
+persona, an unused stage with zero active client instances): added, edited,
+and deleted a throwaway staff task and a throwaway client task, all
+succeeded cleanly with zero errors and zero residual rows after cleanup.
+The package-override editor was reviewed by source only this session
+(Inconclusive, not confirmed live) due to time budget. No code change made —
+the reported symptom did not reproduce, so nothing was fixed. See the L10
+entry for full detail.
+
 **2026-09-09, session 44 — RBAC vocabulary baseline proposed for review
 (documentation-only):** Added a narrowly scoped baseline proposal to the
 [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
