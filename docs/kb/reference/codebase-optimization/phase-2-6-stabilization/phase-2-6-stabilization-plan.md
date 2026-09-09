@@ -422,7 +422,7 @@ Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-D — auth/profile/membership seam
 
-**Status:** disabled-user hotfix and pure profile/membership helpers implemented; cancellation/error handling and the remaining seam work stay open; no second capability registry.
+**Status:** disabled-user hotfix, pure profile/membership helpers, and cancellation guards implemented; broader seam work stays open; no second capability registry.
 
 ## 10. Verification contract for every implementation PR
 

@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-09 — AuthProvider ignores stale profile and membership responses — added mounted/auth-generation guards so late async reads cannot overwrite a newer session, and membership errors clear stale grants. Focused sign-out regression coverage added; no schema, RLS, Edge Function, or production-data changes.](entries/2026-09-09-auth-provider-cancellation-membership-reset.md) · author: Codex
+
 - [2026-09-09 — ProtectedRoute disabled-user check fails closed — a Supabase error in the disabled-account lookup could previously be treated as `disabled: false`; the client guard now renders an access-unavailable Retry/Sign Out state and never renders protected children until a successful check. Focused regression coverage added; no schema, RLS, Edge Function, or production-data changes.](entries/2026-09-09-protected-route-disabled-user-fail-closed.md) · author: Codex
 
 - [2026-09-09 — `swap_tenant_user_to_contact` self-swap guard (L10 #31) — both UI callers already hid the "Swap to Contact" action for a caller's own row (PR #423, 2026-08-27, predating Carl's report), but the RPC itself never checked `p_user_id` against the caller, so a tenant admin could still self-swap directly when another admin contact existed. Added a server-side guard; live-verified in production (rolled-back SQL simulation + a real authenticated Playwright pass against Demo RTO) with zero data seeded or left behind.](entries/2026-09-09-swap-tenant-user-to-contact-self-guard.md) · author: Claude Code
