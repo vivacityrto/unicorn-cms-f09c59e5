@@ -29,7 +29,8 @@
     "test": "npm run test:frontend && npm run test:edge && node scripts/report-edge-test-inventory.mjs",
     "e2e:unauth": "playwright test --project=unauth-desktop --project=unauth-mobile",
     "e2e:auth-setup": "node e2e/auth-setup.mjs",
-    "e2e:personas": "playwright test --project=persona-superadmin --project=persona-client-demo"
+    "e2e:personas": "playwright test --project=persona-superadmin --project=persona-client-demo",
+    "e2e:qa": "playwright test --config=playwright.qa.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
