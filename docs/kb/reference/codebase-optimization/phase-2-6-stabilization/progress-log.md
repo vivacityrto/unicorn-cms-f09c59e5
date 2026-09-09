@@ -15,6 +15,17 @@ described a priority including a real "end_date column" that doesn't exist
 on `tenant_rto_scope` at all; corrected the comment only (no behavior
 change). No other code touched.
 
+**2026-09-09, session 47 — L10 #32 (meeting summary cascade messages) confirmed already fixed:**
+`MeetingSummaryCard.tsx` already renders a "Cascade Messages" fallback card
+for pre-One-Phrase-Close summaries, shipped in the same PR #423
+(2026-08-27) that fixed L10 #31's UI half — again before Carl's 2026-09-07
+report. Confirmed against real production data (old `eos_meeting_summaries`
+rows have `cascades` populated with zero `one_phrase_closes`) and
+live-verified read-only with a SuperAdmin session against a real pre-25-Aug
+meeting summary: the "Cascade Messages" heading renders correctly, zero
+errors. No code change. Closes out the 4-item Carl-reported regression
+batch (#31 fixed for real, #29/#30/#32 investigated and not reproduced).
+
 **2026-09-09, session 43 — L10 #31 self-swap guard: resolved `audit-migrations` false positive via the standard allowlist path:**
 PR #1056's fix for L10 #31 (`swap_tenant_user_to_contact` self-swap guard,
 see the L10 entry and `docs/audit-log/entries/2026-09-09-swap-tenant-user-to-contact-self-guard.md`
