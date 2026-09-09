@@ -79,6 +79,136 @@ operation, or Operations/tenant-transition change was made. The Phase 2.6
 plan remains unchanged because this is preparatory evidence only and the P7
 implementation gate (RBAC vocabulary decision and the separate disabled-user
 hotfix for P7-D) remains open.
+**2026-09-09, session 39 — `qa:migrations`' dynamic-replay half demonstrated,
+closing out all 8 P2-QA suites (docs-only, `docs/qa-migrations-dynamic-replay`):**
+after the previous session's `qa:e2e` closeout, Carl asked "whats next" --
+the only remaining gap was `qa:migrations`' dynamic-replay half, which had
+been sitting idle for lack of an actual migration to test against. Checked
+`origin/main` and found Codex had just merged one in parallel:
+`ed2106afb` ("retire remaining M4 forecast health crons",
+`supabase/migrations/20260908080000_retire_forecast_health_crons.sql`) --
+a real, already-reviewed migration, deliberately written to be a safe
+no-op when `pg_cron` is absent (exactly `unicorn-qa`'s state).
+
+Replayed it onto `unicorn-qa` via `apply_migration`: applied cleanly, its
+own guard executed the early-return branch (no `pg_cron` → `RAISE NOTICE`,
+`RETURN`), and a post-check of `qa_cron_safety_status()` still reported
+zero jobs. The ledger recorded it as version `20260909003606` (the replay
+timestamp) with name `20260908080000_retire_forecast_health_crons`
+preserved -- checking the existing ledger entries confirmed every prior
+row uses a `qa_baseline_*`/`qa_seed_*`-style name, never a real migration
+filename, which is expected: `unicorn-qa`'s ledger is a controlled
+baseline-replay ledger, not a copy of production's migration history (see
+"Current environment state" above). This ruled out the design I'd
+initially considered -- an automated Vitest suite asserting every repo
+migration's filename appears in the ledger -- since that would assert an
+invariant the environment was never meant to hold.
+
+Concluded the dynamic-replay half is better closed as a demonstrated,
+reviewed action plus existing regression coverage than as a new bespoke
+test: this migration's actual guarantee (unicorn-qa stays schedule-free)
+is already an ongoing assertion in `qa:cron-safety` (session 36) -- a
+future replay that left a job scheduled would fail that suite already.
+Writing a second, narrower test asserting the same thing about one
+specific migration would be redundant test theater, not real additional
+coverage.
+
+**P2-QA layered coverage programme status: all 8 suites now
+addressed** -- `qa:rls`, `qa:contract`, `qa:edge`, `qa:data-lifecycle`,
+`qa:residue`, `qa:cron-safety`, `qa:e2e` live-proven; `qa:migrations`
+static half live in CI, dynamic half demonstrated. Verified
+`node scripts/check-kb-links.mjs` before this docs-only PR.
+
+**2026-09-09, session 38 — `qa:e2e`'s first target written and live-proven:
+Super Admin + client persona smoke checks against unicorn-qa (branches
+`feat/qa-seed-e2e-personas` PR #1047, `fix/qa-seed-e2e-tenant-users`
+PR #1048, `feat/qa-e2e-suite`; local run, 4/4 passing):** Carl chose
+`qa:e2e` over `qa:migrations` (the other remaining suite) via
+AskUserQuestion, since it's a bounded setup task rather than needing a
+real migration to replay against.
+
+Chose "seed persistent QA personas" (also via AskUserQuestion) over
+reusing the existing production e2e harness or per-run ephemeral
+fixtures, since `unicorn-qa` is documented as data-less and real
+authenticated route checks need something to actually render. Wrote
+`scripts/qa-seed-e2e-personas.mjs` (idempotent: a persistent
+`qa-e2e-demo-tenant` + Super Admin + client persona, using the
+`@example.qa` domain and `qa-e2e` naming specifically so `qa:residue`'s
+sweep never flags them) and `.github/workflows/qa-seed-e2e-personas.yml`
+(workflow_dispatch only). Set two new `unicorn-qa` environment secrets
+(`QA_E2E_SUPERADMIN_PASSWORD`/`QA_E2E_CLIENT_PASSWORD`, random values
+generated locally, never displayed) via `gh secret set`.
+
+**Real discovery, not anticipated when the AskUserQuestion was framed:**
+`src/integrations/supabase/client.ts` is a Lovable-generated file that
+hardcodes the target project's URL and anon key as literal strings --
+it does **not** read `import.meta.env.VITE_SUPABASE_URL` at runtime, so
+there is no env-var or `--mode` flag that redirects the frontend to a
+different backend. Flagged this back to Carl via AskUserQuestion before
+proceeding, since it changes the operation from "seed some data" to
+"temporarily patch a generated production-credentials file" -- approved
+proceeding with a strict protocol: edit the two literals in this isolated
+worktree only, run the suite, then `git checkout --` the file back to its
+committed (production) content before anything is ever committed or
+pushed. Never done on the shared checkout; `client.ts`'s diff was
+confirmed byte-identical to origin/main before any commit.
+
+Wrote `e2e/qa/superadmin.spec.ts` and `e2e/qa/client.spec.ts` (data-independent
+smoke checks mirrored from the existing production `e2e/personas/*.spec.ts`,
+deliberately dropping the legacy-redirect tests since those are pure
+code-path assertions already covered by production's own suite) and a
+fully separate `playwright.qa.config.ts` (own `testDir`, storage-state
+paths, webServer -- never merged into the always-production
+`playwright.config.ts`, so a QA run can never be accidentally pointed at
+the wrong project). Added `npm run e2e:qa`.
+
+**Two more real, live-discovered gaps, found by actually running the
+suite rather than assuming the fixture was sufficient:**
+1. The client persona initially got only a `tenant_members` row and hit
+   the app's own (correct) "Academy access only" fallback --
+   `ClientTenantContext.tsx` actually gates `canAccessClientPortal` on
+   `tenant_users.relationship_role`/`access_scope`, a separate table.
+   Fixed in `fix/qa-seed-e2e-tenant-users` (PR #1048): added a
+   `tenant_users` row (`relationship_role: "user"`, `access_scope: "full"`).
+2. That fix's first live attempt failed differently: `dd_relationship_role`
+   (the FK target for `tenant_users.relationship_role`) had **zero rows**
+   in `unicorn-qa` -- populated all four values from
+   `src/lib/roles/relationshipRole.ts`'s `RelationshipRole` type
+   (`primary_contact`, `secondary_contact`, `user`, `academy_user`) via
+   `execute_sql`, the same class of QA-baseline reference-table gap as the
+   earlier `dd_unicorn_roles` fix. Also added an `Admin` row to
+   `dd_unicorn_roles` while investigating (not ultimately needed for this
+   persona, kept as a harmless QA-only parity repair for a future
+   SuperAdmin-tier persona).
+
+Also discovered (not a bug): re-running the seed script resets the two
+personas' passwords every time by design, which silently invalidated a
+previously-generated storage-state's session (Supabase revokes other
+sessions on password change) -- regenerating storage states *after* the
+last seed run, not before, is now the documented order.
+
+One more finding, self-resolved: the Super Admin dashboard spec initially
+timed out waiting for the "Welcome back" heading even though the page had
+genuinely rendered correctly (confirmed via a temporary diagnostic spec
+logging every Supabase network call -- all ~50 calls on a cold `/dashboard`
+hit returned 200 or a harmless caught 0-row `PGRST116`, no real errors).
+The QA dashboard simply fires more sequential round-trips than
+production's warmer/cached state, so the existing 15s assertion timeout
+(copied from `playwright.config.ts`) was sometimes too tight; bumped to
+25s in `playwright.qa.config.ts` specifically, with the reasoning recorded
+in a comment rather than silently copied.
+
+**Live-proof status:** local run (not CI-gated) via `npm run e2e:qa`,
+4/4 passing. Unlike every other P2-QA suite, this one cannot run in
+GitHub Actions as designed -- it requires the exact same temporary
+`client.ts` edit described above, which must never happen on a shared
+branch or in CI (a CI run would need its own separate mechanism, not
+attempted here). This matches production's own `e2e:personas`/`e2e:unauth`
+precedent, which has also never been CI-gated in this repo.
+
+Verified locally: lint, typecheck (330/43 skipped -- unchanged, `e2e/**`
+isn't in Vitest's scope), build, KB links (0 broken, 792 links),
+`client.ts` confirmed byte-identical to `origin/main` before every commit.
 
 **2026-09-09, session 37 — `qa:residue`'s first target written and
 live-proven: independent fixture-leftover sweep (`feat/qa-residue`,
