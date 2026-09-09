@@ -47,41 +47,14 @@ interface Unicorn1User {
 }
 
 // unicorn1 is a legacy cross-schema table absent from the generated Database
-// types (src/integrations/supabase/types.ts only covers the public schema),
-// so it can't be typed via supabase.from(...) like a normal table. This
-// interface describes only the one operation used below, so the `as unknown`
-// boundary stays narrow instead of casting the whole client.
-//
-// Known gap (verified live 2026-09-08): this call currently fails at the
-// PostgREST layer with "The schema must be one of the following: public,
-// graphql_public" -- this project's PostgREST config only exposes the
-// public schema, so .schema('unicorn1') can never succeed regardless of
-// typing. search-unicorn1-users/index.ts works around the identical
-// constraint via a SECURITY DEFINER RPC; this call would need the same
-// treatment to actually write mapped_user_uuid. Not fixed here since it's a
-// real schema/RPC change, not a typing fix, and Unicorn 1 (and this import
-// flow with it) is expected to be retired -- not worth the investment.
-interface Unicorn1UsersUpdate {
-  mapped_user_uuid: string;
-}
-
-interface Unicorn1SchemaClient {
-  schema(name: 'unicorn1'): {
-    from(table: 'users'): {
-      update(values: Unicorn1UsersUpdate): {
-        eq(column: 'ID', value: number): PromiseLike<{ error: { message: string } | null }>;
-      };
-    };
-  };
-}
-
+// types and not exposed to PostgREST directly (only public/graphql_public
+// are), so writing mapped_user_uuid goes through the mark-unicorn1-user-mapped
+// edge function, which calls a SECURITY DEFINER RPC the same way
+// search-unicorn1-users does for reads (see L10 #33).
 async function mapUnicorn1UserToUuid(legacyId: number, mappedUserUuid: string): Promise<void> {
-  const unicorn1Client = supabase as unknown as Unicorn1SchemaClient;
-  const { error } = await unicorn1Client
-    .schema('unicorn1')
-    .from('users')
-    .update({ mapped_user_uuid: mappedUserUuid })
-    .eq('ID', legacyId);
+  const { error } = await supabase.functions.invoke('mark-unicorn1-user-mapped', {
+    body: { legacy_id: legacyId, mapped_user_uuid: mappedUserUuid },
+  });
   // Preserve prior behavior: the import itself already succeeded (the new
   // auth user + public.users row exist), so a failure to backfill the
   // legacy mapping is logged rather than surfaced as an "import failed"

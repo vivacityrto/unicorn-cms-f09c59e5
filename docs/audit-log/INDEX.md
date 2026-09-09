@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-09 — `mark_unicorn1_user_mapped` RPC + PUBLIC-grant leak fix (L10 #33) — added the missing write-side counterpart to `search_unicorn1_users` so the "Import from Unicorn 1" flow can actually persist `mapped_user_uuid` (previously always failed at PostgREST). Self-caught and fixed a `PUBLIC`-execute-grant leak in the first migration before it had any caller wired up. Verified via ACL check, direct safe RPC call, and a live read-only Playwright pass; full end-to-end click-through deferred to post-merge Edge Function deploy check.](entries/2026-09-09-mark-unicorn1-user-mapped-rpc.md) · author: Claude Code
+
 - [2026-09-09 — AuthProvider ignores stale profile and membership responses — added mounted/auth-generation guards so late async reads cannot overwrite a newer session, and membership errors clear stale grants. Focused sign-out regression coverage added; no schema, RLS, Edge Function, or production-data changes.](entries/2026-09-09-auth-provider-cancellation-membership-reset.md) · author: Codex
 
 - [2026-09-09 — ProtectedRoute disabled-user check fails closed — a Supabase error in the disabled-account lookup could previously be treated as `disabled: false`; the client guard now renders an access-unavailable Retry/Sign Out state and never renders protected children until a successful check. Focused regression coverage added; no schema, RLS, Edge Function, or production-data changes.](entries/2026-09-09-protected-route-disabled-user-fail-closed.md) · author: Codex
