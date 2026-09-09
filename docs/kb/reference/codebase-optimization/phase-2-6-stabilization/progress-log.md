@@ -19,6 +19,22 @@ fix goes live — Edge Function auto-deploy-on-merge is known-unreliable per
 AGENTS.md; the merger should verify the deployed version advances and
 manually deploy if not.
 
+**2026-09-09, session 49 — P7-B minimal lifecycle feature boundary implemented
+(frontend-only):** Rebased onto `origin/main@81cef2ac0` after the latest
+regression merge. Added `src/features/lifecycle/types.ts` with generated
+Supabase row aliases for `LifecycleTemplate`, `LifecycleDropdownItem`, and the
+compatibility-preserved `LifecycleInstance`. Moved page, grid, dialog, and
+characterization-test type imports to the feature module while retaining the
+hook's type re-exports. No query/mutation adapter was added because the page
+already delegates all Supabase access to the hook; no runtime, route-guard,
+authorization, schema, RLS, Edge, or production-data behavior changed. The
+existing 13-test characterization suite passed unchanged. Full verification:
+`npm run lint:ratchet`, `npm run typecheck`, `npm run test:frontend` (343
+passed/43 skipped), `npm run test:edge` (279 passed), `npm run build`, and
+`npm run metrics`; architecture metrics were unchanged at 1,711 product files
+and 480,168 physical lines. No live Playwright pass was warranted because this
+is a type-only extraction with no emitted JavaScript change.
+
 **2026-09-09 — L10 #28 (`bulk-send-invitations` crash-instead-of-structured-error) fixed:**
 Three call sites (`index.ts` ~line 98/106/113) called the file's own
 `jsonResponse(req, status, body)` helper as `jsonResponse(status, body)`,
@@ -1968,3 +1984,16 @@ the known cron/production-URL failure again.
 > cleanup and zero residue. The repository-to-environment secret move and
 > repeat-run administrative tail were intentionally waived by Carl (session
 > 23); this is a recorded governance exception, not an untracked blocker.
+
+### Packet P7-C — architecture and scoped lint boundary
+
+**Session 50 (2026-09-09):** The lifecycle pilot's post-boundary architecture
+was documented in `src/ARCHITECTURE.md`. The inspected seams remain narrow:
+`LifecycleChecklistsAdmin` owns orchestration, `useLifecycleChecklists` owns
+Supabase/React Query access, `src/features/lifecycle/types.ts` owns generated
+UI contracts, and the grid/dialog remain callback-driven display components.
+An ESLint `no-restricted-imports` rule now prevents lifecycle display
+components from reaching back into the data hook; the page remains allowed to
+use that hook. Existing lifecycle imports and characterization tests pass the
+scoped lint proof. No runtime behavior, authorization, schema, RLS, Edge
+Function, or production-data behavior changed, so no audit entry was needed.

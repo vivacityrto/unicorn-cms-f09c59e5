@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ui/modals";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
+import type { LifecycleTemplate } from "@/features/lifecycle/types";
 
 const COUNTERPART_MAP: Record<string, string> = {
   client_onboarding: "client_offboarding",

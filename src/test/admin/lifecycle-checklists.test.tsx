@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 import { LifecycleTemplateGrid } from "@/components/admin/lifecycle/LifecycleTemplateGrid";
 import { LifecycleTemplateDialog } from "@/components/admin/lifecycle/LifecycleTemplateDialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { LifecycleDropdownItem, LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
+import type { LifecycleDropdownItem, LifecycleTemplate } from "@/features/lifecycle/types";
 
 const mockUseLifecycleDropdowns = vi.fn();
 const mockUseLifecycleTemplates = vi.fn();
