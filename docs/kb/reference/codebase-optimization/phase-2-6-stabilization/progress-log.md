@@ -4,6 +4,46 @@
 
 ## Progress log
 
+**2026-09-09, session 39 — `qa:migrations`' dynamic-replay half demonstrated,
+closing out all 8 P2-QA suites (docs-only, `docs/qa-migrations-dynamic-replay`):**
+after the previous session's `qa:e2e` closeout, Carl asked "whats next" --
+the only remaining gap was `qa:migrations`' dynamic-replay half, which had
+been sitting idle for lack of an actual migration to test against. Checked
+`origin/main` and found Codex had just merged one in parallel:
+`ed2106afb` ("retire remaining M4 forecast health crons",
+`supabase/migrations/20260908080000_retire_forecast_health_crons.sql`) --
+a real, already-reviewed migration, deliberately written to be a safe
+no-op when `pg_cron` is absent (exactly `unicorn-qa`'s state).
+
+Replayed it onto `unicorn-qa` via `apply_migration`: applied cleanly, its
+own guard executed the early-return branch (no `pg_cron` → `RAISE NOTICE`,
+`RETURN`), and a post-check of `qa_cron_safety_status()` still reported
+zero jobs. The ledger recorded it as version `20260909003606` (the replay
+timestamp) with name `20260908080000_retire_forecast_health_crons`
+preserved -- checking the existing ledger entries confirmed every prior
+row uses a `qa_baseline_*`/`qa_seed_*`-style name, never a real migration
+filename, which is expected: `unicorn-qa`'s ledger is a controlled
+baseline-replay ledger, not a copy of production's migration history (see
+"Current environment state" above). This ruled out the design I'd
+initially considered -- an automated Vitest suite asserting every repo
+migration's filename appears in the ledger -- since that would assert an
+invariant the environment was never meant to hold.
+
+Concluded the dynamic-replay half is better closed as a demonstrated,
+reviewed action plus existing regression coverage than as a new bespoke
+test: this migration's actual guarantee (unicorn-qa stays schedule-free)
+is already an ongoing assertion in `qa:cron-safety` (session 36) -- a
+future replay that left a job scheduled would fail that suite already.
+Writing a second, narrower test asserting the same thing about one
+specific migration would be redundant test theater, not real additional
+coverage.
+
+**P2-QA layered coverage programme status: all 8 suites now
+addressed** -- `qa:rls`, `qa:contract`, `qa:edge`, `qa:data-lifecycle`,
+`qa:residue`, `qa:cron-safety`, `qa:e2e` live-proven; `qa:migrations`
+static half live in CI, dynamic half demonstrated. Verified
+`node scripts/check-kb-links.mjs` before this docs-only PR.
+
 **2026-09-09, session 38 — `qa:e2e`'s first target written and live-proven:
 Super Admin + client persona smoke checks against unicorn-qa (branches
 `feat/qa-seed-e2e-personas` PR #1047, `fix/qa-seed-e2e-tenant-users`
