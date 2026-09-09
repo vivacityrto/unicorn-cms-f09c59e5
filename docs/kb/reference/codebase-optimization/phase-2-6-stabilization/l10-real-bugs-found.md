@@ -77,7 +77,7 @@ widened `packages_status_check` to also allow `'archived'` via a migration;
 no code change needed. See
 `docs/audit-log/entries/2026-09-08-fix-stages-id-and-package-archive.md`.
 
-### 5. Stage Preview dialog has never shown real data — DOCUMENTED, NOT FIXED
+### 5. Stage Preview dialog has never shown real data — FIXED (2026-09-07, Phase 2.6 Packet P4-B, PR #975)
 The "Stage Preview" dialog (shows a stage's usage — team tasks, client
 tasks, emails, documents — across every package it's used in) queries a
 column `documents.doc_name` that doesn't exist (the real column is
@@ -91,6 +91,19 @@ stage, in any of its four sections, regardless of the `doc_name` fix. Needs
 either a two-step fetch (a pattern already used elsewhere in this codebase
 for tables without a real FK) or an actual migration adding the missing
 FKs.
+
+**Update (2026-09-09):** already fixed by `PR #975` (2026-09-07, Phase 2.6
+Packet P4-B) — `StagePreviewDialog.tsx` replaced all four
+`packages:package_id (name)` embeds with the two-step-fetch pattern this
+entry recommends (query the base rows, batch-resolve distinct
+`package_id`s via a separate `packages` query, merge client-side via a
+`Map`), with an inline comment documenting the exact no-FK finding above.
+This entry's heading was never updated after that PR merged. Re-verified
+live 2026-09-09 (SuperAdmin, `/admin/stages` → "ASQA Audit" stage →
+Preview, a stage genuinely used in 12 packages): dialog renders "Used in
+12 packages" and 5 real document titles (e.g. "ASQA Audit Report-RTO",
+"Client Bio for Audits"), zero console errors, zero 400s. No code changed
+in this PR — documentation-sync correction only.
 
 ### 6. Package readiness badges were checking against blank data — FIXED
 The "Readiness" column in the Package list computes whether a package has
@@ -108,7 +121,7 @@ has no `status` column at all (the real fields are `is_active`/
 correctly elsewhere in the codebase (`is_active = true AND is_complete =
 false`).
 
-### 8. "Bulk Generate Documents" tenant list has never loaded — DOCUMENTED, NOT FIXED
+### 8. "Bulk Generate Documents" tenant list has never loaded — FIXED (2026-09-07, Phase 2.6 Packet P4-B, PR #975)
 Found during live verification of the fixes above. The Bulk Generate Documents
 dialog's "which tenants have this package" query embeds
 `client_package_stage_state:tenant_id, tenants(id, name)` — but
@@ -120,6 +133,26 @@ same query string existed before any of tonight's changes; the type-safety
 fix only added a compile-time generic, never touched the runtime request.
 Same root cause and same fix options as item 5 above (two-step fetch, or an
 actual FK via migration).
+
+**Update (2026-09-09):** already fixed by the same `PR #975` as item 5 —
+`BulkGenerateDocumentsDialog.tsx` replaced the `tenants(id, name)` embed
+with a two-step fetch (select `tenant_id` alone, batch-resolve names via a
+separate `tenants` query), with an inline comment documenting the same
+no-FK finding. This entry's heading was never updated after that PR
+merged. **Live verification of this specific dialog remains an honestly
+disclosed gap, same as when PR #975 shipped:** `package_stage_documents`
+(the per-package document override table this dialog's trigger button
+depends on — see `StageDetailPanel.tsx`'s `useOverrides` branch) still has
+zero non-deleted rows anywhere in production (`select count(*) from
+package_stage_documents` → 0, re-checked 2026-09-09), so the dialog cannot
+be opened against real data without first enabling a package-specific
+document override on a real, currently-active client package — a live
+production-config mutation this documentation-only correction deliberately
+does not make. Confidence in the fix rests on: (1) source-code parity with
+item 5's `StagePreviewDialog.tsx` fix, live-verified above with real data
+against the identical embed-vs-two-step-fetch pattern, and (2) both fixes
+shipping together in the same commit/PR. No code changed in this PR —
+documentation-sync correction only.
 
 ## Admin — Client Package Detail (`/admin/client-packages/:id`)
 
