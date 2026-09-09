@@ -4,6 +4,21 @@
 
 ## Progress log
 
+**2026-09-09 — L10 #29 (`tga-rto-import` out-of-scope `req`) fixed:**
+Same bug shape as L10 #28: `handleImport`/`handleStatus` called
+`jsonResponse(req, ...)` internally but neither function received `req` as
+a parameter — only the outer `serve(async (req) => {...})` closure had it,
+so every real invocation of `action=import` or the default/status path
+threw `ReferenceError: req is not defined` (the function was confirmed
+non-functional on both actions in production, per the original finding).
+Added `req: Request` as the first parameter to both signatures and updated
+all three call sites. Added `req-scope.test.mjs`, confirmed to fail against
+the pre-fix source and pass against the fix. `npm run test:edge` 280/280,
+`lint-ratchet` 0 → 0. **Flagged in the PR:** merging does not guarantee the
+fix goes live — Edge Function auto-deploy-on-merge is known-unreliable per
+AGENTS.md; the merger should verify the deployed version advances and
+manually deploy if not.
+
 **2026-09-09 — L10 #28 (`bulk-send-invitations` crash-instead-of-structured-error) fixed:**
 Three call sites (`index.ts` ~line 98/106/113) called the file's own
 `jsonResponse(req, status, body)` helper as `jsonResponse(status, body)`,

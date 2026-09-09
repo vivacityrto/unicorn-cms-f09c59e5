@@ -889,7 +889,7 @@ test suite plus this regression assertion are the only automated guard —
 no live Playwright pass applies (no UI route touched, no schema/RLS/
 production-data change).
 
-### 29. `tga-rto-import`'s `handleImport`/`handleStatus` reference an out-of-scope `req` — DOCUMENTED, NOT FIXED (found 2026-09-07)
+### 29. `tga-rto-import`'s `handleImport`/`handleStatus` reference an out-of-scope `req` — FIXED (2026-09-09, `hotfix/tga-rto-import-req-scope`)
 
 `supabase/functions/tga-rto-import/index.ts`'s `handleImport(supabase, userId,
 body, correlationId)` and `handleStatus(supabase, correlationId)` both call
@@ -916,6 +916,25 @@ until this is fixed. Not fixed here — out of scope for a deploy-recovery
 task; needs `req` threaded into both function signatures as a parameter and
 both call sites updated. Worth fixing together with item 28 given the
 identical bug shape, but tracked separately since they're different files.
+
+**Fixed 2026-09-09:** confirmed both handlers' actual signatures from source
+(`handleImport(supabase, userId, body, correlationId)`,
+`handleStatus(supabase, correlationId)` — neither had `req`) and their three
+call sites, all inside the outer `serve(async (req) => {...})` closure.
+Added `req: Request` as the first parameter to both function signatures and
+updated all three call sites to pass `req`. Added
+`req-scope.test.mjs`, asserting both declarations include `req: Request` and
+every call site's first argument is literally `req` — confirmed this
+assertion fails against the pre-fix source (neither declaration matches)
+and passes against the fix. `npm run test:edge` 280/280 passed;
+`lint-ratchet` 0 → 0 on the changed file. **Operational note, not resolved
+by this PR alone:** per AGENTS.md's "Supabase deployment workflow" section,
+Edge Function auto-deploy-on-merge has been observed to fail silently — this
+function was confirmed non-functional in the live deployed version as of
+this entry's original finding, so merging this fix does not guarantee it's
+live; whoever merges should verify `list_edge_functions`/`get_edge_function`
+shows the new source deployed, per that section's standing practice, and
+manually deploy if the version hasn't advanced ~15 minutes after merge.
 
 ### 33. "Import from Unicorn 1"'s legacy-mapping backfill has never worked — DOCUMENTED, NOT FIXED (found 2026-09-08)
 
