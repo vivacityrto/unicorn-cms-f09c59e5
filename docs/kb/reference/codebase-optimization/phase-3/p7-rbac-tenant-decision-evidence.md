@@ -73,7 +73,7 @@ answers its own question.
 
 | # | Decision | Current observed / proven fact | Open question | Decider |
 |---|---|---|---|---|
-| 1 | All-tenant staff read vs. portfolio scope | **Proven:** `has_tenant_access_safe(bigint,uuid)` — the only tracked definition, `supabase/migrations/20260206210015_...sql:60-77` — returns `true` for any user passing `is_super_admin_safe` **or** `is_vivacity_team_safe`, before ever checking `tenant_members`. `is_vivacity_team_safe` (`supabase/migrations/20260609052737_...sql:41-59`) matches all 7 roles in `src/lib/roles/vivacityRoles.ts:6-14` (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET) against `is_vivacity_internal=true` and not `archived`. So today, all 7 internal seats have blanket cross-tenant RLS access baked into the RLS helper itself — not merely a UI convention. | Whether RBAC v6 narrows this to portfolio/assignment scope, and for which seats. | Carl/Vivacity |
+| 1 | All-tenant staff read vs. portfolio scope | **Proven:** `has_tenant_access_safe(bigint,uuid)` — the only tracked definition, `supabase/migrations/20260206210015_...sql:60-77` — returns `true` for any user passing `is_super_admin_safe` **or** `is_vivacity_team_safe`, before ever checking `tenant_members`. `is_vivacity_team_safe` (`supabase/migrations/20260609052737_...sql:41-59`) matches all 7 roles in `src/lib/roles/vivacityRoles.ts:6-14` (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET) against `is_vivacity_internal=true` and not `archived`. So today, all 7 internal seats have blanket cross-tenant RLS access baked into the RLS helper itself — not merely a UI convention. | **Bounded baseline decided 2026-09-09 (ADR-015): preserve broad internal-staff tenant read access for now; scope sensitive actions separately.** The longer-term question—whether and for which seats RBAC v6 narrows read/write scope to portfolios or assignments—remains open. | Carl (baseline); Carl/Vivacity (future scope) |
 | 2 | Authoritative CSC/BGT/CET/Integrator/Team Leader responsibilities | **Proven:** the only place these seats currently differ in effective capability is `src/hooks/useRBAC.tsx:27-155`'s `ROLE_PERMISSIONS` map (EOS meeting scheduling, rocks/risks escalation, `administration:access`, `staff_engagements:access` for Integrator only) — a client-side, non-database-enforced permission list. At the RLS/tenant-access layer (row 1) all 7 seats are identical. No authoritative job-seat responsibility document exists in the KB (`docs/kb/pinned/team-roles.md`'s scope is explicitly unresolved per RBAC plan §11). | What each seat's actual duties/capabilities should be, and whether `team-roles.md` describes engineering seats, app RBAC seats, or both. | Carl/Vivacity (product-owner + one rep per seat, per §7 P1) |
 | 3 | Hard Super Admin vs. delegation / break-glass | **Proven:** `is_super_admin_safe(uuid)` (`supabase/migrations/20260609052737_...sql:67-85`) is the sole predicate behind `is_super_admin()` (consolidated to one overload in `supabase/migrations/20260815080100_consolidate_is_super_admin.sql:136-146`) and behind the frontend's `isSuperAdmin()` (`src/hooks/useAuth.tsx:159-162`, checking `global_role==='SuperAdmin' \|\| unicorn_role==='Super Admin'`). It gates 33 `requireSuperAdmin` occurrences repo-wide (7 files: `App.tsx` 6, `ProtectedRoute.tsx` 3 (definition), `dashboardRoutes.tsx` 15 (real route gates), `PermissionGate.tsx` 1, `useStaffFacilitatorNames.ts` 1, plus 7 test-file occurrences). There is no break-glass account concept anywhere in source — every daily Super Admin account *is* the only privileged tier. | Which specific actions must stay hard-SA vs. become delegable, and whether true non-daily break-glass accounts are needed. | Carl/Vivacity |
 | 4 | Second approver for temporary grants | No grant-approval workflow exists yet (RBAC v6 P7 is unbuilt); `user_roles` currently has 2 active ungoverned grants (RBAC plan §3.2). | Whether high-risk delegated grants need dual approval or should stay non-delegable. | Carl/Vivacity |
@@ -142,12 +142,16 @@ Per RBAC plan §7 P0.1-P0.3 (`rbac-v6-authorization-implementation-plan-2026-09-
 
 Every row in §3-§6 above is already labelled **Proven** (source- or live-verified today) or framed as an **Open question** for Carl/Vivacity. The one cross-cutting proven fact worth restating on its own: RBAC v6 and Tenant Operating Model are both, today, still governed entirely by the *current* behavior described here — no shadow evaluator, no capability catalogue, no portfolio scoping, and no disabled-state enforcement exist yet in any form. Nothing in this packet should be read as a recommendation for what the policy *should* be; every "should"/"whether" phrase above is Vivacity's to answer, not this packet's.
 
-## 7.1 Baseline vocabulary proposal for review (not a policy decision)
+## 7.1 Baseline vocabulary proposal and bounded staff-read decision
 
 This is a deliberately narrow proposal to make the Phase 3 gate discussable;
 it does not approve a role bundle, change a route, or authorize an
 enforcement cutover. It records the smallest shared language that the
 Super Admin and CSC baseline can use before broader seat policy is settled.
+Carl agreed the bounded staff-read baseline on 2026-09-09: preserve current
+broad internal-staff tenant read access for now, while sensitive actions are
+scoped separately. This is not a final portfolio-scope decision and does not
+authorize a production policy change.
 
 | Term | Baseline meaning | Pilot implication |
 |---|---|---|
@@ -174,9 +178,10 @@ disabled-user, schema, RLS, RPC, Edge, grant, or production-data decision is
 made by this proposal; those remain the open questions in §3 and the separate
 disabled-user hotfix gate for P7-D.
 
-**Decision requested:** Carl/Vivacity should confirm whether this vocabulary
-and authority boundary are acceptable as the baseline for a read-only/shadow
-P7-B or P7-C slice. A “yes” would unblock only that bounded preparation or
+**Remaining decision requested:** Carl/Vivacity should confirm whether the
+vocabulary and authority boundary above are acceptable for a read-only/shadow
+P7-B or P7-C slice. The staff-read baseline is recorded, but a “yes” to this
+remaining vocabulary decision would unblock only that bounded preparation or
 shadow work; it would not authorize a policy migration or production change.
 
 ## 8. Verification / commands run this session

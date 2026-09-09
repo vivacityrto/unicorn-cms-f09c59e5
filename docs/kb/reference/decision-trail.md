@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-01 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, and ADR-014 are canonical for current state.
+> **Last updated:** 2026-09-09 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; the future portfolio-scope decision remains open. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, and ADR-015 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -370,6 +370,58 @@ This reframing is documentation-only. No code changes. ADR-006 (EOS Level 10 as 
 - `AGENTS.md → Write permissions & branch naming` (the actual current rules this ADR describes)
 - `pinned/team-roles.md → Tool access matrix`
 - `pinned/orientation.md → Ground rules`
+
+---
+
+### ADR-015: Preserve broad internal-staff tenant read access as the RBAC compatibility baseline {#adr-015}
+**Date:** 2026-09-09
+**Status:** Decided for the current baseline; future portfolio scope remains open
+**Decided by:** Carl
+
+**Context:** The current database helper `has_tenant_access_safe` grants broad
+cross-tenant access to active internal Vivacity staff, while the RBAC v6 plan
+has not yet established whether staff read access should follow assigned
+portfolios. The Phase 3 lifecycle pilot needs a stable compatibility baseline,
+but it must not silently narrow existing operational access or turn assignment
+into an authorization boundary. The P7 evidence packet records Super Admin
+and CSC as the priority characterization personas, not as newly approved
+capability bundles.
+
+**Decision:** Preserve broad internal-staff tenant **read** access for now.
+Scope sensitive actions separately by explicit capability, target scope, and
+relationship. This is a compatibility baseline for characterization and
+read-only/shadow work; it does not authorize a production policy migration,
+change any RLS helper, or approve future portfolio/assignment scope.
+
+**Boundaries:**
+- Job roles remain defaults, not permissions or tenant scope by themselves.
+- Super Admin and CSC remain the first baseline personas; current lifecycle
+  route behavior is unchanged (Super Admin allowed, CSC denied).
+- Any future narrowing of staff read access requires a separate
+  Carl/Vivacity decision, workflow evidence, and an explicit migration plan.
+- Sensitive writes, destructive operations, exports, privilege administration,
+  and cross-tenant controls remain subject to their own capability and
+  hard-Super-Admin/delegation decisions.
+
+**Alternatives considered:**
+- **Move all staff immediately to assigned portfolios.** Rejected for now —
+  current behavior is broad and the assignment relationship is not yet a
+  proven authorization boundary; an immediate narrowing could create silent
+  operational lockouts.
+- **Leave the baseline unspecified.** Rejected — Phase 3 characterization
+  needs an explicit compatibility assumption so a shadow result is
+  interpretable and cannot accidentally become a policy choice.
+
+**Consequences:** The RBAC vocabulary packet can use broad internal-staff
+read as its current baseline while keeping the final staff-scope decision
+open. No code, schema, RLS, grant, Edge, or production-data change follows
+from this ADR. The decision must be revisited before any v6 cutover that
+narrowly scopes staff reads.
+
+**Linked to:**
+- [RBAC/Tenant decision evidence packet](codebase-optimization/phase-3/p7-rbac-tenant-decision-evidence.md)
+- [RBAC v6 authorization plan](rbac-v6-authorization-implementation-plan-2026-09-01.md)
+- [Phase 2.6 progress log](codebase-optimization/phase-2-6-stabilization/progress-log.md)
 
 ---
 
