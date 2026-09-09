@@ -4,6 +4,17 @@
 
 ## Progress log
 
+**2026-09-09, session 46 — L10 #30 (RTO scope end dates) investigated, not reproduced:**
+Checked `useTgaRtoData.tsx`'s `resolveEndDate` helper against live production
+data (18,715 `tenant_rto_scope` rows): `tga_data.endDate_raw` and
+`tga_data.endDate` are present/absent together and never disagree in value
+on any row, and zero on-scope items have a missing end date across every
+scope type — so the reported "blank or stale date" symptom did not
+reproduce. The one real finding was the helper's own comment, which
+described a priority including a real "end_date column" that doesn't exist
+on `tenant_rto_scope` at all; corrected the comment only (no behavior
+change). No other code touched.
+
 **2026-09-09, session 47 — L10 #32 (meeting summary cascade messages) confirmed already fixed:**
 `MeetingSummaryCard.tsx` already renders a "Cascade Messages" fallback card
 for pre-One-Phrase-Close summaries, shipped in the same PR #423
