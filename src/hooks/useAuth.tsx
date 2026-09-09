@@ -3,32 +3,15 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { loadTenantMemberships, loadUserProfile } from '@/auth/loaders';
-import type { UserProfile } from '@/auth/types';
+import type { AuthContextValue, TenantMembership, UserProfile } from '@/auth/types';
 import {
   getTenantRole,
   hasTenantAccess,
   hasTenantAdmin,
   isSuperAdmin,
-  type TenantMembership,
 } from '@/auth/access';
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  profile: UserProfile | null;
-  memberships: TenantMembership[];
-  loading: boolean;
-  profileError: string | null;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  // Helper functions for RBAC
-  isSuperAdmin: () => boolean;
-  hasTenantAccess: (tenantId: number) => boolean;
-  hasTenantAdmin: (tenantId: number) => boolean;
-  getTenantRole: (tenantId: number) => 'Admin' | 'General User' | null;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
