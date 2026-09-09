@@ -1,0 +1,22 @@
+---
+description: Keep repository documentation changes reviewable and merged through GitHub
+alwaysApply: true
+---
+
+# Documentation PR and merge workflow
+
+For every repository documentation change—including `docs/**`, `AGENTS.md`,
+`CLAUDE.md`, `README*`, `CONTRIBUTING*`, and `.cursor/rules/**`:
+
+1. Start from the current `origin/main` in a dedicated branch/worktree.
+2. Make the smallest authoritative change and preserve historical entries.
+3. Run relevant documentation checks (`check:kb-links`, document-size,
+   `git diff --check`, and any document-specific verifier).
+4. Commit the change, open a concise PR, and merge it through GitHub after the
+   required checks pass. Never edit or merge directly on `main`.
+5. Report the merged PR, verification results, and intentionally unchanged docs.
+
+This workflow does not authorize production, schema, RLS, security, migration,
+cron, or operational changes. Keep their separate approval and audit gates.
+If another agent owns the same document, coordinate rather than overwrite it.
+Honor an explicit user request to hold, draft, or not merge.

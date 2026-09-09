@@ -253,6 +253,17 @@ former `unicorn-kb` and `unicorn-audit` repos — see
 
 ## Documentation synchronization (standing practice)
 
+**Documentation PR/merge standing rule:** every repository documentation
+change (`docs/**`, `AGENTS.md`, `CLAUDE.md`, `README*`, `CONTRIBUTING*`, or
+`.cursor/rules/**`) must be made on a dedicated branch from current
+`origin/main`, committed, opened as a reviewable PR, verified with relevant
+documentation checks, and merged through GitHub once required checks pass. Do
+not edit or merge these changes directly on `main`. This workflow does not
+authorize underlying production, schema, RLS, security, migration, cron, or
+operational changes; retain their separate approval and audit gates. If
+another agent owns the same document, coordinate rather than overwrite it,
+and honor an explicit request to hold, draft, or not merge.
+
 Implementation work is incomplete until its authoritative documentation is
 reconciled. For every change, identify and update the relevant plan,
 codebase-state, handoff, or operational document with current status, evidence,

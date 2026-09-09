@@ -22,6 +22,28 @@ the audit entry, or the scanner itself. Reran `node scripts/audit-migrations.mjs
 --changed-only --base-ref origin/main` locally (0 blocking, 5 allowlisted)
 and `node scripts/check-kb-links.mjs` (0 broken) before pushing.
 
+**2026-09-09, session 45 — Carl approved the bounded RBAC staff-read baseline
+(documentation-only):** For the current baseline, preserve broad internal
+staff tenant read access and scope sensitive actions separately. This records
+the present behavior as the compatibility starting point; it does not decide
+future portfolio/assignment scope, seat capability bundles, hard-Super-Admin
+or break-glass policy, or any production enforcement change. The decision is
+captured as ADR-015 and in the [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
+The remaining vocabulary/authority-boundary decision is still required before
+a read-only/shadow P7-B or P7-C slice is treated as unblocked.
+
+**2026-09-09, session 44 — RBAC vocabulary baseline proposed for review
+(documentation-only):** Added a narrowly scoped baseline proposal to the
+[P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
+It keeps principal state, job role/seat, capability/action, scope, and
+relationship separate; names the canonical server decision core as the
+security authority; keeps React route/navigation guards UX-only; and requires
+fail-closed unknown, missing-context, inactive-principal, and evaluator-error
+semantics. The baseline uses the already characterized Super Admin-allowed
+and CSC-forbidden lifecycle cases without approving future role bundles or
+staff-scope policy. Broader RBAC §13 decisions remain open, and no code,
+schema, RLS, RPC, Edge, grant, or production-data change was made.
+
 **2026-09-09, session 42 — P7 RBAC/Tenant decision evidence packet (prep only, no implementation):**
 Consolidated the RBAC v6 §13 and Tenant Operating Model §18 decision matrices,
 current observed CSC/Super Admin/messaging/membership behavior (source-cited,
