@@ -4,6 +4,20 @@
 
 ## Progress log
 
+**2026-09-09, session 42 — P7-B lifecycle boundary prepared (evidence only):**
+From a fresh `origin/main` worktree, traced the admin lifecycle hook and all
+consumers. `useLifecycleChecklists.ts` has three production importers (the
+admin page plus type-only grid/dialog imports); its `LifecycleInstance` export
+has no production consumer. Staff onboarding hub, self-onboarding, and the
+`generate-staff-checklist` Edge Function use separate instance contracts and
+were deliberately kept outside the candidate boundary. Added the Phase 3
+packet `p7-b-lifecycle-feature-boundary.md`, recommending only a feature-local
+type/query seam if it measurably reduces coupling after the RBAC vocabulary
+gate is approved. The display grid and dialog are already callback-driven and
+form the feature's display-only core; no cross-feature shared display core was
+found. No code, route guard, authorization, schema/RLS/grant, Edge contract,
+or production data changed.
+
 **2026-09-09, session 41 — CSC authenticated route baseline gathered:**
 Confirmed the QA account in the hosted `public.users` read path as active,
 `unicorn_role = CSC`, and tenant-unbound (`tenant_id` null); no production
