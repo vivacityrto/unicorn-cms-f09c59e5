@@ -15,7 +15,26 @@ the RBAC vocabulary decision (narrowly, RBAC §13 items 1-3/7) plus, for P7-D
 only, a not-yet-written disabled-user hotfix. No decisions were made; no
 code, schema, or production data changed.
 
-**2026-09-09, session 42 (concurrent session) — P7-B lifecycle boundary prepared (evidence only):**
+**2026-09-09, session 43 — P7-B implementation readiness recorded
+(evidence-only):** From a fresh `origin/main@64c37ba97` worktree, refreshed the
+consumer map and architecture baseline for the lifecycle pilot. The four
+production surfaces measure 175 lines (`useLifecycleChecklists.ts`), 204
+(`LifecycleChecklistsAdmin.tsx`), 139 (`LifecycleTemplateGrid.tsx`), and 176
+(`LifecycleTemplateDialog.tsx`); the focused characterization file is 322
+lines with 13 tests. The generated row shapes for all three lifecycle
+dropdown tables and `lifecycle_checklist_templates` match the UI-facing
+interfaces field-for-field, but the dynamic table and mutation casts remain
+unremoved until generic inference is proven. Added an implementation-readiness
+snapshot and state/interaction parity matrix to the Phase 3 P7-B packet,
+including the route-vs-database authorization distinction and explicit
+non-consumer exclusions. This also corrects the stale earlier note that CSC
+browser evidence was unavailable: the ignored `playwright/.auth/csc.json`
+state was generated and the read-only CSC baseline was recorded in session 41's
+follow-up evidence. No code, route guard, authorization, schema/RLS/grant,
+Edge contract, or production data changed; P7-B remains gated on the RBAC
+vocabulary decision.
+
+**2026-09-09, session 42 — P7-B lifecycle boundary prepared (evidence only):**
 From a fresh `origin/main` worktree, traced the admin lifecycle hook and all
 consumers. `useLifecycleChecklists.ts` has three production importers (the
 admin page plus type-only grid/dialog imports); its `LifecycleInstance` export

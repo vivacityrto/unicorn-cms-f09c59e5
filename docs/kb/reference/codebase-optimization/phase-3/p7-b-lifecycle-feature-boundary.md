@@ -61,6 +61,62 @@ return the inserted row; deactivate is a soft update of `is_active = false`;
 successful mutations invalidate `lifecycle-templates`; and error toasts retain
 the current messages.
 
+## Implementation-readiness snapshot
+
+Measured from `origin/main@64c37ba97` on 2026-09-09. This is a baseline for a
+future implementation PR, not an acceptance target or a claim that extraction
+is approved.
+
+| Surface | Physical lines | Production import evidence |
+| --- | ---: | --- |
+| `src/hooks/useLifecycleChecklists.ts` | 175 | imported by the admin page; its two UI-facing types are imported type-only by the grid and dialog |
+| `src/pages/admin/LifecycleChecklistsAdmin.tsx` | 204 | lazy-loaded by the lifecycle route |
+| `src/components/admin/lifecycle/LifecycleTemplateGrid.tsx` | 139 | callback-driven display/actions only |
+| `src/components/admin/lifecycle/LifecycleTemplateDialog.tsx` | 176 | callback-driven form/payload construction only |
+| `src/test/admin/lifecycle-checklists.test.tsx` | 322 | 13 characterization tests; not production reachability |
+
+The repository-wide architecture script reports 1,710 tracked product files,
+480,182 physical lines, 407,144 lines excluding generated types, and 394,259
+lines excluding generated types and tests. The lifecycle hook contributes no
+directly measurable shared abstraction: the only production dependency edge is
+the admin page's runtime import plus two type-only component edges. The
+`LifecycleInstance` export still has zero production consumers.
+
+## Behavioural parity matrix for the implementation PR
+
+The existing characterization suite is the oracle. A boundary change must keep
+each row green without broadening the route or database policy.
+
+| State or interaction | Current observable contract | Required parity assertion |
+| --- | --- | --- |
+| Loading | grid renders skeleton rows while the template query or dropdowns are pending | preserve skeleton count/role and disabled add action when no tab exists |
+| Empty | selected lifecycle tab renders the empty-state message and no step cards | preserve selected text lifecycle code and empty-state copy |
+| Populated/inactive | rows group by category order; labels resolve through dropdowns; inactive rows remain visible with status treatment | preserve category ordering, label fallback, inactive treatment, and action callbacks |
+| Tab/filter | first active lifecycle type is selected; changing a tab re-runs the template query with that code | preserve query key/filter and four current lifecycle codes |
+| View/external link | view dialog shows description, category/role badges, and opens an external link in a new window | preserve dialog accessibility and `_blank` link behavior |
+| Add/edit | dialog emits the current fields; add supplies the selected lifecycle code; edit supplies the existing id | preserve payload fields, hydration, and close-on-success behavior |
+| Copy/deactivate | copy removes identity/timestamps and targets the counterpart code; deactivate updates only `is_active=false` | preserve counterpart mapping, soft-delete semantics, confirmation, and invalidation |
+| Query/mutation error | query errors currently produce no dedicated error panel; mutation errors use the existing destructive toast messages | preserve current error text/shape unless a separately approved UX change is added |
+| Authorization | route is nested under `ProtectedRoute requireSuperAdmin`; hosted template SELECT policy is the broader `is_vivacity_staff` policy | keep route guard and server policy distinct; do not infer CSC access from the browser baseline |
+
+## Generated-type and implementation checklist
+
+- Generated `Row` shapes for `dd_lifecycle_type`,
+  `dd_lifecycle_category`, and `dd_lifecycle_responsible_role` match the
+  `LifecycleDropdownItem` fields exactly; the generated template row also
+  matches `LifecycleTemplate` field-for-field.
+- The current casts sit at a dynamic-table query boundary and at insert/update
+  payload boundaries. Removing them is not automatically safe: first prove the
+  dynamic-table generic inference and embedded query shape with `typecheck` and
+  focused tests.
+- Keep React Query keys, invalidation, toast callbacks, and the three mutation
+  contracts together unless a smaller measured seam is demonstrated.
+- Do not move `LifecycleInstance`, onboarding queries, or
+  `generate-staff-checklist`; they have separate contracts and owners.
+- Before implementation, rebase from the latest `origin/main`, confirm the RBAC
+  decision packet has named the capability vocabulary and enforcement boundary,
+  then record before/after LOC/import counts and rerun this parity matrix.
+
 ## Authorization and data-contract guardrails
 
 - The route remains inside `requireSuperAdmin`.
