@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-09 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; the future portfolio-scope decision remains open. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, and ADR-015 are canonical for current state.
+> **Last updated:** 2026-09-09 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, and ADR-016 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -417,6 +417,72 @@ read as its current baseline while keeping the final staff-scope decision
 open. No code, schema, RLS, grant, Edge, or production-data change follows
 from this ADR. The decision must be revisited before any v6 cutover that
 narrowly scopes staff reads.
+
+**Linked to:**
+- [RBAC/Tenant decision evidence packet](codebase-optimization/phase-3/p7-rbac-tenant-decision-evidence.md)
+- [RBAC v6 authorization plan](rbac-v6-authorization-implementation-plan-2026-09-01.md)
+- [Phase 2.6 progress log](codebase-optimization/phase-2-6-stabilization/progress-log.md)
+
+---
+
+### ADR-016: RBAC authority, role, delegation, and AJ/CSC pilot baseline {#adr-016}
+**Date:** 2026-09-09
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** RBAC v6 is still an implementation plan. Current frontend route
+guards, database helpers, and Edge gates do not form a single capability
+catalogue, while internal staff currently retain broad tenant access. Phase 3
+needs a stable vocabulary and bounded pilot contract without silently changing
+production authorization behavior.
+
+**Decisions:**
+
+1. The server-side decision core is authoritative. RLS, RPCs, and Edge
+   Functions enforce server-side checks; React guards are UX-only. Unknown or
+   missing context, inactive principals, and evaluator errors fail closed.
+2. Super Admin covers governance, security, system configuration, and approved
+   cross-tenant controls. CSC covers client coordination and approved
+   package/stage/Academy workflows. Other seats remain unassigned until their
+   responsibilities are validated; no permissions are inferred from a title.
+3. High-risk authorization, privilege, system-configuration, destructive
+   tenant, cross-tenant export, and audit-administration actions remain
+   Super Admin-only for now. Routine CSC elevation is a future possibility,
+   not a grant made by this ADR.
+4. CSCs retain standing portfolio-wide access. A temporary elevated grant may
+   be used for a named package/stage capability or similar exceptional action;
+   high-risk changes require a second approver, ordinary narrow changes may
+   use one approver, and self-approval is prohibited. Grants record rationale,
+   scope, approver, and expiry.
+5. Elevated grants expire after 30 days for high-risk actions or 90 days for
+   ordinary operational actions, with quarterly review and explicit renewal.
+6. The AJ Delostrico pilot is limited to the assigned active-client portfolio
+   and explicitly named package/stage create/edit plus approved Academy
+   actions. Delete, bulk, publish/archive, assignment, and cross-portfolio
+   actions are excluded.
+7. Disabled or archived users fail closed, have sessions revoked promptly,
+   and require approved administrator recovery. An unavailable account-state
+   check is an access-unavailable condition, not an allow.
+8. Carl/Vivacity owns quarterly access-review policy; a named Operations
+   delegate prepares the evidence. Reviews cover roles, grants, expirations,
+   and exceptions.
+9. `unicorn-qa` and the existing P2-QA persona suite are the standing
+   disposable verification process. Verification is read-only against QA and
+   must not create, mutate, or seed production data.
+10. Shadow observation lasts 14 days before any authority cutover, with zero
+    unexpected v6-only allows, zero unexplained legacy-allow/v6-deny
+    lockouts, and review of every mismatch.
+11. Internal staff retain portfolio-wide messaging access. Main-consultant and
+    assistant relationships provide routing and audit context but do not
+    silently narrow that standing access. Academy-only client users receive
+    only explicitly named Academy communications, not ordinary broadcasts.
+
+**Consequences:** These are characterization and migration-gate decisions,
+not a production policy change. The capability catalogue, exact approval
+workflow, break-glass model, person-picker/system-account classification, and
+tenant-less-user disposition remain open. Any implementation affecting
+schema, RLS, RPC, Edge enforcement, or production data requires a separate
+authorized PR and applicable audit record.
 
 **Linked to:**
 - [RBAC/Tenant decision evidence packet](codebase-optimization/phase-3/p7-rbac-tenant-decision-evidence.md)

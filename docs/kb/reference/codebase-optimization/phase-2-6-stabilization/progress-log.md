@@ -57,6 +57,30 @@ The package-override editor was reviewed by source only this session
 (Inconclusive, not confirmed live) due to time budget. No code change made —
 the reported symptom did not reproduce, so nothing was fixed. See the L10
 entry for full detail.
+**2026-09-09, session 48 — Carl approved the bounded RBAC decision batch
+(documentation-only):** Established the server-authoritative boundary
+(server/RLS/RPC/Edge enforcement; frontend guards UX-only; unknown,
+missing-context, inactive-principal, and evaluator-error cases fail closed),
+the Super Admin and CSC responsibility baseline, and the hard-Super-Admin
+control-plane boundary. Super Admin-only actions remain authorization,
+privilege, system-configuration, destructive tenant, cross-tenant export, and
+audit administration; routine CSC elevation may be considered only through
+explicit capability, scope, relationship, audit, approval, and review controls.
+CSC portfolio-wide access remains standing, while the AJ Delostrico pilot is
+bounded to the assigned active-client portfolio and explicitly named
+package/stage create/edit plus approved Academy actions; delete, bulk,
+publish/archive, assignment, and cross-portfolio actions remain excluded.
+Temporary elevations require no self-approval, second approval for high-risk
+changes, recorded rationale/scope, and expiry (30 days high-risk, 90 days
+ordinary) with quarterly review. Disabled/archived users fail closed and have
+sessions revoked promptly. `unicorn-qa` and the P2-QA persona suite are the
+standing disposable verification baseline, with a 14-day shadow observation
+window before any authority cutover. Internal staff retain portfolio-wide
+messaging access; consultant/assistant relationships provide routing context
+without silently narrowing that standing access, and Academy-only client users
+receive only explicitly named Academy communications. Person-picker/system-
+account classification and tenant-less users remain parked. No production
+authorization, schema, RLS, or data behavior changed.
 
 **2026-09-09, session 45 — Carl approved the bounded RBAC staff-read baseline
 (documentation-only):** For the current baseline, preserve broad internal
