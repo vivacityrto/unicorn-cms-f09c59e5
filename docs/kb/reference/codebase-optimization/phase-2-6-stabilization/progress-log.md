@@ -18,6 +18,21 @@ warnings on either client route, zero page errors, and the "TEAM KPI"
 section renders with real staff data for the SuperAdmin account. No code
 changed; this PR only corrects the three L10 headings/notes.
 
+**2026-09-09 — L10 #29 (`tga-rto-import` out-of-scope `req`) fixed:**
+Same bug shape as L10 #28: `handleImport`/`handleStatus` called
+`jsonResponse(req, ...)` internally but neither function received `req` as
+a parameter — only the outer `serve(async (req) => {...})` closure had it,
+so every real invocation of `action=import` or the default/status path
+threw `ReferenceError: req is not defined` (the function was confirmed
+non-functional on both actions in production, per the original finding).
+Added `req: Request` as the first parameter to both signatures and updated
+all three call sites. Added `req-scope.test.mjs`, confirmed to fail against
+the pre-fix source and pass against the fix. `npm run test:edge` 280/280,
+`lint-ratchet` 0 → 0. **Flagged in the PR:** merging does not guarantee the
+fix goes live — Edge Function auto-deploy-on-merge is known-unreliable per
+AGENTS.md; the merger should verify the deployed version advances and
+manually deploy if not.
+
 **2026-09-09, session 49 — P7-B minimal lifecycle feature boundary implemented
 (frontend-only):** Rebased onto `origin/main@81cef2ac0` after the latest
 regression merge. Added `src/features/lifecycle/types.ts` with generated
@@ -1983,3 +1998,16 @@ the known cron/production-URL failure again.
 > cleanup and zero residue. The repository-to-environment secret move and
 > repeat-run administrative tail were intentionally waived by Carl (session
 > 23); this is a recorded governance exception, not an untracked blocker.
+
+### Packet P7-C — architecture and scoped lint boundary
+
+**Session 50 (2026-09-09):** The lifecycle pilot's post-boundary architecture
+was documented in `src/ARCHITECTURE.md`. The inspected seams remain narrow:
+`LifecycleChecklistsAdmin` owns orchestration, `useLifecycleChecklists` owns
+Supabase/React Query access, `src/features/lifecycle/types.ts` owns generated
+UI contracts, and the grid/dialog remain callback-driven display components.
+An ESLint `no-restricted-imports` rule now prevents lifecycle display
+components from reaching back into the data hook; the page remains allowed to
+use that hook. Existing lifecycle imports and characterization tests pass the
+scoped lint proof. No runtime behavior, authorization, schema, RLS, Edge
+Function, or production-data behavior changed, so no audit entry was needed.
