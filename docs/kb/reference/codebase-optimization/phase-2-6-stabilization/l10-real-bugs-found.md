@@ -1003,13 +1003,37 @@ clicking Delete or saving an edit on any of those tasks fails silently or
 errors — an admin cleaning up a package stage can't remove or change tasks
 at all.
 
-### 30. RTO scope end dates can go missing
+### 30. RTO scope end dates can go missing — INVESTIGATED, NOT REPRODUCED (2026-09-09)
 
 On a client's training.gov.au scope lists (qualifications, units, skill
 sets, courses, training packages), the end/expiry date reportedly now
 ignores the stored date column and only reads it from the raw sync
 snapshot — so staff checking when a qualification comes off scope can see
 a blank or stale date and mis-advise the client.
+
+**Investigated 2026-09-09:** the code the report describes is
+`useTgaRtoData.tsx`'s `resolveEndDate` helper
+(`item.tga_data?.endDate_raw ?? item.tga_data?.endDate ?? null`), whose own
+comment claimed a priority of "end_date column > endDate_raw > endDate" —
+but `tenant_rto_scope` has no standalone `end_date` column at all (confirmed
+against the generated types); every candidate value lives inside the
+`tga_data` JSON blob. Checked live production data across all 18,715 rows:
+`endDate_raw` and `endDate` are present/absent together on every single row,
+and never disagree in value where both are present (`endDate_raw is
+distinct from endDate` matched zero rows) — so which field the code reads
+first cannot currently produce a different displayed date. Separately, zero
+on-scope (current/teach_out) items have no end date at all across every
+scope type. The reported "blank or stale date" symptom did not reproduce
+against current production data.
+
+The one real finding was the comment itself: it described a three-level
+priority including a real "end_date column" that doesn't exist, which could
+mislead a future reader into thinking a database column is being consulted
+when it isn't. Corrected the comment to reflect reality (no behavior change,
+branch `chore/l10-30-rto-scope-end-date-investigated`); no other code was
+touched. If this recurs, capture the exact tenant, scope-item code, and
+whether `tga_data->>'endDate_raw'` is genuinely null or present-but-stale
+for that row — that evidence is what's currently missing.
 
 ### 31. Client portal admins can remove their own login by mistake
 

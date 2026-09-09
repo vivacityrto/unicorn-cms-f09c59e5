@@ -440,7 +440,14 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           return status === 'current';
         };
 
-        // Helper: resolve TGA end date with priority: end_date column > endDate_raw > endDate
+        // Helper: resolve TGA end date. tenant_rto_scope has no standalone
+        // end_date column (confirmed 2026-09-09, L10 #30) — every candidate
+        // value lives inside tga_data. The sync writer (tga-rto-sync)
+        // currently only ever populates endDate_raw, and live data shows
+        // endDate_raw and endDate are always identical when both are
+        // present, so this fallback order is a safety net for whichever
+        // field a given sync happened to populate, not a real priority
+        // distinction today.
         const resolveEndDate = (item: TenantRtoScopeRow) =>
           item.tga_data?.endDate_raw ?? item.tga_data?.endDate ?? null;
 
