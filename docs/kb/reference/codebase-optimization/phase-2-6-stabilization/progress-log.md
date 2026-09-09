@@ -4,6 +4,81 @@
 
 ## Progress log
 
+**2026-09-09, session 41 — CSC authenticated route baseline gathered:**
+Confirmed the QA account in the hosted `public.users` read path as active,
+`unicorn_role = CSC`, and tenant-unbound (`tenant_id` null); no production
+data was changed. Using the ignored `playwright/.auth/csc.json` state, a
+read-only browser sweep against the local Vite frontend visited
+`/admin/lifecycle-checklists`, `/admin/sharepoint-sites`, `/dashboard`,
+`/manage-tenants`, `/manage-documents`, `/manage-stages`, `/communications`,
+`/superadmin/academy/enrollments`, and `/eos`. The lifecycle-admin and
+SharePoint-sites routes redirected to `/dashboard`, confirming the current
+Super Admin-only boundary. Dashboard, work surfaces, EOS, and Academy
+enrolments rendered for CSC; the shell identified the session as CSC with no
+tenant selected. The sweep clicked no mutation controls and recorded no page
+errors, failed requests, or HTTP responses at or above 400 in the final run.
+The results characterize current access only; they do not change RBAC or
+advance the Phase 3 implementation gate.
+
+**2026-09-09, session 40 — authenticated read-only browser baseline confirmed:**
+Using the existing ignored `playwright/.auth/superadmin.json` storage state,
+ran a targeted Playwright visit to `/admin/lifecycle-checklists` against the
+local Vite frontend (which uses the hosted Supabase project). The final run
+stayed on the lifecycle route, rendered the main page heading, Add Step
+control, and lifecycle tab, and captured no page errors. No Add, Edit, Copy,
+Deactivate, or submit control was clicked; no data was written. The first
+cold-run attempt exposed only a temporary test-selector/cold-transform issue;
+the corrected targeted run passed in 30.6 seconds. This supplies the live
+Super Admin browser evidence for the current baseline. CSC browser evidence
+remains intentionally unrun because no CSC storage state is available; the
+route-level denial remains characterized by source and existing guard tests.
+The Phase 2.6 plan remains unchanged: this is still preparatory P7-A evidence,
+not a policy or implementation change.
+
+**2026-09-09, session 39 — live read-only lifecycle baseline confirmed:**
+Queried the hosted Supabase project through the read-only SQL path (no
+insert/update/delete, seed, migration, or production-data operation). The
+deployed state matches the source characterization: all four lifecycle types
+are active and ordered (`client_onboarding`, `client_offboarding`,
+`staff_onboarding`, `staff_offboarding`); `lifecycle_checklist_templates`
+exposes the expected 13 columns; `dd_lifecycle_type` has an authenticated
+read policy; and template management is governed by
+`is_vivacity_staff((select auth.uid()))`. This confirms the route-vs-database
+boundary distinction against the live project rather than relying only on
+migration text. No changes to the Phase 2.6 plan are warranted: P7 remains
+preparatory characterization, with implementation still gated by the RBAC
+vocabulary decision and the separate disabled-user hotfix for P7-D.
+
+**2026-09-09, session 38 — P7-A preparatory characterization for lifecycle
+checklist templates (no Phase 3 implementation or policy change):** After
+confirming the approved pilot boundary (the existing
+`/admin/lifecycle-checklists` template-administration surface only), inspected
+`LifecycleChecklistsAdmin.tsx`, `useLifecycleChecklists.ts`,
+`LifecycleTemplateGrid.tsx`, `LifecycleTemplateDialog.tsx`,
+`dashboardRoutes.tsx`, the generated Supabase types, and the lifecycle-table
+migrations. The evidence map records four seeded lifecycle types
+(`client_onboarding`, `client_offboarding`, `staff_onboarding`,
+`staff_offboarding`), direct browser reads/writes to the template table,
+soft-deactivation via `is_active = false`, and a route-level
+`requireSuperAdmin` guard. The current database policy is separately
+characterized as `is_vivacity_staff`, so the UI Super Admin boundary and the
+database staff boundary are not silently treated as equivalent; CSC remains a
+route-forbidden persona for this pilot. `dd_lifecycle_type` is a process-type
+lookup, not the tenant lifecycle-status table, and its text codes are not a
+foreign-key constrained relationship from templates.
+
+Added `src/test/admin/lifecycle-checklists.test.tsx` with 13 focused
+characterization tests covering loading, empty, populated, inactive, tab
+switching, view/copy/edit/deactivate/external-link interactions, add/edit form
+hydration and submission, current query-error behavior (no dedicated error
+panel), route placement under `requireSuperAdmin`, and the distinct broader
+database policy. The focused suite passes. The run reproduces existing Radix
+dialog accessibility warnings; these are recorded as baseline findings and
+were not changed. No extraction, schema/RLS/grant change, production-data
+operation, or Operations/tenant-transition change was made. The Phase 2.6
+plan remains unchanged because this is preparatory evidence only and the P7
+implementation gate (RBAC vocabulary decision and the separate disabled-user
+hotfix for P7-D) remains open.
 **2026-09-09, session 39 — `qa:migrations`' dynamic-replay half demonstrated,
 closing out all 8 P2-QA suites (docs-only, `docs/qa-migrations-dynamic-replay`):**
 after the previous session's `qa:e2e` closeout, Carl asked "whats next" --
