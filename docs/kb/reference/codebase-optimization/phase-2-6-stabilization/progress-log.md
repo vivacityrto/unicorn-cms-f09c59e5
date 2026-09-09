@@ -4,7 +4,18 @@
 
 ## Progress log
 
-**2026-09-09, session 42 — P7-B lifecycle boundary prepared (evidence only):**
+**2026-09-09, session 42 — P7 RBAC/Tenant decision evidence packet (prep only, no implementation):**
+Consolidated the RBAC v6 §13 and Tenant Operating Model §18 decision matrices,
+current observed CSC/Super Admin/messaging/membership behavior (source-cited,
+one live-DB corroboration attempt blocked by the auto-mode classifier), and
+sequencing recommendations for Packets P7-B/C/D into one doc:
+[`p7-rbac-tenant-decision-evidence.md`](../phase-3/p7-rbac-tenant-decision-evidence.md).
+Confirmed P6-A is already closed, so the sole remaining P7-B/C/D blocker is
+the RBAC vocabulary decision (narrowly, RBAC §13 items 1-3/7) plus, for P7-D
+only, a not-yet-written disabled-user hotfix. No decisions were made; no
+code, schema, or production data changed.
+
+**2026-09-09, session 42 (concurrent session) — P7-B lifecycle boundary prepared (evidence only):**
 From a fresh `origin/main` worktree, traced the admin lifecycle hook and all
 consumers. `useLifecycleChecklists.ts` has three production importers (the
 admin page plus type-only grid/dialog imports); its `LifecycleInstance` export
