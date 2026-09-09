@@ -4,6 +4,18 @@
 
 ## Progress log
 
+**2026-09-09, session 44 — RBAC vocabulary baseline proposed for review
+(documentation-only):** Added a narrowly scoped baseline proposal to the
+[P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
+It keeps principal state, job role/seat, capability/action, scope, and
+relationship separate; names the canonical server decision core as the
+security authority; keeps React route/navigation guards UX-only; and requires
+fail-closed unknown, missing-context, inactive-principal, and evaluator-error
+semantics. The baseline uses the already characterized Super Admin-allowed
+and CSC-forbidden lifecycle cases without approving future role bundles or
+staff-scope policy. Broader RBAC §13 decisions remain open, and no code,
+schema, RLS, RPC, Edge, grant, or production-data change was made.
+
 **2026-09-09, session 42 — P7 RBAC/Tenant decision evidence packet (prep only, no implementation):**
 Consolidated the RBAC v6 §13 and Tenant Operating Model §18 decision matrices,
 current observed CSC/Super Admin/messaging/membership behavior (source-cited,

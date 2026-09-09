@@ -84,6 +84,9 @@ tenant or cross-tenant access surface is implied by this pilot.
 - The RBAC v6 plan requires a server decision core and explicit staff-scope
   decision before route/navigation cutover. Optimization must not create a
   second permission registry.
+- The [P7 RBAC/Tenant decision evidence packet](p7-rbac-tenant-decision-evidence.md)
+  now contains a clearly marked baseline vocabulary proposal for Carl/Vivacity
+  review. It is not a policy decision or implementation authorization.
 
 ### Preparation only
 
