@@ -403,7 +403,7 @@ Retired outright (`hotfix/retire-dead-seatcard-cluster`); see
 
 ## 9. Phase 3 pilot packets
 
-Do not begin until P6-A has parity evidence and the RBAC vocabulary decision explicitly says where authorization predicates live.
+Do not begin until P6-A has parity evidence and the RBAC vocabulary decision explicitly says where authorization predicates live. P6-A is closed and the vocabulary/authority boundary is approved in ADR-016 (2026-09-09), so bounded P7-B/P7-C preparation is now unblocked. P7-D remains separately gated on the disabled-user hotfix.
 
 ### Packet P7-A — lifecycle characterization
 

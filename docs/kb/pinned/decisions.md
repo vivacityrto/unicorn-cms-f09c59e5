@@ -21,6 +21,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-012] [2026-04-28] Audit-entry authorship — devs author Lovable prod DB change sessions; Carl sole author for everything else — full: [reference/decision-trail.md#adr-012](../reference/decision-trail.md#adr-012)
 - [ADR-013] [2026-05-15] Flagship surfaces — CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system — full: [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013)
 - [ADR-015] [2026-09-09] RBAC staff-read baseline — preserve broad internal-staff tenant read access for now; scope sensitive actions separately — full: [reference/decision-trail.md#adr-015](../reference/decision-trail.md#adr-015)
+- [ADR-016] [2026-09-09] RBAC authority, role, delegation, and pilot baseline — preserve portfolio-wide staff access while keeping high-risk controls Super Admin-only — full: [reference/decision-trail.md#adr-016](../reference/decision-trail.md#adr-016)
 
 ---
 
