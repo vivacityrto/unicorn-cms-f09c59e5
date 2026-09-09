@@ -2011,3 +2011,18 @@ components from reaching back into the data hook; the page remains allowed to
 use that hook. Existing lifecycle imports and characterization tests pass the
 scoped lint proof. No runtime behavior, authorization, schema, RLS, Edge
 Function, or production-data behavior changed, so no audit entry was needed.
+
+### Packet P7-D prerequisite — disabled-user fail-closed hotfix
+
+**Session 51 (2026-09-09):** `ProtectedRoute` previously converted an error
+reading `users.disabled` into `loaded: true, disabled: false`, a client-side
+fail-open path. The guard now has explicit loading/ready/error states; lookup
+errors render an access-unavailable Retry/Sign Out card, and Retry reruns the
+read before any protected child renders. Added focused regression coverage in
+`src/test/rbac/ProtectedRoute.test.tsx`. This is a frontend security-boundary
+correction with no schema/RLS/Edge/data changes; audit entry
+`2026-09-09-protected-route-disabled-user-fail-closed.md` records the change.
+The broader P7-D auth/profile/membership seam remains open. Metrics at the
+rebased branch state (`origin/main@77de40e1a` plus this fix) are 1,712 product
+files / 480,286 physical lines, with 394,280 excluding generated types/tests;
+the change adds no new direct Supabase call or route.

@@ -30,15 +30,16 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
 
   // Disabled-account check (fetched separately because useAuth's profile
   // select does not include the `disabled` column).
-  const [disabledState, setDisabledState] = useState<{ loaded: boolean; disabled: boolean }>({
-    loaded: false,
-    disabled: false,
-  });
+  const [disabledCheckAttempt, setDisabledCheckAttempt] = useState(0);
+  const [disabledState, setDisabledState] = useState<{
+    status: 'loading' | 'ready' | 'error';
+    disabled: boolean;
+  }>({ status: 'loading', disabled: false });
 
   useEffect(() => {
     let cancelled = false;
     if (!user?.id) {
-      setDisabledState({ loaded: false, disabled: false });
+      setDisabledState({ status: 'loading', disabled: false });
       return;
     }
     (async () => {
@@ -50,15 +51,15 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
       if (cancelled) return;
       if (error) {
         console.error('Error checking disabled flag:', error);
-        setDisabledState({ loaded: true, disabled: false });
+        setDisabledState({ status: 'error', disabled: false });
         return;
       }
-      setDisabledState({ loaded: true, disabled: data?.disabled === true });
+      setDisabledState({ status: 'ready', disabled: data?.disabled === true });
     })();
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, disabledCheckAttempt]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -110,10 +111,42 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false, allowedRol
 
   // Wait for the disabled check before rendering anything else so we never
   // flash the disabled screen or the app shell during the check.
-  if (!disabledState.loaded) {
+  if (disabledState.status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
         <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (disabledState.status === 'error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle>We couldn't verify your account</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <p className="text-muted-foreground">
+              We couldn't verify whether your account is active. Please try again
+              or sign out and contact your administrator if this continues.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
+                  setDisabledState({ status: 'loading', disabled: false });
+                  setDisabledCheckAttempt((attempt) => attempt + 1);
+                }}
+                className="flex-1"
+              >
+                Retry
+              </Button>
+              <Button variant="outline" onClick={handleSignOut} className="flex-1">
+                Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
