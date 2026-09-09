@@ -233,6 +233,28 @@ describe('ProtectedRoute', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Sign Out' }));
       expect(mockSignOut).toHaveBeenCalledTimes(1);
     });
+
+    it('fails closed when the disabled check errors, and Retry rechecks before rendering children', async () => {
+      authedAs(staffProfile('Team Member'));
+      mockUseRBAC.mockReturnValue({
+        canAccessRoute: () => true,
+        isSuperAdmin: false,
+        canAccessEOS: () => true,
+        isVivacityTeam: true,
+      });
+      mockMaybeSingle
+        .mockResolvedValueOnce({ data: null, error: new Error('status unavailable') })
+        .mockResolvedValueOnce({ data: { disabled: false }, error: null });
+
+      renderProtected('/some-staff-page');
+
+      expect(await screen.findByText("We couldn't verify your account")).toBeInTheDocument();
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(screen.getByText('Protected Content')).toBeInTheDocument());
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('academy-only user redirect', () => {

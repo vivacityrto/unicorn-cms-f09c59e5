@@ -422,7 +422,7 @@ Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-D — auth/profile/membership seam
 
-Only after RBAC decisions and the disabled-user hotfix: separate session, profile, membership and authorization concerns with pure-helper tests and cancellation/error handling. Do not create a second capability registry.
+**Status:** disabled-user hotfix implemented; remaining scope is the session/profile/membership/authorization seam with pure-helper tests; no second capability registry.
 
 ## 10. Verification contract for every implementation PR
 
