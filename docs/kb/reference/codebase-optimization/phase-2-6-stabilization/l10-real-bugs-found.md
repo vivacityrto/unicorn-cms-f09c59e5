@@ -222,7 +222,7 @@ scope. Full detail:
 
 ## KPI v2 dashboard (`src/hooks/useKpiAccess.tsx`)
 
-### 11. "Team KPI" toggle never renders for real SuperAdmin accounts — DOCUMENTED, NOT FIXED
+### 11. "Team KPI" toggle never renders for real SuperAdmin accounts — FIXED (2026-09-07, Phase 2.6 Packet P4-A, PR #959)
 `useKpiAccess.tsx`'s `canViewAnyStaff` — which gates the "Team KPI" toggle and
 the whole `KpiTeamSection`/`KpiDrillDownSheet` team dashboard — checks only
 `profile?.global_role === 'SuperAdmin'`. The codebase's own canonical
@@ -244,6 +244,18 @@ since `useKpiAccess.tsx` has zero `no-explicit-any` findings and is untouched
 by that PR; a one-line fix (`profile?.global_role === 'SuperAdmin' ||
 profile?.unicorn_role === 'Super Admin'`, matching `useAuth.tsx`'s existing
 pattern) is available whenever someone picks it up.
+
+**Fixed 2026-09-07 (PR #959, same-day as this finding):** `useKpiAccess.tsx`
+was changed to reuse `useAuth()`'s canonical `isSuperAdmin()` directly
+(`const isSuperAdmin = checkIsSuperAdmin();`) instead of duplicating the
+legacy-only check, so `canViewAnyStaff` now covers both fields. Live-verified
+against `carl@vivacity.com.au`'s real profile in that PR: the Team KPI toggle
+and section render, checked by default, zero console errors. **Found stale
+2026-09-09**: this session initially picked #11 up as still open per this
+entry's own heading; re-checked the live source first and found the fix
+already present and unchanged since PR #959 — this entry's heading had
+simply never been updated after that PR merged. No code change made here;
+this is a documentation-sync correction only.
 
 ## Manage Phases (`/manage-documents` → Manage Phases, `ManageStages.tsx`)
 
@@ -700,16 +712,27 @@ K_Account Test) alongside staff, zero console errors.
 
 ## Client notification surfaces
 
-### 22. ClientRouteGuard updates BrowserRouter during render — DOCUMENTED, NOT FIXED
+### 22. ClientRouteGuard updates BrowserRouter during render — FIXED (2026-09-07, Phase 2.6 Packet P4-A, PR #959)
 
 During the authenticated read-only notification smoke test (`/client/inbox?tab=notifications`), the browser logged React's warning that `ClientRouteGuard` updates `BrowserRouter` while a different component is rendering. The route still rendered and no data/write failure occurred, but this render-time navigation can cause unstable transitions or repeated renders. It is pre-existing and outside the Phase 2.5 notification typing diff; schedule a focused follow-up to move the redirect/state update into an effect or event boundary and verify client-route navigation.
 
 **Truth-sync note (2026-09-07, Phase 2.6 stabilization plan Packet P0-C):**
-this is the same root cause as [#24](#24-client-files-navigation-emits-a-react-setstate-during-render-warning--documented-not-fixed)
+this is the same root cause as [#24](#24-client-files-navigation-emits-a-react-setstate-during-render-warning--fixed-2026-09-07-phase-26-packet-p4-a-pr-959)
 — both are `src/components/client/ClientRouteGuard.tsx:23` updating
 `BrowserRouter` during render, surfaced on two different routes. Fix once
 (Packet P4-A) and it resolves both entries; do not treat them as two
 separate bugs or duplicate the fix effort.
+
+**Fixed 2026-09-07 (PR #959, same-day as this Packet P0-C note):** both the
+staff-bypass and requires-portal-user-management redirects were moved out of
+the render body into `useEffect`s gated on derived booleans (`staffBypass`,
+`blockedUserMgmt`), preserving the exact same guard/fallback ordering and
+rendered content. Live-verified in that PR: navigating to `/client/home` as
+SuperAdmin still redirects cleanly to `/manage-tenants`, now with zero
+console warnings. **Found stale 2026-09-09**: re-checked the live source
+before picking this up and found the fix already present, unchanged since
+PR #959 — this heading had simply never been updated after that PR merged.
+No code change made here; documentation-sync correction only.
 
 ## Bulk communications
 
@@ -736,9 +759,15 @@ an unfiled, not-yet-root-caused observation rather than guessed at here.
 
 ## Client Files route
 
-### 24. Client Files navigation emits a React setState-during-render warning — DOCUMENTED, NOT FIXED
+### 24. Client Files navigation emits a React setState-during-render warning — FIXED (2026-09-07, Phase 2.6 Packet P4-A, PR #959)
 
 During the Phase 2.5 authenticated SharePoint cohort smoke test, `/client/files` loaded and remained usable, but Vite captured a React warning: `BrowserRouter` was updated while `ClientRouteGuard` was rendering. The stack points to `src/components/client/ClientRouteGuard.tsx:23` and occurs while the client layout resolves tenant access. No page error, failed route, or data write occurred, and the warning predates this typing-only cohort. Track separately as a client-route lifecycle fix; do not conflate it with the SharePoint boundary changes.
+
+**Fixed 2026-09-07 (PR #959) — same root cause and same fix as
+[#22](#22-clientrouteguard-updates-browserrouter-during-render--fixed-2026-09-07-phase-26-packet-p4-a-pr-959)
+above.** Found stale 2026-09-09 for the same reason: the heading wasn't
+updated after PR #959 merged. No separate fix was needed or made for this
+entry beyond #22's.
 
 **Truth-sync note (2026-09-07, Phase 2.6 stabilization plan Packet P0-C):**
 this is the same root cause as [#22](#22-clientrouteguard-updates-browserrouter-during-render--documented-not-fixed),

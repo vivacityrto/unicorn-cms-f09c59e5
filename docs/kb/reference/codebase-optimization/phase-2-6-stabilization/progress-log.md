@@ -4,6 +4,20 @@
 
 ## Progress log
 
+**2026-09-09 — L10 #22/#24/#11 found already fixed (documentation-sync correction, no code change):**
+Picked up #22 (`ClientRouteGuard` render-time navigate), #24 (same root
+cause), and #11 (`useKpiAccess.tsx` Team KPI toggle) as the next Tier
+2/3 items. Before touching any code, re-checked live source and found all
+three already fixed by `PR #959` (2026-09-07, Phase 2.6 Packet P4-A) —
+`ClientRouteGuard.tsx`'s redirects are already inside `useEffect`s, and
+`useKpiAccess.tsx` already reuses `useAuth()`'s canonical `isSuperAdmin()`.
+Their L10 headings had simply never been updated after that PR merged.
+Live-verified read-only (Demo RTO for `/client/inbox?tab=notifications`
+and `/client/files`, SuperAdmin for `/kpi`): zero render-time-update
+warnings on either client route, zero page errors, and the "TEAM KPI"
+section renders with real staff data for the SuperAdmin account. No code
+changed; this PR only corrects the three L10 headings/notes.
+
 **2026-09-09 — L10 #29 (`tga-rto-import` out-of-scope `req`) fixed:**
 Same bug shape as L10 #28: `handleImport`/`handleStatus` called
 `jsonResponse(req, ...)` internally but neither function received `req` as
