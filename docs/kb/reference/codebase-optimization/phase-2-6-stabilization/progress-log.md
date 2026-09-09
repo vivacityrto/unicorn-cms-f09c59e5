@@ -15,6 +15,16 @@ described a priority including a real "end_date column" that doesn't exist
 on `tenant_rto_scope` at all; corrected the comment only (no behavior
 change). No other code touched.
 
+**2026-09-09, session 45 — Carl approved the bounded RBAC staff-read baseline
+(documentation-only):** For the current baseline, preserve broad internal
+staff tenant read access and scope sensitive actions separately. This records
+the present behavior as the compatibility starting point; it does not decide
+future portfolio/assignment scope, seat capability bundles, hard-Super-Admin
+or break-glass policy, or any production enforcement change. The decision is
+captured as ADR-015 and in the [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
+The remaining vocabulary/authority-boundary decision is still required before
+a read-only/shadow P7-B or P7-C slice is treated as unblocked.
+
 **2026-09-09, session 44 — RBAC vocabulary baseline proposed for review
 (documentation-only):** Added a narrowly scoped baseline proposal to the
 [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
