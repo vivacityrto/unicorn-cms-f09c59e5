@@ -4,6 +4,17 @@
 
 ## Progress log
 
+**2026-09-09, session 42 — P7 RBAC/Tenant decision evidence packet (prep only, no implementation):**
+Consolidated the RBAC v6 §13 and Tenant Operating Model §18 decision matrices,
+current observed CSC/Super Admin/messaging/membership behavior (source-cited,
+one live-DB corroboration attempt blocked by the auto-mode classifier), and
+sequencing recommendations for Packets P7-B/C/D into one doc:
+[`p7-rbac-tenant-decision-evidence.md`](../phase-3/p7-rbac-tenant-decision-evidence.md).
+Confirmed P6-A is already closed, so the sole remaining P7-B/C/D blocker is
+the RBAC vocabulary decision (narrowly, RBAC §13 items 1-3/7) plus, for P7-D
+only, a not-yet-written disabled-user hotfix. No decisions were made; no
+code, schema, or production data changed.
+
 **2026-09-09, session 41 — CSC authenticated route baseline gathered:**
 Confirmed the QA account in the hosted `public.users` read path as active,
 `unicorn_role = CSC`, and tenant-unbound (`tenant_id` null); no production
