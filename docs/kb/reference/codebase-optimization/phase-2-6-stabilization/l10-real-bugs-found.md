@@ -996,12 +996,53 @@ alongside P4-B/C's "invalid relationship reads"/"identity and lookup"
 framing once each is root-caused), not as verified L10 entries in the same
 sense as items 1–28 above.
 
-### 29. Editing or deleting package stage tasks no longer works
+### 29. Editing or deleting package stage tasks no longer works — INVESTIGATED, NOT REPRODUCED (2026-09-09)
 
 On a package's stage, staff and client task IDs are reportedly mangled, so
 clicking Delete or saving an edit on any of those tasks fails silently or
 errors — an admin cleaning up a package stage can't remove or change tasks
 at all.
+
+**Investigated 2026-09-09:** checked both admin surfaces that edit/delete
+stage tasks today:
+
+1. **Stage template editor** (`/admin/stages/:id`, `AdminStageDetail.tsx`
+   + `useStageTemplateContent.tsx`) — the primary "clean up a stage" admin
+   surface. `teamTasks`/`clientTasks` state is fetched directly from
+   `staff_tasks`/`client_tasks` filtered by `stage_id`
+   (`useStageTemplateContent.tsx:147-154`), and `updateTeamTask`/
+   `deleteTeamTask`/`updateClientTask`/`deleteClientTask`
+   (`useStageTemplateContent.tsx:256-343`) mutate those exact same tables
+   by the row's own `id` — no ID-space mismatch found in source.
+   **Live-verified** (SuperAdmin persona, an unused stage with zero active
+   client instances — id 1051, "Financial Viability and ASQAnet - AddOn"):
+   added a throwaway staff task, edited its name, deleted it; added a
+   throwaway client task, opened its edit dialog, deleted it. Both
+   succeeded cleanly with a "Task Deleted"/"Client Task Deleted" toast,
+   zero page errors, zero failed HTTP responses, and zero residual rows
+   confirmed via a follow-up read query. One unrelated, minor, non-blocking
+   UX quirk: the Edit dialog does not auto-close after a successful save
+   (data does save correctly) — not the reported bug, noted for a future
+   session, not fixed here.
+2. **Package-specific override editor** (`/admin/package-builder/:id` →
+   `StageDetailPanel.tsx` + `usePackageBuilder.tsx`'s `useStageDetail`) — a
+   second, structurally distinct path operating on `package_staff_tasks`/
+   `package_client_tasks` (own UUID `id` column) instead of the stage
+   template's `staff_tasks`/`client_tasks`. Source review
+   (`usePackageBuilder.tsx:732-796`) shows the same pattern: fetched and
+   mutated by the same table's own `id`, gated behind a `useOverrides`
+   toggle that also gates whether the Delete/Add buttons render at all.
+   No ID-space mismatch found. **Not live-tested** this session (time
+   budget) — reviewed by source only, so this specific surface is
+   Inconclusive rather than confirmed, unlike the fully live-verified
+   stage-template editor above.
+
+No code change was made — there is nothing to fix without a live
+reproduction, and inventing a fix for unreproduced symptoms would risk
+masking whatever the real (possibly since-resolved, or environment-
+specific) cause was. If this recurs, capture the exact page URL, task
+type (staff/client), and the browser console/network error at the moment
+of failure — that evidence is what's currently missing.
 
 ### 30. RTO scope end dates can go missing
 
