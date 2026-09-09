@@ -1969,3 +1969,16 @@ the known cron/production-URL failure again.
 > cleanup and zero residue. The repository-to-environment secret move and
 > repeat-run administrative tail were intentionally waived by Carl (session
 > 23); this is a recorded governance exception, not an untracked blocker.
+
+### Packet P7-C — architecture and scoped lint boundary
+
+**Session 50 (2026-09-09):** The lifecycle pilot's post-boundary architecture
+was documented in `src/ARCHITECTURE.md`. The inspected seams remain narrow:
+`LifecycleChecklistsAdmin` owns orchestration, `useLifecycleChecklists` owns
+Supabase/React Query access, `src/features/lifecycle/types.ts` owns generated
+UI contracts, and the grid/dialog remain callback-driven display components.
+An ESLint `no-restricted-imports` rule now prevents lifecycle display
+components from reaching back into the data hook; the page remains allowed to
+use that hook. Existing lifecycle imports and characterization tests pass the
+scoped lint proof. No runtime behavior, authorization, schema, RLS, Edge
+Function, or production-data behavior changed, so no audit entry was needed.

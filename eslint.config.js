@@ -42,4 +42,24 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "error",
     },
   },
+  {
+    // P7-C lifecycle pilot boundary: display components stay callback-driven
+    // and consume contracts from the feature-local type module. The page is
+    // intentionally excluded because it owns the data hook seam.
+    files: ["src/components/admin/lifecycle/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/hooks/useLifecycleChecklists",
+              message:
+                "Import lifecycle contracts from @/features/lifecycle/types; keep data access in the page hook seam.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );
