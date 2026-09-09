@@ -4,6 +4,21 @@
 
 ## Progress log
 
+**2026-09-09, session 40 — authenticated read-only browser baseline confirmed:**
+Using the existing ignored `playwright/.auth/superadmin.json` storage state,
+ran a targeted Playwright visit to `/admin/lifecycle-checklists` against the
+local Vite frontend (which uses the hosted Supabase project). The final run
+stayed on the lifecycle route, rendered the main page heading, Add Step
+control, and lifecycle tab, and captured no page errors. No Add, Edit, Copy,
+Deactivate, or submit control was clicked; no data was written. The first
+cold-run attempt exposed only a temporary test-selector/cold-transform issue;
+the corrected targeted run passed in 30.6 seconds. This supplies the live
+Super Admin browser evidence for the current baseline. CSC browser evidence
+remains intentionally unrun because no CSC storage state is available; the
+route-level denial remains characterized by source and existing guard tests.
+The Phase 2.6 plan remains unchanged: this is still preparatory P7-A evidence,
+not a policy or implementation change.
+
 **2026-09-09, session 39 — live read-only lifecycle baseline confirmed:**
 Queried the hosted Supabase project through the read-only SQL path (no
 insert/update/delete, seed, migration, or production-data operation). The
