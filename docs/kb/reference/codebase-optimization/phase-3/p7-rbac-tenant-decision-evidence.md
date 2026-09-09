@@ -142,6 +142,43 @@ Per RBAC plan §7 P0.1-P0.3 (`rbac-v6-authorization-implementation-plan-2026-09-
 
 Every row in §3-§6 above is already labelled **Proven** (source- or live-verified today) or framed as an **Open question** for Carl/Vivacity. The one cross-cutting proven fact worth restating on its own: RBAC v6 and Tenant Operating Model are both, today, still governed entirely by the *current* behavior described here — no shadow evaluator, no capability catalogue, no portfolio scoping, and no disabled-state enforcement exist yet in any form. Nothing in this packet should be read as a recommendation for what the policy *should* be; every "should"/"whether" phrase above is Vivacity's to answer, not this packet's.
 
+## 7.1 Baseline vocabulary proposal for review (not a policy decision)
+
+This is a deliberately narrow proposal to make the Phase 3 gate discussable;
+it does not approve a role bundle, change a route, or authorize an
+enforcement cutover. It records the smallest shared language that the
+Super Admin and CSC baseline can use before broader seat policy is settled.
+
+| Term | Baseline meaning | Pilot implication |
+|---|---|---|
+| **Principal state** | active, disabled, archived, or system | State is evaluated first; inactive or disallowed principals deny. |
+| **Job role / seat** | Super Admin, CSC, or another reviewed human/machine seat | A seat supplies defaults; it is not itself a permission or tenant scope. |
+| **Capability / action** | An atomic verb-ended operation such as `lifecycle.templates.view` or `lifecycle.templates.edit` | The pilot names actions explicitly instead of treating “admin” as a capability. |
+| **Scope** | The target extent, such as `own_resource`, `assigned_tenants`, `explicit_tenant`, `all_tenants`, or `global` | Scope is evaluated against the server-resolved target; it is not a privilege level. |
+| **Relationship** | A named relation to the target, such as tenant membership, assignment, ownership, or facilitation | A matching role is insufficient when the required relationship is absent. |
+
+The proposed authority boundary is equally narrow and follows the existing
+RBAC plan: a canonical server decision core is the security authority;
+Postgres RLS, RPCs, and Edge Functions enforce their own server-side checks;
+React route/navigation guards remain UX gates and may not widen access. The
+decision contract denies unknown capabilities, missing required context,
+inactive principals, and evaluator failures. During migration, a capability
+has one authority at a time and shadow comparisons must never combine legacy
+and v6 results with `OR`, `AND`, or fallback-to-allow.
+
+For the current lifecycle baseline, Super Admin remains the allowed route
+persona and CSC remains the route-forbidden persona already proven in session
+41. Those are characterization cases, not approval of future Super Admin or
+CSC capability bundles. No staff-scope, hard-Super-Admin/break-glass,
+disabled-user, schema, RLS, RPC, Edge, grant, or production-data decision is
+made by this proposal; those remain the open questions in §3 and the separate
+disabled-user hotfix gate for P7-D.
+
+**Decision requested:** Carl/Vivacity should confirm whether this vocabulary
+and authority boundary are acceptable as the baseline for a read-only/shadow
+P7-B or P7-C slice. A “yes” would unblock only that bounded preparation or
+shadow work; it would not authorize a policy migration or production change.
+
 ## 8. Verification / commands run this session
 
 - `git fetch origin`; `git worktree list` (confirmed the three other in-flight worktrees named in the task and left them untouched).
