@@ -4,6 +4,22 @@
 
 ## Progress log
 
+**2026-09-09, session 41 — CSC authenticated route baseline gathered:**
+Confirmed the QA account in the hosted `public.users` read path as active,
+`unicorn_role = CSC`, and tenant-unbound (`tenant_id` null); no production
+data was changed. Using the ignored `playwright/.auth/csc.json` state, a
+read-only browser sweep against the local Vite frontend visited
+`/admin/lifecycle-checklists`, `/admin/sharepoint-sites`, `/dashboard`,
+`/manage-tenants`, `/manage-documents`, `/manage-stages`, `/communications`,
+`/superadmin/academy/enrollments`, and `/eos`. The lifecycle-admin and
+SharePoint-sites routes redirected to `/dashboard`, confirming the current
+Super Admin-only boundary. Dashboard, work surfaces, EOS, and Academy
+enrolments rendered for CSC; the shell identified the session as CSC with no
+tenant selected. The sweep clicked no mutation controls and recorded no page
+errors, failed requests, or HTTP responses at or above 400 in the final run.
+The results characterize current access only; they do not change RBAC or
+advance the Phase 3 implementation gate.
+
 **2026-09-09, session 40 — authenticated read-only browser baseline confirmed:**
 Using the existing ignored `playwright/.auth/superadmin.json` storage state,
 ran a targeted Playwright visit to `/admin/lifecycle-checklists` against the
