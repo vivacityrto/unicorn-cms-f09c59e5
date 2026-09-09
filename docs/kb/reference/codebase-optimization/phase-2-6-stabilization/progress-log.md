@@ -2026,3 +2026,18 @@ The broader P7-D auth/profile/membership seam remains open. Metrics at the
 rebased branch state (`origin/main@77de40e1a` plus this fix) are 1,712 product
 files / 480,286 physical lines, with 394,280 excluding generated types/tests;
 the change adds no new direct Supabase call or route.
+
+### Packet P7-D — pure profile/membership helper seam
+
+**Session 52 (2026-09-09):** Extracted the existing profile/membership
+predicates from `useAuth` into `src/auth/access.ts` and changed the focused
+auth helper tests to exercise those production helpers instead of maintaining
+an independent mirror. The contract is unchanged: SuperAdmin bypasses tenant
+membership checks, only active memberships grant access, and tenant roles are
+resolved per tenant. Session loading, Supabase I/O, and authorization policy
+remain in their existing owners. This is a minimal P7-D slice; cancellation,
+error-state handling, and any broader auth/profile/membership separation remain
+open. No schema/RLS/Edge/data behavior changed, so no audit entry was needed.
+The branch adds one production helper module and no Supabase call or route;
+metrics are 1,712 product files / 480,259 physical lines / 394,307 excluding
+generated types/tests.

@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import {
+  getTenantRole,
+  hasTenantAccess,
+  hasTenantAdmin,
+  isSuperAdmin,
+  type TenantMembership,
+} from '@/auth/access';
 
 interface UserProfile {
   user_uuid: string;
@@ -19,13 +26,6 @@ interface UserProfile {
   is_vivacity_internal: boolean | null;
   is_team: boolean | null;
   kpi_role: string | null;
-}
-
-// Tenant membership info for RBAC
-interface TenantMembership {
-  tenant_id: number;
-  role: 'Admin' | 'General User';
-  status: string;
 }
 
 interface AuthContextType {
@@ -156,26 +156,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // RBAC helper functions
-  const isSuperAdmin = (): boolean => {
-    // Check both global_role (legacy) and unicorn_role (current standard)
-    return profile?.global_role === 'SuperAdmin' || profile?.unicorn_role === 'Super Admin';
-  };
-
-  const hasTenantAccess = (tenantId: number): boolean => {
-    if (isSuperAdmin()) return true;
-    return memberships.some(m => m.tenant_id === tenantId && m.status === 'active');
-  };
-
-  const hasTenantAdmin = (tenantId: number): boolean => {
-    if (isSuperAdmin()) return true;
-    return memberships.some(m => m.tenant_id === tenantId && m.role === 'Admin' && m.status === 'active');
-  };
-
-  const getTenantRole = (tenantId: number): 'Admin' | 'General User' | null => {
-    if (isSuperAdmin()) return 'Admin'; // SuperAdmins have admin access everywhere
-    const membership = memberships.find(m => m.tenant_id === tenantId && m.status === 'active');
-    return membership?.role || null;
-  };
+  const isSuperAdminForProfile = (): boolean => isSuperAdmin(profile);
+  const hasTenantAccessForProfile = (tenantId: number): boolean => hasTenantAccess(profile, memberships, tenantId);
+  const hasTenantAdminForProfile = (tenantId: number): boolean => hasTenantAdmin(profile, memberships, tenantId);
+  const getTenantRoleForProfile = (tenantId: number): TenantMembership['role'] | null =>
+    getTenantRole(profile, memberships, tenantId);
 
   return (
     <AuthContext.Provider value={{ 
@@ -187,10 +172,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       loading, 
       signOut, 
       refreshProfile,
-      isSuperAdmin,
-      hasTenantAccess,
-      hasTenantAdmin,
-      getTenantRole,
+      isSuperAdmin: isSuperAdminForProfile,
+      hasTenantAccess: hasTenantAccessForProfile,
+      hasTenantAdmin: hasTenantAdminForProfile,
+      getTenantRole: getTenantRoleForProfile,
     }}>
       {children}
     </AuthContext.Provider>

@@ -9,61 +9,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { mockUsers, mockMemberships, testTenants } from '../fixtures/auth-test-data';
-
-// Profile type that accepts any user role
-interface UserProfile {
-  user_uuid: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  unicorn_role: string;
-  global_role: string | null;
-  tenant_id: number | null;
-  avatar_url: string | null;
-}
-
-// Membership type
-interface TenantMembership {
-  tenant_id: number;
-  role: 'Admin' | 'General User';
-  status: string;
-}
-
-// Extract the pure logic functions for testing (without React context)
-// These mirror the logic in useAuth.tsx
-
-function isSuperAdmin(profile: UserProfile | null): boolean {
-  if (!profile) return false;
-  return profile.global_role === 'SuperAdmin' || profile.unicorn_role === 'Super Admin';
-}
-
-function hasTenantAccess(
-  profile: UserProfile | null,
-  memberships: TenantMembership[],
-  tenantId: number
-): boolean {
-  if (isSuperAdmin(profile)) return true;
-  return memberships.some(m => m.tenant_id === tenantId && m.status === 'active');
-}
-
-function hasTenantAdmin(
-  profile: UserProfile | null,
-  memberships: TenantMembership[],
-  tenantId: number
-): boolean {
-  if (isSuperAdmin(profile)) return true;
-  return memberships.some(m => m.tenant_id === tenantId && m.role === 'Admin' && m.status === 'active');
-}
-
-function getTenantRole(
-  profile: UserProfile | null,
-  memberships: TenantMembership[],
-  tenantId: number
-): 'Admin' | 'General User' | null {
-  if (isSuperAdmin(profile)) return 'Admin';
-  const membership = memberships.find(m => m.tenant_id === tenantId && m.status === 'active');
-  return membership?.role || null;
-}
+import { getTenantRole, hasTenantAccess, hasTenantAdmin, isSuperAdmin } from '@/auth/access';
 
 describe('useAuth RBAC Helpers', () => {
   describe('isSuperAdmin', () => {
