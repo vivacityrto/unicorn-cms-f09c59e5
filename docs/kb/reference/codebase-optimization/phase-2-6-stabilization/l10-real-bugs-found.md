@@ -1052,13 +1052,38 @@ ignores the stored date column and only reads it from the raw sync
 snapshot — so staff checking when a qualification comes off scope can see
 a blank or stale date and mis-advise the client.
 
-### 31. Client portal admins can remove their own login by mistake
+### 31. Client portal admins can remove their own login by mistake — FIXED (2026-09-09, `hotfix/client-portal-self-swap-guard`)
 
 The "Swap to Contact" action in the client portal's Users page is
 reportedly offered on the signed-in admin's own row, so a client admin can
 convert themselves into a contact and instantly lose their own Unicorn
 login and seat — the equivalent staff-side screen deliberately hides this
 action for the signed-in user's own account.
+
+**Investigated 2026-09-09:** the originally-reported symptom (a visible
+self-swap button) was already stale — both UI callers
+(`ClientUsersPage.tsx:621`, `TenantUsersTab.tsx:1309`) already hid the
+button for the caller's own row since PR #423 (2026-08-27), before this
+report. The real, still-live gap was one level deeper: the underlying
+`swap_tenant_user_to_contact` RPC never checked `p_user_id` against the
+caller at all, so a tenant admin could still self-swap by calling it
+directly, bypassing both UI guards. Fixed with a server-side guard
+(`supabase/migrations/20260909040000_swap_tenant_user_to_contact_self_guard.sql`),
+live-verified in production against Demo RTO (rolled-back SQL simulation
+proving both the pre-fix vulnerability and the post-fix denial, plus a real
+authenticated Playwright pass through the actual JWT/RLS path) with zero
+data seeded or left behind. Audit entry:
+`docs/audit-log/entries/2026-09-09-swap-tenant-user-to-contact-self-guard.md`.
+The fix's own migration file re-introduced the pre-existing function body
+verbatim (plus the one new guard line), which tripped
+`scripts/audit-migrations.mjs`'s conservative DML scanner as 5 "new"
+findings — all 5 are the same pre-existing INSERT/UPDATE/DELETE statements
+inside the function body, unchanged in behavior and only executed later,
+per-caller, when the RPC runs (identical false-positive shape to the
+`p4d-18-allow-tenant-less-notification-prefs` allowlist entry). Resolved
+via the standard allowlist path (`l10-31-swap-tenant-user-to-contact-self-guard`
+in `supabase/migration-safety-allowlist.json`), not by weakening the
+scanner or the guard itself.
 
 ### 32. Past meeting summaries no longer show cascade messages
 
