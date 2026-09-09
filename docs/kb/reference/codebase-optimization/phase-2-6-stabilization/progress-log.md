@@ -4,6 +4,37 @@
 
 ## Progress log
 
+**2026-09-09, session 38 — P7-A preparatory characterization for lifecycle
+checklist templates (no Phase 3 implementation or policy change):** After
+confirming the approved pilot boundary (the existing
+`/admin/lifecycle-checklists` template-administration surface only), inspected
+`LifecycleChecklistsAdmin.tsx`, `useLifecycleChecklists.ts`,
+`LifecycleTemplateGrid.tsx`, `LifecycleTemplateDialog.tsx`,
+`dashboardRoutes.tsx`, the generated Supabase types, and the lifecycle-table
+migrations. The evidence map records four seeded lifecycle types
+(`client_onboarding`, `client_offboarding`, `staff_onboarding`,
+`staff_offboarding`), direct browser reads/writes to the template table,
+soft-deactivation via `is_active = false`, and a route-level
+`requireSuperAdmin` guard. The current database policy is separately
+characterized as `is_vivacity_staff`, so the UI Super Admin boundary and the
+database staff boundary are not silently treated as equivalent; CSC remains a
+route-forbidden persona for this pilot. `dd_lifecycle_type` is a process-type
+lookup, not the tenant lifecycle-status table, and its text codes are not a
+foreign-key constrained relationship from templates.
+
+Added `src/test/admin/lifecycle-checklists.test.tsx` with 13 focused
+characterization tests covering loading, empty, populated, inactive, tab
+switching, view/copy/edit/deactivate/external-link interactions, add/edit form
+hydration and submission, current query-error behavior (no dedicated error
+panel), route placement under `requireSuperAdmin`, and the distinct broader
+database policy. The focused suite passes. The run reproduces existing Radix
+dialog accessibility warnings; these are recorded as baseline findings and
+were not changed. No extraction, schema/RLS/grant change, production-data
+operation, or Operations/tenant-transition change was made. The Phase 2.6
+plan remains unchanged because this is preparatory evidence only and the P7
+implementation gate (RBAC vocabulary decision and the separate disabled-user
+hotfix for P7-D) remains open.
+
 **2026-09-09, session 37 — `qa:residue`'s first target written and
 live-proven: independent fixture-leftover sweep (`feat/qa-residue`,
 PR #1045; live-proof workflow run `34292052765`, 5/5 passing):** Continuing the same-session P2-QA sweep. Read
