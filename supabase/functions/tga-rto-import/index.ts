@@ -391,6 +391,7 @@ interface ImportRequest {
 }
 
 async function handleImport(
+  req: Request,
   supabase: SupabaseClient,
   userId: string | null,
   body: ImportRequest,
@@ -513,6 +514,7 @@ async function handleImport(
 // ============================================================================
 
 async function handleStatus(
+  req: Request,
   supabase: SupabaseClient,
   correlationId: string
 ): Promise<Response> {
@@ -591,7 +593,7 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      return await handleStatus(supabase, correlationId);
+      return await handleStatus(req, supabase, correlationId);
     }
 
     // Auth check for import operations
@@ -635,11 +637,11 @@ serve(async (req) => {
 
     // Handle import action
     if (action === 'import') {
-      return await handleImport(supabase, user.id, body, correlationId);
+      return await handleImport(req, supabase, user.id, body, correlationId);
     }
 
     // Default: return status
-    return await handleStatus(supabase, correlationId);
+    return await handleStatus(req, supabase, correlationId);
 
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
