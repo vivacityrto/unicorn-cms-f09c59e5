@@ -4,6 +4,24 @@
 
 ## Progress log
 
+**2026-09-09 — L10 #28 (`bulk-send-invitations` crash-instead-of-structured-error) fixed:**
+Three call sites (`index.ts` ~line 98/106/113) called the file's own
+`jsonResponse(req, status, body)` helper as `jsonResponse(status, body)`,
+omitting `req`. Confirmed the crash mechanism from source first:
+`jsonResponse` spreads `corsHeaders(req)`, which calls
+`req.headers.get("Origin")` — with arguments shifted, `req` was the numeric
+status code, so this throws a `TypeError` instead of returning the intended
+422/500/403 structured error. Added the missing `req` argument at all three
+sites; no other logic changed. Added a regression assertion to
+`auth-gate.test.mjs` asserting every `jsonResponse(...)` call site's first
+argument is literally `req` — confirmed it fails against the pre-fix source
+and passes against the fix. `npm run test:edge` 279/279, `lint-ratchet`
+0 → 0 on the changed file. Not covered by `npm run typecheck`
+(`supabase/functions/**` is outside both tsconfig includes); no UI route or
+schema/RLS/production-data touched, so no Playwright pass applies. L10 #29's
+package-specific override editor remains explicitly Inconclusive
+(not re-verified this session) — left as-is per standing instruction.
+
 **2026-09-09, session 46 — L10 #30 (RTO scope end dates) investigated, not reproduced:**
 Checked `useTgaRtoData.tsx`'s `resolveEndDate` helper against live production
 data (18,715 `tenant_rto_scope` rows): `tga_data.endDate_raw` and

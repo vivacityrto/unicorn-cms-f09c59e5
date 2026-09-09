@@ -32,4 +32,16 @@ assert.match(source, /hasTenantAccessSafe\(supabase, callerUser\.user\.id, tenan
 assert.match(source, /catch \(e: unknown\)/);
 assert.match(source, /e instanceof Error/);
 
+// L10 #28 regression guard: jsonResponse(req, status, body) requires `req`
+// as its first argument — corsHeaders(req) inside it calls req.headers.get(),
+// so any call site that omits `req` (shifting status into the `req` slot,
+// e.g. the historical `jsonResponse(422, {...})`) throws a TypeError instead
+// of returning the intended structured error response. Every call site must
+// start with `req,`, and none may start with a bare numeric status code.
+const jsonResponseCalls = [...source.matchAll(/(?<!function )jsonResponse\(\s*([^,]+),/g)].map((m) => m[1].trim());
+assert.ok(jsonResponseCalls.length > 0, 'must find at least one jsonResponse( call site to check');
+for (const firstArg of jsonResponseCalls) {
+  assert.equal(firstArg, 'req', `jsonResponse(...) call must pass req as its first argument, found "${firstArg}"`);
+}
+
 console.log('bulk-send-invitations auth-gate checks passed');

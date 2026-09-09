@@ -95,7 +95,7 @@ serve(async (req: Request) => {
 
   for (const tenant_id of body.tenant_ids) {
     if (typeof tenant_id !== "number" || !Number.isFinite(tenant_id)) {
-      return jsonResponse(422, {
+      return jsonResponse(req, 422, {
         ok: false,
         code: "INVALID_PAYLOAD",
         detail: "tenant_ids must be an array of numbers",
@@ -103,14 +103,14 @@ serve(async (req: Request) => {
     }
     const tenantAccess = await hasTenantAccessSafe(supabase, callerUser.user.id, tenant_id);
     if (tenantAccess.lookupFailed) {
-      return jsonResponse(500, {
+      return jsonResponse(req, 500, {
         ok: false,
         code: "TENANT_ACCESS_CHECK_FAILED",
         detail: "Failed to verify tenant access",
       });
     }
     if (!tenantAccess.allowed) {
-      return jsonResponse(403, {
+      return jsonResponse(req, 403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "You do not have access to one or more requested tenants",
