@@ -72,6 +72,15 @@
       "owner": "Carl",
       "reason": "False positive: the flagged INSERT/UPDATE statements are inside CREATE OR REPLACE FUNCTION bodies for get_user_notification_prefs/update_user_notification_prefs (only executed later, per-caller, when those RPCs run) - the migration itself performs no direct data mutation, only ALTER COLUMN DROP NOT NULL, CREATE UNIQUE INDEX, and two function redefinitions. Carl explicitly authorized proceeding with the not-null fix after reviewing the tenant-assignment question separately (L10 #18, parked to docs/kb/reference/tenant-operating-model-data-architecture-plan-2026-09-02.md §18 item 14).",
       "expires": "2026-10-08"
+    },
+    {
+      "id": "l10-31-swap-tenant-user-to-contact-self-guard",
+      "file": "supabase/migrations/20260909040000_swap_tenant_user_to_contact_self_guard.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive, same shape as p4d-18-allow-tenant-less-notification-prefs above: all 5 flagged INSERT/UPDATE/DELETE statements are inside the CREATE OR REPLACE FUNCTION body for swap_tenant_user_to_contact (tenant_contacts insert/update, tenant_users delete, audit_eos_events insert, client_timeline_events insert) - unchanged from the function's existing production behavior, only executed later, per-caller, when a tenant admin actually calls the RPC. The migration itself performs no direct data mutation; it only adds one new guard clause (reject p_user_id = auth.uid()) ahead of the existing, unmodified body. Carl explicitly authorized this scoped self-swap-guard hotfix (L10 #31) for review via the standard allowlist path after the scanner flagged the pre-existing function body as new text.",
+      "expires": "2026-10-09"
     }
   ]
 }

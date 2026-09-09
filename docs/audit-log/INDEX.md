@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-09 — `swap_tenant_user_to_contact` self-swap guard (L10 #31) — both UI callers already hid the "Swap to Contact" action for a caller's own row (PR #423, 2026-08-27, predating Carl's report), but the RPC itself never checked `p_user_id` against the caller, so a tenant admin could still self-swap directly when another admin contact existed. Added a server-side guard; live-verified in production (rolled-back SQL simulation + a real authenticated Playwright pass against Demo RTO) with zero data seeded or left behind.](entries/2026-09-09-swap-tenant-user-to-contact-self-guard.md) · author: Claude Code
+
 - [2026-09-09 — tenant-lifecycle "Close" action always failed (missing FK) — found live-verifying Phase 2.6 P2-QA's `qa:data-lifecycle` suite: `stage_instances` has no foreign key to `package_instances` in production or `unicorn-qa`, so `executeCloseTransaction`'s PostgREST embed failed unconditionally since the code was written. Fixed with a plain two-step query lookup (the same workaround `ClientAuditsTab.tsx` already applied for the identical root cause); no behavior change to close semantics. A separate, non-blocking `compliance_risk_flags` gap (table doesn't exist in production either) was documented, not fixed, pending a product decision.](entries/2026-09-09-tenant-lifecycle-close-fk-bug.md) · author: Claude Code
 
 - [2026-09-09 — Preserve PostgREST messages in typed Edge Function catches (Phase 2.6 P5-A follow-up) — audited recent `catch (unknown)` typing edits, fixed four affected functions with a shared structural message guard and focused tests, and confirmed no hosted state changed.](entries/2026-09-09-edge-postgrest-error-message-preservation.md) · author: Codex

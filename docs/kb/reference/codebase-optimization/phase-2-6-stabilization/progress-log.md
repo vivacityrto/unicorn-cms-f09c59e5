@@ -15,6 +15,48 @@ meeting summary: the "Cascade Messages" heading renders correctly, zero
 errors. No code change. Closes out the 4-item Carl-reported regression
 batch (#31 fixed for real, #29/#30/#32 investigated and not reproduced).
 
+**2026-09-09, session 43 — L10 #31 self-swap guard: resolved `audit-migrations` false positive via the standard allowlist path:**
+PR #1056's fix for L10 #31 (`swap_tenant_user_to_contact` self-swap guard,
+see the L10 entry and `docs/audit-log/entries/2026-09-09-swap-tenant-user-to-contact-self-guard.md`
+for the fix itself) initially failed CI's `audit-migrations` check with 5
+blocking findings. All 5 were the pre-existing INSERT/UPDATE/DELETE
+statements inside the `swap_tenant_user_to_contact` function body
+(unchanged, only executed later per-caller when the RPC runs) — the
+migration's new text is a full `CREATE OR REPLACE FUNCTION`, so the
+scanner's conservative regex-based approach (documented in its own header
+as intentionally not a SQL parser) flagged the whole body as new. Same
+false-positive shape as the existing `p4d-18-allow-tenant-less-notification-prefs`
+allowlist entry. Resolved by adding a matching entry
+(`l10-31-swap-tenant-user-to-contact-self-guard`) to
+`supabase/migration-safety-allowlist.json` rather than altering the guard,
+the audit entry, or the scanner itself. Reran `node scripts/audit-migrations.mjs
+--changed-only --base-ref origin/main` locally (0 blocking, 5 allowlisted)
+and `node scripts/check-kb-links.mjs` (0 broken) before pushing.
+
+**2026-09-09, session 45 — L10 #29 (package stage task edit/delete) investigated, not reproduced:**
+Checked both admin surfaces that edit/delete stage tasks: the stage template
+editor (`/admin/stages/:id`) and the package-specific override editor
+(`/admin/package-builder/:id` → `StageDetailPanel.tsx`). Source review found
+no ID-space mismatch in either — each fetches and mutates its own table by
+that table's own `id`. Live-verified the stage template editor (SuperAdmin
+persona, an unused stage with zero active client instances): added, edited,
+and deleted a throwaway staff task and a throwaway client task, all
+succeeded cleanly with zero errors and zero residual rows after cleanup.
+The package-override editor was reviewed by source only this session
+(Inconclusive, not confirmed live) due to time budget. No code change made —
+the reported symptom did not reproduce, so nothing was fixed. See the L10
+entry for full detail.
+
+**2026-09-09, session 45 — Carl approved the bounded RBAC staff-read baseline
+(documentation-only):** For the current baseline, preserve broad internal
+staff tenant read access and scope sensitive actions separately. This records
+the present behavior as the compatibility starting point; it does not decide
+future portfolio/assignment scope, seat capability bundles, hard-Super-Admin
+or break-glass policy, or any production enforcement change. The decision is
+captured as ADR-015 and in the [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).
+The remaining vocabulary/authority-boundary decision is still required before
+a read-only/shadow P7-B or P7-C slice is treated as unblocked.
+
 **2026-09-09, session 44 — RBAC vocabulary baseline proposed for review
 (documentation-only):** Added a narrowly scoped baseline proposal to the
 [P7 RBAC/Tenant decision evidence packet](../phase-3/p7-rbac-tenant-decision-evidence.md).

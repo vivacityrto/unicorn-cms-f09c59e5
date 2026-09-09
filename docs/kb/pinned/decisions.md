@@ -1,6 +1,6 @@
 # Product Decisions (Index)
 
-> **Last updated:** 2026-04-30 · **Reconsider by:** 2026-07-30 · **Confidence:** high for recorded entries.
+> **Last updated:** 2026-09-09 · **Reconsider by:** 2026-12-09 · **Confidence:** high for recorded entries.
 >
 > One-line-per-decision index. For full rationale, alternatives, and
 > supersession history, see [../reference/decision-trail.md](../reference/decision-trail.md).
@@ -20,6 +20,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-011] [2026-04-27] Operating model — Lovable is the workflow; no peer review or sign-off gates — full: [reference/decision-trail.md#adr-011](../reference/decision-trail.md#adr-011)
 - [ADR-012] [2026-04-28] Audit-entry authorship — devs author Lovable prod DB change sessions; Carl sole author for everything else — full: [reference/decision-trail.md#adr-012](../reference/decision-trail.md#adr-012)
 - [ADR-013] [2026-05-15] Flagship surfaces — CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system — full: [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013)
+- [ADR-015] [2026-09-09] RBAC staff-read baseline — preserve broad internal-staff tenant read access for now; scope sensitive actions separately — full: [reference/decision-trail.md#adr-015](../reference/decision-trail.md#adr-015)
 
 ---
 
