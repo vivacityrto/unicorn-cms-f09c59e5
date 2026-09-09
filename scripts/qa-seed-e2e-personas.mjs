@@ -122,6 +122,39 @@ async function upsertTenant() {
   return created.id;
 }
 
+async function ensureTenantUser(tenantId, userId) {
+  // tenant_users.relationship_role/access_scope (not tenant_members) is what
+  // ClientTenantContext.tsx actually gates client-portal access on -- a
+  // persona present only in tenant_members but absent from tenant_users
+  // renders the app's own (correct) "Academy access only" fallback, since
+  // ClientTenantContext treats a missing tenant_users row as no portal
+  // access at all. relationship_role "user" (see
+  // src/lib/roles/relationshipRole.ts) is a full-access standard member --
+  // deliberately not "primary_contact", which the UI treats as unique per
+  // organisation.
+  const { data: existing, error: findErr } = await svc
+    .from("tenant_users")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (findErr) throw new Error(`tenant_users lookup: ${findErr.message}`);
+  if (existing) {
+    console.log(`tenant_users: already links tenant ${tenantId} <-> user ${userId}`);
+    return;
+  }
+  const { error: insertErr } = await svc.from("tenant_users").insert({
+    tenant_id: tenantId,
+    user_id: userId,
+    role: "child",
+    primary_contact: false,
+    access_scope: "full",
+    relationship_role: "user",
+  });
+  if (insertErr) throw new Error(`tenant_users insert: ${insertErr.message}`);
+  console.log(`tenant_users: linked tenant ${tenantId} <-> user ${userId} (relationship_role=user, access_scope=full)`);
+}
+
 async function ensureTenantMember(tenantId, userId) {
   const { data: existing, error: findErr } = await svc
     .from("tenant_members")
@@ -168,6 +201,7 @@ async function main() {
     tenantId,
   });
   await ensureTenantMember(tenantId, clientUserId);
+  await ensureTenantUser(tenantId, clientUserId);
 
   console.log("qa-seed-e2e-personas: done");
 }
