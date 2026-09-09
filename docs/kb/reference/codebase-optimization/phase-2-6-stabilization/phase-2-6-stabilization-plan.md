@@ -42,8 +42,8 @@ administrative secret-move/repeat-run tail was intentionally waived and is not
 an open implementation blocker.
 
 Current repository measurements, taken from the merged code state at
-`origin/main@77de40e1a`, are: 1,712 tracked product files; 480,286 physical
-lines (407,248 excluding generated types; 394,280 excluding generated types and
+`origin/main@561493691`, are: 1,710 tracked product files; 480,182 physical
+lines (407,144 excluding generated types; 394,259 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
 As of `hotfix/generate-meeting-recurrence-typing` (2026-09-08), the lint
@@ -422,7 +422,7 @@ Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-D — auth/profile/membership seam
 
-**Status:** disabled-user hotfix implemented; remaining scope is the session/profile/membership/authorization seam with pure-helper tests; no second capability registry.
+**Status:** disabled-user hotfix and pure profile/membership helpers implemented; cancellation/error handling and the remaining seam work stay open; no second capability registry.
 
 ## 10. Verification contract for every implementation PR
 
