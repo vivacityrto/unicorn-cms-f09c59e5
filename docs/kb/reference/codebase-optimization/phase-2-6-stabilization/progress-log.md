@@ -4,6 +4,29 @@
 
 ## Progress log
 
+**2026-09-09 — L10 #5/#8 found already fixed (documentation-sync correction, no code change):**
+Picked up #5 (Stage Preview dialog's no-FK `packages:package_id` embed)
+and #8 (Bulk Generate Documents dialog's no-FK `tenants` embed) as the
+two remaining Tier-1 items recommending a two-step fetch. Before
+implementing anything, re-checked live source and found both already
+fixed by `PR #975` (2026-09-07, Phase 2.6 Packet P4-B) — both
+`StagePreviewDialog.tsx` and `BulkGenerateDocumentsDialog.tsx` already
+use the exact two-step-fetch pattern this register recommended (batch
+rows, separately batch-resolve names, merge via a `Map`), each with an
+inline comment documenting the original no-FK finding. Both L10 headings
+had simply never been updated after that PR merged. Live-verified #5
+read-only (SuperAdmin, `/admin/stages` → "ASQA Audit" stage, used in 12
+packages → Preview): real usage count, 5 real document titles, zero
+console errors. #8 could not be live-verified against real data for the
+same reason PR #975 itself disclosed at the time — `package_stage_documents`
+still has zero non-deleted rows anywhere in production, so the dialog's
+own trigger (gated on a package having a document override) cannot fire
+without first mutating a real, currently-active client package's
+configuration, which this documentation-only correction deliberately does
+not do. Confidence rests on source-code parity with #5's live-verified
+fix plus both shipping in the same commit. No code changed; this PR only
+corrects the two L10 headings/notes.
+
 **2026-09-09 — L10 #22/#24/#11 found already fixed (documentation-sync correction, no code change):**
 Picked up #22 (`ClientRouteGuard` render-time navigate), #24 (same root
 cause), and #11 (`useKpiAccess.tsx` Team KPI toggle) as the next Tier
