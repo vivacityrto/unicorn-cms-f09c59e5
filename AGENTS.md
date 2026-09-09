@@ -264,6 +264,12 @@ for lost claims, links, or evidence. Run the relevant documentation checks — a
 minimum `node scripts/check-kb-links.mjs` for KB changes — and explicitly note
 when a related document was reviewed but intentionally unchanged.
 
+**Standing KB placement rule:** when initiative work needs a new phase or
+packet document, place it under the owning initiative's phase directory
+(`docs/kb/reference/<initiative>/<phase-slug>/`). Keep the four initiative
+master plans flat under `docs/kb/reference/`; do not create new flat
+root-level phase/packet documents or invent an extra grouping level.
+
 ## Reading order for the four tracked initiatives (standing practice, added 2026-09-08)
 
 Four initiatives run in parallel under `docs/kb/reference/`: Codebase

@@ -46,8 +46,9 @@ and the smallest implementation unit that should follow each gate.
 
 - `/admin/lifecycle-checklists` is a live lazy route in
   `src/routes/dashboardRoutes.tsx` and renders `LifecycleChecklistsAdmin`.
-- `src/hooks/useLifecycleChecklists.ts` is 170 physical lines and is imported
-  by the page plus three lifecycle components. It currently owns interfaces,
+- `src/hooks/useLifecycleChecklists.ts` is 175 physical lines and is imported
+  by the page plus two lifecycle components (the component imports are
+  type-only). It currently owns interfaces,
   Supabase reads/writes, React Query configuration, invalidation, and toasts.
 - The hook has three dropdown queries, one template query, and create/update/
   deactivate mutations. The dropdown helper and template operations use
