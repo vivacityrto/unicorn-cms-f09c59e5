@@ -167,11 +167,14 @@ describe("Login", () => {
 
 describe("useAuth session management", () => {
   function AuthProbe() {
-    const { user, loading, signOut } = useAuth();
+    const { user, loading, profile, profileError, memberships, signOut } = useAuth();
     return (
       <div>
         <span data-testid="loading">{String(loading)}</span>
         <span data-testid="user-id">{user?.id ?? "none"}</span>
+        <span data-testid="profile-role">{profile?.unicorn_role ?? "none"}</span>
+        <span data-testid="membership-count">{memberships.length}</span>
+        <span data-testid="profile-error">{profileError ?? "none"}</span>
         <button onClick={() => void signOut()}>Sign Out</button>
       </div>
     );
@@ -196,6 +199,47 @@ describe("useAuth session management", () => {
 
     await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("false"));
     expect(screen.getByTestId("user-id").textContent).toBe("user-123");
+  });
+
+  it("loads the profile and active tenant memberships through the auth boundary", async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "user-123" } } },
+    });
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "users") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({
+                data: { user_uuid: "user-123", unicorn_role: "CSC" },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+
+      return {
+        select: () => {
+          const chain = {
+            eq: vi.fn(() => chain),
+            then: (resolve: (value: { data: { tenant_id: number; role: "Admin"; status: "active" }[]; error: null }) => void) =>
+              resolve({ data: [{ tenant_id: 42, role: "Admin", status: "active" }], error: null }),
+          };
+          return chain;
+        },
+      };
+    });
+
+    renderWithProviders(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("profile-role").textContent).toBe("CSC"));
+    expect(screen.getByTestId("membership-count").textContent).toBe("1");
+    expect(screen.getByTestId("profile-error").textContent).toBe("none");
   });
 
   it("clears local auth state and calls supabase.auth.signOut() on Sign Out", async () => {

@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { loadTenantMemberships, loadUserProfile } from '@/auth/loaders';
+import type { UserProfile } from '@/auth/types';
 import {
   getTenantRole,
   hasTenantAccess,
@@ -9,24 +11,6 @@ import {
   isSuperAdmin,
   type TenantMembership,
 } from '@/auth/access';
-
-interface UserProfile {
-  user_uuid: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member'
-    | 'Integrator' | 'BGT' | 'CSC' | 'CET'
-    | 'Admin' | 'User' | 'Academy User';
-  global_role: 'SuperAdmin' | null;
-  superadmin_level: 'Administrator' | 'Team Leader' | 'General' | 'Assistant' | null;
-  tenant_id: number | null;
-  avatar_url: string | null;
-  job_title: string | null;
-  is_vivacity_internal: boolean | null;
-  is_team: boolean | null;
-  kpi_role: string | null;
-}
 
 interface AuthContextType {
   user: User | null;
@@ -109,11 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchUserProfile = async (userId: string, generation: number) => {
     setProfileError(null);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, email, first_name, last_name, unicorn_role, global_role, superadmin_level, tenant_id, avatar_url, job_title, is_vivacity_internal, is_team, kpi_role')
-        .eq('user_uuid', userId)
-        .maybeSingle();
+      const { data, error } = await loadUserProfile(userId);
 
       if (!mountedRef.current || generation !== authGenerationRef.current) return;
       if (error) {
@@ -138,11 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchMemberships = async (userId: string, generation: number) => {
     try {
-      const { data, error } = await supabase
-        .from('tenant_members')
-        .select('tenant_id, role, status')
-        .eq('user_id', userId)
-        .eq('status', 'active');
+      const { data, error } = await loadTenantMemberships(userId);
 
       if (!mountedRef.current || generation !== authGenerationRef.current) return;
       if (error) {
@@ -151,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      setMemberships((data || []) as TenantMembership[]);
+      setMemberships(data);
     } catch (error) {
       if (!mountedRef.current || generation !== authGenerationRef.current) return;
       console.error('Error fetching memberships:', error);
