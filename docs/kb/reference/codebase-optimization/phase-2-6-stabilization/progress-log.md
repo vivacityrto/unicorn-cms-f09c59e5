@@ -4,6 +4,30 @@
 
 ## Progress log
 
+**2026-09-09 — P7-D auth contract seam separated (frontend-only):**
+Characterized the current auth/profile/membership consumers before editing:
+`AuthProvider` owns session state and Supabase I/O, `src/auth/loaders.ts`
+owns the two profile/membership reads, `src/auth/access.ts` owns pure
+authorization predicates, and `useUserAccess`/`useRBAC` consume the public
+context. Existing focused characterization coverage (`useAuth.test.ts` and
+the authenticated session tests in `authentication.test.tsx`) covers global
+Super Admin detection, active/inactive tenant membership access/admin/role
+states, profile loading, membership loading, sign-out clearing, and stale
+response cancellation (30 tests passed before and after the extraction).
+
+Moved the shared `AuthProfile` and `TenantMembership` data contracts into
+`src/auth/types.ts` and added the public `AuthContextValue` contract there;
+`access.ts` re-exports its predicate input types for compatibility,
+`loaders.ts` imports the canonical contracts, and `useAuth.tsx` now consumes
+the shared context type instead of declaring a private duplicate. No emitted
+runtime behavior, role policy, membership query, route guard, schema/RLS,
+Edge contract, or production data changed. Verification passed:
+`npm run lint:ratchet`, `npm run typecheck`, `npm run test:frontend`
+(346 passed/43 skipped), `npm run test:edge` (280 passed), `npm run build`,
+and the KB link/document-size checks; targeted auth tests were 30/30. This is a bounded
+contract-seam slice; broader session/profile/membership redesign remains open
+under P7-D.
+
 **2026-09-09 — L10 #5/#8 found already fixed (documentation-sync correction, no code change):**
 Picked up #5 (Stage Preview dialog's no-FK `packages:package_id` embed)
 and #8 (Bulk Generate Documents dialog's no-FK `tenants` embed) as the

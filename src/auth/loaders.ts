@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { TenantMembership } from '@/auth/access';
-import type { UserProfile } from '@/auth/types';
+import type { TenantMembership, UserProfile } from '@/auth/types';
 
 const USER_PROFILE_COLUMNS = 'user_uuid, email, first_name, last_name, unicorn_role, global_role, superadmin_level, tenant_id, avatar_url, job_title, is_vivacity_internal, is_team, kpi_role';
 

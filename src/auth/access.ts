@@ -1,19 +1,12 @@
+import type { AuthProfile, TenantMembership } from './types';
+
+export type { AuthProfile, TenantMembership } from './types';
+
 /**
  * Pure authorization predicates shared by the auth context and focused tests.
  * These helpers intentionally consume only the profile/membership fields they
  * need; session loading and Supabase I/O remain owned by useAuth.
  */
-export type AuthProfile = {
-  global_role: string | null;
-  unicorn_role: string | null;
-};
-
-export type TenantMembership = {
-  tenant_id: number;
-  role: 'Admin' | 'General User';
-  status: string;
-};
-
 export type TenantRole = TenantMembership['role'] | null;
 
 export function isSuperAdmin(profile: AuthProfile | null): boolean {
