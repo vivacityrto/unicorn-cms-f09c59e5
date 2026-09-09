@@ -28,7 +28,7 @@
 >
 > **Audit entry:** none needed - documentation-only status reconciliation; individual packet changes retain their existing audit entries
 
-## Current truth-sync (2026-09-08)
+## Current truth-sync (2026-09-09)
 
 This addendum is the present-tense source of truth; dated progress entries below
 remain intact as historical evidence. Phase 2.5 is closed as a prerequisite
@@ -42,8 +42,8 @@ administrative secret-move/repeat-run tail was intentionally waived and is not
 an open implementation blocker.
 
 Current repository measurements, taken from the merged code state at
-`origin/main@2175ea6b1`, are: 1,711 tracked product files; 480,180 physical
-lines (407,142 excluding generated types; 394,245 excluding generated types and
+`origin/main@77de40e1a`, are: 1,712 tracked product files; 480,286 physical
+lines (407,248 excluding generated types; 394,280 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
 As of `hotfix/generate-meeting-recurrence-typing` (2026-09-08), the lint

@@ -2008,4 +2008,7 @@ read before any protected child renders. Added focused regression coverage in
 `src/test/rbac/ProtectedRoute.test.tsx`. This is a frontend security-boundary
 correction with no schema/RLS/Edge/data changes; audit entry
 `2026-09-09-protected-route-disabled-user-fail-closed.md` records the change.
-The broader P7-D auth/profile/membership seam remains open.
+The broader P7-D auth/profile/membership seam remains open. Metrics at the
+rebased branch state (`origin/main@77de40e1a` plus this fix) are 1,712 product
+files / 480,286 physical lines, with 394,280 excluding generated types/tests;
+the change adds no new direct Supabase call or route.
