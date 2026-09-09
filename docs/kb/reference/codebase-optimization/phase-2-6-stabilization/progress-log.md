@@ -4,6 +4,20 @@
 
 ## Progress log
 
+**2026-09-09, session 39 — live read-only lifecycle baseline confirmed:**
+Queried the hosted Supabase project through the read-only SQL path (no
+insert/update/delete, seed, migration, or production-data operation). The
+deployed state matches the source characterization: all four lifecycle types
+are active and ordered (`client_onboarding`, `client_offboarding`,
+`staff_onboarding`, `staff_offboarding`); `lifecycle_checklist_templates`
+exposes the expected 13 columns; `dd_lifecycle_type` has an authenticated
+read policy; and template management is governed by
+`is_vivacity_staff((select auth.uid()))`. This confirms the route-vs-database
+boundary distinction against the live project rather than relying only on
+migration text. No changes to the Phase 2.6 plan are warranted: P7 remains
+preparatory characterization, with implementation still gated by the RBAC
+vocabulary decision and the separate disabled-user hotfix for P7-D.
+
 **2026-09-09, session 38 — P7-A preparatory characterization for lifecycle
 checklist templates (no Phase 3 implementation or policy change):** After
 confirming the approved pilot boundary (the existing
