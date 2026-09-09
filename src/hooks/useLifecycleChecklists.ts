@@ -2,46 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type {
+  LifecycleDropdownItem,
+  LifecycleInstance,
+  LifecycleTemplate,
+} from "@/features/lifecycle/types";
 
-export interface LifecycleDropdownItem {
-  id: number;
-  code: string;
-  label: string;
-  description: string | null;
-  sort_order: number;
-  is_active: boolean;
-}
-
-export interface LifecycleTemplate {
-  id: string;
-  lifecycle_type: string;
-  category: string;
-  step_title: string;
-  description: string | null;
-  responsible_role: string | null;
-  default_assignee_id: string | null;
-  external_link: string | null;
-  sort_order: number;
-  is_default: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface LifecycleInstance {
-  id: string;
-  template_id: string;
-  lifecycle_type: string;
-  tenant_id: number | null;
-  target_user_id: string | null;
-  package_instance_id: number | null;
-  assigned_to: string | null;
-  completed: boolean;
-  completed_by: string | null;
-  completed_at: string | null;
-  notes: string | null;
-  created_at: string;
-}
+export type { LifecycleDropdownItem, LifecycleInstance, LifecycleTemplate } from "@/features/lifecycle/types";
 
 type LifecycleDropdownTable = "dd_lifecycle_type" | "dd_lifecycle_responsible_role" | "dd_lifecycle_category";
 

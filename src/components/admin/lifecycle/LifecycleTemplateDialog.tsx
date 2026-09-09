@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { LifecycleTemplate, LifecycleDropdownItem } from "@/hooks/useLifecycleChecklists";
+import type { LifecycleTemplate, LifecycleDropdownItem } from "@/features/lifecycle/types";
 
 interface Props {
   open: boolean;

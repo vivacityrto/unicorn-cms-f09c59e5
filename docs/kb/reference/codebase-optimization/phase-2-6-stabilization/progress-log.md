@@ -4,6 +4,22 @@
 
 ## Progress log
 
+**2026-09-09, session 49 — P7-B minimal lifecycle feature boundary implemented
+(frontend-only):** Rebased onto `origin/main@81cef2ac0` after the latest
+regression merge. Added `src/features/lifecycle/types.ts` with generated
+Supabase row aliases for `LifecycleTemplate`, `LifecycleDropdownItem`, and the
+compatibility-preserved `LifecycleInstance`. Moved page, grid, dialog, and
+characterization-test type imports to the feature module while retaining the
+hook's type re-exports. No query/mutation adapter was added because the page
+already delegates all Supabase access to the hook; no runtime, route-guard,
+authorization, schema, RLS, Edge, or production-data behavior changed. The
+existing 13-test characterization suite passed unchanged. Full verification:
+`npm run lint:ratchet`, `npm run typecheck`, `npm run test:frontend` (343
+passed/43 skipped), `npm run test:edge` (279 passed), `npm run build`, and
+`npm run metrics`; architecture metrics were unchanged at 1,711 product files
+and 480,168 physical lines. No live Playwright pass was warranted because this
+is a type-only extraction with no emitted JavaScript change.
+
 **2026-09-09 — L10 #28 (`bulk-send-invitations` crash-instead-of-structured-error) fixed:**
 Three call sites (`index.ts` ~line 98/106/113) called the file's own
 `jsonResponse(req, status, body)` helper as `jsonResponse(status, body)`,
