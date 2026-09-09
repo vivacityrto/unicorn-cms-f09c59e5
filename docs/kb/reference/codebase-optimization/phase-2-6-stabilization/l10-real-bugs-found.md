@@ -846,7 +846,7 @@ icon button) and every one of its features was either disconnected from
 the real data model or a strictly less-capable duplicate of a live,
 actively-used equivalent elsewhere. No separate fix was made or is needed.
 
-### 28. `bulk-send-invitations` per-tenant validation errors crash instead of returning a structured response — DOCUMENTED, NOT FIXED (found 2026-09-07)
+### 28. `bulk-send-invitations` per-tenant validation errors crash instead of returning a structured response — FIXED (2026-09-09, `hotfix/bulk-send-invitations-json-response-arity`)
 
 Found during Phase 2.6 stabilization Packet P5-A's Edge Function typing
 pass (PR #967), while typing `bulk-send-invitations/index.ts` — not caused
@@ -869,6 +869,25 @@ order mismatch never gets compiler-checked. Deliberately not fixed in PR
 #967 — it's a behavioral change, out of scope for a lint/typing-only
 packet — left for a small, separate follow-up fix (add the missing `req`
 argument to all three call sites) plus its own PR.
+
+**Fixed 2026-09-09:** confirmed the crash mechanism from source before
+patching — `jsonResponse`'s body spreads `corsHeaders(req)`, which calls
+`req.headers.get("Origin")`; with the arguments shifted, `req` was the
+numeric status code, so `(422).headers` is `undefined` and `.get(...)`
+throws a `TypeError` — exactly the "bare 500 with no diagnostic body"
+symptom described above. Added the missing `req` argument at all three call
+sites (`index.ts` ~line 98, ~106, ~113); no other logic changed. Added a
+regression assertion to `auth-gate.test.mjs` that extracts every
+`jsonResponse(...)` call site's first argument and asserts it is literally
+`req` — confirmed this check fails against the pre-fix source (extracts
+`'422'`, `'500'`, `'403'` for the three broken call sites) and passes
+against the fix. `npm run test:edge` 279/279 passed; `lint-ratchet` 0 → 0
+errors on the changed file. This function is not covered by
+`npm run typecheck` (`supabase/functions/**` is outside both
+`tsconfig.*.json` includes, per this doc's own note above), so the edge
+test suite plus this regression assertion are the only automated guard —
+no live Playwright pass applies (no UI route touched, no schema/RLS/
+production-data change).
 
 ### 29. `tga-rto-import`'s `handleImport`/`handleStatus` reference an out-of-scope `req` — DOCUMENTED, NOT FIXED (found 2026-09-07)
 
