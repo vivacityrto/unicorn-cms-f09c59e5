@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -54,24 +54,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [memberships, setMemberships] = useState<TenantMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const mountedRef = useRef(true);
+  const authGenerationRef = useRef(0);
 
   useEffect(() => {
+    mountedRef.current = true;
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
+        const generation = ++authGenerationRef.current;
+        setProfile(null);
+        setProfileError(null);
+        setMemberships([]);
+
         if (session?.user) {
           // Fetch user profile with setTimeout to avoid deadlock
           setTimeout(() => {
-            fetchUserProfile(session.user.id);
-            fetchMemberships(session.user.id);
+            if (!mountedRef.current || generation !== authGenerationRef.current) return;
+            fetchUserProfile(session.user.id, generation);
+            fetchMemberships(session.user.id, generation);
           }, 0);
         } else {
-          setProfile(null);
-          setProfileError(null);
-          setMemberships([]);
+          setLoading(false);
         }
       }
     );
@@ -81,17 +88,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
+      const generation = ++authGenerationRef.current;
+      setProfile(null);
+      setProfileError(null);
+      setMemberships([]);
       if (session?.user) {
-        fetchUserProfile(session.user.id);
-        fetchMemberships(session.user.id);
+        fetchUserProfile(session.user.id, generation);
+        fetchMemberships(session.user.id, generation);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mountedRef.current = false;
+      authGenerationRef.current += 1;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, generation: number) => {
     setProfileError(null);
     try {
       const { data, error } = await supabase
@@ -100,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq('user_uuid', userId)
         .maybeSingle();
 
+      if (!mountedRef.current || generation !== authGenerationRef.current) return;
       if (error) {
         console.error('Error fetching user profile:', error);
         setProfileError('We could not load your account profile. Please try again.');
@@ -114,12 +130,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setProfile(data as UserProfile);
     } catch (error) {
+      if (!mountedRef.current || generation !== authGenerationRef.current) return;
       console.error('Error fetching user profile:', error);
       setProfileError('We could not load your account profile. Please try again.');
     }
   };
 
-  const fetchMemberships = async (userId: string) => {
+  const fetchMemberships = async (userId: string, generation: number) => {
     try {
       const { data, error } = await supabase
         .from('tenant_members')
@@ -127,14 +144,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq('user_id', userId)
         .eq('status', 'active');
 
+      if (!mountedRef.current || generation !== authGenerationRef.current) return;
       if (error) {
         console.error('Error fetching memberships:', error);
+        setMemberships([]);
         return;
       }
       
       setMemberships((data || []) as TenantMembership[]);
     } catch (error) {
+      if (!mountedRef.current || generation !== authGenerationRef.current) return;
       console.error('Error fetching memberships:', error);
+      setMemberships([]);
     }
   };
 
@@ -150,8 +171,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchUserProfile(user.id);
-      await fetchMemberships(user.id);
+      const generation = authGenerationRef.current;
+      await fetchUserProfile(user.id, generation);
+      await fetchMemberships(user.id, generation);
     }
   };
 

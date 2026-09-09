@@ -2041,3 +2041,18 @@ open. No schema/RLS/Edge/data behavior changed, so no audit entry was needed.
 The branch adds one production helper module and no Supabase call or route;
 metrics are 1,712 product files / 480,259 physical lines / 394,307 excluding
 generated types/tests.
+
+### Packet P7-D — cancellation and stale-auth response guards
+
+**Session 53 (2026-09-09):** Added mounted-state and auth-generation guards to
+`AuthProvider` so late profile or membership reads cannot repopulate a newer
+session after sign-out or account changes. New auth loads clear prior profile,
+error, and membership state; membership read failures clear memberships rather
+than retaining stale grants. Added an integration regression test for the
+late-profile-after-sign-out path. This closes the cancellation/error-handling
+slice of P7-D; broader session/profile/membership/authorization separation
+remains open. The change is frontend-only but security-relevant, so the audit
+entry `2026-09-09-auth-provider-cancellation-membership-reset.md` records it.
+Metrics at the branch state are 1,712 product files / 480,331 physical lines
+/ 394,329 excluding generated types/tests; direct Supabase call counts remain
+unchanged.

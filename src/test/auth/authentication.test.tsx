@@ -24,6 +24,7 @@ const {
   mockOnAuthStateChange,
   mockToast,
   mockNavigate,
+  mockFrom,
 } = vi.hoisted(() => ({
   mockSignInWithPassword: vi.fn(),
   mockSignOut: vi.fn(),
@@ -31,6 +32,7 @@ const {
   mockOnAuthStateChange: vi.fn(),
   mockToast: vi.fn(),
   mockNavigate: vi.fn(),
+  mockFrom: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -54,20 +56,24 @@ vi.mock("@/integrations/supabase/client", () => ({
       getSession: mockGetSession,
       onAuthStateChange: mockOnAuthStateChange,
     },
-    from: vi.fn(() => ({
-      select: vi.fn(() => {
-        const chain = {
-          eq: vi.fn(() => chain),
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          then: (resolve: (v: { data: never[]; error: null }) => void) =>
-            resolve({ data: [], error: null }),
-        };
-        return chain;
-      }),
-    })),
+    from: mockFrom,
   },
 }));
+
+function defaultFrom() {
+  return {
+    select: vi.fn(() => {
+      const chain = {
+        eq: vi.fn(() => chain),
+        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        then: (resolve: (v: { data: never[]; error: null }) => void) =>
+          resolve({ data: [], error: null }),
+      };
+      return chain;
+    }),
+  };
+}
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -94,6 +100,7 @@ describe("Login", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockFrom.mockImplementation(defaultFrom);
   });
 
   describe("Form validation", () => {
@@ -173,6 +180,7 @@ describe("useAuth session management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockOnAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
+    mockFrom.mockImplementation(defaultFrom);
   });
 
   it("persists an existing session across a fresh mount (getSession)", async () => {
@@ -206,6 +214,48 @@ describe("useAuth session management", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign Out" }));
 
     await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId("user-id").textContent).toBe("none");
+  });
+
+  it("ignores a late profile response after sign-out", async () => {
+    let resolveProfile!: (value: { data: null; error: null }) => void;
+    const profilePromise = new Promise<{ data: null; error: null }>((resolve) => {
+      resolveProfile = resolve;
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "user-123" } } },
+    });
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "users") {
+        return {
+          select: () => ({
+            eq: () => ({ maybeSingle: () => profilePromise }),
+          }),
+        };
+      }
+      return {
+        select: () => {
+          const chain = {
+            eq: vi.fn(() => chain),
+            then: (resolve: (value: { data: never[]; error: null }) => void) =>
+              resolve({ data: [], error: null }),
+          };
+          return chain;
+        },
+      };
+    });
+
+    renderWithProviders(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("user-id").textContent).toBe("user-123"));
+    await userEvent.click(screen.getByRole("button", { name: "Sign Out" }));
+    resolveProfile({ data: null, error: null });
+
+    await waitFor(() => expect(screen.getByTestId("user-id").textContent).toBe("none"));
     expect(screen.getByTestId("user-id").textContent).toBe("none");
   });
 });
