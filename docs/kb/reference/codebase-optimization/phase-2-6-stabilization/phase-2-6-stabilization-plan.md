@@ -33,7 +33,7 @@
 This addendum is the present-tense source of truth; dated progress entries below
 remain intact as historical evidence. Phase 2.5 is closed as a prerequisite
 gate at PR #953. Phase 2.6 stabilization/retirement is active and partly
-shipped; the Phase 3 pilot is underway with bounded P7-B/P7-C slices. P1-C, P4-A, P4-B, P4-C, P4-D, P6-A and the
+shipped; the Phase 3 pilot is underway with bounded P7-B/P7-C/P7-D slices. P1-C, P4-A, P4-B, P4-C, P4-D, P6-A and the
 completed P6-B cohorts are closed; M0, M1, M2, M3-A, M3-C and M6 are closed;
 M5 is superseded. The dedicated QA target is `unicorn-qa`
 (`qfpxvumcrnzrjyvqkicq`), not the earlier failed `tenant-isolation-qa` branch.
@@ -42,8 +42,8 @@ administrative secret-move/repeat-run tail was intentionally waived and is not
 an open implementation blocker.
 
 Current repository measurements, taken from the merged code state at
-`origin/main@561493691`, are: 1,710 tracked product files; 480,182 physical
-lines (407,144 excluding generated types; 394,259 excluding generated types and
+`origin/main@aed835437`, are: 1,714 tracked product files; 480,407 physical
+lines (407,369 excluding generated types; 394,361 excluding generated types and
 tests); 115 files over 600 lines and 32 over 1,000; six wrapper files (105
 lines); 240 routes with zero duplicate paths; and typecheck at zero errors.
 As of `hotfix/generate-meeting-recurrence-typing` (2026-09-08), the lint
@@ -69,7 +69,7 @@ closed: all 8 suites addressed (`qa:rls`, `qa:contract`, `qa:edge`,
 `qa:data-lifecycle`, `qa:residue`, `qa:cron-safety`, `qa:e2e` live-proven;
 `qa:migrations` static half live in CI, dynamic half demonstrated —
 2026-09-09, `progress-log.md` session 39). P7-B's minimal lifecycle type
-boundary is implemented; P7-C's architecture note/import guard are implemented; P7-D remains a follow-on.
+boundary is implemented; P7-C's architecture note/import guard are implemented; P7-D bounded auth/profile/membership slices are implemented through #1073; broader session/profile/membership contract remains open.
 The SeatCard display-core prerequisite is resolved (dead code, retired
 outright) and the last deliberate lint exception is closed — see above. The
 separate RBAC correctness hotfix
@@ -403,7 +403,7 @@ Retired outright (`hotfix/retire-dead-seatcard-cluster`); see
 
 ## 9. Phase 3 pilot packets
 
-Do not begin until P6-A has parity evidence and the RBAC vocabulary decision explicitly says where authorization predicates live. P6-A is closed and the vocabulary/authority boundary is approved in ADR-016 (2026-09-09), so bounded P7-B/P7-C preparation is now unblocked. P7-D remains separately gated on the disabled-user hotfix.
+Do not begin until P6-A has parity evidence and the RBAC vocabulary decision explicitly says where authorization predicates live. P6-A is closed and the vocabulary/authority boundary is approved in ADR-016 (2026-09-09), so bounded P7-B/P7-C preparation is now unblocked. The disabled-user hotfix is also merged; P7-D is underway with bounded auth seam slices, while broader contract work remains open.
 
 ### Packet P7-A — lifecycle characterization
 

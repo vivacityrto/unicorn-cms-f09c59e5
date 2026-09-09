@@ -1,10 +1,10 @@
 # Codebase Optimization and KB Renewal Plan
 
-> **Last updated:** 2026-09-08 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
+> **Last updated:** 2026-09-09 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
 >
 > **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
-> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 is not started. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 is underway with bounded P7-B/P7-C/P7-D slices. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
 >
 > **Program index:** [Program Index](program-index.md)
 >
