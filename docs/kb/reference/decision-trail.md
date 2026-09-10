@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion); ADR-021 added 2026-09-10 to record the TOM §18 item 6 decision (`package_instances`/`stage_instances` ratified as authoritative for service assignments; three live call sites still reading/writing the legacy `tenants.package_id`/`package_ids`/`stage_ids` columns must migrate before those columns are vestigial). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 7-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, ADR-020, and ADR-021 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion); ADR-021 added 2026-09-10 to record the TOM §18 item 6 decision (`package_instances`/`stage_instances` ratified as authoritative for service assignments; three live call sites still reading/writing the legacy `tenants.package_id`/`package_ids`/`stage_ids` columns must migrate before those columns are vestigial); ADR-022 added 2026-09-10 to record the TOM §18 item 7 decision (Manage Tenants KPI cards move to bounded-freshness server-side aggregates instead of the current whole-book client-side exact computation). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 8-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, ADR-020, ADR-021, and ADR-022 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -881,6 +881,68 @@ apply per `AGENTS.md`.
 **Linked to:**
 - [Tenant Operating Model plan, §18 item 6](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §5.2 tenant master concerns](tenant-operating-model-data-architecture-plan-2026-09-02.md#52-tenant-master-concerns)
+
+---
+
+### ADR-022: Manage Tenants KPI cards move to bounded-freshness aggregates, not whole-book exact real-time {#adr-022}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 7 asked whether KPI cards
+must be exact and real-time for the whole book, or whether bounded
+freshness/approximation is acceptable. This is a product tradeoff, not an
+architecture defect, but live inspection grounded it in real cost:
+`ManageTenants.tsx` currently computes every stat card
+(`stats.total`, `totalMembers`, an at-risk count, CSC-assignment
+breakdowns) by fetching the full tenant list and reducing over it
+client-side — a genuine whole-book exact computation on every page load.
+The §4.3 hot-path evidence (`tenants.* ORDER BY name` shapes: ~2,600 calls,
+~767,000 ms combined execution time; per-tenant `v_package_burndown`:
+5,648 calls, 558,175 ms total) is the measured cost of that pattern.
+
+**Decision:**
+
+1. KPI cards move to bounded-freshness server-side aggregates (a
+   count/sum query or a small summary refreshed on a short interval, e.g.
+   1-5 minutes) rather than being recomputed synchronously from the full
+   row set on every render.
+2. Sub-second/exact-real-time precision is not required for any KPI card
+   by default. If a specific card is later found to need stricter
+   accuracy (e.g., overdue-invoice/arrears count), that is a named
+   exception decided when raised, not a standing requirement.
+3. This supports the plan's target directory architecture (§4.4): the
+   page becomes scoped-page by default, with "exact whole-cohort" facets
+   as an explicitly opt-in, separately-loaded query rather than part of
+   the default render path.
+
+**Reasoning:** Nothing in current product usage or the evidence gathered
+argues for sub-second whole-book exactness — portfolio-health stat cards
+tolerating a few minutes of staleness is normal SaaS practice, and the
+current whole-book-exact approach is directly responsible for a
+measurable, non-trivial share of the hot-path cost already identified as
+a problem in §4.3.
+
+**Alternatives considered:** Keeping whole-book exact computation and
+solving the cost purely with better indexes was rejected — the cost here
+is architectural (fetching and reducing over the full row set on every
+render), not a missing-index problem; indexing alone would not remove the
+need to transfer and process every row on every page load.
+
+**Risks accepted:** A refreshed-aggregate approach means a KPI card can
+briefly lag a just-made change (e.g., a tenant closed seconds ago still
+counted in the prior aggregate window) — accepted as normal and
+reversible if a specific card proves this unacceptable in practice.
+
+**Consequences:** TOM §18 item 7 is closed as a policy question. Items
+8-13 remain open. The KPI-card migration to server-side aggregates is
+separately authorized implementation work — normal branch/PR/
+verification/audit-entry rules apply per `AGENTS.md`.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 7](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §4.3 measured database hot-path evidence](tenant-operating-model-data-architecture-plan-2026-09-02.md#43-measured-database-hot-path-evidence)
+- [Tenant Operating Model plan, §4.4 desired read shape](tenant-operating-model-data-architecture-plan-2026-09-02.md#44-desired-read-shape)
 
 ---
 
