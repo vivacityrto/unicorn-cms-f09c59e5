@@ -69,7 +69,7 @@ closed: all 8 suites addressed (`qa:rls`, `qa:contract`, `qa:edge`,
 `qa:data-lifecycle`, `qa:residue`, `qa:cron-safety`, `qa:e2e` live-proven;
 `qa:migrations` static half live in CI, dynamic half demonstrated —
 2026-09-09, `progress-log.md` session 39). P7-B's minimal lifecycle type
-boundary is implemented; P7-C's architecture note/import guard are implemented; P7-D bounded auth/profile/membership slices are implemented through #1073; broader session/profile/membership contract remains open.
+boundary is implemented; P7-C's architecture note/import guard are implemented; P7-D's auth/profile/membership seam, including the session-lifecycle extraction (2026-09-10, PR #1079), is now fully implemented — see the packet status below.
 The SeatCard display-core prerequisite is resolved (dead code, retired
 outright) and the last deliberate lint exception is closed — see above. The
 separate RBAC correctness hotfix
@@ -403,7 +403,7 @@ Retired outright (`hotfix/retire-dead-seatcard-cluster`); see
 
 ## 9. Phase 3 pilot packets
 
-Do not begin until P6-A has parity evidence and the RBAC vocabulary decision explicitly says where authorization predicates live. P6-A is closed and the vocabulary/authority boundary is approved in ADR-016 (2026-09-09), so bounded P7-B/P7-C preparation is now unblocked. The disabled-user hotfix is also merged; P7-D is underway with bounded auth seam slices, while broader contract work remains open.
+Do not begin until P6-A has parity evidence and the RBAC vocabulary decision explicitly says where authorization predicates live. P6-A is closed and the vocabulary/authority boundary is approved in ADR-016 (2026-09-09), so bounded P7-B/P7-C preparation is now unblocked. The disabled-user hotfix is also merged; P7-D's auth/profile/membership seam is now fully implemented (2026-09-10, PR #1079).
 
 ### Packet P7-A — lifecycle characterization
 
@@ -422,7 +422,7 @@ Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-D — auth/profile/membership seam
 
-**Status:** disabled-user hotfix, pure profile/membership helpers, cancellation guards, and a query-loader seam implemented; the remaining session/profile/membership contract work stays open; no second capability registry.
+**Status:** disabled-user hotfix, pure profile/membership helpers, cancellation guards, a query-loader seam, and (2026-09-10, PR #1079) the session-lifecycle extraction into `src/auth/session.ts` are all implemented — `useAuth.tsx` is now a thin React-context/RBAC wrapper over `useAuthSession`/`loaders.ts`/`access.ts`, closing the session/profile/membership contract-seam scope; no second capability registry. See the 2026-09-10 progress-log entry for verification detail.
 
 ## 10. Verification contract for every implementation PR
 
