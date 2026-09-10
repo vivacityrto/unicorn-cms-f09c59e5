@@ -1,6 +1,8 @@
 # P6-1 Documents/Generation Characterization
 
-> **Status:** characterization only — no extraction, no behavior change
+> **Status:** five bounded extraction/retirement PRs landed (2,788 → 2,050
+> lines, -26.5%); paused deliberately — remaining candidates are cross-cutting
+> or tightly coupled, not a clean next bounded cut (see "Sixth pass" below)
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md) — Phase 4, P6 hotspot slice #1
 >
@@ -339,6 +341,34 @@ category-fetch duplication between the local `fetchCategories` and the
 `useDocumentCategories` hook, plus the dialog's step-machine/JSX itself
 (left as-is deliberately — tightly coupled to `createStep`, lower value to
 extract further once its mutation logic already has an oracle).
+
+## Sixth pass: why this slice is paused here, not stopped forever
+
+Re-investigated the category-fetch duplication flagged as a candidate after
+the fourth pass. It's bigger than it looked: `useDocumentCategories` (the
+hook with the unused-elsewhere `valueLabelMap`) is not local to this page —
+it's a shared hook consumed by 5 other real components
+(`GeneratedDocumentsTab`, `DocumentFilterDialog`, `StageDocumentsPanel`,
+`GovernanceDocumentEditDialog`, `GovernanceDocumentDetail`). Consolidating
+`ManageDocuments.tsx`'s local `fetchCategories` into it means widening a
+shared hook's query and re-verifying five other consumers, not touching one
+file — a legitimate cross-cutting task in its own right, not a bounded P6-1
+seam. Per the deepening rule's stop condition ("remaining seams are all
+heavily coupled with no clean next cut"), this is being deferred rather than
+forced into this slice.
+
+The other remaining candidate — the create/edit dialog's own step-machine
+and JSX — is deliberately left alone too: its actual mutation logic already
+has an oracle (the fifth extraction above), so further restructuring of the
+step machine itself would be pure refactor risk for comparatively little
+measured benefit right now.
+
+Both are real, valid future work — just not a fit for continuing this
+particular slice's bounded-PR rhythm today. A future session picking this
+back up should treat the category-fetch consolidation as its own
+cross-cutting packet (touching all 6 consumers, not filed under P6-1), and
+can reconsider the step-machine refactor once there's a specific reason to
+(e.g. a bug in that area, or a genuine architectural need).
 
 ## Definition of done for this packet
 
