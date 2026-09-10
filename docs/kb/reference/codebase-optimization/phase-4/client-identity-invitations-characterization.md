@@ -128,6 +128,12 @@ packets.
   invocation and preserves its invitation-id/reason payload, response, and
   structured Edge detail handling. `copyLink` and `resetPassword` remain
   separate future seams; no invitation was revoked during verification.
+- The contact-promotion command is now implemented in the review branch:
+  `promoteContactViaInvite` owns the existing session guard and `invite-user`
+  promotion invocation while preserving the real-email, role-ceiling,
+  `skip_email: false`, and `job_title: null` contract. UI state, toasts,
+  contact refresh, and capacity invalidation remain in the component; no
+  contact was promoted during verification.
 - Static source and migration review was completed from
   `origin/main@b63ea5fea`. The existing authenticated storage-state files were
   copied into the implementation worktree. The source PR's verification

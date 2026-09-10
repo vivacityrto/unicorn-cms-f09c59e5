@@ -44,6 +44,7 @@ import { isValidEmail, RELATIONSHIP_ROLE_OPTIONS, type RelationshipRole } from '
 import { type PositionTypeOption, positionTypeLabel } from '@/lib/roles/positionType';
 import { useInvalidateUserCapacity } from '@/hooks/useUserCapacity';
 import type { TenantContact } from '@/features/client-identity/models';
+import { promoteContactViaInvite } from '@/features/client-identity/promoteContact';
 
 interface ContactFormState {
   first_name: string;
@@ -214,30 +215,7 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
     if (!promotingContact) return;
     setPromoting(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Authentication required');
-
-      const { data, error } = await supabase.functions.invoke('invite-user', {
-        body: {
-          email: promotingContact.email,
-          first_name: promotingContact.first_name,
-          last_name: promotingContact.last_name || '',
-          invite_as: 'CLIENT',
-          tenant_id: tenantId,
-          unicorn_role: promoteRole === 'primary_contact' || promoteRole === 'secondary_contact' ? 'Admin' : 'User',
-          relationship_role: promoteRole,
-          // Send a real invitation email rather than creating the account
-          // directly — skip_email:true left promoted contacts as unusable
-          // "ghost" accounts with no way to set a password (client callers
-          // can't reach the staff-only activate-ghost-user function). The
-          // matching tenant_contacts row is archived and linked to the new
-          // user automatically by accept_invitation_v2 once they accept —
-          // not here, since no user exists yet at send time.
-          skip_email: false,
-          job_title: null,
-        },
-      });
+      const { data, error } = await promoteContactViaInvite(tenantId, promotingContact, promoteRole);
 
       if (error) {
         // FunctionsHttpError for a non-2xx response — the edge function's JSON
