@@ -34,6 +34,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-026] [2026-09-10] Xero source of truth — ratified as authoritative for invoices/accounting; connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's — full: [reference/decision-trail.md#adr-026](../reference/decision-trail.md#adr-026)
 - [ADR-027] [2026-09-10] Test environment process — `unicorn-qa` ratified as the shared standing disposable environment for Tenant Operating Model mutation/cross-tenant testing too, not a second parallel environment — full: [reference/decision-trail.md#adr-027](../reference/decision-trail.md#adr-027)
 - [ADR-028] [2026-09-10] Risk/rollback parameters — three-tier observation-window/canary-cohort/performance-budget template (Critical/High/Medium); Carl is rollback owner for every tier. Closes all 13 TOM §18 decisions — full: [reference/decision-trail.md#adr-028](../reference/decision-trail.md#adr-028)
+- [ADR-029] [2026-09-10] Phase 3 item 5 (`requireSuperAdmin` page-local check cleanup) deferred entirely to RBAC v6 P3/P5/P8 — no P7-E deletion packet; the 9 candidate checks are intentional defense-in-depth per the already-executed dashboard-layout migration plan's preservation rule — full: [reference/decision-trail.md#adr-029](../reference/decision-trail.md#adr-029)
 
 ---
 

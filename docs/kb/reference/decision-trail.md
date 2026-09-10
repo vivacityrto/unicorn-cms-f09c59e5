@@ -1395,6 +1395,86 @@ authorization to begin any specific migration.
 
 ---
 
+### ADR-029: Phase 3 item 5 (`requireSuperAdmin` page-local check cleanup) deferred entirely to RBAC v6; no partial deletion under Codebase Optimization {#adr-029}
+**Date:** 2026-09-10
+**Status:** Decided
+**Decided by:** Carl
+
+**Context:** Codebase Optimization's Phase 3 lists item 5, "permission
+predicate consolidation in one route family," alongside the four completed
+P7-A–D pilot packets. Independent investigation (Claude and Codex, run in
+parallel per Carl's request) identified 9 page components under the
+`requireSuperAdmin` route group (`StageBuilder`, `AdminStageAnalytics`,
+`RiskCommandCentre`, `StrategicCommandCentre`,
+`StrategicOrchestrationDashboard`, `WorkflowOptimisation`,
+`KnowledgeExplorer`, `AdminAssistant`, `AdminKnowledgeLibrary`) whose
+page-local `!isSuperAdmin` early-return checks are value-identical to
+`ProtectedRoute`'s own `requireSuperAdmin` guard (`isSuperAdmin() ||
+profile?.unicorn_role === 'Super Admin'`, `src/hooks/useRBAC.tsx`), with
+each page confirmed single-registered under that guard. Both agents
+initially converged on a bounded "P7-E" packet to delete these as proven
+exact duplicates.
+
+Before any deletion, a verification pass surfaced that this premise
+directly conflicts with a standing, already-executed decision:
+`docs/kb/reference/dashboard-direct-layout-migration-plan-2026-09-01.md`
+(9 merged PRs) explicitly lists "remove page-local authorization because a
+route guard appears equivalent" as out of scope (line 501), and
+`src/routes/dashboardRoutes.tsx`'s own migration header documents that
+every one of these 9 files' local checks was deliberately kept unchanged
+during that migration under that exact rule, repeated across PRs 1, 2, 4,
+6, 7, and 8 of that program.
+
+**Decision:** Leave all 9 page-local `requireSuperAdmin` checks unchanged.
+No P7-E deletion packet ships under Codebase Optimization. Phase 3 closes
+with the four completed pilot packets (P7-A–D) only; item 5 is reclassified
+as deferred, not implemented, not scoped for a fifth optimization packet.
+Any future consolidation of this route family is RBAC v6's to do, under
+P3/P5/P8, as part of that program's canonical `requiredCapability` route
+metadata and duplicate-raw-check retirement work (ADR-016) — not as a
+standalone line-count-reduction packet.
+
+**Reasoning:** The 2026-09-01 migration's preservation rule is deliberate
+policy applied consistently across a real, already-shipped program, not an
+oversight to correct. These checks currently function as a defense-in-depth
+backstop: if a route's `requireSuperAdmin` prop were ever dropped by
+mistake, or a second unguarded route were added to the same page, the
+page-local check is the only remaining barrier. Removing it for a
+Codebase-Optimization line-count goal repeats the exact tradeoff the
+master plan itself elsewhere rejects ("lower LOC never justifies" cutting
+an access-control corner). RBAC v6 already owns the canonical version of
+this problem (ADR-016's server-decision-core model) and is likely to
+replace these ad hoc checks with a generated capability check rather than
+simply delete them — a partial deletion now risks diverging from that
+eventual shape for no compounding benefit, since the checks are inert
+UX-layer duplicates today, not a correctness bug.
+
+**Alternatives considered:** Proceeding with the narrow "delete only
+proven-exact duplicates" P7-E packet, as both Claude's and Codex's
+independent investigations first proposed — rejected once the standing
+preservation rule was found, since it would reverse a considered decision
+on precisely the rationale ("route guard appears equivalent") that rule
+was written to reject.
+
+**Risks accepted:** None new — the status quo (harmless, unreachable
+duplicate checks) continues. The only cost is that Codebase Optimization's
+Phase 3 closes without a fifth packet; RBAC v6 inherits this specific
+cleanup alongside its broader predicate-consolidation scope.
+
+**Consequences:** Codebase Optimization Phase 3 is complete as P7-A
+through P7-D; item 5 carries no further optimization-owned work.
+`docs/kb/reference/codebase-optimization-plan-2026-08-28.md`'s Phase 3
+item-5 line and status text should reflect this disposition (tracked via
+the in-review master-plan PR, held for Carl per the standing practice for
+that specific edit).
+
+**Linked to:**
+- [Codebase Optimization plan, §3](codebase-optimization-plan-2026-08-28.md)
+- [dashboard-direct-layout-migration-plan-2026-09-01.md](dashboard-direct-layout-migration-plan-2026-09-01.md)
+- [ADR-016](#adr-016)
+
+---
+
 ## Decisions still needing ADRs
 
 | Decision | Why write it up | Priority |
