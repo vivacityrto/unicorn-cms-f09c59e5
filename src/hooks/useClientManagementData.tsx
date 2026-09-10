@@ -96,7 +96,7 @@ export const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   all: [],
   meetings: ['meeting_synced', 'meeting_attendance_imported', 'meeting_artifacts_captured', 'minutes_draft_created', 'minutes_draft_updated', 'minutes_published_pdf'],
   time: ['time_posted', 'time_ignored', 'time_reallocated'],
-  tasks: ['task_completed_team', 'task_completed_client', 'tasks_created_from_minutes', 'action_item_created', 'action_item_updated', 'action_item_completed', 'action_item_comment'],
+  tasks: ['task_completed_team', 'task_completed_client', 'task_status_changed', 'tasks_created_from_minutes', 'action_item_created', 'action_item_updated', 'action_item_completed', 'action_item_comment'],
   emails: ['email_sent', 'email_failed', 'email_linked', 'email_attachment_saved'],
   docs: ['document_uploaded', 'document_downloaded', 'document_shared_to_client', 'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid'],
   notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned', 'structured_note_added'],

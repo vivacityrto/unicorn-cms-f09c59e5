@@ -169,12 +169,20 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
         updateData.completed_by = null;
       }
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from('staff_task_instances')
         .update(updateData)
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .select('id');
 
       if (error) throw error;
+      // .update() reports no error even when RLS silently filters the row
+      // to zero matches (e.g. the acting user lost tenant/staff access) —
+      // .select() is the only way to detect that and avoid a false-positive
+      // "Task Updated" toast for a write that never happened.
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error('Update was not applied — you may not have permission to edit this task.');
+      }
 
       // Compute structured AI signals
       const aiSignals: {
@@ -226,10 +234,15 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           currentStatus === undefined;
         if (isNotStarted) {
           const inProgressOption = statuses.find(s => s.code === 1);
-          await supabase
+          const { data: promotedRows } = await supabase
             .from('stage_instances')
             .update({ status: inProgressOption?.value || 'in_progress' })
-            .eq('id', stageInstanceId);
+            .eq('id', stageInstanceId)
+            .select('id');
+
+          if (!promotedRows || promotedRows.length === 0) {
+            console.error('Stage auto-promote to In Progress did not persist (0 rows updated)', { stageInstanceId });
+          }
 
           await supabase.from('client_audit_log').insert({
             tenant_id: tenantId,
@@ -262,10 +275,15 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           stageUpdateData.completion_date = new Date().toISOString().split('T')[0];
         }
 
-        await supabase
+        const { data: completedRows } = await supabase
           .from('stage_instances')
           .update(stageUpdateData)
-          .eq('id', stageInstanceId);
+          .eq('id', stageInstanceId)
+          .select('id');
+
+        if (!completedRows || completedRows.length === 0) {
+          console.error('Stage auto-complete did not persist (0 rows updated)', { stageInstanceId });
+        }
 
         await supabase.from('client_audit_log').insert({
           tenant_id: tenantId,
@@ -299,12 +317,16 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       const oldTask = tasks.find(t => t.id === taskId);
       const oldAssigneeId = oldTask?.assignee_id;
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from('staff_task_instances')
         .update({ assignee_id: assigneeId })
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .select('id');
 
       if (error) throw error;
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error('Update was not applied — you may not have permission to edit this task.');
+      }
 
       // Log to audit
       await supabase.from('client_audit_log').insert({
@@ -394,12 +416,16 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       const oldTask = tasks.find(t => t.id === taskId);
       const oldIsCore = oldTask?.is_core;
 
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from('staff_task_instances')
         .update({ is_core: isCore })
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .select('id');
 
       if (error) throw error;
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error('Update was not applied — you may not have permission to edit this task.');
+      }
 
       // Log to audit
       await supabase.from('client_audit_log').insert({
