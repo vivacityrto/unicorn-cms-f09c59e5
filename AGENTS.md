@@ -194,7 +194,11 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   allowlisted `unicorn-qa` target plus protected workflow skeleton now exist.
   The harness fails closed when a service-role key targets another project and
   serializes local runs; GitHub Actions adds the cross-run concurrency lock.
-  The QA-only secrets and first live run remain intentionally outstanding.
+  The first live run is complete (workflow run `34179875080`: 15/15 RLS
+  tests passed, zero run-scoped residue) — see
+  `docs/kb/reference/codebase-optimization/phase-2-6-stabilization/qa-environment-and-coverage-strategy.md`.
+  Only the repository-level secret placement remains under an explicit,
+  intentional waiver.
 - Architecture metrics (P0.5, `docs/kb/reference/codebase-optimization-plan-2026-08-28.md`):
   `npm run metrics` (`scripts/architecture-metrics.mjs`) reproduces the
   plan's section-3 baseline table from a script instead of an ad-hoc pass —

@@ -2,9 +2,9 @@
 
 > **Status:** execution plan; no packet below authorizes a production migration, production-data deletion, Edge deployment, permission change, or PR merge by itself
 >
-> **Prepared:** 2026-09-07 · **Truth-sync reviewed:** 2026-09-09
+> **Prepared:** 2026-09-07 · **Truth-sync reviewed:** 2026-09-10
 >
-> **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against current `origin/main@2175ea6b1`, current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
+> **Evidence base:** historical audit at `origin/main@b24bbca57`, reconciled against current `origin/main@5344f3dc8`, current lint/typecheck/routes/KB-link checks, the Phase 2.6 investigation, and read-only Supabase checks of production plus the dedicated `unicorn-qa` project
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md)
 >
@@ -28,7 +28,7 @@
 >
 > **Audit entry:** none needed - documentation-only status reconciliation; individual packet changes retain their existing audit entries
 
-## Current truth-sync (2026-09-09)
+## Current truth-sync (2026-09-10)
 
 This addendum is the present-tense source of truth; dated progress entries below
 remain intact as historical evidence. Phase 2.5 is closed as a prerequisite
@@ -414,11 +414,11 @@ Characterize `/admin/lifecycle-checklists` for list, filter, create, edit, deact
 
 ### Packet P7-B — minimal feature boundary
 
-**Status:** implemented in the current PR — a feature-local generated-type boundary with hook compatibility re-exports. Existing route/server enforcement is unchanged; no query adapter was justified because the page has no direct Supabase knowledge. Success remains testability and neutral/negative LOC.
+**Status:** implemented and merged (PR #1065) — a feature-local generated-type boundary with hook compatibility re-exports (`src/features/lifecycle/types.ts`). Existing route/server enforcement is unchanged; no query adapter was justified because the page has no direct Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-C — architecture and scoped lint boundary
 
-**Status:** implemented in the current PR — architecture note plus scoped display-import guard; no broad abstraction.
+**Status:** implemented and merged (PR #1068) — architecture note plus scoped display-import guard; no broad abstraction.
 
 ### Packet P7-D — auth/profile/membership seam
 
@@ -735,7 +735,7 @@ This stabilization programme is complete when:
 - the tenant-isolation suite executes safely in a disposable QA project and proves cleanup;
 - urgent Client Health, dashboard-timeout and authorization defects have an owner and verified disposition;
 - every Phase 2.6 candidate is classified with current reachability evidence;
-- the task-dialog consolidation has parity tests and read-only browser evidence; and
+- the task-dialog work (P6-A) has either parity tests and read-only browser evidence for a consolidation, or an evidenced retirement disposition — satisfied by PR #964's reachability/route/test/read-only-browser evidence for retiring the dead consumer instead; and
 - the Phase 3 lifecycle pilot has characterization tests, a measured boundary, and no authorization or tenant-scope drift.
 
 ## 14. Claude Code handoff prompt
