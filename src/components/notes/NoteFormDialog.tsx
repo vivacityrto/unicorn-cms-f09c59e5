@@ -114,6 +114,8 @@ function getDraftKey(tenantId: number, noteId?: string) {
   return `note-draft-${tenantId}-${noteId || 'new'}`;
 }
 
+const EMPTY_ACTIVE_PACKAGES: ActivePackage[] = [];
+
 interface DraftData {
   title: string;
   content: string;
@@ -163,7 +165,7 @@ export function NoteFormDialog({
   showSpeech = true,
   showAiTitle = true,
   showDuration = true,
-  activePackages = [],
+  activePackages = EMPTY_ACTIVE_PACKAGES,
   noteTypeOptions: propTypeOptions,
   noteStatusOptions: propStatusOptions,
   hideLogTime = false,
@@ -226,7 +228,7 @@ export function NoteFormDialog({
   const noteStatusOpts = propStatusOptions || localStatusOptions;
 
   // Loading state for edit mode
-  const [loadingNote, setLoadingNote] = useState(false);
+  const [loadingNote, setLoadingNote] = useState(() => mode === 'edit' && Boolean(noteId));
   const [internalSaving, setInternalSaving] = useState(false);
   const saving = externalSaving || internalSaving;
 
