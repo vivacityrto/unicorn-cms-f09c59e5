@@ -307,6 +307,59 @@ through this structure — it's still just its own branch, its own PR, and
 an audit entry only if it touches schema/RLS/trigger/security/cron,
 exactly as before.
 
+## Phase 4 hotspot extraction — characterization-oracle rule (standing practice, added 2026-09-10)
+
+Before extracting **state, a query, or a mutation** (not a pure function or a
+type alias — those are compiler-provable with zero behavior change and never
+need this) from a Phase 4 P6 hotspot file
+(`docs/kb/reference/codebase-optimization-plan-2026-08-28.md` §P6), confirm
+the specific behavior being moved has a real oracle. "Existing test
+coverage" means coverage that actually exercises that behavior — a test file
+that merely imports the same module, or covers an unrelated branch of the
+same file, does not count. There is no size/risk exception for auth, tenant
+resolution, authorization, or mutation code; a small extraction can still
+move a security or data-write boundary.
+
+Two oracles are valid; use whichever fits, but one of them is mandatory —
+a change with neither is not characterized:
+
+1. **Focused unit/component tests** exercising the specific behavior being
+   moved (loading/empty/populated, success/error, authorization, and
+   side-effect contracts), written first as their own PR if none already
+   exist. Preferred when the file already has, or can cheaply get, a
+   testable seam (a hook or a display component with mockable boundaries —
+   see `src/contexts/__tests__/ClientTenantContext.test.tsx` for the mocked-
+   Supabase pattern).
+2. A **genuinely verbatim, no-logic-rewrite move** of the current lines (no
+   contract or control-flow cleanup hidden inside the "extraction") plus a
+   **real authenticated Playwright pass exercising that exact workflow**,
+   asserting the workflow's meaningful success and relevant failure/
+   authorization outcomes — not merely that the route rendered. Use this
+   when the file has no existing hook/component split and writing new unit
+   tests against the untested monolith would itself be a large, novel,
+   mock-heavy undertaking (mocking every table a giant page's list-fetch
+   joins, for example) rather than a proportionate first step. A mutation
+   workflow's Playwright run must use an approved safe QA fixture/tenant —
+   never turn production data into a characterization fixture. If a
+   workflow has a server-side branch that can't be safely reached from the
+   browser, that branch still needs its own focused static/contract test;
+   a client-side Playwright pass doesn't stand in for it.
+
+Real incident this rule captures (2026-09-10): independent investigation of
+Phase 4 slice #1 (`src/pages/ManageDocuments.tsx`, Documents/generation) and
+slice #2 (client identity/invitations — `ClientUsersPage.tsx`,
+`TenantUsersTab.tsx`, `TenantContactsSection.tsx`, `useInviteMutations.ts`,
+the `invite-user` Edge Function) found the same shape of gap in both: real,
+behavior-bearing extraction candidates (template CRUD state; promotion/
+swap-to-contact; invite mutations) with **zero existing test coverage** of
+that specific behavior, unlike the Phase 3 P7-B lifecycle precedent, which
+had a 13-test characterization suite as a regression oracle before its
+extraction. The first draft of this rule assumed unit testing was always the
+answer; applying it to `ManageDocuments.tsx` (2,788 lines, no hook/component
+split, its list-fetch alone joining 6+ tables) showed that would be a bigger,
+riskier undertaking than the rule's intent — hence the two-oracle version
+above, converged on independently by both Claude and Codex the same session.
+
 ## Workflow efficiency checkpoints (standing practice, added 2026-09-04)
 
 When starting a new phase of a multi-batch plan (e.g. a new sub-phase of
