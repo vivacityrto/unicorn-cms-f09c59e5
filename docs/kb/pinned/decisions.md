@@ -26,6 +26,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-018] [2026-09-10] Tenant canonical key — `tenants.id` ratified as canonical, `id_uuid` mandatory for external integration contracts, no UUID-primary migration — full: [reference/decision-trail.md#adr-018](../reference/decision-trail.md#adr-018)
 - [ADR-019] [2026-09-10] Tenant membership authority — `tenant_members` ratified as canonical for membership/access/invitations; `tenant_users`' contact-relationship data migrates onto it instead of remaining a second access authority — full: [reference/decision-trail.md#adr-019](../reference/decision-trail.md#adr-019)
 - [ADR-020] [2026-09-10] Unmatched `tenant_profile`/`tenant_members`/`package_instances` rows classified as migration-restore artifacts from unremapped tenant-ID renumbering; approved for quarantine, not deletion — full: [reference/decision-trail.md#adr-020](../reference/decision-trail.md#adr-020)
+- [ADR-021] [2026-09-10] Package/service assignment authority — `package_instances`/`stage_instances` ratified as authoritative; three live call sites still on legacy `tenants.package_id`/`package_ids`/`stage_ids` must migrate first — full: [reference/decision-trail.md#adr-021](../reference/decision-trail.md#adr-021)
 
 ---
 

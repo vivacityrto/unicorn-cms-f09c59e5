@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 6-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, and ADR-020 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion); ADR-021 added 2026-09-10 to record the TOM §18 item 6 decision (`package_instances`/`stage_instances` ratified as authoritative for service assignments; three live call sites still reading/writing the legacy `tenants.package_id`/`package_ids`/`stage_ids` columns must migrate before those columns are vestigial). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 7-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, ADR-020, and ADR-021 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -810,6 +810,77 @@ rules — this ADR classifies, it does not authorize a migration.
 **Linked to:**
 - [Tenant Operating Model plan, §18 item 4](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §5.4 relationship integrity candidates](tenant-operating-model-data-architecture-plan-2026-09-02.md#54-relationship-integrity-candidates)
+
+---
+
+### ADR-021: `package_instances`/`stage_instances` ratified as authoritative for service assignments {#adr-021}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 6 asked whether
+`package_instances` is authoritative for all service assignments, and
+what remaining callers legitimately use `package_id`/`package_ids`/
+`stage_ids` on `tenants`. Live inspection (current `origin/main`) found
+`package_instances` already covers nearly all of the legacy population,
+but three real, current code paths still depend on the legacy columns:
+
+- Live data: only 31 of 415 tenants have `tenants.package_id` set, 31
+  have non-empty `package_ids`, 6 have non-empty `stage_ids` — a small,
+  shrinking minority. Of the 31 with legacy `package_id`, **29 already
+  have a corresponding `package_instances` row**; only 2 (both `inactive`
+  tenants — "Malyun Ahmed", "Accredited Training Company") rely solely on
+  the legacy column.
+- Three live call sites still read/write the legacy columns directly:
+  `AddStageDialog.tsx` **writes** `tenants.stage_ids` (appends a new
+  stage ID when a stage is added); `GeneratedDocumentsTab.tsx` **reads**
+  `tenants.package_id`/`package_ids` to decide which packages' documents
+  to generate; `AskVivScopeSelectorModal.tsx` **reads** both
+  `tenants.package_ids` and `tenants.stage_ids` to scope Ask Viv queries
+  to a package or stage. None of these three have been migrated to read
+  `package_instances`/`stage_instances` instead.
+
+**Decision:**
+
+1. `package_instances` (and its `stage_instances` counterpart) is
+   ratified as authoritative for all service assignments, consistent with
+   the item 5 consolidation direction.
+2. The legacy `tenants.package_id`/`package_ids`/`stage_ids` columns are
+   not yet vestigial in practice — the three call sites above must
+   migrate to read/write `package_instances`/`stage_instances` before the
+   legacy columns can be considered safe to retire. This is real
+   implementation work, not a documentation-only close.
+3. The 2 inactive-tenant edge cases with no `package_instances` row are
+   low-risk historical outliers, quarantined under the same standing rule
+   as ADR-020's classification — not a blocker to migrating the 3 call
+   sites.
+
+**Reasoning:** Declaring `package_instances` authoritative without first
+identifying live consumers of the legacy columns would create the same
+class of defect ADR-019 closed for `tenant_members`/`tenant_users` — a
+second, still-functioning access/data path left running in parallel with
+the "canonical" one. Finding the three call sites now means the migration
+can be scoped precisely instead of discovered later as a regression.
+
+**Alternatives considered:** Treating the legacy columns as already dead
+(since only 31/6 of 415 tenants populate them) was rejected — population
+count doesn't determine whether live code still depends on the column;
+the three call sites prove real current usage regardless of how few rows
+are affected.
+
+**Risks accepted:** Migrating `AddStageDialog.tsx`'s write path and the
+two read paths is real, live-surface work needing its own scoped PR(s),
+reachability verification, and Playwright coverage before shipping — this
+ADR authorizes the direction, not the migration itself.
+
+**Consequences:** TOM §18 item 6 is closed as a policy question. Items
+7-13 remain open. The three-call-site migration is separately authorized
+implementation work — normal branch/PR/verification/audit-entry rules
+apply per `AGENTS.md`.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 6](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §5.2 tenant master concerns](tenant-operating-model-data-architecture-plan-2026-09-02.md#52-tenant-master-concerns)
 
 ---
 
