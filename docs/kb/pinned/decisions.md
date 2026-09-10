@@ -23,6 +23,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-015] [2026-09-09] RBAC staff-read baseline — preserve broad internal-staff tenant read access for now; scope sensitive actions separately — full: [reference/decision-trail.md#adr-015](../reference/decision-trail.md#adr-015)
 - [ADR-016] [2026-09-09] RBAC authority, role, delegation, and pilot baseline — preserve portfolio-wide staff access while keeping high-risk controls Super Admin-only — full: [reference/decision-trail.md#adr-016](../reference/decision-trail.md#adr-016)
 - [ADR-017] [2026-09-10] Tenant status/lifecycle/access vocabulary — three-axis model, consolidate to one authoritative writer instead of the current dropdown+trigger/Edge-Function split — full: [reference/decision-trail.md#adr-017](../reference/decision-trail.md#adr-017)
+- [ADR-018] [2026-09-10] Tenant canonical key — `tenants.id` ratified as canonical, `id_uuid` mandatory for external integration contracts, no UUID-primary migration — full: [reference/decision-trail.md#adr-018](../reference/decision-trail.md#adr-018)
 
 ---
 
