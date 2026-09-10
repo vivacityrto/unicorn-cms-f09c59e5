@@ -16,6 +16,18 @@
 
 ---
 
+## Current truth-sync (2026-09-10)
+
+All 13 §18 decisions are now closed (ADR-017 through ADR-028 in
+[decision-trail.md](decision-trail.md), items 2-13; item 1 is the same
+decision as RBAC v6 §13 item 1, tracked on that separate track). Item
+14's unmatched-user question stays parked per Carl's earlier direction.
+No implementation has been authorized by these ADRs alone — Phase P0/P1
+scoping and Carl's per-packet approval remain required before any code,
+schema, or production change per the Production rule above.
+
+---
+
 ## 1. Executive decision
 
 Do **not** begin by splitting the 64-column `tenants` table, replacing its primary key, partitioning tenant-owned tables, deleting “unused” indexes, or building one larger join. Those actions have high write-path and permission blast radius and do not address the clearest current bottleneck.
@@ -1062,7 +1074,7 @@ The April performance audit's 13-query architecture is historical and should rem
 10. ~~What is the first governed BI decision the analytical pilot must support?~~ **Decided 2026-09-10 (ADR-025):** "which active clients need consultant attention this week, and why" — a real-signal watchlist (overdue tasks/invoices/renewals, wiring the orphaned `v_stage_health_latest` data into the rollup, activity silence), not a resurrected composite churn score. The dormant `run-retention-forecast`/`run-tenant-risk-forecast` composite-score infrastructure is deferred, not built first. See [decision-trail.md#adr-025](decision-trail.md#adr-025).
 11. ~~Will Xero remain the financial source of truth, and which entity/account is connected?~~ **Decided 2026-09-10 (ADR-026):** Xero ratified as authoritative for invoices/accounting; the connected account is confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's. See [decision-trail.md#adr-026](decision-trail.md#adr-026).
 12. ~~What Supabase branch/disposable environment and synthetic persona process is approved for mutation and cross-tenant testing?~~ **Decided 2026-09-10 (ADR-027):** `unicorn-qa` (already ratified for RBAC v6 by ADR-016) is the shared standing environment for this work too, not a second parallel one. QA-only secrets and the first live run remain outstanding either way. See [decision-trail.md#adr-027](decision-trail.md#adr-027).
-13. What observation window, canary cohort, performance budget, and rollback owner apply to each risk class?
+13. ~~What observation window, canary cohort, performance budget, and rollback owner apply to each risk class?~~ **Decided 2026-09-10 (ADR-028):** three risk tiers (Critical/High/Medium) each with a defined observation window, canary cohort, and performance budget; Carl is rollback owner for every tier. **Closes all 13 TOM §18 decisions.** See [decision-trail.md#adr-028](decision-trail.md#adr-028).
 14. **Parked 2026-09-08 (Carl, during Phase 2.6 Packet P4-D, L10 #18 —
     notification-preferences fix):** `public.users.tenant_id` is `NULL` for
     72 of 626 rows, and that population is not homogeneous — confirmed live

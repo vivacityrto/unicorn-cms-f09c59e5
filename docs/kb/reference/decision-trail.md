@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score); ADR-026 added 2026-09-10 records the TOM §18 item 11 decision (Xero ratified as financial source of truth; the connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's); ADR-027 added 2026-09-10 records the TOM §18 item 12 decision (`unicorn-qa` ratified as the shared standing disposable environment for TOM mutation/cross-tenant testing too, not a second parallel environment). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as does TOM §18 item 13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-027 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score); ADR-026 added 2026-09-10 records the TOM §18 item 11 decision (Xero ratified as financial source of truth; the connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's); ADR-027 added 2026-09-10 records the TOM §18 item 12 decision (`unicorn-qa` ratified as the shared standing disposable environment for TOM mutation/cross-tenant testing too, not a second parallel environment); ADR-028 added 2026-09-10 records the TOM §18 item 13 decision (a three-tier observation-window/canary-cohort/performance-budget template, Carl as rollback owner for every tier), closing all 13 TOM §18 decisions. The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open (RBAC v6 track, separate from TOM). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-028 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -1327,6 +1327,71 @@ not resolve them.
 - [Tenant Operating Model plan, §18 item 12](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, Phase P0.2](tenant-operating-model-data-architecture-plan-2026-09-02.md#phase-p0--freeze-truth-and-make-risk-measurable)
 - [ADR-016](#adr-016)
+
+---
+
+### ADR-028: Three-tier observation/canary/performance/rollback template; Carl is rollback owner for every tier {#adr-028}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 13 — the last open TOM §18
+item — asked what observation window, canary cohort, performance budget,
+and rollback owner apply to each risk class. The plan already provides
+the mechanics this decision configures: the expand → migrate → compare →
+canary → contract runbook (§14), a required deployment packet template,
+explicit stop conditions, and a 17-row risk table (§15) already carrying
+council severities (Critical/High/Medium-high/Medium, per §19). Assigning
+a bespoke set of values to each of the 17 individual risks was rejected
+as premature before any specific migration is actually scoped — a small
+tiered template, applied per risk when real implementation work begins,
+is more practical than 17 one-off numbers decided in the abstract now.
+
+**Decision:** three risk tiers, each risk in §15 maps to one when its
+implementation is actually scoped:
+
+| Tier | Representative risks (§15) | Observation window | Canary cohort | Performance budget | Rollback |
+|---|---|---|---|---|---|
+| Critical | Whole-book UX/pagination dependency, status-vocabulary overlap, RLS-through-views, service-role Ask Viv authorization, cross-tenant leakage | 14 days (matches ADR-016's RBAC shadow-observation precedent) | Staff + 1-2 known-safe test tenants only, before any real client exposure | Zero unexplained regressions; p95 ≤300ms (ADR-023); <10% write-path regression (§13.3) | Same-day cutback via feature flag |
+| High | Trigger/RPC density changes, legacy-ID/orphan-row handling, materialized-view exposure, projection staleness | 7 days | 10% of active tenants, a representative small/median/large sample | Same numeric targets as Critical, standard monitoring | Within 24 hours on any golden-transaction/parity mismatch |
+| Medium | Advisor-driven index cleanup, BI-workload isolation, realtime-invalidation tuning | 48-72 hours | Full active-tenant population (lower blast radius) | <10% regression, standard monitoring | Next business day |
+
+**Rollback owner: Carl, for every tier.** No delegation to a separate
+operations role at this time.
+
+**Reasoning:** A tiered template lets the same small set of rules cover
+every risk in §15 (and any new risk discovered later) without inventing
+17 bespoke numbers that would mostly be guesses anyway before real
+migrations are scoped. Tying the Critical tier's observation window to
+the precedent already set by ADR-016 for RBAC keeps risk-tolerance
+consistent across both initiatives rather than inventing a different
+number for the same underlying question.
+
+**Alternatives considered:** Assigning individual parameters per risk row
+in §15 right now was rejected — most rows have no scoped implementation
+yet, so specific numbers would be speculative rather than evidence-based.
+Naming a rollback owner other than Carl was not proposed by Carl and is
+not assumed here.
+
+**Risks accepted:** A three-tier template is coarser than per-risk tuning
+— a specific risk within a tier might reasonably warrant a different
+number once its implementation is actually scoped. This decision doesn't
+prevent adjusting a specific risk's parameters later; it sets the default
+absent a reason to deviate.
+
+**Consequences:** TOM §18 item 13 is closed. **This closes all 13 TOM
+§18 decisions (items 2-13; item 1 is the same decision as RBAC v6 §13
+item 1, tracked on that separate track).** Each risk's tier assignment
+and the deployment-packet mechanics remain separately authorized
+implementation work per `AGENTS.md` — this ADR sets the template, not an
+authorization to begin any specific migration.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 13](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §14 online migration and rollback runbook](tenant-operating-model-data-architecture-plan-2026-09-02.md#14-online-migration-and-rollback-runbook)
+- [Tenant Operating Model plan, §15 known risks and blast-radius traps](tenant-operating-model-data-architecture-plan-2026-09-02.md#15-known-risks-and-blast-radius-traps)
+- [ADR-016](#adr-016)
+- [ADR-023](#adr-023)
 
 ---
 
