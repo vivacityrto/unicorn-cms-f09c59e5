@@ -28,6 +28,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-020] [2026-09-10] Unmatched `tenant_profile`/`tenant_members`/`package_instances` rows classified as migration-restore artifacts from unremapped tenant-ID renumbering; approved for quarantine, not deletion — full: [reference/decision-trail.md#adr-020](../reference/decision-trail.md#adr-020)
 - [ADR-021] [2026-09-10] Package/service assignment authority — `package_instances`/`stage_instances` ratified as authoritative; three live call sites still on legacy `tenants.package_id`/`package_ids`/`stage_ids` must migrate first — full: [reference/decision-trail.md#adr-021](../reference/decision-trail.md#adr-021)
 - [ADR-022] [2026-09-10] KPI accuracy bar — Manage Tenants KPI cards move to bounded-freshness server-side aggregates instead of whole-book exact client-side computation — full: [reference/decision-trail.md#adr-022](../reference/decision-trail.md#adr-022)
+- [ADR-023] [2026-09-10] Directory/context freshness SLOs — paginated directory and detail views stay live/real-time by default post-redesign, no snapshot layer added preemptively; ≤300ms p95 ratified as the performance bar — full: [reference/decision-trail.md#adr-023](../reference/decision-trail.md#adr-023)
 
 ---
 

@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion); ADR-021 added 2026-09-10 to record the TOM §18 item 6 decision (`package_instances`/`stage_instances` ratified as authoritative for service assignments; three live call sites still reading/writing the legacy `tenants.package_id`/`package_ids`/`stage_ids` columns must migrate before those columns are vestigial); ADR-022 added 2026-09-10 to record the TOM §18 item 7 decision (Manage Tenants KPI cards move to bounded-freshness server-side aggregates instead of the current whole-book client-side exact computation). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 8-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, ADR-020, ADR-021, and ADR-022 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion); ADR-021 added 2026-09-10 to record the TOM §18 item 6 decision (`package_instances`/`stage_instances` ratified as authoritative for service assignments; three live call sites still reading/writing the legacy `tenants.package_id`/`package_ids`/`stage_ids` columns must migrate before those columns are vestigial); ADR-022 added 2026-09-10 to record the TOM §18 item 7 decision (Manage Tenants KPI cards move to bounded-freshness server-side aggregates instead of the current whole-book client-side exact computation); ADR-023 added 2026-09-10 to record the TOM §18 item 8 decision (the paginated directory itself stays live/real-time by default post-redesign, no snapshot layer added preemptively; directory DB p95 ≤300ms ratified as the performance bar). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 9-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, ADR-020, ADR-021, ADR-022, and ADR-023 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -943,6 +943,75 @@ verification/audit-entry rules apply per `AGENTS.md`.
 - [Tenant Operating Model plan, §18 item 7](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §4.3 measured database hot-path evidence](tenant-operating-model-data-architecture-plan-2026-09-02.md#43-measured-database-hot-path-evidence)
 - [Tenant Operating Model plan, §4.4 desired read shape](tenant-operating-model-data-architecture-plan-2026-09-02.md#44-desired-read-shape)
+
+---
+
+### ADR-023: Directory freshness stays live by default post-redesign; ≤300ms p95 ratified as the performance bar {#adr-023}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 8 asked what operational
+directory and context freshness SLOs are acceptable. The plan already
+drafted candidate numbers (§13.3, "confirm in P0"), and its own
+architecture stance (§7.4) is explicit: "Start with a live invoker query.
+Add asynchronous projection infrastructure only if the measured query
+remains outside target after correct indexes and query shape." This
+decision turns that stance into policy, distinct from ADR-022's KPI-card
+decision (whole-book aggregates) — the paginated directory rows are a
+different, page-scoped concern once `get_tenant_directory_v1` (§4.4)
+ships.
+
+**Decision:**
+
+1. The paginated directory list itself (name, status, contact, renewal
+   date, CSC assignment, last activity — one page of tenants after the
+   P1/P2 redesign) stays **live/real-time by default**. No caching or
+   snapshot/projection layer is added preemptively.
+2. Directory DB p95 ≤300ms is ratified as the performance bar for that
+   live query (from §13.3's candidate table), subject to the ≤60%-of-
+   baseline check the plan already specifies in P0.
+3. An asynchronous projection/snapshot layer is authorized only if a
+   specific, measured scaling problem later proves the live query cannot
+   hit target even with correct indexing and query shape — not adopted
+   now as a precaution. If one is introduced, its lag target is ≤60
+   seconds (per §13.3's candidate).
+4. Tenant-detail/context data (Phase P3) follows the same live-by-default
+   posture as the directory list, for the same reason: once scoped to one
+   tenant instead of the whole book, it should be cheap enough to query
+   live.
+5. Ask Viv's own indexing/deletion-lag freshness is explicitly out of
+   scope here — that is item 9's separate decision.
+
+**Reasoning:** Once the directory query is properly page-scoped (the
+architectural work already decided by earlier phases of this plan), it no
+longer carries the whole-book cost that justified ADR-022's bounded-
+freshness approach for KPI cards. Building caching/snapshot
+infrastructure before that cost is actually measured and shown to be a
+problem would add operational complexity (staleness bugs, invalidation
+logic) for a performance problem that may not exist post-redesign.
+
+**Alternatives considered:** Applying the same bounded-freshness posture
+as KPI cards to the directory list itself was rejected — the two have
+different cost profiles after the redesign (whole-book aggregate vs.
+one-page live query), so treating them identically would either
+over-engineer the directory (unneeded staleness) or under-serve KPI cards
+(forcing an expensive live full-book computation that ADR-022 already
+decided against).
+
+**Risks accepted:** None beyond normal implementation risk — this
+ratifies the plan's own already-stated default architecture rather than
+introducing new behavior.
+
+**Consequences:** TOM §18 item 8 is closed as a policy question. Items
+9-13 remain open. The directory redesign and its P0 measurement work
+remain separately authorized implementation work — normal branch/PR/
+verification/audit-entry rules apply per `AGENTS.md`.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 8](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §7.4 operational projection update strategy](tenant-operating-model-data-architecture-plan-2026-09-02.md#74-operational-projection-update-strategy)
+- [Tenant Operating Model plan, §13.3 proposed numeric targets](tenant-operating-model-data-architecture-plan-2026-09-02.md#133-proposed-numeric-targets--confirm-in-p0)
 
 ---
 
