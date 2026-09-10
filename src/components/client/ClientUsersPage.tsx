@@ -79,6 +79,7 @@ import { CapacityPill } from "./users/CapacityPill";
 import { supabase } from "@/integrations/supabase/client";
 import { TenantContactsSection } from "./TenantContactsSection";
 import { type PositionTypeOption } from "@/lib/roles/positionType";
+import { swapTenantUserToContact } from "@/features/client-identity/swapToContact";
 
 
 function getInitials(name: string): string {
@@ -407,11 +408,7 @@ export default function ClientUsersPage() {
     if (!userToSwap?.user_id || !activeTenantId) return;
     setSwapping(true);
     try {
-      const { error } = await supabase.rpc("swap_tenant_user_to_contact", {
-        p_tenant_id: activeTenantId,
-        p_user_id: userToSwap.user_id,
-      });
-      if (error) throw error;
+      await swapTenantUserToContact(activeTenantId, userToSwap.user_id);
 
       queryClient.invalidateQueries({ queryKey: ["client_tenant_users", activeTenantId] });
       setContactsRefreshKey((k) => k + 1);
