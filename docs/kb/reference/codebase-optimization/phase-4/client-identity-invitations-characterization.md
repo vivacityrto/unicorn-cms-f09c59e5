@@ -112,12 +112,17 @@ packets.
 
 ## Boundary and verification notes
 
-- The first bounded Stage 2 command adapter is now implemented in the review
-  branch: `sendClientInvite` owns only the existing client `invite-user`
+- The first bounded Stage 2 command adapter is merged as PR #1123:
+  `sendClientInvite` owns only the existing client `invite-user`
   invocation (input normalization, role mapping, active-tenant guard, and
   structured Edge error propagation). `resend`, `revoke`, `copyLink`, and
   `resetPassword` remain in the hook for later independently reviewed seams.
   The adapter makes no Edge, RPC, schema, or control-flow contract changes.
+- The next bounded Stage 2 adapter is now implemented in the review branch:
+  `resendClientInvite` owns only the existing `resend-invite` invocation and
+  preserves its invitation-id payload, response, and structured Edge detail
+  handling. `revoke`, `copyLink`, and `resetPassword` remain separate future
+  seams; no invitation was resent during verification.
 - Static source and migration review was completed from
   `origin/main@b63ea5fea`. The existing authenticated storage-state files were
   copied into the implementation worktree. The source PR's verification
