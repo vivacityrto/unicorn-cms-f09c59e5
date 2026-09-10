@@ -1,10 +1,12 @@
 # P6-3 Packages/Time Characterization
 
-> **Status:** first extraction landed — renewal-window calculation
+> **Status:** one real extraction landed — renewal-window calculation
 > centralized into `src/features/packages/renewalWindow.ts`, converged on
 > Carl's leap-day decision (date-fns clip, 2026-09-11), and fixed a real
-> timezone bug found during the extraction itself (see "First extraction"
-> below)
+> timezone bug found during the extraction itself. Paused after this one —
+> the allocation-mutation seam turned out not to be clean on closer look,
+> and the presentation-model candidate is already in the target shape with
+> nothing to extract
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md) — Phase 4, P6 hotspot slice #3
 >
@@ -121,9 +123,24 @@ allocation mutation is **not** spread across many files:
   (Academy/Compliance/both), not package allocation. Do not conflate the
   two when scoping a future PR.
 
-This seam is a small, well-bounded wrapper candidate (one `.update()` call
-plus its guard conditions) once prioritized — lower risk than the
-renewal-window seam, since there's no duplication to reconcile.
+**Correction after closer investigation (2026-09-11): this is not actually
+a clean seam.** The `.update()` call at `EditTimeDialog.tsx:269–286` isn't a
+dedicated allocation-mutation function — it's the single general-purpose
+submit handler for the entire "edit time entry" form, updating
+`duration_minutes`, `start_at`, `work_type`, `work_sub_type`, `notes`,
+`is_billable`, `scope_tag`, `user_id`, **and** `package_id`/
+`package_instance_id` together in one call, plus follow-on notify-intent and
+client-notification-email side effects. The package reassignment is two
+fields bundled into a much larger, unrelated update, not a separable
+mutation with its own call site. Extracting just those two fields would
+mean either pulling the entire edit-form submit handler out (mixing many
+unrelated concerns into one "adapter," the opposite of a bounded seam) or
+artificially splitting two fields out of one Supabase call for no real
+architectural benefit, since they're never updated independently today.
+
+Per the deepening rule's stop condition, this is deferred rather than
+forced — it doesn't have a clean cut the way the renewal-window duplication
+did.
 
 ## Seam 3 — presentation model
 
@@ -227,11 +244,33 @@ read-only, authenticated SuperAdmin Playwright check confirming the Time
 tab's burn-down cards still render for a real tenant with an active package
 instance post-extraction — no time entry or renewal action performed.
 
+## Why this slice pauses here
+
+Re-investigated both remaining candidates before continuing:
+
+- **Allocation-mutation adapter**: not a clean seam on closer inspection.
+  `EditTimeDialog.tsx:269–286` isn't a dedicated allocation mutation — it's
+  the general-purpose "edit time entry" submit handler, updating ~9 unrelated
+  fields (duration, date, work type, notes, billable, scope tag, user,
+  *and* package assignment) in one call plus notify-intent/email side
+  effects. There's no bounded piece to extract without either dragging the
+  whole form-submit handler along (mixing unrelated concerns) or artificially
+  splitting two fields out of one Supabase call that are never updated
+  independently. Deferred per the deepening rule's stop condition — see
+  "Seam 2" above for the full correction.
+- **Presentation model**: `PackageUsageBar.tsx` is already exactly the
+  target shape (pure, side-effect-free, 45 lines) — there's nothing to
+  extract *from* it; it was cited as a template for other extractions, not
+  itself a pending seam.
+
+Both are genuinely closed out, not just deferred for later — there isn't a
+next bounded cut waiting here the way slice #1 still has a documented
+category-fetch consolidation pending. This slice's real, high-value seam
+(the renewal-window duplication, plus the timezone bug it surfaced) is done.
+
 ## Definition of done for this packet
 
-This packet's characterization and first extraction are both complete —
+This packet's characterization and its one extraction are both complete —
 full lint-ratchet/typecheck/test/build chain passed, plus the scoped
-Playwright check above. The allocation-mutation adapter and presentation-
-model seams (`EditTimeDialog.tsx`'s package-reassignment `.update()`;
-`PackageUsageBar.tsx` as a template) remain lower-risk follow-ups, not
-authorized by this PR.
+Playwright check for the renewal-window PR. No further seams in this slice
+are authorized without a fresh investigation finding a genuinely clean cut.
