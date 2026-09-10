@@ -33,6 +33,43 @@ test("A SuperAdmin-only route denies the client persona", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+// Read-only client identity characterization for the invite-policy seam.
+// This uses the real Demo RTO client storage state and never submits an
+// invite or mutates users, invitations, contacts, or capacity.
+test("real client can inspect users and sees only client invite roles", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  const response = await page.goto("/client/users");
+  expect(response?.status()).toBeLessThan(400);
+  await expect(page).not.toHaveURL(/\/login/);
+
+  // The real Demo RTO account may have an unread portal update. Close the
+  // review overlay locally (the X only changes dialog state; Done/Open
+  // details would mark the production notification read or navigate away).
+  const portalUpdate = page.getByRole("dialog", { name: /Fee-Free TAFE|portal update/i });
+  await portalUpdate.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+  if (await portalUpdate.isVisible().catch(() => false)) {
+    await portalUpdate.getByRole("button", { name: "Close" }).click();
+    await expect(portalUpdate).toBeHidden();
+  }
+
+  await expect(page.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
+
+  const inviteButton = page.getByRole("button", { name: /invite user/i });
+  await expect(inviteButton).toBeVisible();
+  if (await inviteButton.isEnabled()) {
+    await inviteButton.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("Academy only", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Full access", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Super Admin", { exact: true })).toHaveCount(0);
+  }
+
+  expect(errors).toEqual([]);
+});
+
 // Legacy client-portal "suggestions" redirects (src/App.tsx). Unlike the
 // staff side, all three legacy paths collapse onto the same plain
 // /client/support-tickets target -- there is no client-side /new or /:id
