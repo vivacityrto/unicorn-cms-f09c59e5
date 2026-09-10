@@ -4,7 +4,7 @@
 >
 > **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
-> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 pilot packets P7-A/B/C/D are implemented and merged (2026-09-10), and the bounded P7-E closure packet is scoped for characterization. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; the Phase 3 pilot is complete (P7-A/B/C/D all implemented and merged, 2026-09-10). This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
 >
 > **Program index:** [Program Index](program-index.md)
 >
@@ -560,9 +560,9 @@ The entire optimization program does not need to finish before RBAC v6. Converse
 2. Minimal feature API/query/domain extraction.
 3. Code-adjacent architecture guide and scoped lint boundary.
 4. Auth/profile/membership split.
-5. Permission predicate consolidation in one route family (bounded P7-E UX cleanup; see disposition below).
+5. Permission predicate consolidation in one route family — deferred; no Codebase Optimization packet (see disposition below).
 
-**Phase 3 item 5 disposition (P7-E).** The broad “permission predicate consolidation” wording is split into a narrow, optimization-owned UX cleanup and a separately owned authorization-model track. P7-E may characterize the `requireSuperAdmin` route family and remove only page-local early-return checks whose predicate is proven identical to the route guard, whose page has no alternate direct registration, and whose removal preserves loading/recovery behavior. It must not introduce a permission registry, change capability semantics, alter server/RLS enforcement, or retire guards whose SuperAdmin-or-staff, role, display, or loading behavior is intentionally different. The broader canonical capability/predicate consolidation and retirement of duplicate raw checks remains deferred to RBAC v6 P3/P5/P8 under ADR-016. Phase 3 closes with P7-A–P7-D plus P7-E only after that characterization, parity evidence, and the normal route/build/lint/type/frontend/Edge/browser checks are complete; otherwise the unproven remainder stays explicitly RBAC-owned rather than being implied complete.
+**Phase 3 item 5 disposition.** The nine characterized page-local `requireSuperAdmin` checks remain unchanged. The dashboard-direct-layout migration plan explicitly preserved these checks as intentional defense-in-depth even where their predicates are value-identical to the route guard, so there is no P7-E deletion or consolidation packet in Codebase Optimization. Phase 3 closes with the four completed packets P7-A through P7-D. The broader canonical capability/predicate consolidation and retirement of duplicate raw checks remains deferred to RBAC v6 P3/P5/P8 under ADR-016; the Carl-approved deferral is recorded in [ADR-029](decision-trail.md#adr-029).
 
 **Exit gate:** the convention is demonstrably smaller/easier than the original and can be copied without creating boilerplate.
 
