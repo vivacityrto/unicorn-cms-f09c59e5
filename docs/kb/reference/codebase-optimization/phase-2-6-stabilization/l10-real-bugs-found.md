@@ -1272,14 +1272,35 @@ components, but most are guarded, idempotent, or only cause redundant effect
 runs: `AttendancePanel` (with an inline `participants` array at one caller),
 `MetricEditorDialogV2`, `AssessmentEditorTab`, `GeneratedDocumentsTab`,
 `useTenantTimeTracker`, `AcademyLessonViewerPage`, and
-`TeamCommunicationsPage`. One separate confirmed edge case remains open:
-`ClientPackagesTab` can repeatedly set a new empty `Set` when all packages are
-completed and no active package exists. It is unrelated to linked notes and
-was deliberately not mixed into PR #1080.
+`TeamCommunicationsPage`. One separate confirmed edge case was identified in
+`ClientPackagesTab`; it is documented and fixed below, separately from PR
+#1080.
 
 Verification for PR #1080: lint ratchet, typecheck, Edge tests, and production
 build passed. The frontend suite reported 344 passed and 43 skipped, with two
 unrelated five-second timeouts in the authentication and add-in-shell tests.
+Authenticated live click-through was inconclusive because no QA session was
+available in this environment. No schema, RLS, backend, or data changes were
+made; no audit entry is required.
+
+### ClientPackagesTab all-completed state repeatedly updated — FIXED (PR #1082)
+
+The client packages tab could enter a render loop for a tenant whose package
+list was non-empty but contained no active packages. The auto-expand effect
+checked `packages.length > 0` and `expandedPackages.size === 0`, then called
+`setExpandedPackages(new Set([]))`. Because every empty `Set` had a new
+identity, the state update retriggered the effect on every render.
+
+This was introduced by the Phase 2.5 dependency cleanup in commit
+`f838b3bdb1` (PR #536). The cleanup correctly added the derived
+`activePackages` dependency, but the existing guard did not cover the
+all-completed case. PR #1082 adds `activePackages.length > 0` to the guard,
+so active packages still auto-expand while an all-completed list no longer
+causes repeated state updates.
+
+Verification for PR #1082: lint ratchet, typecheck, Edge tests (281 passed),
+and production build passed. The frontend suite reported 345 passed and 43
+skipped, with one unrelated five-second timeout in add-in-shell integration.
 Authenticated live click-through was inconclusive because no QA session was
 available in this environment. No schema, RLS, backend, or data changes were
 made; no audit entry is required.

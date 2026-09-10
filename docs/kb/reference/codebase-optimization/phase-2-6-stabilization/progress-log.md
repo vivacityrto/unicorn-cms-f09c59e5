@@ -4,6 +4,19 @@
 
 ## Progress log
 
+**2026-09-10 — ClientPackagesTab all-completed render loop diagnosed and
+fixed (PR #1082):**
+The Phase 2.5 dependency cleanup in PR #536 added the derived
+`activePackages` dependency to the auto-expand effect, but its guard only
+required a non-empty package list. When every package was complete, the effect
+constructed and stored a new empty `Set` on every render, causing an infinite
+state-update loop. PR #1082 adds `activePackages.length > 0` to the guard while
+preserving first-load expansion for active packages. Lint ratchet, typecheck,
+Edge tests (281 passed), and build passed; the frontend suite had 345
+passes/43 skips plus one unrelated add-in-shell timeout. Live authenticated
+verification was inconclusive because no QA session was available. The L10
+bug register records this as a separate regression from the linked-note fix.
+
 **2026-09-10 — linked-note dialog flicker regression diagnosed and fixed
 (PR #1080):**
 The Phase 2.5 exhaustive-deps cleanup added `activePackages` to
