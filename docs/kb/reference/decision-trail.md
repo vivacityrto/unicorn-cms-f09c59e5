@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion); ADR-021 added 2026-09-10 to record the TOM §18 item 6 decision (`package_instances`/`stage_instances` ratified as authoritative for service assignments; three live call sites still reading/writing the legacy `tenants.package_id`/`package_ids`/`stage_ids` columns must migrate before those columns are vestigial); ADR-022 added 2026-09-10 to record the TOM §18 item 7 decision (Manage Tenants KPI cards move to bounded-freshness server-side aggregates instead of the current whole-book client-side exact computation); ADR-023 added 2026-09-10 to record the TOM §18 item 8 decision (the paginated directory itself stays live/real-time by default post-redesign, no snapshot layer added preemptively; directory DB p95 ≤300ms ratified as the performance bar). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 9-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, ADR-020, ADR-021, ADR-022, and ADR-023 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 10-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-024 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -1012,6 +1012,106 @@ verification/audit-entry rules apply per `AGENTS.md`.
 - [Tenant Operating Model plan, §18 item 8](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §7.4 operational projection update strategy](tenant-operating-model-data-architecture-plan-2026-09-02.md#74-operational-projection-update-strategy)
 - [Tenant Operating Model plan, §13.3 proposed numeric targets](tenant-operating-model-data-architecture-plan-2026-09-02.md#133-proposed-numeric-targets--confirm-in-p0)
+
+---
+
+### ADR-024: Ask Viv source scope, retention, deletion SLA, and staff/client capability scopes {#adr-024}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 9 asked which Ask Viv sources
+may be indexed, for how long, under what deletion SLA, and with what
+staff/client capability scopes. Live inspection of `ask_viv_corpus`
+(current `origin/main`) found real, sensitive content already indexed
+with no governance schema around it: 24,769 `timeline_event` rows, 11,795
+`note`, 605 `document`, 74 `email`, 25 `eos` — and no ACL/capability-scope
+column, no effective-dates or deleted/tombstone state, no retention/
+sensitivity class, confirming the gap the plan's §9.4 already flagged.
+RLS on the table currently grants any non-archived/non-disabled internal
+staff member read access to any row, with tenant scoping enforced only in
+application code after retrieval, not in the database policy itself.
+Separately, `docs/kb/codebase-state/audit-log-inventory.md` already
+records an open, unconfirmed retention assumption elsewhere in the system
+("7-year ASQA standard likely applies," pending Angela's confirmation) —
+this decision reuses that existing reference point rather than inventing
+a new one.
+
+Carl separately described a broader product direction during this
+discussion: sources should eventually cover "everything in the Unicorn
+system" to support an operations layer capable of automated task
+creation, insights, and foresight — not just document/note retrieval.
+
+**Decision:**
+
+1. **Sources:** broaden indexing beyond the current 5 source types to
+   include the rest of the entity set the existing structured fact
+   builder (§9.1) already touches — package instances, stage state,
+   tasks, action items, time entries, audits/findings/actions — unified
+   into one governed indexing pipeline rather than kept as two separate,
+   ungoverned paths.
+2. **Retention:** tiered by tenant lifecycle status (per ADR-017), not one
+   flat number. While a tenant is active, indexed content is retained
+   indefinitely (precedent: `EOS_LEVEL10_SPECIFICATION.md`'s existing
+   "Retention: Indefinite, no auto-deletion" stance). On tenant closure/
+   archive, a retention clock starts, anchored to the existing 7-year
+   ASQA-standard assumption pending Angela's formal confirmation of that
+   specific number.
+3. **Deletion SLA:** two-tier. Routine lifecycle-expiry purge (the 7-year
+   clock) has no urgency requirement — batch/scheduled is acceptable. An
+   explicit deletion event (source note/document deleted, a client
+   data-removal request) propagates within ≤5 minutes if asynchronous,
+   per the plan's own §9.5 proposed target.
+4. **Capability scopes:** staff access is operational and cross-tenant,
+   consistent with the existing broad-internal-staff baseline (ADR-015/
+   016) — this is what a cross-tenant automation/insight engine needs.
+   Client access is strictly scoped to their own tenant (RTO), and the
+   client-facing surface of this system is specifically task management
+   and consultant communication — not general retrieval into arbitrary
+   internal content.
+5. The broader "operations automation, insights, and foresight" product
+   direction is acknowledged but explicitly out of scope for this ADR —
+   it is a new capability requiring its own separately scoped initiative,
+   not something this decision authorizes by implication.
+
+**Reasoning:** Governing what's already indexed (schema gaps, RLS scope,
+retention) before expanding sources further prevents compounding an
+already-ungoverned corpus. Reusing the existing 7-year ASQA reference
+rather than inventing a new number keeps this decision consistent with
+what the business has already assumed elsewhere, pending its own formal
+confirmation. Separating the automation/insight/foresight vision from
+this ADR keeps the decision bounded to what item 9 actually asked, rather
+than retroactively authorizing a large new feature through a data-
+governance ADR.
+
+**Alternatives considered:** A single flat retention period regardless of
+tenant status was rejected — it would either purge data still valuable
+for retention/foresight analysis while a client is active, or fail to
+start a real deletion clock once a relationship ends. Extending staff-tier
+broad access to the client-facing surface was rejected — that would
+contradict the RTO-scoped, task/communication-focused client experience
+Carl described.
+
+**Risks accepted:** Broadening indexed sources increases the sensitivity
+and volume of what `ask_viv_corpus` holds before its ACL/tombstone/
+retention-class schema gaps are actually closed — this ADR authorizes the
+direction, not a source-broadening migration before that schema work
+lands. The 7-year retention anchor is provisional pending Angela's
+specific confirmation, not a final compliance determination.
+
+**Consequences:** TOM §18 item 9 is closed as a policy question. Items
+10-13 remain open. The `ask_viv_corpus` schema work (ACL/tombstone/
+retention-class columns), the source-broadening migration, and the RLS
+tenant-scoping fix are each separately authorized implementation work —
+normal branch/PR/verification/audit-entry rules apply per `AGENTS.md`.
+The operations automation/insight/foresight direction requires its own
+future initiative scoping, not implied authorization from this ADR.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 9](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §9.4 retrieval projection v2](tenant-operating-model-data-architecture-plan-2026-09-02.md#94-retrieval-projection-v2)
+- [Tenant Operating Model plan, §9.5 Ask Viv acceptance gates](tenant-operating-model-data-architecture-plan-2026-09-02.md#95-ask-viv-acceptance-gates)
+- [Audit-log inventory retention assumption](../codebase-state/audit-log-inventory.md)
 
 ---
 

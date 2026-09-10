@@ -29,6 +29,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-021] [2026-09-10] Package/service assignment authority — `package_instances`/`stage_instances` ratified as authoritative; three live call sites still on legacy `tenants.package_id`/`package_ids`/`stage_ids` must migrate first — full: [reference/decision-trail.md#adr-021](../reference/decision-trail.md#adr-021)
 - [ADR-022] [2026-09-10] KPI accuracy bar — Manage Tenants KPI cards move to bounded-freshness server-side aggregates instead of whole-book exact client-side computation — full: [reference/decision-trail.md#adr-022](../reference/decision-trail.md#adr-022)
 - [ADR-023] [2026-09-10] Directory/context freshness SLOs — paginated directory and detail views stay live/real-time by default post-redesign, no snapshot layer added preemptively; ≤300ms p95 ratified as the performance bar — full: [reference/decision-trail.md#adr-023](../reference/decision-trail.md#adr-023)
+- [ADR-024] [2026-09-10] Ask Viv data governance — broaden indexed sources to the full operational entity set; tiered retention (indefinite while active, 7-year-anchored clock after archive/close); ≤5 min deletion-event SLA; staff=operational/cross-tenant, client=RTO-scoped task/consultant-communication only — full: [reference/decision-trail.md#adr-024](../reference/decision-trail.md#adr-024)
 
 ---
 
