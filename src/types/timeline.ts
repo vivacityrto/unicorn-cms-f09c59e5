@@ -27,6 +27,7 @@ export const TIMELINE_EVENT_TYPES = [
   'tasks_created_from_minutes',
   'task_completed_team',
   'task_completed_client',
+  'task_status_changed',
   'action_item_created',
   'action_item_updated',
   'action_item_completed',

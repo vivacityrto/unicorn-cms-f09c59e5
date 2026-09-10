@@ -1,4 +1,4 @@
-# Audit: 2026-09-10 — stage task completion persistence + missing timeline event
+# Audit: 2026-09-10 — stage task completion persistence + task status timeline events
 
 **Trigger:** ad-hoc — Carl reported consultants completing a stage task and it
 not persisting, specifically on newer stages.
@@ -67,17 +67,50 @@ reports there and out of scope for this pass.
     statement's target list, not the row after a `BEFORE` trigger modifies
     it, so `status_id`-only would have silently missed that path.
 
+## Follow-up same day: broadened to all status transitions
+
+Carl asked for every status change to appear on the Timeline, not only
+completions. `supabase/migrations/20260910070000_task_status_changed_timeline_event.sql`
+(applied via Supabase MCP `apply_migration`) adds `task_status_changed` to
+the `client_timeline_events.event_type` CHECK constraint and to
+`TIMELINE_EVENT_TYPES` (`src/types/timeline.ts`), and `CREATE OR REPLACE`s
+the same trigger function (name/signature unchanged) so that:
+- A fresh transition into Completed(2)/Core Complete(4) still emits
+  `task_completed_team` (unchanged wording).
+- Every other real transition — Not Started → In Progress, reverting away
+  from Completed, editing between the two completed states, etc. — now
+  emits `task_status_changed`, titled `<task>: <old> -> <new> (<stage> —
+  <stage status>)`, mirroring `fn_stage_instance_timeline_trigger()`'s own
+  `%s -> %s` convention. A guard (`OLD IS NOT DISTINCT FROM NEW` on both
+  columns) skips a no-op re-save of the same status, since `UPDATE OF`
+  fires whenever a listed column is in the SET clause regardless of whether
+  the value actually changed.
+- Added `task_status_changed` to the Timeline UI: `EVENT_TYPE_FILTERS.tasks`
+  (`src/hooks/useClientManagementData.tsx`) and the exhaustive
+  `EVENT_ICON_MAP`/`EVENT_COLOR_MAP` in `TimelineEventCard.tsx` (`ListChecks`
+  icon, blue — matching `stage_status_changed`'s treatment, to visually pair
+  "a status changed" against the purple/green completion-flavoured types).
+  `getModuleChip`'s existing `eventType.startsWith('task')` already covers
+  it without a change.
+
 ## Live verification
 
-Two rolled-back transactions against production (`BEGIN; ... ROLLBACK;`, no
-residual data):
+Rolled-back transactions against production (`BEGIN; ... ROLLBACK;`, no
+residual data) for every branch of the final logic:
 1. `UPDATE staff_task_instances SET status_id = 2, status = 'completed'`
-   (the direct `useStaffTaskInstances.ts` path) → produced a correct
-   `task_completed_team` timeline row with task name, stage name, and
-   `stage_status` in both `title` and `metadata`.
+   (the direct `useStaffTaskInstances.ts` path) → correct
+   `task_completed_team` row with task name, stage name, and `stage_status`
+   in both `title` and `metadata`.
 2. `UPDATE staff_task_instances SET status = 'completed'` only (the
-   `complete_audit_stage_tasks()` shape) → produced the same, confirming the
-   broadened `status, status_id` column list was necessary.
+   `complete_audit_stage_tasks()` shape) → same, confirming the broadened
+   `status, status_id` column list was necessary.
+3. Not Started → In Progress → correct `task_status_changed` row
+   (`... not_started -> in_progress ...`).
+4. Completed → Monitor (a revert away from complete) on the same row, in one
+   transaction → produced *two* correctly-ordered events:
+   `task_completed_team` first, then `task_status_changed`
+   (`completed -> monitor`) — confirms the two event types don't
+   double-fire or collide on the same transition.
 
 Confirmed the trigger is registered correctly via `pg_trigger` alongside the
 two pre-existing triggers on the table
