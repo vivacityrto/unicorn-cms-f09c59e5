@@ -1,6 +1,6 @@
 # RBAC v6 — Authorization Implementation and Gate-Streamlining Plan
 
-> **Last updated:** 2026-09-03 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code and live-database findings; medium on the target capability catalogue until Vivacity validates each job seat; low on delivery estimates until the characterization and route-manifest prerequisites are complete.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code, live-database, and agreed policy-baseline findings; medium on the target capability catalogue and implementation sequencing; low on delivery estimates until the remaining characterization and route-manifest prerequisites are complete.
 >
 > **Reflects:** the original `origin/main@853c9e18` and read-only production metadata snapshot from 2026-09-01; a fresh operational-regression council review against `origin/main@73a61b2f9` on 2026-09-03; the historical [RBAC v6 gate-closure handoff](../handoffs/rbac-v6-gate-closure-plan.md); the [tenant operating-model architecture plan](tenant-operating-model-data-architecture-plan-2026-09-02.md); and the assumed completed target state of the [codebase optimization plan](codebase-optimization-plan-2026-08-28.md).
 >
@@ -853,6 +853,63 @@ LOC reduction is a secondary benefit expected in P8. Do not trade visible duplic
     §18 item 14. Not scoped or actioned here — explicitly deferred by Carl.
 
 No phase should silently answer these through code. Record approved answers in the policy ADR and relevant KB procedure.
+
+### 13.1 Current decision disposition (2026-09-10)
+
+The following baseline was agreed in the direct Carl/Codex policy discussion and
+is recorded here as a truth-sync. It is a policy baseline for read-only and
+shadow preparation, not authorization for implementation, migration, production
+enforcement, or role/permission changes. The numbered questions above remain the
+historical decision record; this subsection records their current disposition
+without deleting that history.
+
+1. Active internal staff retain broad cross-tenant read and approved AI-context
+   access while the current operating model remains overlapping. Sensitive
+   writes, destructive actions, approvals, exports, configuration, and external
+   sharing are separately capability- and scope-controlled. Client users remain
+   restricted to their own tenant and approved relationships; assignment is not
+   silently made an internal authorization boundary.
+2. CSC consultant and CSC assistant use the same baseline capability bundle;
+   seat subtype may add approved AI-context breadth for assistants without
+   changing ordinary client-operation rights. Integrator is the canonical
+   internal-operations profile (including EOS/KPI work). Team Leader retires
+   into Integrator, Team Member is migration-only, and CET is retired as an
+   active seat because it has no current holders. BGT remains capability-based,
+   not a blanket elevated role. Multiple approved profiles per person are
+   allowed.
+3. Super Admin remains the hard control-plane role. Operational subtypes (for
+   example developer, executive/integrator, or BGT) describe the seat's work;
+   they do not create an additional privilege tier or bypass the hard-SA
+   boundary. Routine work is delegated only through explicit capabilities,
+   scope, relationships, audit, and review; a separate break-glass profile
+   remains a future design choice.
+4. High-risk temporary grants require two approvers; ordinary narrow
+   operational grants may use one. Self-approval is prohibited. Every grant
+   records rationale, scope, expiry, and audit evidence; defaults are 30 days
+   for high-risk and 90 days for ordinary temporary grants, with quarterly
+   review and explicit renewal.
+5. Disabled, archived, expired, inactive, unknown, or unavailable principals
+   fail closed; sessions are revoked promptly and recovery requires approved
+   administrator action. The `unicorn-qa` project and its protected P2-QA suite
+   are the standing disposable persona/environment process. Shadow mode runs
+   for 14 days with zero unexplained v6-only allows and zero unexplained
+   legacy-allow/v6-deny lockouts; every mismatch is reviewed before cutover.
+6. Conversations and messages remain participant-private by default. Internal
+   staff receive an explicit broad list/read/reply/assign/resolve capability
+   while that workflow remains cross-tenant; client users remain own-tenant and
+   relationship scoped. Notifications, previews, timeline entries, realtime,
+   and Ask Viv must not expose more than the underlying capability permits.
+   Academy-only client users are excluded from ordinary messaging and
+   broadcasts and included only in explicitly named Academy communications.
+7. The existing `/administration/role-permissions` matrix is retained as an
+   inventory and UX guide. The v6 redesign must add the missing profile/seat
+   subtype, tenant/resource scope, relationship, temporary-grant, approval,
+   effective-access-preview, and audit concepts; the current role-level matrix
+   is not itself the future policy model.
+8. Person-picker/system-account classification (item 14) and the 72 tenantless
+   users (item 15) remain explicitly parked and are not reopened by this
+   baseline. Exact capability rows, implementation sequencing, and any future
+   narrowing of internal staff scope still require their own reviewed packets.
 
 ## 14. Definition of program completion
 

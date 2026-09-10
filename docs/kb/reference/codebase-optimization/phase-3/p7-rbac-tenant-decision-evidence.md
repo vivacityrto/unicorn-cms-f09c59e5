@@ -7,10 +7,12 @@
 > PR #1049, Codex's completed P7-A lifecycle-characterization packet)
 > **Parent plan:** [Phase 2.6 Stabilization Plan](../phase-2-6-stabilization/phase-2-6-stabilization-plan.md) §9 "Phase 3 pilot packets"
 > **Program index:** [Program Index](../../program-index.md)
-> **Purpose:** collect, in one place, the current observed (proven) behavior
-> and the still-open Vivacity/Carl decisions that gate Packets P7-B, P7-C and
-> P7-D, so a future session does not have to re-derive this from three
-> master plans and source.
+> **Truth-sync:** 2026-09-10 — direct Carl/Codex policy baseline recorded below;
+> implementation and production enforcement remain unauthorized.
+> **Purpose:** collect, in one place, the current observed (proven) behavior,
+> the historical Vivacity/Carl decision record, and the current policy baseline
+> so a future session does not have to re-derive this from three master plans and
+> source.
 
 ## 1. Scope and explicit non-goals
 
@@ -21,8 +23,10 @@ matrix and blocker/sequencing recommendation.
 **Explicitly out of scope / not done here:**
 
 - No RBAC v6 or Tenant Operating Model implementation code.
-- No answers to any of the open decisions below — they are recorded as open
-  questions for Carl/Vivacity, not resolved.
+- The §3/§4 matrices preserve the 2026-09-09 open-question record. The dated
+  truth-sync addendum below records the policy baseline agreed on 2026-09-10;
+  exact capability rows, implementation sequencing, and the parked items remain
+  open.
 - No schema, RLS, grant, RPC, Edge Function, migration, or production-data
   change of any kind. No `apply_migration`/`execute_sql` write was issued;
   one read-only `execute_sql` probe was attempted for live corroboration and
@@ -31,10 +35,13 @@ matrix and blocker/sequencing recommendation.
   source), not Tier A (live catalog), per the tenant-operating-model plan's
   own evidence-tier vocabulary (`tenant-operating-model-data-architecture-plan-2026-09-02.md:104-114`).
 - No QA or production seeding, no credential/persona creation.
-- No start of P7-B/P7-C/P7-D implementation.
-- No change to `program-index.md` or any phase-plan status line — none of
-  the four initiatives' official status has changed as a result of this
-  packet.
+- No P7-B/P7-C/P7-D implementation was started by this evidence packet; those
+  slices were implemented separately and are now recorded in the Phase 2.6
+  stabilization plan.
+- At preparation time (2026-09-09), no change to `program-index.md` or any
+  phase-plan status line had been made. This 2026-09-10 documentation sync now
+  updates `program-index.md` and this packet's status language; no phase-plan
+  implementation status is changed here.
 
 ## 2. Evidence sources — every file read
 
@@ -118,7 +125,7 @@ Source: `tenant-operating-model-data-architecture-plan-2026-09-02.md:1051-1101`.
 
 ## 6. Source-of-truth, route, query, RPC, and enforcement-point inventory
 
-Per RBAC plan §7 P0.1-P0.3 (`rbac-v6-authorization-implementation-plan-2026-09-01.md:348-378`), P0.1 is a versioned inventory of routes/checks/RPCs/RLS; P0.2 is the permission-mutation/audit-atomicity fix; P0.3 is the shadow `is_active_principal_v6()` rollout. **None of P0.1-P0.3 has started as a tracked implementation packet** — `program-index.md:23` records RBAC v6 status as "Implementation plan only... awaiting the plan's own §13 decisions," with no PR against it. This packet is not that inventory; it is a bounded citation set sufficient for the P7 gate:
+Per RBAC plan §7 P0.1-P0.3 (`rbac-v6-authorization-implementation-plan-2026-09-01.md:348-378`), P0.1 is a versioned inventory of routes/checks/RPCs/RLS; P0.2 is the permission-mutation/audit-atomicity fix; P0.3 is the shadow `is_active_principal_v6()` rollout. **None of P0.1-P0.3 has started as a tracked implementation packet** — `program-index.md:23` records RBAC v6 as implementation-plan-only, with its §13 policy baseline now agreed for read-only/shadow preparation but no production PR authorized. This packet is not that inventory; it is a bounded citation set sufficient for the P7 gate:
 
 | Layer | Object | Evidence |
 |---|---|---|
@@ -138,9 +145,14 @@ Per RBAC plan §7 P0.1-P0.3 (`rbac-v6-authorization-implementation-plan-2026-09-
 | Lifecycle-checklists pilot boundary (P7-A, done) | `LifecycleChecklistsAdmin.tsx`, `useLifecycleChecklists.ts`, route under `requireSuperAdmin`, DB policy `is_vivacity_staff` | `progress-log.md` sessions 38-41; `src/test/admin/lifecycle-checklists.test.tsx` |
 | Approved disposable-QA process | `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`) + P2-QA suites | `qa-environment-and-coverage-strategy.md` (full doc) |
 
-## 7. Proven facts vs. proposed policy — recap
+## 7. Proven facts vs. policy — recap
 
-Every row in §3-§6 above is already labelled **Proven** (source- or live-verified today) or framed as an **Open question** for Carl/Vivacity. The one cross-cutting proven fact worth restating on its own: RBAC v6 and Tenant Operating Model are both, today, still governed entirely by the *current* behavior described here — no shadow evaluator, no capability catalogue, no portfolio scoping, and no disabled-state enforcement exist yet in any form. Nothing in this packet should be read as a recommendation for what the policy *should* be; every "should"/"whether" phrase above is Vivacity's to answer, not this packet's.
+Every row in §3-§6 above is labelled **Proven** (source- or live-verified) or
+framed as an **Open question** in the 2026-09-09 preparation record. The
+cross-cutting runtime fact remains: no production v6 evaluator, capability
+catalogue, portfolio scoping, or v6 enforcement cutover exists yet. The dated
+policy disposition in §7.2 is the current baseline for read-only/shadow
+preparation; it does not authorize implementation or production change.
 
 ## 7.1 Baseline vocabulary proposal and bounded staff-read decision
 
@@ -182,16 +194,50 @@ and v6 results with `OR`, `AND`, or fallback-to-allow.
 For the current lifecycle baseline, Super Admin remains the allowed route
 persona and CSC remains the route-forbidden persona already proven in session
 41. Those remain characterization cases; the approved pilot scope does not
-authorize a production grant or route change. The disabled-user hotfix remains
-a separate implementation gate for P7-D, and all schema/RLS/RPC/Edge changes
-still require their own authorized PR and verification.
+authorize a production grant or route change. The disabled-user hotfix and the
+P7-D session/profile/membership seam are now recorded as implemented in the
+Phase 2.6 plan (PR #1079); any future schema/RLS/RPC/Edge changes still require
+their own authorized PR and verification.
 
-**Decision status:** The vocabulary and authority boundary, staff-read
-compatibility baseline, role responsibilities, hard-Super-Admin boundary, and
-the remaining §13 decisions listed above are approved for read-only/shadow
-preparation. This unblocks bounded P7-B/P7-C planning only; it does not
-authorize a policy migration or production change. Person-picker/system-account
-classification and tenant-less users remain explicitly parked.
+**Decision status (historical 2026-09-09 record):** The vocabulary and authority
+boundary, staff-read compatibility baseline, role responsibilities,
+hard-Super-Admin boundary, and the remaining §13 decisions listed above were
+approved for read-only/shadow preparation. The current 2026-09-10 disposition
+is expanded in §7.2; person-picker/system-account classification and tenant-less
+users remain explicitly parked.
+
+## 7.2 Current policy truth-sync (2026-09-10)
+
+Direct Carl/Codex discussion confirmed the following baseline; the full
+disposition is maintained in [RBAC v6 §13.1](../../rbac-v6-authorization-implementation-plan-2026-09-01.md#131-current-decision-disposition-2026-09-10).
+
+- Internal staff retain broad cross-tenant read and approved AI-context access
+  while work remains overlapping; sensitive writes, destructive actions,
+  approvals, exports, configuration, and external sharing are separately
+  capability- and scope-controlled. Clients remain own-tenant and
+  relationship-scoped.
+- CSC consultants and assistants share the same baseline bundle, with an
+  optional approved AI-context extension for assistants. Integrator is the
+  canonical EOS/KPI operations profile; Team Leader retires into Integrator;
+  Team Member is migration-only; CET is retired as an active seat; BGT is
+  capability-based; multiple approved profiles per person are allowed.
+- Super Admin remains the hard control-plane role. Operational seat subtypes
+  describe work but do not bypass that boundary. High-risk grants require two
+  approvers; ordinary narrow grants may use one; no self-approval; 30/90-day
+  expiry defaults and quarterly review apply.
+- Messaging remains participant-private by default, with explicit broad
+  internal-staff list/read/reply/assign/resolve capability. Notifications,
+  previews, timeline, realtime, and Ask Viv cannot exceed the underlying
+  capability. Academy-only client users are excluded from ordinary messaging
+  and broadcasts.
+- `unicorn-qa` plus the protected P2-QA suite is the standing disposable
+  environment/persona process. Shadow mode is 14 days with zero unexplained
+  v6-only allows and zero unexplained legacy-allow/v6-deny lockouts; every
+  mismatch is reviewed before cutover.
+- `/administration/role-permissions` remains an inventory/UX guide. The v6
+  model must add profiles/subtypes, scope, relationships, temporary grants,
+  approvals, effective-access preview, and audit rather than treating the
+  current role-level matrix as authoritative.
 
 ## 8. Verification / commands run this session
 
@@ -205,7 +251,13 @@ classification and tenant-less users remain explicitly parked.
 - `node scripts/check-kb-doc-size.mjs` — 16 files scanned, 0 over the applicable limits (2026-09-09 batch); this file lives under `codebase-optimization/phase-3/` so the 750-line phase-doc ceiling applies.
 - `git diff --check` — passed (2026-09-09 batch).
 
-## 9. Exact blockers and recommended sequencing for P7-B/C/D
+## 9. Historical blockers and recommended sequencing for P7-B/C/D
+
+The following sequencing was accurate for the 2026-09-09 preparation packet and
+is retained as historical rationale. As of 2026-09-10, the Phase 2.6
+stabilization plan records P7-B, P7-C, and P7-D (including the disabled-user
+hotfix and session/profile/membership seam) as implemented through PR #1079;
+this section is not an active blocker list.
 
 Per `phase-2-6-stabilization-plan.md:404-422`:
 
