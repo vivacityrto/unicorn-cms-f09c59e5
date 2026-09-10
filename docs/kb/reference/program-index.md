@@ -21,7 +21,7 @@ initiatives. Start here for "where does this program stand," go to
 |---|---|---|---|
 | Codebase Optimization | active | Phase 2.6 stabilization — Phase 3 lifecycle pilot underway; P7-B/P7-C complete and the P7-D auth/profile/membership contract-seam scope complete through PR #1079 | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
 | RBAC v6 | planning | Implementation plan only — §13 policy baseline agreed 2026-09-10 for read-only/shadow preparation; no production migration, Edge deployment, permission grant, or role change authorized yet | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
-| Tenant Operating Model | planning | Council-reviewed implementation plan; no implementation or production mutation authorized in the planning session itself | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
+| Tenant Operating Model | planning | All 13 §18 decisions closed 2026-09-10 (ADR-017 through ADR-028); Phase P0/P1 implementation scoping not yet started or authorized | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | Current implementation reconciliation (2026-09-08): P3-A has contained the legacy stage-health signal on the main dashboard, executive widget, triage views, and Ask Viv hotspot tool | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
 
 ## Active work
@@ -35,16 +35,19 @@ real-time state.
 |---|---|---|---|---|
 | Codebase Optimization | Phase 3 lifecycle pilot — P7-D auth/profile/membership contract-seam scope closed through PR #1079; no active bounded packet allocation recorded | — | — | — |
 | RBAC v6 | §13 policy baseline recorded; implementation packet not authorized | — | — | — |
-| Tenant Operating Model | Awaiting Carl/Vivacity decisions (§18) | — | — | — |
+| Tenant Operating Model | §18 items 2-13 closed (item 1 tracks with RBAC v6 §13 item 1); Phase P0/P1 scoping not yet started | — | — | — |
 | Client Health Activity Analytics | P3-A consumer containment closed 2026-09-08 | — | — | — |
 
 ## Dependencies and gates
 
 - **RBAC v6** is a prerequisite for wider Tenant Operating Model rollout:
-  the tenant plan's own §18 item 3 gates further internal-staff-scope work
-  behind RBAC v6's staff-scope decision (see
+  the tenant plan's own §18 item 1 (same decision as RBAC v6 §13 item 1)
+  gates tenant P1/P2 implementation and any new directory/context/AI/BI
+  permission surface behind RBAC v6's staff-scope and shadow-cutover
+  decisions (see
   `tenant-operating-model-data-architecture-plan-2026-09-02.md`'s own
-  "Stop gate" language).
+  "Stop gate" language — corrected from a prior mis-citation of item 3,
+  which is the unrelated canonical-key decision, closed by ADR-018).
 - **Client Health Activity Analytics** is architecturally a *child* of
   Tenant Operating Model, not a fully independent peer — its own header
   names Tenant Operating Model as "Parent architecture." It's tracked as
@@ -66,9 +69,12 @@ real-time state.
   capability rows and implementation sequencing remain packet-level work, while
   items 14/15 remain explicitly parked — see the plan itself for the full
   disposition.
-- Tenant Operating Model §18 — 14 decisions required from Carl/Vivacity,
-  including item 14: how the 72 tenant-less `public.users` rows should
-  actually be classified/assigned (parked 2026-09-08 during the
+- Tenant Operating Model §18 — items 2-13 closed 2026-09-10 (ADR-017
+  through ADR-028 in `decision-trail.md`); item 1 tracks with RBAC v6 §13
+  item 1 above. Phase P0/P1 implementation is not yet scoped or
+  authorized by these decisions alone. Item 14 (a §18 sub-item, not a
+  14th top-level decision): how the 72 tenant-less `public.users` rows
+  should actually be classified/assigned (parked 2026-09-08 during the
   notification-preferences fix — see
   `docs/audit-log/entries/2026-09-08-allow-tenant-less-notification-prefs.md`).
 
