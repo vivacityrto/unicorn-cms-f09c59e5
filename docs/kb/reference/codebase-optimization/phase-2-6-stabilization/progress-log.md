@@ -4,6 +4,21 @@
 
 ## Progress log
 
+**2026-09-10 — linked-note dialog flicker regression diagnosed and fixed
+(PR #1080):**
+The Phase 2.5 exhaustive-deps cleanup added `activePackages` to
+`NoteFormDialog`'s note-population effect, but `EditNoteDialog` omitted that
+optional prop. Its default `[]` was therefore recreated on every render,
+causing a refetch/loading-state loop when a linked note was clicked. The fix
+uses a module-level stable empty array and initializes edit-by-ID dialogs as
+loading. A related scan found several guarded or idempotent unstable-array
+patterns and one separate `ClientPackagesTab` all-completed edge case; these
+are recorded in [the L10 bug register](l10-real-bugs-found.md) and are not
+included in this fix. Lint ratchet, typecheck, Edge tests, and build passed;
+the frontend suite had 344 passes/43 skips plus two unrelated five-second
+timeouts. Live authenticated verification was inconclusive because no QA
+session was available. Frontend-only; no audit entry required.
+
 **2026-09-09 — P7-D auth contract seam separated (frontend-only):**
 Characterized the current auth/profile/membership consumers before editing:
 `AuthProvider` owns session state and Supabase I/O, `src/auth/loaders.ts`

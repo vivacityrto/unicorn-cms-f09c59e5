@@ -1244,7 +1244,48 @@ zero failed HTTP responses. No code change needed — same pattern as L10
 #31 and #29: symptoms reported 2026-09-07 that a 2026-08-27 fix (or, for
 #29, live testing) shows no longer reproduce.
 
-Nothing above was caused by tonight's work — every one of these bugs
+## Phase 2.5 optimization regression — linked-note dialog flicker (2026-09-10)
+
+### Linked-note edit dialog repeatedly refetched — FIXED (PR #1080)
+
+Clicking the linked-note icon in the client time-entry list opened the edit
+dialog, but the dialog flickered as its loading state repeatedly changed. The
+same behavior was not found in the other linked-note entry points inspected.
+
+**Root cause:** `EditNoteDialog` does not pass `activePackages` to
+`NoteFormDialog`, so the optional prop's inline default `[]` created a new
+array on every render. Phase 2.5 commit `24db112b7` added `activePackages` to
+the note-population effect's dependency list. The effect therefore observed a
+changed dependency on every render, refetched the note, and toggled
+`loadingNote`, producing the visible flicker and a persistent request/render
+loop. The linked-note UI itself was introduced in `d16d44ca4` and switched to
+the inline `EditNoteDialog` flow in `be70d628d`; the regression surfaced only
+after the dependency cleanup.
+
+**Fix:** `NoteFormDialog` now uses a module-level stable empty array for the
+omitted `activePackages` prop, preserving the dependency correctness without
+creating a false change signal. Edit-by-ID dialogs also start in the loading
+state, preventing a transient blank-form render before the first fetch.
+
+**Related-feature investigation:** the same static pattern exists in several
+components, but most are guarded, idempotent, or only cause redundant effect
+runs: `AttendancePanel` (with an inline `participants` array at one caller),
+`MetricEditorDialogV2`, `AssessmentEditorTab`, `GeneratedDocumentsTab`,
+`useTenantTimeTracker`, `AcademyLessonViewerPage`, and
+`TeamCommunicationsPage`. One separate confirmed edge case remains open:
+`ClientPackagesTab` can repeatedly set a new empty `Set` when all packages are
+completed and no active package exists. It is unrelated to linked notes and
+was deliberately not mixed into PR #1080.
+
+Verification for PR #1080: lint ratchet, typecheck, Edge tests, and production
+build passed. The frontend suite reported 344 passed and 43 skipped, with two
+unrelated five-second timeouts in the authentication and add-in-shell tests.
+Authenticated live click-through was inconclusive because no QA session was
+available in this environment. No schema, RLS, backend, or data changes were
+made; no audit entry is required.
+
+The historical L10 items above were not caused by tonight's work — every one
+of those bugs
 pre-dated this session; the type-safety cleanup just surfaced them by
 forcing the compiler (or a live click-through) to check assumptions that
 had been hidden behind `any`. Seven real, previously-silently-broken
