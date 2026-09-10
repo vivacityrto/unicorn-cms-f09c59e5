@@ -43,18 +43,7 @@ import { toast } from 'sonner';
 import { isValidEmail, RELATIONSHIP_ROLE_OPTIONS, type RelationshipRole } from '@/lib/roles/relationshipRole';
 import { type PositionTypeOption, positionTypeLabel } from '@/lib/roles/positionType';
 import { useInvalidateUserCapacity } from '@/hooks/useUserCapacity';
-
-interface TenantContact {
-  id: number;
-  first_name: string;
-  last_name: string | null;
-  email: string;
-  position_type: string | null;
-  status: 'active' | 'archived';
-  promoted_to_user_id: string | null;
-  promoted_at: string | null;
-  created_at: string;
-}
+import type { TenantContact } from '@/features/client-identity/models';
 
 interface ContactFormState {
   first_name: string;
