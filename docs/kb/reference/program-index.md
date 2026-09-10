@@ -19,7 +19,7 @@ initiatives. Start here for "where does this program stand," go to
 
 | Initiative | Status | Current phase/packet | Master plan |
 |---|---|---|---|
-| Codebase Optimization | active | Phase 2.6 stabilization — Phase 3 lifecycle pilot underway; P7-B/P7-C complete and the P7-D auth/profile/membership contract-seam scope complete through PR #1079 | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
+| Codebase Optimization | active | Phase 2.6 stabilization — Phase 3 lifecycle pilot complete (P7-A/B/C/D all implemented and merged, 2026-09-10); no active bounded packet allocation recorded | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
 | RBAC v6 | planning | Implementation plan only — §13 policy baseline agreed 2026-09-10 for read-only/shadow preparation; no production migration, Edge deployment, permission grant, or role change authorized yet | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
 | Tenant Operating Model | planning | All 13 §18 decisions closed 2026-09-10 (ADR-017 through ADR-028); Phase P0/P1 implementation scoping not yet started or authorized | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | Current implementation reconciliation (2026-09-08): P3-A has contained the legacy stage-health signal on the main dashboard, executive widget, triage views, and Ask Viv hotspot tool | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
@@ -33,7 +33,7 @@ real-time state.
 
 | Initiative | Current phase/packet | Branch | Owner/tool | Started |
 |---|---|---|---|---|
-| Codebase Optimization | Phase 3 lifecycle pilot — P7-D auth/profile/membership contract-seam scope closed through PR #1079; no active bounded packet allocation recorded | — | — | — |
+| Codebase Optimization | Phase 3 lifecycle pilot complete (P7-A/B/C/D); no active bounded packet allocation recorded | — | — | — |
 | RBAC v6 | §13 policy baseline recorded; implementation packet not authorized | — | — | — |
 | Tenant Operating Model | §18 items 2-13 closed (item 1 tracks with RBAC v6 §13 item 1); Phase P0/P1 scoping not yet started | — | — | — |
 | Client Health Activity Analytics | P3-A consumer containment closed 2026-09-08 | — | — | — |

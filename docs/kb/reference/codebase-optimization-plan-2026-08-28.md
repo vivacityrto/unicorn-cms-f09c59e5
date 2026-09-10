@@ -4,7 +4,7 @@
 >
 > **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
-> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 is underway with bounded P7-B/P7-C/P7-D slices. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; the Phase 3 pilot is complete (P7-A/B/C/D all implemented and merged, 2026-09-10). This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
 >
 > **Program index:** [Program Index](program-index.md)
 >
