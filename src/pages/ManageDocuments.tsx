@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink, Settings2, Loader2, Sparkles, Blocks } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink, Settings2, Loader2, Sparkles, Blocks } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -221,56 +221,6 @@ export default function ManageDocuments() {
   }>>([]);
   const [stagesCount, setStagesCount] = useState<number>(0);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
-  const [isBulkSendDialogOpen, setIsBulkSendDialogOpen] = useState(false);
-  const [bulkSendEmail, setBulkSendEmail] = useState("");
-  const [bulkSendSearchQuery, setBulkSendSearchQuery] = useState("");
-  const [bulkSendUsers, setBulkSendUsers] = useState<Array<{
-    email: string;
-    first_name: string;
-    last_name: string;
-    user_uuid: string;
-  }>>([]);
-  const [bulkSendFilteredUsers, setBulkSendFilteredUsers] = useState<Array<{
-    email: string;
-    first_name: string;
-    last_name: string;
-    user_uuid: string;
-  }>>([]);
-  const [bulkSending, setBulkSending] = useState(false);
-
-  // Bulk send type selection
-  const [bulkSendType, setBulkSendType] = useState<'email' | 'tenant' | null>(null);
-
-  // Bulk send to tenant state
-  const [bulkTenants, setBulkTenants] = useState<Array<{
-    id: string;
-    tenant_id: number;
-    companyname: string;
-    rto_name: string | null;
-    state: string | null;
-    cricos_id: string | null;
-    email: string | null;
-    framework: string | null;
-  }>>([]);
-  const [bulkFilteredTenants, setBulkFilteredTenants] = useState<Array<{
-    id: string;
-    tenant_id: number;
-    companyname: string;
-    rto_name: string | null;
-    state: string | null;
-    cricos_id: string | null;
-    email: string | null;
-    framework: string | null;
-  }>>([]);
-  const [bulkTenantSearch, setBulkTenantSearch] = useState('');
-  const [bulkSelectedTenants, setBulkSelectedTenants] = useState<string[]>([]);
-  const [bulkExpandedTenant, setBulkExpandedTenant] = useState<string | null>(null);
-  const [isBulkFilterOpen, setIsBulkFilterOpen] = useState(false);
-
-  // Bulk tenant filters
-  const [bulkStateFilter, setBulkStateFilter] = useState<string>('');
-  const [bulkCricosFilter, setBulkCricosFilter] = useState<'all' | 'cricos' | 'non-cricos'>('all');
-  const [bulkFrameworkFilter, setBulkFrameworkFilter] = useState<string>('');
   const [documentsCount, setDocumentsCount] = useState<number>(0);
   const {
     profile
@@ -364,9 +314,6 @@ export default function ManageDocuments() {
     fetchCurrentUser();
     fetchCategories();
     fetchStages();
-    
-    fetchBulkSendUsers();
-    fetchBulkTenants();
     fetchDocumentsCount();
   }, []);
 
@@ -433,61 +380,6 @@ export default function ManageDocuments() {
       console.error("Error fetching stages:", error);
     }
   };
-  const fetchBulkSendUsers = async () => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from("users").select("email, first_name, last_name, user_uuid");
-      if (error) throw error;
-      setBulkSendUsers(data || []);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-  const fetchBulkTenants = async () => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from('clients_legacy').select('id, tenant_id, companyname, rto_name, state, cricos_id, email, framework').order('companyname', {
-        ascending: true
-      });
-      if (error) throw error;
-      setBulkTenants(data || []);
-      setBulkFilteredTenants(data || []);
-    } catch (error) {
-      console.error('Error fetching tenants:', error);
-    }
-  };
-
-  // Apply bulk tenant filters
-  useEffect(() => {
-    let result = bulkTenants;
-
-    // Search filter
-    if (bulkTenantSearch) {
-      result = result.filter(tenant => tenant.companyname.toLowerCase().includes(bulkTenantSearch.toLowerCase()) || tenant.rto_name && tenant.rto_name.toLowerCase().includes(bulkTenantSearch.toLowerCase()) || tenant.email && tenant.email.toLowerCase().includes(bulkTenantSearch.toLowerCase()));
-    }
-
-    // State filter
-    if (bulkStateFilter) {
-      result = result.filter(tenant => tenant.state === bulkStateFilter);
-    }
-
-    // CRICOS filter
-    if (bulkCricosFilter === 'cricos') {
-      result = result.filter(tenant => tenant.cricos_id && tenant.cricos_id.trim() !== '');
-    } else if (bulkCricosFilter === 'non-cricos') {
-      result = result.filter(tenant => !tenant.cricos_id || tenant.cricos_id.trim() === '');
-    }
-
-    // Framework filter
-    if (bulkFrameworkFilter) {
-      result = result.filter(tenant => tenant.framework === bulkFrameworkFilter);
-    }
-    setBulkFilteredTenants(result);
-  }, [bulkTenants, bulkTenantSearch, bulkStateFilter, bulkCricosFilter, bulkFrameworkFilter]);
   const fetchDocumentsCount = async () => {
     try {
       const {
@@ -503,14 +395,6 @@ export default function ManageDocuments() {
       console.error("Error fetching documents count:", error);
     }
   };
-  useEffect(() => {
-    if (bulkSendSearchQuery) {
-      const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
-      setBulkSendFilteredUsers(filtered);
-    } else {
-      setBulkSendFilteredUsers([]);
-    }
-  }, [bulkSendSearchQuery, bulkSendUsers]);
   const fetchCurrentUser = async () => {
     try {
       const {
@@ -1169,151 +1053,6 @@ export default function ManageDocuments() {
     } else {
       setSelectedDocuments(filteredDocuments.map(doc => doc.id));
     }
-  };
-  const handleBulkSend = async () => {
-    if (!bulkSendEmail) {
-      toast({
-        title: "Error",
-        description: "Please select a recipient",
-        variant: "destructive"
-      });
-      return;
-    }
-    try {
-      setBulkSending(true);
-
-      // Get recipient user data
-      const {
-        data: userData,
-        error: userError
-      } = await supabase.from("users").select("tenant_id, email, first_name, last_name").eq("email", bulkSendEmail).single();
-      if (userError || !userData) throw new Error("Recipient not found");
-      const {
-        data: currentUser
-      } = await supabase.auth.getUser();
-      if (!currentUser) throw new Error("Not authenticated");
-
-      for (const docId of selectedDocuments) {
-        const doc = documents.find(d => d.id === docId);
-        if (!doc) continue;
-
-        // Create notification for the tenant
-        await supabase.from("notification_tenants").insert({
-          tenant_id: userData.tenant_id,
-          document_id: docId,
-          message: `New document received: ${doc.title}`,
-          is_read: false,
-          type: "Document Received"
-        });
-      }
-      toast({
-        title: "Success",
-        description: `${selectedDocuments.length} document(s) sent to ${bulkSendEmail}`
-      });
-      setIsBulkSendDialogOpen(false);
-      setBulkSendEmail("");
-      setBulkSendSearchQuery("");
-      setBulkSendType(null);
-      setSelectedDocuments([]);
-    } catch (error) {
-      console.error("Error sending documents:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send documents",
-        variant: "destructive"
-      });
-    } finally {
-      setBulkSending(false);
-    }
-  };
-  const handleBulkSendToTenants = async () => {
-    if (bulkSelectedTenants.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one tenant",
-        variant: "destructive"
-      });
-      return;
-    }
-    try {
-      setBulkSending(true);
-      const {
-        data: currentUser
-      } = await supabase.auth.getUser();
-      if (!currentUser) throw new Error("Not authenticated");
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const docId of selectedDocuments) {
-        const doc = documents.find(d => d.id === docId);
-        if (!doc) continue;
-        try {
-          // Create notifications for each selected tenant
-          for (const tenantId of bulkSelectedTenants) {
-            const tenant = bulkTenants.find(t => t.id === tenantId);
-            if (!tenant) continue;
-            
-            await supabase.from("notification_tenants").insert({
-              tenant_id: tenant.tenant_id,
-              document_id: docId,
-              message: `New document received: ${doc.title}`,
-              is_read: false,
-              type: "Document Received"
-            });
-          }
-          successCount++;
-        } catch (error) {
-          console.error(`Error releasing document ${docId}:`, error);
-          errorCount++;
-        }
-      }
-      if (successCount > 0) {
-        toast({
-          title: "Success",
-          description: `${selectedDocuments.length} document(s) sent to ${bulkSelectedTenants.length} tenant${bulkSelectedTenants.length > 1 ? 's' : ''}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: 'Failed to send documents',
-          variant: 'destructive'
-        });
-      }
-      setIsBulkSendDialogOpen(false);
-      setBulkTenantSearch('');
-      setBulkSelectedTenants([]);
-      setBulkSendType(null);
-      setBulkStateFilter('');
-      setBulkCricosFilter('all');
-      setBulkFrameworkFilter('');
-      setSelectedDocuments([]);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send documents",
-        variant: "destructive"
-      });
-    } finally {
-      setBulkSending(false);
-    }
-  };
-  const handleBulkSendDialogClose = () => {
-    setIsBulkSendDialogOpen(false);
-    setBulkSendType(null);
-    setBulkSendEmail('');
-    setBulkSendSearchQuery('');
-    setBulkTenantSearch('');
-    setBulkSelectedTenants([]);
-    setBulkStateFilter('');
-    setBulkCricosFilter('all');
-    setBulkFrameworkFilter('');
-  };
-  const toggleBulkTenantSelection = (tenantId: string) => {
-    setBulkSelectedTenants(prev => prev.includes(tenantId) ? prev.filter(id => id !== tenantId) : [...prev, tenantId]);
-  };
-  const selectAllBulkFilteredTenants = () => {
-    const allIds = bulkFilteredTenants.map(t => t.id);
-    setBulkSelectedTenants(allIds);
   };
   const handleDownloadFile = async (filePath: string, fileName: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2423,138 +2162,6 @@ export default function ManageDocuments() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Bulk Send Dialog - Same two-step flow as DocumentDetail */}
-      <Dialog open={isBulkSendDialogOpen} onOpenChange={handleBulkSendDialogClose}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Send {selectedDocuments.length} Document(s)</DialogTitle>
-          </DialogHeader>
-          
-          {/* Step 1: Select Send Type */}
-          {!bulkSendType && <div className="space-y-4 py-6">
-              <p className="text-sm text-muted-foreground">Choose how you want to send these documents:</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setBulkSendType('email')} className="p-6 border-2 rounded-lg hover:border-primary hover:bg-accent transition-all flex flex-col items-center gap-3">
-                  <Mail className="h-8 w-8 text-primary" />
-                  <div className="text-center">
-                    <h3 className="font-semibold">Send to Email</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Send to a specific user by email</p>
-                  </div>
-                </button>
-                <button onClick={() => setBulkSendType('tenant')} className="p-6 border-2 rounded-lg hover:border-primary hover:bg-accent transition-all flex flex-col items-center gap-3">
-                  <Building2 className="h-8 w-8 text-primary" />
-                  <div className="text-center">
-                    <h3 className="font-semibold">Send to Tenant</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Send to one or more tenants with filtering</p>
-                  </div>
-                </button>
-              </div>
-            </div>}
-
-          {/* Step 2a: Send to Email */}
-          {bulkSendType === 'email' && <>
-              <div className="space-y-4 py-4 flex-1 overflow-y-auto">
-                <div className="space-y-2">
-                  <Label>Recipient Email</Label>
-                  <Input placeholder="Search by email or name..." value={bulkSendSearchQuery} onChange={e => {
-                setBulkSendSearchQuery(e.target.value);
-                setBulkSendEmail(e.target.value);
-              }} />
-                  {bulkSendFilteredUsers.length > 0 && bulkSendSearchQuery && <div className="border rounded-md max-h-48 overflow-y-auto">
-                      {bulkSendFilteredUsers.map(user => <button key={user.user_uuid} className="w-full text-left px-3 py-2 hover:bg-accent text-sm" onClick={() => {
-                  setBulkSendSearchQuery(user.email);
-                  setBulkSendEmail(user.email);
-                  setBulkSendFilteredUsers([]);
-                }}>
-                          <div className="font-medium">{user.email}</div>
-                          <div className="text-muted-foreground text-xs">
-                            {user.first_name} {user.last_name}
-                          </div>
-                        </button>)}
-                    </div>}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setBulkSendType(null)}>
-                  Back
-                </Button>
-                <Button onClick={handleBulkSend} disabled={!bulkSendEmail || bulkSending}>
-                  {bulkSending ? 'Sending...' : 'Send'}
-                </Button>
-              </DialogFooter>
-            </>}
-
-          {/* Step 2b: Send to Tenant */}
-          {bulkSendType === 'tenant' && <>
-              <div className="space-y-4 py-4 flex-1 overflow-y-auto">
-                <div className="flex gap-2">
-                  <Input placeholder="Search tenants by name, RTO, or email..." value={bulkTenantSearch} onChange={e => setBulkTenantSearch(e.target.value)} className="flex-1" />
-                  <Button variant="outline" size="icon" onClick={() => setIsBulkFilterOpen(!isBulkFilterOpen)}>
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {bulkFilteredTenants.length} tenant{bulkFilteredTenants.length !== 1 ? 's' : ''} found
-                    {bulkSelectedTenants.length > 0 && ` (${bulkSelectedTenants.length} selected)`}
-                  </p>
-                  {bulkFilteredTenants.length > 0 && <Button variant="outline" size="sm" onClick={selectAllBulkFilteredTenants}>
-                      Select All
-                    </Button>}
-                </div>
-
-                <div className="border rounded-md max-h-96 overflow-y-auto">
-                  {bulkFilteredTenants.length === 0 ? <div className="p-8 text-center text-muted-foreground">
-                      No tenants found matching your criteria
-                    </div> : <div className="divide-y">
-                      {bulkFilteredTenants.map(tenant => <div key={tenant.id} className="p-3">
-                          <div className="flex items-start gap-3">
-                            <Checkbox checked={bulkSelectedTenants.includes(tenant.id)} onCheckedChange={() => toggleBulkTenantSelection(tenant.id)} className="mt-1" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <h4 className="font-medium text-sm truncate">{tenant.companyname}</h4>
-                                <Button variant="ghost" size="sm" onClick={() => setBulkExpandedTenant(bulkExpandedTenant === tenant.id ? null : tenant.id)}>
-                                  {bulkExpandedTenant === tenant.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                </Button>
-                              </div>
-                              {tenant.rto_name && <p className="text-xs text-muted-foreground truncate">{tenant.rto_name}</p>}
-                              {bulkExpandedTenant === tenant.id && <div className="mt-2 pt-2 border-t space-y-1 text-xs">
-                                  {tenant.state && <div className="flex gap-2">
-                                      <span className="text-muted-foreground">State:</span>
-                                      <span className="font-medium">{tenant.state}</span>
-                                    </div>}
-                                  {tenant.cricos_id && <div className="flex gap-2">
-                                      <span className="text-muted-foreground">CRICOS:</span>
-                                      <span className="font-medium">{tenant.cricos_id}</span>
-                                    </div>}
-                                  {tenant.framework && <div className="flex gap-2">
-                                      <span className="text-muted-foreground">Framework:</span>
-                                      <span className="font-medium">{tenant.framework}</span>
-                                    </div>}
-                                  {tenant.email && <div className="flex gap-2">
-                                      <span className="text-muted-foreground">Email:</span>
-                                      <span className="font-medium">{tenant.email}</span>
-                                    </div>}
-                                </div>}
-                            </div>
-                          </div>
-                        </div>)}
-                    </div>}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setBulkSendType(null)}>
-                  Back
-                </Button>
-                <Button onClick={handleBulkSendToTenants} disabled={bulkSelectedTenants.length === 0 || bulkSending}>
-                  {bulkSending ? 'Sending...' : `Send to ${bulkSelectedTenants.length} Tenant${bulkSelectedTenants.length !== 1 ? 's' : ''}`}
-                </Button>
-              </DialogFooter>
-            </>}
-        </DialogContent>
-      </Dialog>
 
       {/* Results Summary */}
       <div className="text-sm text-muted-foreground text-center">
