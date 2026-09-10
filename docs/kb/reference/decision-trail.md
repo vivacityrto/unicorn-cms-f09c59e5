@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-09 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, and ADR-016 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 3-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -488,6 +488,91 @@ authorized PR and applicable audit record.
 - [RBAC/Tenant decision evidence packet](codebase-optimization/phase-3/p7-rbac-tenant-decision-evidence.md)
 - [RBAC v6 authorization plan](rbac-v6-authorization-implementation-plan-2026-09-01.md)
 - [Phase 2.6 progress log](codebase-optimization/phase-2-6-stabilization/progress-log.md)
+
+---
+
+### ADR-017: Tenant status/lifecycle/access vocabulary — three-axis model, single authoritative writer {#adr-017}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 2 asked for the authoritative
+meanings and allowed transitions for `tenants.status`, `lifecycle_status`,
+and `access_status`. Live inspection (all 415 tenants, current
+`origin/main`) found the drift the plan warned about is real, not
+theoretical, and traced it to a concrete root cause rather than just
+inconsistent vocabulary:
+
+- Two independent, uncoordinated writers exist. `TenantStatusDropdown.tsx`
+  is the only frontend writer of `status` (options sourced from
+  `dd_status`); a `BEFORE UPDATE` trigger (`sync_tenant_lifecycle_status`)
+  then derives `lifecycle_status` from it, but the derivation's `CASE` has
+  no mapping for `status` values `inactive`, `archived`, or `completed` —
+  setting status to any of those three leaves `lifecycle_status` stale.
+  Separately, the SuperAdmin-gated `tenant-lifecycle` Edge Function sets
+  `lifecycle_status`/`access_status` directly for suspend/archive/close/
+  reactivate actions and never touches `status` at all. Neither path knows
+  about the other. Zero RPC functions write any of the three columns
+  (confirmed via `pg_get_functiondef` search across `public`), so these two
+  paths are the entire write surface.
+- A concrete, fixable defect surfaced along the way: every Edge-Function-
+  driven lifecycle transition writes `client_audit_log` twice — once
+  correctly from the Edge Function's own `writeAuditLog()` (real actor),
+  once from the DB trigger `trg_tenant_lifecycle_audit`, which fires on the
+  same `UPDATE` regardless of caller and logs `actor_user_id = auth.uid()`
+  — `NULL` for Edge Functions, which authenticate as `service_role`.
+- Live distribution: dominant `inactive`/`suspended`/`disabled` (320 of
+  415), `active`/`active`/`enabled` (54), several smaller legitimate
+  combinations, plus known-bad rows (`In Arears` typo, 2 occurrences) that
+  predate this decision.
+
+**Decision:**
+
+1. Adopt the plan's three-axis target semantics: commercial/service status
+   (customer-facing, preserved as-is), lifecycle state (canonical active/
+   suspended/closed/archived state machine), and access state (independent
+   auth/application enablement).
+2. Consolidate to one authoritative writer for all three columns together
+   (extend `tenant-lifecycle` or an equivalent single RPC/Edge contract),
+   replacing the implicit trigger-derivation with an explicit, complete
+   transition table. The current dropdown-writes-`status`-only /
+   Edge-writes-lifecycle-only split is retired as part of this migration,
+   not preserved alongside a new layer.
+3. Historical/typo raw values (`In Arears`, etc.) are not retroactively
+   remapped as part of this decision — that is a separate, bounded
+   data-cleanup task once the new write path exists.
+4. The duplicate-audit-log-row defect is approved as an independent,
+   isolated bug fix — it does not need to wait on items 1-2 above.
+
+**Reasoning:** The vocabulary ambiguity is a symptom; the actual defect is
+that no single code path owns tenant-state transitions, so the two
+existing writers silently diverge. An explicit transition table owned by
+one writer is more robust than an implicit trigger `CASE` that has already
+demonstrated it silently misses new/changed status values (three status
+values it doesn't handle today) — the same failure class as the April
+status-filter incident this plan was written to prevent from recurring.
+
+**Alternatives considered:** Patching the trigger's `CASE` to add the
+missing `inactive`/`archived`/`completed` mappings without consolidating
+writers was rejected — it would fix today's specific gap but leaves the
+same drift-by-construction risk (two writers, no shared contract) for the
+next new status value or the next new lifecycle action.
+
+**Risks accepted:** Consolidating writers is a real code change to an
+active production path (tenant suspend/archive/close/reactivate, plus the
+routine status dropdown) and needs its own scoped implementation plan,
+transition-table review, and Playwright verification before it ships —
+this ADR authorizes the direction, not a migration or deployment.
+
+**Consequences:** TOM §18 item 2 is closed as a policy question. Items
+3-13 remain open. The single-writer consolidation and the audit-log fix
+are each separately authorized implementation work, not authorized by this
+ADR alone — normal branch/PR/verification/audit-entry rules apply per
+`AGENTS.md`.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 2](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §5.5 lifecycle vocabulary drift](tenant-operating-model-data-architecture-plan-2026-09-02.md#55-lifecycle-vocabulary-drift)
 
 ---
 

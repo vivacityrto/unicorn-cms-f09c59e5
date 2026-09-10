@@ -1,6 +1,6 @@
 # Product Decisions (Index)
 
-> **Last updated:** 2026-09-09 · **Reconsider by:** 2026-12-09 · **Confidence:** high for recorded entries.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2026-12-09 · **Confidence:** high for recorded entries.
 >
 > One-line-per-decision index. For full rationale, alternatives, and
 > supersession history, see [../reference/decision-trail.md](../reference/decision-trail.md).
@@ -22,6 +22,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-013] [2026-05-15] Flagship surfaces — CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system — full: [reference/decision-trail.md#adr-013](../reference/decision-trail.md#adr-013)
 - [ADR-015] [2026-09-09] RBAC staff-read baseline — preserve broad internal-staff tenant read access for now; scope sensitive actions separately — full: [reference/decision-trail.md#adr-015](../reference/decision-trail.md#adr-015)
 - [ADR-016] [2026-09-09] RBAC authority, role, delegation, and pilot baseline — preserve portfolio-wide staff access while keeping high-risk controls Super Admin-only — full: [reference/decision-trail.md#adr-016](../reference/decision-trail.md#adr-016)
+- [ADR-017] [2026-09-10] Tenant status/lifecycle/access vocabulary — three-axis model, consolidate to one authoritative writer instead of the current dropdown+trigger/Edge-Function split — full: [reference/decision-trail.md#adr-017](../reference/decision-trail.md#adr-017)
 
 ---
 

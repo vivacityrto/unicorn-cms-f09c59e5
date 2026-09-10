@@ -1051,7 +1051,7 @@ The April performance audit's 13-query architecture is historical and should rem
 ## 18. Decisions Carl/Vivacity must approve
 
 1. Does every active internal Vivacity staff role retain all-tenant read access, or will RBAC v6 introduce portfolio/capability scope? Optimization preserves current behavior until answered.
-2. What are the authoritative meanings and allowed transitions for raw commercial status, lifecycle status, and access status?
+2. ~~What are the authoritative meanings and allowed transitions for raw commercial status, lifecycle status, and access status?~~ **Decided 2026-09-10 (ADR-017):** three-axis model (commercial/service status, lifecycle state, access state) approved; consolidate to one authoritative writer instead of the current dropdown-writes-`status`/Edge-writes-lifecycle split. See [decision-trail.md#adr-017](decision-trail.md#adr-017) for the live-inspection evidence (two uncoordinated writers, a trigger-derivation gap, and a duplicate-audit-log-row defect found along the way). Implementation (the consolidated writer, the transition table, the audit fix) remains separately authorized.
 3. Is `tenants.id` the long-term canonical internal key, with `id_uuid` an integration-safe identifier, or is a future key migration required for a specific reason?
 4. What do the 758 `tenant_profile` IDs, 349 unmatched `tenant_members`, and 25 unmatched `package_instances` represent?
 5. Which of `tenant_users` and `tenant_members` is authoritative for membership, contacts, invitations, and client administration?
