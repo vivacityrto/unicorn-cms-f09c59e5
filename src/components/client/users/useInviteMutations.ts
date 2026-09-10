@@ -7,6 +7,7 @@ import {
   sendClientInvite,
   type InviteInput,
 } from "@/features/client-identity/sendClientInvite";
+import { resendClientInvite } from "@/features/client-identity/resendClientInvite";
 
 export type { InviteAccessLevel } from "@/features/client-identity/invite-policy";
 export type { InviteInput } from "@/features/client-identity/sendClientInvite";
@@ -54,16 +55,7 @@ export function useInviteMutations() {
   });
 
   const resend = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const { data, error } = await supabase.functions.invoke("resend-invite", {
-        body: { invitation_id: invitationId },
-      });
-      if (error) {
-        const edge = await extractEdgeError(error);
-        throw new Error(edge?.detail || error.message);
-      }
-      return data;
-    },
+    mutationFn: resendClientInvite,
     onSuccess: () => {
       toast({ title: "Invitation re-sent", description: "We've sent a fresh email with a new link." });
       invalidate();
