@@ -70,7 +70,7 @@ reports there and out of scope for this pass.
 ## Follow-up same day: broadened to all status transitions
 
 Carl asked for every status change to appear on the Timeline, not only
-completions. `supabase/migrations/20260910070000_task_status_changed_timeline_event.sql`
+completions. `supabase/migrations/20260910013418_task_status_changed_timeline_event.sql`
 (applied via Supabase MCP `apply_migration`) adds `task_status_changed` to
 the `client_timeline_events.event_type` CHECK constraint and to
 `TIMELINE_EVENT_TYPES` (`src/types/timeline.ts`), and `CREATE OR REPLACE`s
@@ -122,6 +122,33 @@ none of the current internal accounts do — confirmed via `is_vivacity_team_saf
 covering all internal users checked). The fix is a defensive-coding
 correction of a real Supabase-js footgun, not contingent on reproducing the
 specific failure.
+
+## Follow-up: transcription drift Carl caught live (2026-09-10, same day)
+
+Carl spotted real production Timeline entries reading
+`"... completed (Setup Client -- na)"` — a literal double-hyphen, not the
+em dash (`—`) the committed migration actually contains. Root cause: when
+retyping the SQL into the `apply_migration` tool call, the em dash was
+retyped as `--` — the same class of risk AGENTS.md already documents for
+manual Edge Function deploys ("manual deploys risk transcription errors
+from retyping large files... verify after"), here for a migration body
+instead. Confirmed by pulling the live function source
+(`select prosrc from pg_proc where proname = '...'`) and diffing against
+the committed file.
+
+Fixed via `supabase/migrations/20260910014444_fix_task_timeline_title_dash_transcription.sql`
+(`CREATE OR REPLACE`, no logic change beyond the character) plus a one-time
+backfill (`UPDATE ... SET title = replace(title, ' -- ', ' — ') WHERE
+event_type IN ('task_completed_team','task_status_changed') AND title LIKE
+'%--%'`) correcting the 15 rows already written since this morning's
+migrations, so existing Timeline entries read consistently with new ones.
+Verified 0 rows remain with the wrong dash afterward.
+
+Take-away for future MCP-applied migrations containing non-ASCII
+punctuation (em dashes, smart quotes, etc.): diff the live `pg_get_functiondef`
+against the git file's exact bytes before considering the change done, not
+just its functional behaviour — the same discipline already required for
+manual Edge Function deploys applies here.
 
 ## Open questions parked
 
