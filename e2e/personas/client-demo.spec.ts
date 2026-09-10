@@ -48,8 +48,10 @@ test("real client can inspect users and sees only client invite roles", async ({
   // review overlay locally (the X only changes dialog state; Done/Open
   // details would mark the production notification read or navigate away).
   const portalUpdate = page.getByRole("dialog", { name: /Fee-Free TAFE|portal update/i });
+  await portalUpdate.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
   if (await portalUpdate.isVisible().catch(() => false)) {
-    await portalUpdate.locator("button").last().click();
+    await portalUpdate.getByRole("button", { name: "Close" }).click();
+    await expect(portalUpdate).toBeHidden();
   }
 
   await expect(page.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
