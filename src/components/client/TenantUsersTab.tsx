@@ -100,42 +100,8 @@ import {
   positionTypeLabel,
 } from '@/lib/roles/positionType';
 import { setTenantUserRelationshipRole } from '@/features/client-identity/setRelationshipRole';
-
-interface TenantUser {
-  user_uuid: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
-  phone: string | null;
-  mobile_phone: string | null;
-  job_title: string | null;
-  disabled: boolean;
-  last_sign_in_at: string | null;
-  created_at: string;
-}
-
-interface TenantMemberInfo {
-  user_id: string;
-  role: string;
-  created_at: string;
-  primary_contact?: boolean | null;
-  secondary_contact?: boolean | null;
-  relationship_role?: RelationshipRole | null;
-  position_type?: string | null;
-  users: TenantUser;
-}
-
-interface PendingInvite {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  unicorn_role: string;
-  status: string;
-  expires_at: string;
-  created_at: string;
-}
+import type { PendingInvite, TenantMemberInfo } from '@/features/client-identity/models';
+import { resolveTenantMemberRelationshipRole } from '@/features/client-identity/models';
 
 interface TenantUsersTabProps {
   tenantId: number;
@@ -528,14 +494,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
 
 
-  // Resolve effective relationship_role for a member, preferring the new
-  // canonical column and falling back to legacy flags for unmigrated rows.
-  const getMemberRelationshipRole = (m: TenantMemberInfo): RelationshipRole => {
-    if (m.relationship_role) return m.relationship_role;
-    if (m.secondary_contact) return 'secondary_contact';
-    if (m.primary_contact || m.role === 'parent') return 'primary_contact';
-    return 'user';
-  };
+  const getMemberRelationshipRole = resolveTenantMemberRelationshipRole;
 
   // Confirm-swap state for the "demote existing primary, promote this user"
   // flow. Holds the target member being promoted; the existing primary is

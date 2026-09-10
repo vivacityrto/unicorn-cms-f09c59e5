@@ -1,18 +1,17 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  mapUserCapacity,
+  type UserCapacity,
+  type UserCapacityRpcRow,
+} from "@/features/client-identity/models";
 
+export type { UserCapacity } from "@/features/client-identity/models";
 export const userCapacityKeys = {
   all: ["user-capacity"] as const,
   tenant: (tenantId: number | null | undefined) =>
     ["user-capacity", tenantId ?? "none"] as const,
 };
-
-export interface UserCapacity {
-  used: number;
-  limit: number | null;
-  isUnlimited: boolean;
-  atLimit: boolean;
-}
 
 export function useUserCapacity(tenantId: number | null | undefined) {
   return useQuery({
@@ -24,16 +23,7 @@ export function useUserCapacity(tenantId: number | null | undefined) {
         .rpc("get_tenant_user_capacity", { p_tenant_id: tenantId as number })
         .single();
       if (error) throw error;
-      const row = data as { used: number; limit: number | null; is_unlimited: boolean };
-      const used = row.used ?? 0;
-      const limit = row.limit;
-      const isUnlimited = !!row.is_unlimited;
-      return {
-        used,
-        limit,
-        isUnlimited,
-        atLimit: !isUnlimited && limit !== null && used >= limit,
-      };
+      return mapUserCapacity(data as UserCapacityRpcRow);
     },
   });
 }
