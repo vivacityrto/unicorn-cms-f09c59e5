@@ -82,3 +82,21 @@ test("Manage Documents: Create Document dialog opens on the browse step", async 
   await expect(page.getByRole("heading", { name: /select template file/i })).toBeVisible({ timeout: 10_000 });
   expect(errors).toEqual([]);
 });
+
+// Phase 4 P6-3 (Packages/time): the duplicated renewal-window calculation in
+// RenewalConfirmDialog.tsx and ClientTimeTab.tsx's PackageBurndownCards was
+// centralized into computeRenewalWindow (src/features/packages/
+// renewalWindow.ts), fixing a real timezone bug in the process (see that
+// file's doc comments). This confirms the Time tab's burn-down cards still
+// render for a real tenant with an active package instance -- read-only,
+// no time entry created/edited/deleted, no renewal actioned.
+
+test("Client Time tab: package burn-down renders for a tenant with an active package", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/tenant/7449?tab=time");
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByText(/package burn-?down/i).first()).toBeVisible({ timeout: 15_000 });
+  expect(errors).toEqual([]);
+});
