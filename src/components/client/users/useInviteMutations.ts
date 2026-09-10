@@ -3,8 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useToast } from "@/hooks/use-toast";
 import { userCapacityKeys } from "@/hooks/useUserCapacity";
+import {
+  mapClientInviteAccess,
+  type InviteAccessLevel,
+} from "@/features/client-identity/invite-policy";
 
-export type InviteAccessLevel = "academy" | "secondary" | "user";
+export type { InviteAccessLevel } from "@/features/client-identity/invite-policy";
 
 export interface InviteInput {
   email: string;
@@ -12,15 +16,6 @@ export interface InviteInput {
   lastName: string;
   accessLevel: InviteAccessLevel;
 }
-
-const ROLE_MAP: Record<
-  InviteAccessLevel,
-  { unicorn_role: "Admin" | "User"; relationship_role: "academy_user" | "secondary_contact" | "user" }
-> = {
-  academy: { unicorn_role: "User", relationship_role: "academy_user" },
-  secondary: { unicorn_role: "Admin", relationship_role: "secondary_contact" },
-  user: { unicorn_role: "User", relationship_role: "user" },
-};
 
 interface EdgeError {
   ok?: boolean;
@@ -59,7 +54,7 @@ export function useInviteMutations() {
   const invite = useMutation({
     mutationFn: async (input: InviteInput) => {
       if (!activeTenantId) throw new Error("No active tenant");
-      const mapping = ROLE_MAP[input.accessLevel];
+      const mapping = mapClientInviteAccess(input.accessLevel);
       const { data, error } = await supabase.functions.invoke("invite-user", {
         body: {
           email: input.email.trim().toLowerCase(),
