@@ -370,6 +370,17 @@ no longer exists. `GeneratedDocumentsTab.tsx`'s copy is the real, live
 instance and remains open, unfixed, pending the same product decision on
 the correct legacy-mapping source.
 
+**Current truth-sync (2026-09-10):** The preceding 2026-09-07 note is
+preserved as historical state but is superseded. The live
+`GeneratedDocumentsTab.tsx` occurrence was fixed in commit `ec270c8c1`
+([PR #1015](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1015)):
+its Excel-generation path now queries `clients_legacy.id` by
+`clients_legacy.tenant_id` instead of the nonexistent
+`tenants.client_legacy_id`. The source and progress log record L10 #15 as
+done; no product decision remains open for this lookup. L10 #17 is a
+separate `TenantDocuments.tsx` package-name/route-retirement item and is
+already documented above as resolved via retirement.
+
 ## Manage Stages — audit trail (`AdminManageStages.tsx`)
 
 ### 14. Stage archive/restore has never recorded an audit trail entry — FIXED (compliance-relevant)
