@@ -4,7 +4,7 @@
 >
 > **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
-> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; the Phase 3 pilot is complete (P7-A/B/C/D all implemented and merged, 2026-09-10). This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; Phase 3 pilot packets P7-A/B/C/D are implemented and merged (2026-09-10), and the bounded P7-E closure packet is scoped for characterization. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
 >
 > **Program index:** [Program Index](program-index.md)
 >
@@ -550,6 +550,7 @@ The tenant program's P0.1 source inventory is now tracked separately from optimi
 4. Complete RBAC P0.2–P0.5 and the full P0 correctness exit gate before RBAC P2–P4 establishes the server decision core, shadow route-capability metadata, explicit staff-scope decision, and Academy/Package/Stage AJ/CSC pilot. Do not build a second optimization-era permission registry or cut over UI gates before server enforcement.
 5. Tenant P1/P2+ and database-affecting feature redesign begin only after the RBAC staff-scope/decision-core/pilot gates required by the tenant plan.
 6. Package/time, membership/contact/lifecycle, documents/delivery, messaging, Academy, Ask Viv, and analytics redesigns ship as authorization-aware vertical slices owned by their applicable RBAC/tenant phases. They are not bundled into Phase 2.6.
+7. Use this routing crosswalk for Phases 4–6; it is a discoverability aid, not a second authority or a new gate. Phase 4 hotspot packets may make separately authorized behavior-preserving fixes, but any new capability or tenant/data contract must link its owning [RBAC v6](rbac-v6-authorization-implementation-plan-2026-09-01.md) P4–P7 slice, [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md) P2–P8 slice, and/or [Client Health Activity Analytics](client-health-activity-analytics-plan-2026-09-03.md) H0–H7 slice. Phase 5 Edge convergence may consolidate response helpers while preserving the current authority mode; auth/subject/tenant/resource enforcement belongs to RBAC P5/P6, tenant/event/Ask Viv contracts to Tenant P5/P6, and health/activity contracts to the applicable Client Health H2/H5/H7 work. Phase 6 type-safety and module-boundary work may proceed independently when behavior- and policy-neutral; anything touching authorization, tenant identity, event/health projections, or AI context must link the relevant RBAC P0/P1/P3/P5/P8, Tenant P0/P1/P5/P6/P7/P8, or Client Health H0–H2/H5/H7 evidence packet and must not create a second registry or source of truth. Packet authors still follow the owning initiative’s phase gates and acceptance evidence.
 
 The entire optimization program does not need to finish before RBAC v6. Conversely, lower LOC never justifies inventing a new tenant source of truth, changing all-tenant staff visibility, trusting a caller-supplied tenant/resource binding, or dropping a database object without the live dependency and migration gates in the tenant/RBAC plans.
 
@@ -559,7 +560,9 @@ The entire optimization program does not need to finish before RBAC v6. Converse
 2. Minimal feature API/query/domain extraction.
 3. Code-adjacent architecture guide and scoped lint boundary.
 4. Auth/profile/membership split.
-5. Permission predicate consolidation in one route family.
+5. Permission predicate consolidation in one route family (bounded P7-E UX cleanup; see disposition below).
+
+**Phase 3 item 5 disposition (P7-E).** The broad “permission predicate consolidation” wording is split into a narrow, optimization-owned UX cleanup and a separately owned authorization-model track. P7-E may characterize the `requireSuperAdmin` route family and remove only page-local early-return checks whose predicate is proven identical to the route guard, whose page has no alternate direct registration, and whose removal preserves loading/recovery behavior. It must not introduce a permission registry, change capability semantics, alter server/RLS enforcement, or retire guards whose SuperAdmin-or-staff, role, display, or loading behavior is intentionally different. The broader canonical capability/predicate consolidation and retirement of duplicate raw checks remains deferred to RBAC v6 P3/P5/P8 under ADR-016. Phase 3 closes with P7-A–P7-D plus P7-E only after that characterization, parity evidence, and the normal route/build/lint/type/frontend/Edge/browser checks are complete; otherwise the unproven remainder stays explicitly RBAC-owned rather than being implied complete.
 
 **Exit gate:** the convention is demonstrably smaller/easier than the original and can be copied without creating boilerplate.
 
