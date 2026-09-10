@@ -33,9 +33,10 @@
 This addendum is the present-tense source of truth; dated progress entries below
 remain intact as historical evidence. Phase 2.5 is closed as a prerequisite
 gate at PR #953. Phase 2.6 stabilization/retirement is active and partly
-shipped; the Phase 3 pilot is underway with bounded P7-B/P7-C/P7-D slices. P1-C, P4-A, P4-B, P4-C, P4-D, P6-A and the
-completed P6-B cohorts are closed; M0, M1, M2, M3-A, M3-C and M6 are closed;
-M5 is superseded. The dedicated QA target is `unicorn-qa`
+shipped; the Phase 3 pilot is complete (2026-09-10) — P7-A/P7-B/P7-C/P7-D
+are all implemented and merged, see the packet statuses below. P1-C, P4-A, P4-B, P4-C, P4-D, P6-A and the
+completed P6-B cohorts are closed; M0, M1, M2, M3-A, M3-B, M3-C and M6 are
+closed; M5 is superseded. The dedicated QA target is `unicorn-qa`
 (`qfpxvumcrnzrjyvqkicq`), not the earlier failed `tenant-isolation-qa` branch.
 P1-C live proof completed in protected workflow run `34179875080`; the
 administrative secret-move/repeat-run tail was intentionally waived and is not
@@ -585,13 +586,7 @@ in a separately reviewed packet with an auditable rollback/restore procedure.
 
 ### Packet M3 — notification legacy decision
 
-The read-only dependency review supports a staged version of path 2 (retire),
-not migration to a new reminder workflow. Production has zero rows in both
-legacy tables. The three legacy database functions are service-role-only,
-unscheduled after M2, have no trigger/view dependency, and have no repository
-caller. `notification_audit_log` is not dead: the active
-`process-notification-outbox` worker writes success/failure delivery records to
-it, so it remains in the live notification contract. `notification_schedule`
+The read-only dependency review supports a staged version of path 2 (retire), not migration to a new reminder workflow. Production has zero rows in both legacy tables. The three legacy database functions are service-role-only, unscheduled after M2, have no trigger/view dependency, and have no repository caller. `notification_audit_log` is not dead: the active `process-notification-outbox` worker writes success/failure delivery records to it, so it remains in the live notification contract. `notification_schedule`
 is dormant but cannot be dropped yet because the deployed
 `process-notification-queue` reads it and `send-automated-email` still writes
 it in three unreachable audit branches; both paths reference the removed
@@ -619,6 +614,8 @@ retire the deployed `process-notification-queue` worker through a separately
 reviewed Edge change (no cron job or frontend caller exists). Run Edge tests,
 lint ratchet, typecheck, build, and a read-only function health check. Do not
 drop `notification_schedule` in the same Edge deployment.
+
+**Status:** done — the three dormant `notification_schedule` writes were removed from `send-automated-email`, and `process-notification-queue` was replaced with a credential-free HTTP 410 retirement stub. Implemented/merged 2026-09-07 (session 8), deployment-verified the same day (session 11: v171 serving `FUNCTION_RETIRED`), and re-confirmed against deployed version 175 in a 2026-09-08 cross-check (session 19). See `progress-log.md` and `_shared/notification-retirement.test.mjs`.
 
 #### M3-C — drop `notification_schedule` after dependency proof
 
