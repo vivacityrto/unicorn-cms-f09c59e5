@@ -32,6 +32,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-024] [2026-09-10] Ask Viv data governance — broaden indexed sources to the full operational entity set; tiered retention (indefinite while active, 7-year-anchored clock after archive/close); ≤5 min deletion-event SLA; staff=operational/cross-tenant, client=RTO-scoped task/consultant-communication only — full: [reference/decision-trail.md#adr-024](../reference/decision-trail.md#adr-024)
 - [ADR-025] [2026-09-10] First governed BI question — "which active clients need consultant attention this week, and why" via a real-signal watchlist (overdue tasks/invoices/renewals, orphaned stage-health data, activity silence), not a resurrected composite churn score — full: [reference/decision-trail.md#adr-025](../reference/decision-trail.md#adr-025)
 - [ADR-026] [2026-09-10] Xero source of truth — ratified as authoritative for invoices/accounting; connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's — full: [reference/decision-trail.md#adr-026](../reference/decision-trail.md#adr-026)
+- [ADR-027] [2026-09-10] Test environment process — `unicorn-qa` ratified as the shared standing disposable environment for Tenant Operating Model mutation/cross-tenant testing too, not a second parallel environment — full: [reference/decision-trail.md#adr-027](../reference/decision-trail.md#adr-027)
 
 ---
 

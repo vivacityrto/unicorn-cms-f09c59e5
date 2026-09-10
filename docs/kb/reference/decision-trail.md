@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score); ADR-026 added 2026-09-10 records the TOM §18 item 11 decision (Xero ratified as financial source of truth; the connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 12-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-026 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score); ADR-026 added 2026-09-10 records the TOM §18 item 11 decision (Xero ratified as financial source of truth; the connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's); ADR-027 added 2026-09-10 records the TOM §18 item 12 decision (`unicorn-qa` ratified as the shared standing disposable environment for TOM mutation/cross-tenant testing too, not a second parallel environment). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as does TOM §18 item 13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-027 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -1270,6 +1270,63 @@ unconfirmed are updated in the same change as this ADR, not left stale.
 - [Tenant Operating Model plan, §8.3 integration boundaries](tenant-operating-model-data-architecture-plan-2026-09-02.md#83-integration-boundaries)
 - [Architecture doc, Xero integration entry](../codebase-state/architecture.md)
 - [2026-08-05 Xero OAuth provider-account-ID audit entry](../../audit-log/entries/2026-08-05-xero-oauth-provider-account-id.md)
+
+---
+
+### ADR-027: `unicorn-qa` ratified as the shared standing test environment for Tenant Operating Model work {#adr-027}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 12 (P0.2) asked what
+Supabase branch/disposable environment and synthetic persona process is
+approved for mutation and cross-tenant testing — an isolated environment
+with synthetic small/median/skewed/archived/suspended/disabled/
+cross-tenant fixtures, and persona tests across anonymous, client Admin/
+User in tenants A/B, CSC, Integrator/Team Leader, Super Admin, disabled
+staff, and service principal. ADR-016 already ratified `unicorn-qa`
+(Supabase project `qfpxvumcrnzrjyvqkicq`) plus the existing P2-QA persona
+suite as the standing disposable verification process for RBAC v6 work.
+`AGENTS.md` documents this environment in detail: an allowlisted target,
+generated types, run-scoped cleanup, a protected-workflow skeleton, and a
+harness that fails closed if a service-role key ever targets another
+project. The QA-only secrets and the first actual live run remain
+intentionally outstanding, per that same documentation.
+
+**Decision:**
+
+1. `unicorn-qa` is ratified as the same standing disposable environment
+   for Tenant Operating Model mutation/cross-tenant testing — not a
+   second, parallel test environment.
+2. The outstanding work already known (QA-only secrets provisioning, the
+   first live run) is unchanged by this decision — it remains outstanding
+   for both initiatives, not newly resolved here.
+
+**Reasoning:** One disposable environment serving both the RBAC v6 and
+Tenant Operating Model initiatives is simpler to maintain, reuses
+already-built safety mechanics (fail-closed cross-project guard, run-scoped
+cleanup) instead of duplicating them, and keeps the "missing real
+credentials remain Inconclusive, not Pass" discipline consistent across
+both tracks.
+
+**Alternatives considered:** Standing up a second, TOM-specific disposable
+environment was rejected — nothing about tenant-data testing needs are
+different enough from RBAC's to justify duplicating the environment,
+persona suite, and safety harness that already exist.
+
+**Risks accepted:** None beyond what ADR-016 already accepted for this
+environment; this decision extends its scope of use, not its risk
+profile.
+
+**Consequences:** TOM §18 item 12 is closed as a policy question. Item 13
+remains open. The QA-secrets provisioning and first live run stay
+separately authorized, outstanding implementation work — this ADR does
+not resolve them.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 12](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, Phase P0.2](tenant-operating-model-data-architecture-plan-2026-09-02.md#phase-p0--freeze-truth-and-make-risk-measurable)
+- [ADR-016](#adr-016)
 
 ---
 
