@@ -409,12 +409,11 @@ Do not begin until P6-A has parity evidence and the RBAC vocabulary decision exp
 
 Characterize `/admin/lifecycle-checklists` for list, filter, create, edit, deactivate, loading, empty, error and forbidden states. Verify live tables, columns, grants, RLS and write authority.
 
+**Status:** implemented and merged (PR #1049) — see `progress-log.md` sessions 38-41 and the 13-test suite in `src/test/admin/lifecycle-checklists.test.tsx`. Characterization-only; superseded by the completed P7-B/C/D slices below.
+
 ### Packet P7-B — minimal feature boundary
 
-**Status:** implemented in the current PR — a feature-local generated-type
-boundary with hook compatibility re-exports. Existing route/server enforcement
-is unchanged; no query adapter was justified because the page has no direct
-Supabase knowledge. Success remains testability and neutral/negative LOC.
+**Status:** implemented in the current PR — a feature-local generated-type boundary with hook compatibility re-exports. Existing route/server enforcement is unchanged; no query adapter was justified because the page has no direct Supabase knowledge. Success remains testability and neutral/negative LOC.
 
 ### Packet P7-C — architecture and scoped lint boundary
 
