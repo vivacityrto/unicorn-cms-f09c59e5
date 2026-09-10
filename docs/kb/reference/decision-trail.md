@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 3-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 4-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, and ADR-018 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -573,6 +573,65 @@ ADR alone — normal branch/PR/verification/audit-entry rules apply per
 **Linked to:**
 - [Tenant Operating Model plan, §18 item 2](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §5.5 lifecycle vocabulary drift](tenant-operating-model-data-architecture-plan-2026-09-02.md#55-lifecycle-vocabulary-drift)
+
+---
+
+### ADR-018: `tenants.id` ratified as the canonical key; `id_uuid` mandatory for external integration contracts {#adr-018}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 3 asked whether `tenants.id` is
+the long-term canonical internal key, with `id_uuid` an integration-safe
+identifier, or whether a future key migration is required. The plan (§7.1)
+already carried an interim working stance to this effect; this ADR ratifies
+it as policy rather than a provisional default.
+
+Live evidence (all 415 current tenants, current `origin/main`): every
+tenant has `id_uuid` populated; only 2 of 415 have a legacy `unicorn1_id`;
+411 of 415 have `id != import_id` (a legacy import sequence that diverged
+from the real key early on and is not itself a candidate key). Spot-checked
+against the internal Vivacity staff tenant (`id = 6372`, `id_uuid =
+8575ea84-3155-4acc-8197-344fb05adf67`, `import_id = 319`, `unicorn1_id =
+NULL`) — the same shape as the aggregate evidence.
+
+**Decision:**
+
+1. `tenants.id` (bigint) remains the canonical internal key. No key
+   migration to UUID-as-primary is planned or justified by current
+   evidence.
+2. `id_uuid` is the integration-safe external identifier. Every future
+   integration contract (new external system connection, import, or
+   sync — not internal reporting/joins) must expose and consume
+   `id_uuid`, never bare `id`, with no exceptions carved out case-by-case.
+3. New contracts must expose one named canonical ID and, where integration
+   needs it, one explicitly named external UUID — never an ambiguous
+   generic `id` variant (per §7.1, now ratified rather than provisional).
+
+**Reasoning:** Nothing in the live evidence (no partitioning pressure, no
+cross-system collision risk, no performance complaint tied to key type)
+argues for a UUID-primary migration — that would be a large, high-blast-
+radius change solving a problem that doesn't exist in this data. Making
+`id_uuid` mandatory for integrations (rather than optional/ad hoc) closes
+off the exact ambiguous-generic-`id` drift the evidence above already shows
+(`import_id`, `unicorn1_id` as parallel, inconsistently-populated
+identifiers).
+
+**Alternatives considered:** Leaving `id_uuid` usage on integrations
+optional/discretionary was rejected — that is the same pattern that
+produced the current drift across `import_id`/`unicorn1_id`/`id_uuid`, just
+one identifier later.
+
+**Risks accepted:** None beyond normal implementation risk — this ratifies
+an already-observed-safe default rather than changing behavior.
+
+**Consequences:** TOM §18 item 3 is closed as a policy question. Items 4-13
+remain open. Any new integration contract that skips `id_uuid` in favor of
+bare `id` is a conformance gap against this ADR, not a judgment call.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 3](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §7.1 bounded source-of-truth model](tenant-operating-model-data-architecture-plan-2026-09-02.md#71-bounded-source-of-truth-model)
 
 ---
 
