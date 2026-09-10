@@ -150,6 +150,39 @@ against the git file's exact bytes before considering the change done, not
 just its functional behaviour — the same discipline already required for
 manual Edge Function deploys applies here.
 
+## Follow-up: raw status values in titles (2026-09-10, same day)
+
+Carl then flagged the same screenshot's status text itself:
+`"(RTO Documentation - 2025 — in_progress)"` — the trigger was embedding
+`stage_instances.status`/`staff_task_instances.status`'s raw
+`dd_status.value` (snake_case) rather than a human label. Fixed via
+`supabase/migrations/20260910014915_task_timeline_status_labels.sql`:
+looks up `dd_status.description` (the same label source
+`src/hooks/useTaskStatusOptions.ts` already uses elsewhere in the app —
+"Not Started", "In Progress", "Completed", "N/A", "Core Complete",
+"Monitor") for the stage's current status and, for `task_status_changed`,
+both the old and new task status in the "X -> Y" portion; falls back to a
+Title-Case rendering of the raw value (`initcap(replace(..., '_', ' '))`)
+if a status is ever missing from `dd_status`, so a future new status
+degrades gracefully instead of showing blank text. `metadata`'s raw
+`old_status`/`new_status`/`stage_status` fields are unchanged (still the
+snake_case DB values — only the human-facing `title` string changed).
+
+Also backfilled the titles of all 16 rows written since this morning's
+migrations by re-deriving from each row's `metadata` (`stage_id`,
+`old_status`/`new_status`/`stage_status`, `task_name` — all already
+present) rather than parsing the old title text, since the metadata was
+never affected by either the dash or the label issue.
+
+Live-verified in a rolled-back transaction first (a real Not
+Started → In Progress transition produced `"...: Not Started ->
+In Progress (Mock Audit — Not Started)"`), then applied for real and
+confirmed all 16 existing rows read with proper labels afterward
+(`"... (Setup Client — N/A)"`, `"... (RTO Documentation - 2025 — In
+Progress)"`), and re-diffed the live function source against the
+committed file to rule out a repeat of the dash-transcription mistake
+from the prior follow-up.
+
 ## Open questions parked
 
 - The specific historical incident (which consultant, which client, which
