@@ -188,10 +188,35 @@ tab. No further action needed on them from this packet.
    self-contained sub-concern (template CRUD does not touch delivery/status
    logic at all).
 
+## Correction after deeper `ManageDocuments.tsx` investigation (2026-09-10)
+
+Question 3's claim that template CRUD "does not touch delivery/status logic
+at all" is true only narrowly (it doesn't call bulk-generate/delivery Edge
+Functions) — a closer read found real coupling: the fetched `documents` list
+and its refresh function are shared by CRUD, list/filter rendering, and
+inline actions; `selectedDocuments` is shared between CRUD bulk-delete and
+the unrelated bulk-send feature; and there are two independent, overlapping
+implementations of category-fetching in the same file. There is also **no
+existing test coverage** for this file at all, unlike the Phase 3 P7-B
+lifecycle precedent, which had a 13-test characterization suite as an oracle.
+
+Given that, the safe first extraction is narrower than "template CRUD": a
+pure-function boundary only. `deriveCategoryFromFilename`,
+`deriveFrameworkFromRootFolder`, and `deriveFormatFromFile` (the latter
+hoisted out of the component body, where it was previously non-reusable)
+moved to `src/features/document-templates/derive.ts`, with new focused unit
+tests (`src/test/admin/document-template-derive.test.ts`) — this repo's first
+test coverage of any kind for this feature area. No state, query, or mutation
+extraction is attempted here; that remains blocked on writing a real
+characterization test suite first, matching the Phase 3 precedent's own
+requirement.
+
 ## Definition of done for this packet
 
-This characterization packet is complete once reviewed; it does not itself
-require lint/typecheck/test/build verification since no code changed. The
-next step is a decision on question 1 above (via Codex/Carl discussion or a
-direct Carl call, matching the Phase 3 precedent of characterize-then-decide)
-before any extraction PR is scoped.
+This characterization packet, plus its first bounded extraction (the
+pure-function boundary above), is complete once the full lint-ratchet/
+typecheck/test/build chain passes. No Playwright pass is required — the
+change is a pure code move with new tests, compiler- and test-provable, no
+component behavior altered. Any further extraction (state/query/mutation
+boundary for template CRUD or category-tree) needs its own characterization
+test suite written first, and is not authorized by this packet.
