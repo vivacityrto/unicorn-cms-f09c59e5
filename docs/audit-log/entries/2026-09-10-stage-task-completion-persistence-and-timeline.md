@@ -183,6 +183,65 @@ Progress)"`), and re-diffed the live function source against the
 committed file to rule out a repeat of the dash-transcription mistake
 from the prior follow-up.
 
+## Follow-up: SHCS Academy Pty Ltd (tenant 7408) M-SAC investigation (2026-09-10)
+
+Carl asked to check a specific client report: a CSC said they'd changed a
+stage task's status on M-SAC before, but it looked like it reset. Traced
+tenant 7408's active M-SAC package instance (15147) end to end:
+
+- **Strong candidate for the reported symptom:** stage instance 25051
+  ("Compliance Health Check 2025", a recurring stage added mid-package on
+  2026-07-11) has 6 staff tasks that are *still* sitting at `not_started`
+  today with **zero** `client_audit_log` or `client_timeline_events` history
+  of any kind since creation — two months with no recorded activity at all.
+  That's the exact signature of the silent-failure bug fixed earlier this
+  session: a pre-fix attempt would show a success toast but never write,
+  and (unlike a genuine SQL error) leave no trace anywhere. Not proven this
+  is the exact incident the CSC meant, but it's the one place in this
+  client's data that matches the report precisely.
+- **Confirmed the fix works going forward:** the same session, 4 tasks on
+  this package's "Setup Client" stage (24637) were completed live by a real
+  CSC (Ezel Olores) *after* today's fix shipped, and all 4 persisted
+  correctly with matching `client_audit_log` entries and
+  `client_timeline_events` rows — no reversion.
+- **Ruled out as the cause:** the *prior* M-SAC cycle (package instance
+  15072, closed on renewal 2025-11-18) has its own real completed-task
+  history from 2025 fully intact on its own `stage_instances` — nothing was
+  lost, it's a separate closed-out package instance from the current one.
+  If the CSC was comparing against last year's cycle, that reads as "reset"
+  but is just how annual renewals work (a fresh package_instance per cycle,
+  not a continuation of the same rows).
+- **Noted but not the cause:** a system account ("Bulk Generate Automation")
+  called `repair_package_instance_stages` on this and several other SHCS
+  packages 9 times across two short bursts (2026-08-20, 2026-08-23) — but
+  that RPC only inserts rows guarded by `NOT EXISTS`, never touches an
+  existing task's status (confirmed via `pg_get_functiondef`). The firing
+  pattern itself (repeatedly, ~60-70s apart) is unusual and worth a
+  separate look, but not flagged as a persistence-bug cause here.
+
+No code change from this investigation alone — recommended Carl have the
+CSC retry a status change on "Compliance Health Check 2025" now that the
+fix is live, to close the loop with a real positive confirmation.
+
+## Follow-up: same label issue in `stage_status_changed` (2026-09-10)
+
+Carl spotted the identical raw-snake_case problem in a *different* trigger:
+`stage_status_changed` titles read e.g. `"Vivacity Academy Enrolment (v2):
+not_started -> completed"`. This is the older, separate
+`fn_stage_instance_timeline_trigger()` (on `stage_instances`, from
+2026-08-04) — not the staff-task trigger fixed above, but the same defect
+class. Fixed identically via
+`supabase/migrations/20260910034510_stage_status_changed_timeline_labels.sql`:
+`dd_status.description` lookup for both `OLD.status`/`NEW.status` with the
+same Title-Case fallback, no other logic change. Backfilled all 30 existing
+`stage_status_changed` rows by re-deriving from each row's own
+`old_status`/`new_status` metadata (the stage-name portion of the title was
+preserved via `split_part(title, ':', 1)`, since that part was never
+wrong). Verified 0 rows remain matching the raw
+`": <lowercase> -> <lowercase>"` pattern, and re-diffed the live function
+source against the committed file — exact match, no repeat of the earlier
+transcription mistake.
+
 ## Open questions parked
 
 - The specific historical incident (which consultant, which client, which
