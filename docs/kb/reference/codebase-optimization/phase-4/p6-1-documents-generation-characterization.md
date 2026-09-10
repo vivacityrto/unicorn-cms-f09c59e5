@@ -299,22 +299,56 @@ existing test coverage, so that extraction needs its own oracle chosen per
 the characterization-oracle rule before proceeding — not authorized by this
 packet.
 
+## Fifth extraction: create/update save logic
+
+Implemented the recommended next cut above. `handleCreateDocument`'s two
+Supabase mutation branches (update for edit, insert + SharePoint import for
+create) moved verbatim into `useDocumentTemplateSave`
+(`src/features/document-templates/useDocumentTemplateSave.ts`), taking
+`formData`, `editingDocumentId`, `existingFiles`, `selectedTemplate`,
+`newDocDisplayVersion`, the creator's user UUID, and `nextOrderNumber` as
+explicit inputs, with the dialog's own reset logic passed in as a
+`resetAfterSave` callback — the step machine and dialog JSX stay in the
+parent, unchanged. `maybeGenerateDescription` was left in place; it's
+called from `handleNextFromBrowse` (the step-transition handler), not from
+the save path itself, so it wasn't part of this seam.
+
+Oracle: this flow had zero existing coverage, so oracle (1) was used —
+7 new focused unit tests against the hook (mocked Supabase), covering the
+update branch's success/error/file-preservation, and the create branch's
+missing-template guard, successful insert-then-import, insert succeeding
+with the import failing (verified the document row is kept and the dialog
+still resets, matching the original's non-rollback behavior), and insert
+failure. Additionally ran one scoped, read-only, authenticated SuperAdmin
+Playwright check (`e2e/personas/superadmin.spec.ts`, added to the existing
+persona spec) confirming the Create Document dialog still opens on its
+browse step post-extraction — a structural-wiring smoke check on top of the
+unit-test oracle, given this seam moves real mutation logic and touches the
+dialog's JSX wiring, not just internal function bodies. No document was
+created, edited, or deleted by the check.
+
+`ManageDocuments.tsx`: 2,157 → 2,050 lines.
+
 ## Running total
 
-`ManageDocuments.tsx`: 2,788 → 2,157 lines (-631, ~22.6%) across four PRs in
+`ManageDocuments.tsx`: 2,788 → 2,050 lines (-738, ~26.5%) across five PRs in
 this slice, plus a real 9-month-old production regression found and
 resolved (Bulk Send) — none of it forced through a single large rewrite.
+Remaining open seams: category-tree state and the still-present
+category-fetch duplication between the local `fetchCategories` and the
+`useDocumentCategories` hook, plus the dialog's step-machine/JSX itself
+(left as-is deliberately — tightly coupled to `createStep`, lower value to
+extract further once its mutation logic already has an oracle).
 
 ## Definition of done for this packet
 
-This characterization packet, plus its extractions and the Bulk Send
+This characterization packet, plus its five extractions and the Bulk Send
 retirement above, is complete once the full lint-ratchet/typecheck/test/
-build chain passes for each PR. No Playwright pass was required for any of
-the four PRs so far — three were compiler-/test-provable pure moves or dead-
-code deletions, and the fourth (Bulk Send) deleted code that was already
-unreachable, so there was no user-facing behavior to regress in any of them.
-Any further extraction (the create/edit save logic, category-tree state, or
-the still-present category-fetch duplication between the local
-`fetchCategories` and the `useDocumentCategories` hook) needs its own oracle
-chosen per the characterization-oracle rule, and is not authorized by this
-packet.
+build chain passes for each PR. Four of the five PRs needed no Playwright
+pass (compiler-/test-provable pure moves, or deletion of already-unreachable
+code); the fifth (create/update save extraction) added one scoped read-only
+Playwright check alongside its unit-test oracle, since it moved real
+mutation logic and touched dialog JSX wiring. Any further extraction
+(category-tree state, the category-fetch duplication, or the dialog's step
+machine) needs its own oracle chosen per the characterization-oracle rule,
+and is not authorized by this packet.

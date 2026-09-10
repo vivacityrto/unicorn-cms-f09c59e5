@@ -65,3 +65,20 @@ test("/suggestions/new redirects to /support-tickets/new", async ({ page }) => {
   await page.waitForURL("**/support-tickets/new");
   expect(errors).toEqual([]);
 });
+
+// Phase 4 P6-1 (Documents/generation): the create/edit dialog's Supabase
+// mutation logic was extracted into useDocumentTemplateSave (src/features/
+// document-templates/useDocumentTemplateSave.ts). This confirms the dialog
+// still opens and wires to the extracted save function correctly -- no
+// submission, no document created/edited/deleted, read-only by design.
+
+test("Manage Documents: Create Document dialog opens on the browse step", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/manage-documents");
+  await expect(page).not.toHaveURL(/\/login/);
+  await page.getByRole("button", { name: /create document/i }).click();
+  await expect(page.getByRole("heading", { name: /select template file/i })).toBeVisible({ timeout: 10_000 });
+  expect(errors).toEqual([]);
+});

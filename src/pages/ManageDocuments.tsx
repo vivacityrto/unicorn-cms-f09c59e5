@@ -38,6 +38,7 @@ import { BulkGenerateButton } from '@/components/documents/bulk-generate/BulkGen
 import { DocumentAdditionalStagesField } from '@/components/documents/DocumentAdditionalStagesField';
 import { deriveCategoryFromFilename, deriveFrameworkFromRootFolder, deriveFormatFromFile } from '@/features/document-templates/derive';
 import { useDocumentTemplateDeletion } from '@/features/document-templates/useDocumentTemplateDeletion';
+import { useDocumentTemplateSave } from '@/features/document-templates/useDocumentTemplateSave';
 
 // Default Stage preference for new documents, keyed by Framework Type —
 // stored per-browser (no per-user preference table exists for this yet).
@@ -871,120 +872,19 @@ export default function ManageDocuments() {
     void maybeGenerateDescription(file.name, matchedCategory?.name ?? null, matchedFramework?.label ?? null);
   };
 
-  const handleCreateDocument = async () => {
-    try {
-      // Preserve the document's already-uploaded files across a metadata edit
-      // (there is no manual upload/replace affordance in this dialog --
-      // uploaded_files is only ever populated via the SharePoint import below).
-      const allFileUrls = existingFiles.map(f => f.url);
-      const allFileNames = existingFiles.map(f => f.name);
-      if (editingDocumentId) {
-        // Update existing document
-        const {
-          error
-        } = await supabase.from("documents").update({
-          title: formData.title,
-          description: formData.description || null,
-          format: formData.format || null,
-          watermark: formData.watermark,
-          versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
-          versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
-          isclientdoc: formData.isclientdoc,
-          category: formData.categories.length > 0 ? formData.categories.join(',') : null,
-          framework_type: formData.framework_type || null,
-          stage: formData.stage ? parseInt(formData.stage) : null,
-          standard_set: formData.standard_set || null,
-          is_core: formData.is_core,
-          is_tenant_downloadable: formData.is_tenant_downloadable,
-          uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
-          file_names: allFileNames.length > 0 ? allFileNames : null
-        }).eq("id", editingDocumentId);
-        if (error) throw error;
-        toast({
-          title: "Success",
-          description: "Document updated successfully"
-        });
-      } else {
-        // Create branch: require a selected SharePoint template file
-        if (!selectedTemplate) {
-          toast({
-            title: "Template file required",
-            description: "Select a SharePoint template file before creating the document.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Insert new document with created_by set to current user
-        const {
-          data: insertedDoc,
-          error,
-        } = await supabase.from("documents").insert({
-          title: formData.title,
-          description: formData.description || null,
-          format: formData.format || null,
-          watermark: formData.watermark,
-          versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
-          versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
-          isclientdoc: formData.isclientdoc,
-          category: formData.categories.length > 0 ? formData.categories.join(',') : null,
-          framework_type: formData.framework_type || null,
-          stage: formData.stage ? parseInt(formData.stage) : null,
-          standard_set: formData.standard_set || null,
-          is_core: formData.is_core,
-          is_tenant_downloadable: formData.is_tenant_downloadable,
-          uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
-          file_names: allFileNames.length > 0 ? allFileNames : null,
-          created_by: profile?.user_uuid || null,
-        }).select('id').single();
-        if (error) throw error;
-
-        const newDocId = insertedDoc?.id as number;
-
-        // Import the selected SharePoint template. If this fails, keep the
-        // document row and let the user retry — do not roll back.
-        setImportingTemplate(true);
-        try {
-          const { data: importData, error: importError } = await supabase.functions.invoke(
-            'import-sharepoint-template',
-            {
-              body: {
-                action: 'import',
-                document_id: newDocId,
-                source_drive_id: selectedTemplate.driveId,
-                source_item_id: selectedTemplate.file.id,
-                display_version: newDocDisplayVersion,
-              },
-            },
-          );
-          if (importError) throw importError;
-          if (importData?.error) throw new Error(importData.error);
-
-          const linked = importData?.fields_linked ?? 0;
-          const invalid = (importData?.invalid_tags || []).length;
-          sonnerToast.success(
-            `Imported ${importData?.display_version ?? newDocDisplayVersion} — ${linked} field${linked !== 1 ? 's' : ''} linked${invalid ? `, ${invalid} unrecognised` : ''}`,
-          );
-          toast({
-            title: "Success",
-            description: "Document created and template linked",
-          });
-        } catch (impErr) {
-          sonnerToast.error(impErr instanceof Error ? impErr.message : 'Template import failed — document created without a linked file. You can retry from the edit dialog.');
-          // Keep dialog closed but preserve document row
-        } finally {
-          setImportingTemplate(false);
-        }
-
-        // Drill into the newly created document detail view
-        setSelectedDocId(newDocId);
-
-        // Update next order number only for new documents
-        const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
-        setNextOrderNumber(newNextOrderNumber);
-      }
-
-      // Reset form
+  const { save: handleCreateDocument } = useDocumentTemplateSave({
+    formData,
+    editingDocumentId,
+    existingFiles,
+    selectedTemplate,
+    newDocDisplayVersion,
+    createdByUserUuid: profile?.user_uuid,
+    nextOrderNumber,
+    fetchDocuments,
+    setImportingTemplate,
+    setSelectedDocId,
+    setNextOrderNumber,
+    resetAfterSave: () => {
       setFormData({
         title: "",
         description: "",
@@ -1006,15 +906,8 @@ export default function ManageDocuments() {
       setNewDocDisplayVersion('');
       setCreateStep('browse');
       setIsCreateDialogOpen(false);
-      fetchDocuments();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save document",
-        variant: "destructive"
-      });
-    }
-  };
+    },
+  });
   const toggleSelectDocument = (docId: number) => {
     setSelectedDocuments(prev => prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]);
   };
