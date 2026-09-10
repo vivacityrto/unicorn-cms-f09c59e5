@@ -1,0 +1,197 @@
+# P6-1 Documents/Generation Characterization
+
+> **Status:** characterization only — no extraction, no behavior change
+>
+> **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md) — Phase 4, P6 hotspot slice #1
+>
+> **Program index:** [Program Index](../../program-index.md)
+>
+> **Prerequisite:** none — first Phase 4 slice, taken in the P6 order
+
+## Purpose and non-goals
+
+This packet documents the current, real behavior of the documents/document-generation
+feature area — the largest single hotspot in the P6 table — before any
+extraction is attempted. Per the master plan's Phase 4 rule, this is a
+characterization pass only: it authorizes no code change, no route change, no
+Edge Function change, and no schema/RLS change. The four "first seams" named
+by the plan (filters/selection model, status transitions, delivery commands,
+dialog controllers) are mapped to their current file/line locations below so a
+later extraction PR has a proven baseline to preserve.
+
+Out of scope for this packet: any actual extraction, the adjacent evidence/
+upload dialogs (`UploadDocumentDialog`, `CreateEvidenceRequestDialog`,
+`EvidenceUploadWizard` — same folder, different workflow), `useStageVersions.tsx`
+(stage-level, not document-generation), and any Edge Function contract change.
+
+## Surface inventory
+
+Measured at `origin/main` (this worktree's branch point), 2026-09-10.
+
+| File | Lines | Role |
+|---|---:|---|
+| `src/pages/ManageDocuments.tsx` | 2,788 | Admin document catalogue: list, filters, category tree, template CRUD, SharePoint template import, launches Bulk Generate. The single largest orchestrator in this area. |
+| `src/components/documents/bulk-generate/targeted/TargetedMode.tsx` | 1,088 | Bulk-generate targeted flow: tenant/CSC/search filters, tenant→package→stage→document selection tree, launches preview/create. |
+| `src/pages/BulkDocumentJobProgress.tsx` | 1,375 | Single job detail: polling, status-transition derivation, retry/cancel/skip, per-item progress, nested retry/skipped dialogs. |
+| `src/components/governance/GovernanceDeliveryDialog.tsx` | 722 | Single-document, many-tenant delivery dialog (used from `ManageDocuments`); original home of the delivery-guard logic, now shared via a hook. |
+| `src/pages/BulkDocumentJobsList.tsx` | 381 | Bulk-generation job list/history. |
+| `src/components/documents/tabs/GeneratedDocumentsTab.tsx` | 397 | Per-tenant documents tab, hosted inside `ClientDetail`'s `DocumentsHub` — the confirmed live successor to the retired `TenantDocuments*` family. |
+| `src/hooks/useMissingMergeFields.tsx` | 322 | Per-document merge-field gap detection; an older, separate implementation from the delivery-guards hook below, with conceptual overlap. |
+| `src/components/documents/bulk-generate/DocumentFilterDialog.tsx` | 289 | Document multi-select filter dialog — core of the filters/selection-model seam. |
+| `src/components/governance/GovernanceVersionImportDialog.tsx` | 216 | Version-state import dialog, used from `ManageDocuments`. |
+| `src/components/documents/bulk-generate/DeliveryGuardPanel.tsx` | 220 | Renders delivery-guard output plus an acknowledgement gate before launch. |
+| `src/hooks/useExcelGeneration.tsx` | 138 | Single-document Excel generate/download plus in-flight state. |
+| `src/hooks/useDocumentDeliveryGuards.ts` | 171 | Delivery readiness: merge-field completeness plus TGA snapshot presence, per pair, resolved to `complete`/`partial`/`incomplete`. Already extracted once (out of `GovernanceDeliveryDialog`) to be shared with bulk generate — a precedent for this packet's proposed direction. |
+| `src/components/documents/bulk-generate/PreviewPanel.tsx` | 122 | Shows launcher preview results before commit. |
+| `src/components/documents/bulk-generate/useBulkGenerateLauncher.ts` | 146 | Pure command layer over the `bulk-generate-documents-launcher` Edge Function — the delivery-commands seam. |
+| `src/hooks/useDocumentActivity.tsx` | 64 | Logs download/delivery activity events. |
+| `src/components/documents/bulk-generate/useTemplatedDocuments.ts` | 141 | Loads documents eligible for generation given selected stages. |
+| `src/hooks/useDocumentCategories.ts` | 33 | Category value→label map, used by list/filter UI. |
+| `src/components/documents/bulk-generate/useTenantSharepointLiveness.ts` | 52 | Per-tenant SharePoint connectivity check feeding selection eligibility. |
+| `src/components/documents/bulk-generate/useBulkGenerateClientTree.ts` | 36 | Tenant→package→stage tree for selection. |
+| `src/pages/BulkGenerateNew.tsx` | 83 | Thin wrapper: loads tenants, renders `TargetedMode`. |
+
+19 files, ~10,650 lines total in this inventory (excludes the adjacent
+evidence/upload dialogs and `useStageVersions.tsx`, both out of scope above).
+
+## Edge Functions in this feature's contract
+
+| Function | Role |
+|---|---|
+| `bulk-generate-documents-launcher` | Command endpoint: preview, create, cancel, retry, skip_items, preview_targeted, create_targeted, requeue_skipped, create_delivery. Server side of `useBulkGenerateLauncher.ts`. |
+| `bulk-generate-documents-worker` | Executes queued generation items. |
+| `bulk-generate-documents-resume-stalled` | Cron-style backstop that resumes/flags stalled jobs — source of "resume" behavior named in the plan's required characterization. |
+| `deliver-governance-document` | Delivery execution for `GovernanceDeliveryDialog`'s single-document path. |
+| `generate-document`, `generate-document-description` | Single-document generation/description. |
+| `generate-excel-document` | Excel-specific generation, backing `useExcelGeneration`. |
+
+No Edge Function contract changes are proposed by this packet. Any future
+extraction keeps every one of these contracts byte-identical.
+
+## The four seams, as they exist today
+
+| Seam | Current location |
+|---|---|
+| Filters and selection model | `TargetedMode.tsx` state block (tenant/CSC/search filters, triple selection, itemized rows) plus the whole of `DocumentFilterDialog.tsx` for document picking. `ManageDocuments.tsx` has its own separate list-filter state (search/category/status) that is **not shared** with the bulk-generate filters — two independent implementations of "filter a document list," not one seam split across two files. |
+| Status transitions | `BulkDocumentJobProgress.tsx`: a `TERMINAL` status set, dialog/loading state, retry-eligible/skipped derivation, and the `isRunning`/`isStalled`/`isPolling`/`canRetry` flags computed from job/item rows; polling via a fixed `refetchInterval`. |
+| Delivery commands | `useBulkGenerateLauncher.ts` (all launcher actions, consumed by `TargetedMode.tsx` and `BulkDocumentJobProgress.tsx`) plus `GovernanceDeliveryDialog.tsx`'s direct call to `deliver-governance-document` for the single-document path — **two separate delivery-command contracts**, not one, corresponding to the bulk vs. single-document flows. |
+| Dialog controllers | `DocumentFilterDialog.tsx`, `DeliveryGuardPanel.tsx`, `PreviewPanel.tsx` (bulk path) plus the retry/skipped-items dialogs nested inline inside `BulkDocumentJobProgress.tsx` (not extracted as siblings — an existing routing-hoist comment at `dashboardRoutes.tsx` confirms this was a deliberate prior decision, not an oversight), plus `GovernanceDeliveryDialog.tsx`/`GovernanceVersionImportDialog.tsx` (single-document path). |
+
+**Key finding:** "Documents/generation" is really **two parallel, mostly
+independent workflows** — the bulk/targeted generation path (`TargetedMode` →
+`useBulkGenerateLauncher` → `BulkDocumentJobProgress`) and the single-document
+governance-delivery path (`ManageDocuments` → `GovernanceDeliveryDialog` →
+`deliver-governance-document`) — that happen to share only the delivery-guard
+readiness logic (`useDocumentDeliveryGuards`, already extracted) and, loosely,
+the merge-field-gap concept (`useMissingMergeFields`, a separate older
+implementation covering similar ground). A single unified "documents feature
+boundary" is not obviously the right target; the two paths may warrant
+separate, narrower extractions instead. This is a characterization finding to
+weigh before scoping the actual extraction PR, not a decision made here.
+
+## Required behavioral characterization
+
+### List (catalogue view — `ManageDocuments.tsx`)
+
+- Search/category/status filters are local component state, applied
+  client-side over a single fetched document-template list.
+- Admin visibility gate: `isSuperAdmin || isVivacityStaffRole(...)`, checked
+  in-component (line ~1568) — **not** a route guard; the route itself is the
+  plain `ProtectedRoute` group with no `requireSuperAdmin`/`allowedRoles`.
+- Category tree drives grouping/filtering of the same fetched list, not a
+  separate query.
+
+### Generate (both paths)
+
+- **Bulk/targeted:** `TargetedMode.tsx` builds a tenant→package→stage→document
+  selection, calls `useBulkGenerateLauncher`'s `preview_targeted` then
+  `create_targeted`; `PreviewPanel` shows the preview result before commit;
+  `DeliveryGuardPanel` blocks commit on an unacknowledged incomplete-readiness
+  state from `useDocumentDeliveryGuards`.
+- **Single-document:** `ManageDocuments.tsx` launches `GovernanceDeliveryDialog`
+  directly for a chosen template/tenant pair; the dialog independently computes
+  readiness (via the same shared `useDocumentDeliveryGuards` hook) and calls
+  `deliver-governance-document`, a different Edge Function than the bulk path.
+
+### Resume
+
+- `bulk-generate-documents-resume-stalled` is a cron-style backstop, not a
+  user-initiated action from the frontend UI investigated here — no in-app
+  "resume" button was found in `BulkDocumentJobProgress.tsx`; resume is
+  server-driven for stalled jobs. `BulkDocumentJobProgress.tsx` does expose
+  user-initiated **retry** (a different action, for failed/skipped items, via
+  the `retry`/`skip_items`/`requeue_skipped` launcher commands) — retry and
+  resume are not the same behavior and must not be conflated in a later
+  extraction.
+
+### Deliver
+
+Two independent contracts, as above: `useBulkGenerateLauncher`'s
+`create_delivery` command (bulk path) vs. `GovernanceDeliveryDialog`'s direct
+`deliver-governance-document` call (single-document path). Both gate on
+`useDocumentDeliveryGuards` readiness first.
+
+### Version-state
+
+`GovernanceVersionImportDialog.tsx` handles version import for the
+single-document/governance path in `ManageDocuments.tsx`. No equivalent
+version-import flow was found in the bulk/targeted path — version-state
+appears to be a governance-path-only concept in the current code, not a
+shared concern across both workflows. This should be confirmed, not assumed,
+before any extraction treats it as a shared seam.
+
+## Route registration and guard tier
+
+All documents/generation routes sit under the plain `ProtectedRoute` +
+`DashboardLayoutRoute` group (`src/routes/dashboardRoutes.tsx`) — no
+`requireSuperAdmin`, no `allowedRoles` at the router level:
+
+| Route | Component |
+|---|---|
+| `/manage-documents` | `ManageDocuments` |
+| `/manage-documents/bulk-generate/new` | `BulkGenerateNew` |
+| `/manage-documents/bulk-jobs` | `BulkDocumentJobsList` |
+| `/manage-documents/bulk-jobs/:id` | `BulkDocumentJobProgress` |
+| `/tenant/:tenantId` | `ClientDetail` (hosts `GeneratedDocumentsTab` via `DocumentsHub`) |
+
+Each of the three bulk-generate pages instead does an identical page-local
+`useUserAccess().isVivacityStaff` check, rendering a shell-wrapped
+"you don't have access" message rather than a pre-shell redirect — confirmed
+via each file plus the routing-hoist migration comment in
+`dashboardRoutes.tsx`, which explicitly preserved this as intentional (not
+one of the flagged hard-redirect pages). `ManageDocuments.tsx` gates its own
+admin view the same way. This is the same "page-local check retained
+deliberately" pattern already ruled on in [ADR-029](../../decision-trail.md#adr-029)
+for a different route family — any future extraction here preserves these
+checks unchanged for the same reason, rather than treating them as
+redundant-by-construction.
+
+Also worth noting for the retired-file sweep: `TenantDocuments.tsx`,
+`TenantDocumentsHub.tsx`, `TenantDocumentDetail.tsx`, and
+`TenantDocumentDetailWrapper.tsx` are already retired/unreachable (Phase 2.6
+P4-B/P6-B) — their routes `Navigate` straight to `ClientDetail`'s `documents`
+tab. No further action needed on them from this packet.
+
+## Open questions before scoping an extraction PR
+
+1. Should the bulk/targeted path and the single-document governance path be
+   extracted as **two separate, narrower feature boundaries** rather than one
+   unified "documents" module, given how little they actually share?
+2. Is `useMissingMergeFields.tsx`'s merge-field-gap logic meant to converge
+   with `useDocumentDeliveryGuards.ts`'s readiness logic, or are they
+   deliberately separate (one older, one newer)? Needs a source-history/PR
+   check before either is touched.
+3. `ManageDocuments.tsx` at 2,788 lines is far over the plan's ~600-line
+   per-slice orchestrator target — a first extraction pass there (category
+   tree, template CRUD, list/filter state) may be worth sequencing before the
+   bulk-generate seams, since it is the single largest file and the most
+   self-contained sub-concern (template CRUD does not touch delivery/status
+   logic at all).
+
+## Definition of done for this packet
+
+This characterization packet is complete once reviewed; it does not itself
+require lint/typecheck/test/build verification since no code changed. The
+next step is a decision on question 1 above (via Codex/Carl discussion or a
+direct Carl call, matching the Phase 3 precedent of characterize-then-decide)
+before any extraction PR is scoped.
