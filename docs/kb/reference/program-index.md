@@ -20,7 +20,7 @@ initiatives. Start here for "where does this program stand," go to
 | Initiative | Status | Current phase/packet | Master plan |
 |---|---|---|---|
 | Codebase Optimization | active | Phase 2.6 stabilization — Phase 3 lifecycle pilot underway; P7-B/P7-C complete and the P7-D auth/profile/membership contract-seam scope complete through PR #1079 | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
-| RBAC v6 | planning | Implementation plan only — no production migration, Edge deployment, permission grant, or role change authorized yet; awaiting the plan's own §13 decisions from Vivacity | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
+| RBAC v6 | planning | Implementation plan only — §13 policy baseline agreed 2026-09-10 for read-only/shadow preparation; no production migration, Edge deployment, permission grant, or role change authorized yet | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
 | Tenant Operating Model | planning | Council-reviewed implementation plan; no implementation or production mutation authorized in the planning session itself | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | Current implementation reconciliation (2026-09-08): P3-A has contained the legacy stage-health signal on the main dashboard, executive widget, triage views, and Ask Viv hotspot tool | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
 
@@ -34,7 +34,7 @@ real-time state.
 | Initiative | Current phase/packet | Branch | Owner/tool | Started |
 |---|---|---|---|---|
 | Codebase Optimization | Phase 3 lifecycle pilot — P7-D auth/profile/membership contract-seam scope closed through PR #1079; no active bounded packet allocation recorded | — | — | — |
-| RBAC v6 | Awaiting Vivacity decisions (§13) | — | — | — |
+| RBAC v6 | §13 policy baseline recorded; implementation packet not authorized | — | — | — |
 | Tenant Operating Model | Awaiting Carl/Vivacity decisions (§18) | — | — | — |
 | Client Health Activity Analytics | P3-A consumer containment closed 2026-09-08 | — | — | — |
 
@@ -60,9 +60,12 @@ real-time state.
 
 ## Open decisions blocking further work
 
-- RBAC v6 §13 — 13 decisions required from Vivacity before implementation
-  (staff all-tenant access scope, role-catalogue ownership, break-glass
-  accounts, etc.) — see the plan itself for the full list.
+- RBAC v6 §13 — policy baseline agreed 2026-09-10 for read-only/shadow
+  preparation (broad internal-staff context, seat/profile taxonomy, hard-SA
+  boundary, grants, messaging, AI context, QA, and shadow thresholds); exact
+  capability rows and implementation sequencing remain packet-level work, while
+  items 14/15 remain explicitly parked — see the plan itself for the full
+  disposition.
 - Tenant Operating Model §18 — 14 decisions required from Carl/Vivacity,
   including item 14: how the 72 tenant-less `public.users` rows should
   actually be classified/assigned (parked 2026-09-08 during the
