@@ -140,7 +140,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
 
   // Auto-expand all active packages on first load
   useEffect(() => {
-    if (packages.length > 0 && expandedPackages.size === 0 && !autoExpandPackageInstanceId) {
+    if (packages.length > 0 && activePackages.length > 0 && expandedPackages.size === 0 && !autoExpandPackageInstanceId) {
       const activeIds = new Set(activePackages.map(p => parseInt(p.id, 10)));
       setExpandedPackages(activeIds);
     }
