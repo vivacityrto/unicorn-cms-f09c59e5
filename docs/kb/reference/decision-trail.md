@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 10-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-024 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 11-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-025 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -1112,6 +1112,109 @@ future initiative scoping, not implied authorization from this ADR.
 - [Tenant Operating Model plan, §9.4 retrieval projection v2](tenant-operating-model-data-architecture-plan-2026-09-02.md#94-retrieval-projection-v2)
 - [Tenant Operating Model plan, §9.5 Ask Viv acceptance gates](tenant-operating-model-data-architecture-plan-2026-09-02.md#95-ask-viv-acceptance-gates)
 - [Audit-log inventory retention assumption](../codebase-state/audit-log-inventory.md)
+
+---
+
+### ADR-025: First governed BI question is a real-signal consultant-attention watchlist, not a resurrected composite score {#adr-025}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 10 asked what the first
+governed BI decision the analytical pilot must support should be. Three
+research threads (retired-infrastructure/code inspection, live-schema
+signal inventory, external BI-methodology research) informed this
+decision rather than picking a question speculatively:
+
+- The dormant `run-retention-forecast` Edge Function (a "Composite
+  Retention Risk Index" combining engagement/utilisation/pressure/
+  risk-overlap sub-scores) has never produced a single row — it queries
+  `consult_logs.duration_minutes`, a column that does not exist in the
+  live schema (the real column is `hours`), throwing before any insert.
+  `tenant_retention_forecasts` and `tenant_package_burn_forecast` are
+  both empty live. The Client Health Activity Analytics plan already
+  proposes six governed dimensions on paper, including one named
+  "Consultant Attention/Triage," but none are implemented.
+- Live inspection found real, currently-computable signals already
+  sitting largely unused for this purpose: 2,658 overdue tasks across
+  active tenants, 7 of 58 active tenants with an overdue Xero invoice, 26
+  of 88 active packages already past their renewal date, and only 2 of
+  58 active tenants showing genuine 30-day activity silence across every
+  activity source (a rare, strong signal, not a noisy one). Separately,
+  `v_stage_health_latest` computes real, fresh, granular stage-health
+  data (357,471 `stage_health_snapshots` rows, latest generated days
+  before this decision) that is not currently wired into
+  `v_dashboard_attention_ranked`'s rollup — `worst_stage_health_status`
+  is hardcoded `'unavailable'` there instead of joining it.
+- External research (Gainsight, Totango, Vitally, ChurnZero, and
+  peer-reviewed churn-prediction literature) converges on: don't build a
+  single weighted composite health score first — that is the most common
+  early-stage mistake. Start with 3-5 independently-visible
+  leading-indicator flags sourced from real signals, weighted toward
+  relationship-cadence and obligation/deadline proximity (not raw usage
+  volume) for a high-touch, relationship-based business, surfaced as an
+  actionable watchlist. Only combine into a validated weighted composite
+  once enough real outcomes exist to backtest the weights against.
+
+**Decision:**
+
+1. The first governed BI question is **"which active clients need
+   consultant attention this week, and why"** — a triage/watchlist
+   question, not a churn-prediction composite score.
+2. Build it from real, currently-live signals only: overdue tasks,
+   overdue Xero invoices, renewal-date-passed packages, wiring the
+   already-computed `v_stage_health_latest` data into the attention
+   rollup (fixing a real orphaned-data gap, not building new
+   infrastructure), and 30-day activity silence.
+3. `run-retention-forecast`/`run-tenant-risk-forecast`'s schema-mismatch
+   bugs and their eventual resurrection as a validated composite score
+   are explicitly deferred to a later phase, once the watchlist above
+   produces enough real outcomes (renewals, churns, escalations) to
+   backtest composite weights against — not built now as the first
+   deliverable.
+4. This decision names the first *question*; the exact watchlist
+   thresholds, weighting (if any), and UI surface are implementation
+   detail for a separately authorized, bounded packet under the Client
+   Health Activity Analytics initiative.
+
+**Reasoning:** Building on real, already-computed data (stage health)
+and real, currently-true signals (overdue tasks/invoices/renewals,
+genuine activity silence) delivers something usable immediately without
+inventing unvalidated weights. It also matches the external-research
+consensus for a business in this exact shape (high-touch, relationship-
+managed, compliance-obligation-driven) — leading indicators tied to
+deadlines and relationship cadence outperform raw usage-volume signals
+for this GTM motion, and a watchlist of independent flags is safer to
+trust on day one than a composite score with invented weights.
+
+**Alternatives considered:** Fixing `run-retention-forecast`'s schema bug
+and shipping its existing composite formula as the first deliverable was
+rejected — the formula's weights were never validated against any real
+outcome, and the external research explicitly names this as the most
+common early-stage mistake in health/churn scoring. Waiting to build
+anything until a full composite model is designed was also rejected — it
+would delay real value (the CSC team gets nothing) while the real,
+already-available signals (especially the orphaned stage-health data)
+sit unused.
+
+**Risks accepted:** A watchlist without a validated weighting could
+under- or over-flag some accounts relative to a future, better-calibrated
+composite score — accepted as normal for a first iteration, and this
+decision explicitly plans to revisit with real backtest data once
+available.
+
+**Consequences:** TOM §18 item 10 is closed as a policy question. Items
+11-13 remain open. The actual watchlist implementation (schema, RLS
+scoping per ADR-019/024, UI surface, `v_stage_health_latest` rollup fix)
+is separately authorized implementation work under the Client Health
+Activity Analytics initiative — normal branch/PR/verification/
+audit-entry rules apply per `AGENTS.md`.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 10](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §10 analytics and business intelligence path](tenant-operating-model-data-architecture-plan-2026-09-02.md#10-analytics-and-business-intelligence-path)
+- [Client Health Activity Analytics plan](client-health-activity-analytics-plan-2026-09-03.md)
+- [Phase 3 client-health consumer characterization](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md)
 
 ---
 
