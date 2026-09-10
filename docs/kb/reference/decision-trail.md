@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 4-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, and ADR-018 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 4, 6-13 (item 4's classification investigation is in progress but not yet closed). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, and ADR-019 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -632,6 +632,100 @@ bare `id` is a conformance gap against this ADR, not a judgment call.
 **Linked to:**
 - [Tenant Operating Model plan, §18 item 3](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §7.1 bounded source-of-truth model](tenant-operating-model-data-architecture-plan-2026-09-02.md#71-bounded-source-of-truth-model)
+
+---
+
+### ADR-019: `tenant_members` ratified as the canonical membership/access-authority table {#adr-019}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 5 asked which of `tenant_users`
+and `tenant_members` is authoritative for membership, contacts,
+invitations, and client administration. Live inspection (current
+`origin/main`) found the two tables serve genuinely different concepts,
+and both currently gate real access — this is a live architectural risk,
+not just a naming ambiguity:
+
+- `tenant_members` (936 rows) carries the invitation/membership-lifecycle
+  concept: `role`, `status`, `invited_at`, `joined_at`. `has_tenant_access_safe()`
+  (checks `tenant_members.status = 'active'`) is referenced by **175 RLS
+  policies** and called from 18 other functions — the dominant access gate
+  across the schema.
+- `tenant_users` (576 rows) carries contact/relationship metadata
+  `tenant_members` has no columns for: `primary_contact`,
+  `secondary_contact`, `access_scope`, `relationship_role`,
+  `position_type`. `user_has_tenant_access_safe()`/`user_has_tenant_access()`
+  (checks only row existence in `tenant_users`, no status concept) is
+  referenced by **32 RLS policies directly**, on real client-facing
+  surfaces: `notes`, `portal_documents`, `evidence_requests`/
+  `evidence_request_items`, `client_impact_reports`/`client_impact_items`,
+  the EOS accountability-chart tables, `staff_task_instances`,
+  `tenant_addresses`.
+- Confirmed none of those 32 policies reference the contact-specific
+  columns in their predicate — they check row existence only. This means
+  the 32-policy surface can be repointed to `tenant_members`-based access
+  without losing any RLS-level distinction; only the contact/relationship
+  *data* (not the access decision) needs to migrate.
+- A client user whose `tenant_members` row is fine but whose
+  `tenant_users` row is missing or stale (or vice versa) can see their
+  dashboard but not their own documents/notes/evidence requests, or the
+  reverse — a real, live inconsistency, not a hypothetical one. (Separately,
+  a large historical `tenant_members` orphan population from an
+  unremapped tenant-ID renumbering event was investigated for §18 item 4
+  and found to be dormant migration debris, not a live incident — see the
+  item 4 investigation notes once closed.)
+
+**Decision:**
+
+1. `tenant_members` is ratified as the canonical table for membership,
+   access authority, invitations, and client administration.
+2. `tenant_users`' contact-relationship concepts (primary/secondary
+   contact, access scope, relationship role, position type) are not
+   discarded — they migrate onto (or alongside, keyed through)
+   `tenant_members` rather than remaining a second, independent access
+   authority.
+3. The 32 RLS policies currently gated by `user_has_tenant_access_safe()`/
+   `user_has_tenant_access()` are repointed to the `tenant_members`-based
+   gate as part of this consolidation, since none of them depend on the
+   contact-specific columns for their access decision.
+4. The one-primary-contact-per-tenant business rule (already a live
+   invariant under current indexes/RPC behavior) is preserved through the
+   consolidation, not silently dropped.
+
+**Reasoning:** Two independent, live access authorities for the same
+underlying concept ("does this user belong to this tenant") is a defect
+class, not a stable design — it means a user's actual access depends on
+which specific policy is guarding the surface they're touching, not one
+consistent membership check. `tenant_members` is the better foundation
+because it already models the concept `tenant_users` lacks entirely
+(invited/active/inactive), while `tenant_users`' contact metadata is
+additive information about an already-established membership, not a
+competing definition of membership itself.
+
+**Alternatives considered:** Making `tenant_users` canonical instead was
+rejected — it has no status/invitation-lifecycle concept at all, so
+promoting it would require inventing that concept from scratch rather than
+reusing what already exists and is already the dominant gate. Leaving both
+tables as parallel authorities (status quo) was rejected as the exact
+defect this decision exists to close.
+
+**Risks accepted:** Repointing 32 RLS policies on real client-facing tables
+(`notes`, `portal_documents`, `evidence_requests`, EOS accountability data)
+is a real, live-surface change requiring careful per-table verification and
+Playwright coverage before it ships — this ADR authorizes the direction,
+not the migration itself.
+
+**Consequences:** TOM §18 item 5 is closed as a policy question. Items 4,
+6-13 remain open (item 4's classification work is in progress, separate
+from this policy decision). The consolidation migration, the RLS repoint,
+and the contact-data migration are each separately authorized
+implementation work — normal branch/PR/verification/audit-entry rules
+apply per `AGENTS.md`.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 5](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §5.4 relationship integrity candidates](tenant-operating-model-data-architecture-plan-2026-09-02.md#54-relationship-integrity-candidates)
 
 ---
 
