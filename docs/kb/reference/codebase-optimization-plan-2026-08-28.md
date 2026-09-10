@@ -550,6 +550,7 @@ The tenant program's P0.1 source inventory is now tracked separately from optimi
 4. Complete RBAC P0.2–P0.5 and the full P0 correctness exit gate before RBAC P2–P4 establishes the server decision core, shadow route-capability metadata, explicit staff-scope decision, and Academy/Package/Stage AJ/CSC pilot. Do not build a second optimization-era permission registry or cut over UI gates before server enforcement.
 5. Tenant P1/P2+ and database-affecting feature redesign begin only after the RBAC staff-scope/decision-core/pilot gates required by the tenant plan.
 6. Package/time, membership/contact/lifecycle, documents/delivery, messaging, Academy, Ask Viv, and analytics redesigns ship as authorization-aware vertical slices owned by their applicable RBAC/tenant phases. They are not bundled into Phase 2.6.
+7. Use this routing crosswalk for Phases 4–6; it is a discoverability aid, not a second authority or a new gate. Phase 4 hotspot packets may make separately authorized behavior-preserving fixes, but any new capability or tenant/data contract must link its owning [RBAC v6](rbac-v6-authorization-implementation-plan-2026-09-01.md) P4–P7 slice, [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md) P2–P8 slice, and/or [Client Health Activity Analytics](client-health-activity-analytics-plan-2026-09-03.md) H0–H7 slice. Phase 5 Edge convergence may consolidate response helpers while preserving the current authority mode; auth/subject/tenant/resource enforcement belongs to RBAC P5/P6, tenant/event/Ask Viv contracts to Tenant P5/P6, and health/activity contracts to the applicable Client Health H2/H5/H7 work. Phase 6 type-safety and module-boundary work may proceed independently when behavior- and policy-neutral; anything touching authorization, tenant identity, event/health projections, or AI context must link the relevant RBAC P0/P1/P3/P5/P8, Tenant P0/P1/P5/P6/P7/P8, or Client Health H0–H2/H5/H7 evidence packet and must not create a second registry or source of truth. Packet authors still follow the owning initiative’s phase gates and acceptance evidence.
 
 The entire optimization program does not need to finish before RBAC v6. Conversely, lower LOC never justifies inventing a new tenant source of truth, changing all-tenant staff visibility, trusting a caller-supplied tenant/resource binding, or dropping a database object without the live dependency and migration gates in the tenant/RBAC plans.
 
@@ -559,7 +560,9 @@ The entire optimization program does not need to finish before RBAC v6. Converse
 2. Minimal feature API/query/domain extraction.
 3. Code-adjacent architecture guide and scoped lint boundary.
 4. Auth/profile/membership split.
-5. Permission predicate consolidation in one route family.
+5. Permission predicate consolidation in one route family — deferred; no Codebase Optimization packet (see disposition below).
+
+**Phase 3 item 5 disposition.** The nine characterized page-local `requireSuperAdmin` checks remain unchanged. The dashboard-direct-layout migration plan explicitly preserved these checks as intentional defense-in-depth even where their predicates are value-identical to the route guard, so there is no P7-E deletion or consolidation packet in Codebase Optimization. Phase 3 closes with the four completed packets P7-A through P7-D. The broader canonical capability/predicate consolidation and retirement of duplicate raw checks remains deferred to RBAC v6 P3/P5/P8 under ADR-016; the Carl-approved deferral is recorded in [ADR-029](decision-trail.md#adr-029).
 
 **Exit gate:** the convention is demonstrably smaller/easier than the original and can be copied without creating boilerplate.
 
