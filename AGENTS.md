@@ -360,6 +360,54 @@ split, its list-fetch alone joining 6+ tables) showed that would be a bigger,
 riskier undertaking than the rule's intent — hence the two-oracle version
 above, converged on independently by both Claude and Codex the same session.
 
+## Phase 4 hotspot deepening — iterate a slice across bounded PRs (standing practice, added 2026-09-10)
+
+Landing one bounded extraction from a P6 slice's hotspot file is not the end
+of that slice — deepen it with the same discipline, one small PR at a time,
+rather than treating "we shipped a PR" as done or jumping straight to the
+next slice in the P6 order. Each iteration:
+
+1. **Re-investigate the same file for the next smallest safe seam.** A prior
+   extraction often exposes what was previously hidden inside a bigger
+   tangle — don't assume the first pass found everything reachable.
+2. **Verify reachability before extracting anything.** Grep for real call
+   sites (JSX references, prop passthroughs, indirect exports) before
+   treating a handler as live — a defined-but-uncalled function is dead
+   code, not an extraction candidate, and removing it outright is a
+   separate, zero-risk step. This generalizes the same reachability-triage
+   discipline the Phase 2.5/2.6 any-retirement and dead-code programs
+   already used (e.g. batch 46 and the `TenantDocuments`/
+   `TenantDocumentsHub` false-positive) to Phase 4 extraction candidates.
+   Real incident (2026-09-10): investigating `ManageDocuments.tsx`'s
+   "template CRUD" seam found `handleDuplicateDocument` and a
+   `window.confirm`-based `handleDeleteDocument` were both fully dead —
+   zero call sites — while the actual live delete flow was uncalled-out
+   inline JSX with no name at all. Both were confirmed with a plain
+   occurrence-count grep before touching anything.
+3. **Pick an oracle per the characterization-oracle rule above** for
+   whatever real, live behavior is being moved — this doesn't change PR to
+   PR just because the file already has a hook or two extracted; each new
+   seam is judged on its own.
+4. **Extract verbatim, run the full chain, open one PR, stop for approval.**
+   Never bundle a second seam into the same PR "since you're already in the
+   file" — each seam is its own reviewable, revertible unit, matching the
+   plan's "one workflow slice per PR" rule at the seam level, not just the
+   slice level.
+5. **Know when to stop deepening and move on (or ask).** Stop when: the
+   remaining seams are all heavily coupled with no clean next cut (state
+   shared across unrelated features, as `ManageDocuments.tsx`'s
+   `selectedDocuments`/`categories` are), a genuine product/policy question
+   blocks further progress (the Phase 3 item-5/ADR-029 pattern — defer
+   explicitly rather than force it), or the slice's own exit-gate check
+   (file size/testability/LOC trending the right way) suggests diminishing
+   returns for further cuts right now. Stopping a slice mid-file to defer
+   the rest is a valid outcome, not a failure to finish.
+
+Evidence this produces real progress, not busywork: `ManageDocuments.tsx`
+went from 2,788 to 2,581 lines (measured via `npm run metrics`) across two
+bounded PRs in one slice, each landing its own dead-code finding and its own
+tested seam, rather than one large speculative rewrite.
+
 ## Workflow efficiency checkpoints (standing practice, added 2026-09-04)
 
 When starting a new phase of a multi-batch plan (e.g. a new sub-phase of
