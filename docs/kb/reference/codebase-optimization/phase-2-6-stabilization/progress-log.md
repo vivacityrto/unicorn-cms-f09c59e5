@@ -32,6 +32,33 @@ the frontend suite had 344 passes/43 skips plus two unrelated five-second
 timeouts. Live authenticated verification was inconclusive because no QA
 session was available. Frontend-only; no audit entry required.
 
+**2026-09-10 — P7-D session machinery extracted into `src/auth/session.ts`
+(PR #1079):**
+Bounded next slice after the 2026-09-09 contract-seam separation below.
+`useAuth.tsx` still owned the session lifecycle inline — the
+`onAuthStateChange` listener, the `getSession()` bootstrap,
+`mountedRef`/`authGenerationRef` staleness guards, profile/membership fetch
+orchestration, `signOut`, and `refreshProfile` — while profile/membership
+*loading* and RBAC *predicates* already had their own seam files. Extracted
+that machinery into a `useAuthSession` hook in `src/auth/session.ts`;
+`useAuth.tsx` is now a thin React-context/RBAC wrapper over it. Guardrails
+followed: the hook is per-provider (state/refs/timers stay instance-scoped,
+no module-level singleton), and navigation stays owned by the wrapper via
+an `onSignedOut` callback so the seam doesn't depend on `react-router`. No
+change to the public `AuthContextValue` shape, listener/bootstrap ordering,
+or staleness-guard behavior. This task was split with a concurrent Codex
+session via the coordination board (Codex took the disjoint L10 #15
+doc-reconciliation packet, PR #1077).
+
+Verification: existing `src/test/auth/authentication.test.tsx` (8/8),
+`npm run test:frontend` (346 passed/43 skipped), `npm run test:edge` (281
+passed), `npm run lint:ratchet` (no regressions), `npm run typecheck` (0
+errors), `npm run build`, and a live authenticated Playwright pass against
+the SuperAdmin persona (dashboard load, a SuperAdmin-gated route, and the
+`/suggestions` redirect — 4/4) exercising the refactored auth path live.
+This closes out the bounded contract-seam scope of P7-D described below;
+see the plan's §9 packet status for the current summary.
+
 **2026-09-09 — P7-D auth contract seam separated (frontend-only):**
 Characterized the current auth/profile/membership consumers before editing:
 `AuthProvider` owns session state and Supabase I/O, `src/auth/loaders.ts`
