@@ -4,18 +4,12 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useToast } from "@/hooks/use-toast";
 import { userCapacityKeys } from "@/hooks/useUserCapacity";
 import {
-  mapClientInviteAccess,
-  type InviteAccessLevel,
-} from "@/features/client-identity/invite-policy";
+  sendClientInvite,
+  type InviteInput,
+} from "@/features/client-identity/sendClientInvite";
 
 export type { InviteAccessLevel } from "@/features/client-identity/invite-policy";
-
-export interface InviteInput {
-  email: string;
-  firstName: string;
-  lastName: string;
-  accessLevel: InviteAccessLevel;
-}
+export type { InviteInput } from "@/features/client-identity/sendClientInvite";
 
 interface EdgeError {
   ok?: boolean;
@@ -52,30 +46,7 @@ export function useInviteMutations() {
   };
 
   const invite = useMutation({
-    mutationFn: async (input: InviteInput) => {
-      if (!activeTenantId) throw new Error("No active tenant");
-      const mapping = mapClientInviteAccess(input.accessLevel);
-      const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: {
-          email: input.email.trim().toLowerCase(),
-          first_name: input.firstName.trim(),
-          last_name: input.lastName.trim(),
-          invite_as: "CLIENT",
-          tenant_id: activeTenantId,
-          unicorn_role: mapping.unicorn_role,
-          relationship_role: mapping.relationship_role,
-        },
-      });
-      if (error) {
-        const edge = await extractEdgeError(error);
-        const wrapped = new Error(edge?.detail || error.message) as Error & {
-          code?: string;
-        };
-        wrapped.code = edge?.code;
-        throw wrapped;
-      }
-      return data;
-    },
+    mutationFn: (input: InviteInput) => sendClientInvite(activeTenantId, input),
     onSuccess: (_data, input) => {
       toast({ title: "Invitation sent", description: `An email is on its way to ${input.email.trim()}.` });
       invalidate();
