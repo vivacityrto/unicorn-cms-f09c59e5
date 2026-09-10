@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { format, addYears, parseISO, subYears } from 'date-fns';
+import { format } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { ClientPackage } from '@/hooks/useClientManagement';
+import { computeRenewalWindow } from '@/features/packages/renewalWindow';
 
 interface RenewalConfirmDialogProps {
   open: boolean;
@@ -46,11 +47,10 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
   const [nullStatusCount, setNullStatusCount] = useState(0);
 
   // Renewal dates
-  const currentRenewal = pkg.next_renewal_date
-    ? parseISO(pkg.next_renewal_date)
-    : addYears(parseISO(pkg.membership_started_at), 1);
-  const periodStart = subYears(currentRenewal, 1);
-  const newRenewalDate = addYears(currentRenewal, 1);
+  const { currentRenewal, periodStart, newRenewalDate } = computeRenewalWindow({
+    next_renewal_date: pkg.next_renewal_date,
+    start_date: pkg.membership_started_at,
+  });
 
   useEffect(() => {
     if (!open) return;

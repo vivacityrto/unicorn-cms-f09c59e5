@@ -1,7 +1,10 @@
 # P6-3 Packages/Time Characterization
 
-> **Status:** characterization only — no extraction, no behavior change; one
-> discovered discrepancy flagged for a decision before extracting
+> **Status:** first extraction landed — renewal-window calculation
+> centralized into `src/features/packages/renewalWindow.ts`, converged on
+> Carl's leap-day decision (date-fns clip, 2026-09-11), and fixed a real
+> timezone bug found during the extraction itself (see "First extraction"
+> below)
 >
 > **Parent plan:** [Codebase Optimization and KB Renewal Plan](../../codebase-optimization-plan-2026-08-28.md) — Phase 4, P6 hotspot slice #3
 >
@@ -174,9 +177,61 @@ The allocation-mutation adapter and presentation-model seams are lower-risk
 follow-ups once this shared utility has coverage — they don't have the same
 duplication-drift risk this one does.
 
+## First extraction: shared renewal-window utility, plus a second real bug found
+
+Carl decided the leap-day fallback (2026-09-11): standardize on date-fns's
+`addYears` behavior (clip 29 Feb → 28 Feb), since it was the deliberate
+library choice already used by `RenewalConfirmDialog`, versus
+`ClientTimeTab`'s native-`Date` arithmetic being an unintentional artifact
+of not using a library. A live check confirmed zero of 1,052
+`package_instances` rows currently have a 29 Feb `start_date`/
+`next_renewal_date`, so this is a latent-bug fix, not a live-data
+correction.
+
+`computeRenewalWindow` (`src/features/packages/renewalWindow.ts`) now
+centralizes the calculation; both `RenewalConfirmDialog.tsx` and
+`ClientTimeTab.tsx`'s `PackageBurndownCards` call it.
+
+**A second, more consequential bug was found while doing the extraction
+itself, before it could ship:** `RenewalConfirmDialog` originally used
+date-fns's `parseISO` (which interprets a date-only string as **local**
+midnight) and only ever formatted the result back to a calendar-date string
+— timezone-invariant. `ClientTimeTab` originally used the native `Date`
+constructor on a date-only string (**UTC** midnight, per spec) and stored
+the result via `.toISOString()`, then compared calendar dates by string-
+slicing that UTC timestamp. Naively pointing both callers at the same
+`computeRenewalWindow` (built on `parseISO`, matching `RenewalConfirmDialog`)
+would have silently shifted `ClientTimeTab`'s stored window boundary back by
+one calendar day for any browser in a positive-UTC-offset timezone —
+including AEST/AEDT, this deployment's real timezone — reclassifying which
+months of real logged time fall inside the "current period" burn-down
+bucket. Caught this by writing a test that reproduced the original `new
+Date(dateString).toISOString()` output and comparing it against the naive
+migration's output, which failed; not caught by type-checking or a
+surface-level "looks verbatim" read.
+
+Fixed with a second exported helper, `toUtcMidnightIso(date: Date): string`,
+that reconstructs the calendar date via `format` (local-field-safe) and
+anchors it to UTC midnight explicitly — `ClientTimeTab` calls this instead
+of `.toISOString()` directly. Verified byte-identical to the original
+`new Date(dateString).toISOString()` output via a dedicated regression test,
+and re-ran the full `renewalWindow.test.ts` suite under `TZ=Australia/Sydney`,
+`TZ=America/New_York`, and `TZ=UTC` explicitly to confirm timezone-
+independence, not just correctness under the CI/dev-machine's own zone.
+
+Oracle: 6 focused unit tests (oracle 1) covering the normal case, the
+no-`next_renewal_date` fallback, the leap-day clip, the farsta-shaped
+anomalous-gap case (confirming the function doesn't try to repair bad data),
+and the two `toUtcMidnightIso` regression tests above. Also ran one scoped,
+read-only, authenticated SuperAdmin Playwright check confirming the Time
+tab's burn-down cards still render for a real tenant with an active package
+instance post-extraction — no time entry or renewal action performed.
+
 ## Definition of done for this packet
 
-This characterization packet is complete once reviewed. The next step is
-Carl's call on the leap-day fallback behavior (clip to 28 Feb vs. roll to
-1 Mar) before any extraction PR is scoped — this is not authorized by this
-packet.
+This packet's characterization and first extraction are both complete —
+full lint-ratchet/typecheck/test/build chain passed, plus the scoped
+Playwright check above. The allocation-mutation adapter and presentation-
+model seams (`EditTimeDialog.tsx`'s package-reassignment `.update()`;
+`PackageUsageBar.tsx` as a template) remain lower-risk follow-ups, not
+authorized by this PR.

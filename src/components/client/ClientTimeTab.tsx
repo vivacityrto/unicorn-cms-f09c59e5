@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
 import { useTimeEntriesPaginated, fetchAllMatchingTimeEntries, TIME_ENTRIES_PAGE_SIZE } from '@/hooks/useTimeEntriesPaginated';
 import { PeriodSelector, ALL_TIME_VALUE } from './PeriodSelector';
+import { computeRenewalWindow, toUtcMidnightIso } from '@/features/packages/renewalWindow';
 import { exportToCSV } from '@/lib/exportCsv';
 import { useAuth } from '@/hooks/useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
@@ -351,19 +352,19 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
       // Build renewal year window per instance
       const renewalWindowMap: Record<number, { start: string; end: string }> = {};
       (activeInstances || []).forEach((inst) => {
-        const renewalEnd = inst.next_renewal_date
-          ? new Date(inst.next_renewal_date)
-          : inst.start_date
-            ? new Date(new Date(inst.start_date).getFullYear() + 1, new Date(inst.start_date).getMonth(), new Date(inst.start_date).getDate())
-            : null;
-        if (renewalEnd) {
-          const renewalStart = new Date(renewalEnd);
-          renewalStart.setFullYear(renewalStart.getFullYear() - 1);
-          renewalWindowMap[inst.id] = {
-            start: renewalStart.toISOString(),
-            end: renewalEnd.toISOString(),
-          };
-        }
+        if (!inst.start_date) return;
+        const { periodStart, currentRenewal } = computeRenewalWindow({
+          next_renewal_date: inst.next_renewal_date,
+          start_date: inst.start_date,
+        });
+        // toUtcMidnightIso preserves the original `new Date(dateString)
+        // .toISOString()` (UTC-midnight parse) semantics used here -- see
+        // its own doc comment for why computeRenewalWindow's Date objects
+        // can't be passed straight to `.toISOString()`.
+        renewalWindowMap[inst.id] = {
+          start: toUtcMidnightIso(periodStart),
+          end: toUtcMidnightIso(currentRenewal),
+        };
       });
 
       // 2. Fetch burndown data only for active instances
