@@ -112,13 +112,19 @@ packets.
 
 ## Boundary and verification notes
 
-- This packet is characterization only. No source, migration, Edge Function,
-  database, or production row was changed.
+- The first bounded Stage 2 command adapter is now implemented in the review
+  branch: `sendClientInvite` owns only the existing client `invite-user`
+  invocation (input normalization, role mapping, active-tenant guard, and
+  structured Edge error propagation). `resend`, `revoke`, `copyLink`, and
+  `resetPassword` remain in the hook for later independently reviewed seams.
+  The adapter makes no Edge, RPC, schema, or control-flow contract changes.
 - Static source and migration review was completed from
   `origin/main@b63ea5fea`. The existing authenticated storage-state files were
-  copied into this worktree for a later authorized browser pass, but no dev
-  server, Playwright run, invitation, promotion, swap, or other write path was
-  exercised in this characterization turn.
+  copied into the implementation worktree. The source PR's verification
+  includes focused adapter/component tests, the full frontend and Edge suites,
+  typecheck, build, and a mutex-wrapped authenticated read-only pass over
+  `/client/users` and `/manage-invites`; no invitation, promotion, swap, or
+  other write path was exercised.
 - The later implementation packet must include role/capacity/RPC tests, the
   mixed real-user/ghost/FK matrix above, and a consolidated authenticated
   read-only Playwright pass over the real client users screen and the staff
