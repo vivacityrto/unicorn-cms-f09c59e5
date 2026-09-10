@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 4, 6-13 (item 4's classification investigation is in progress but not yet closed). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, and ADR-019 are canonical for current state.
+> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 added 2026-09-10 to record the Tenant Operating Model §18 item 2 decision (tenant status/lifecycle/access vocabulary and single-writer consolidation); ADR-018 added 2026-09-10 to record the TOM §18 item 3 decision (`tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integration contracts); ADR-019 added 2026-09-10 to record the TOM §18 item 5 decision (`tenant_members` ratified as the canonical membership/access-authority table; `tenant_users`' contact-relationship data migrates onto it rather than remaining a second access authority); ADR-020 added 2026-09-10 to record the TOM §18 item 4 classification (the `tenant_profile`/`tenant_members`/`package_instances` unmatched-row populations are migration-restore artifacts from unremapped tenant-ID renumbering events, approved for quarantine, not deletion). The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open, as do TOM §18 items 6-13. RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, ADR-017, ADR-018, ADR-019, and ADR-020 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -725,6 +725,90 @@ apply per `AGENTS.md`.
 
 **Linked to:**
 - [Tenant Operating Model plan, §18 item 5](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
+- [Tenant Operating Model plan, §5.4 relationship integrity candidates](tenant-operating-model-data-architecture-plan-2026-09-02.md#54-relationship-integrity-candidates)
+
+---
+
+### ADR-020: Unmatched `tenant_profile`/`tenant_members`/`package_instances` rows classified as migration-restore artifacts {#adr-020}
+**Date:** 2026-09-10
+**Status:** Decided baseline; implementation remains separately authorized
+**Decided by:** Carl
+
+**Context:** Tenant Operating Model §18 item 4 asked what the 758
+`tenant_profile` IDs, 349 unmatched `tenant_members` rows, and 25 unmatched
+`package_instances` rows represent. Live inspection (current `origin/main`)
+classified each population rather than leaving them as an unresolved
+count:
+
+- **`tenant_profile` (344 of 759 unmatched):** two single-day bulk-insert
+  events. 338 rows created 2026-05-09, every field null (pure empty
+  stubs). 6 rows created 2026-01-05 with real-looking legacy/test names,
+  including two deliberate old-system bucket concepts ("Unassigned
+  Clients", "Orphaned Users (No Company)").
+- **`tenant_members` (349 unmatched):** one single bulk-insert event,
+  2026-01-05, identical `joined_at`/`created_at` timestamps across every
+  row, referencing small sequential legacy tenant IDs (1, 2, 3, 4, 17,
+  20-26...) that predate the current `tenants` table's ID range — a
+  straight restore of old membership data without translating tenant IDs
+  to their post-renumbering values. Every referenced user is real (no
+  synthetic UUIDs). 43 of 349 have another working `tenant_members` row at
+  a real tenant (harmless duplicate). Of the remaining 306: 300 have no
+  `auth.users` account at all (never provisioned login credentials), zero
+  have signed in within 90 days, and only 5 have ever signed in (over a
+  year ago). One specific case (`peter@powerlinetraining.com.au`,
+  legacy tenant_id 233) was checked directly and found to already have a
+  second, correct, active row at the tenant's current ID (7502) — not
+  affected.
+- **`package_instances` (25 unmatched):** one single bulk-insert event,
+  2026-03-03. 24 of 25 have `membership_state='complete'`/`is_active=false`
+  (already-closed history). One row (id 15069, legacy tenant_id 3146,
+  17 of the 25 rows cluster on this same tenant_id) is flagged
+  `is_active=true` but has `hours_used=0` and a `next_renewal_date`
+  already 8 months lapsed with no renewal recorded, and no match found in
+  `clients_legacy` — likely dormant but not positively confirmed dead.
+
+**Decision:**
+
+1. All three unmatched-row populations are classified as migration-restore
+   artifacts from historical, unremapped tenant-ID renumbering events —
+   not live orphaned business data requiring urgent remediation.
+2. Approved for quarantine per the plan's standing "quarantine, never
+   delete without provenance" rule (§5.4) — retained, not deleted, pending
+   the tagging/labeling mechanism the eventual cleanup implementation
+   defines.
+3. Package instance id 15069 (the one ambiguous "active" row) is flagged
+   for a human eyeball before any archival action touches it — not
+   resolved by this decision.
+4. No code, schema, or data-mutation action is authorized by this decision
+   alone.
+
+**Reasoning:** Classifying by verifiable evidence (bulk-insert timestamps,
+auth-account existence, sign-in recency, cross-references against
+currently-active tenants) turns an open count into an actionable
+risk-ranked list, without guessing at intent or silently defaulting
+ambiguous rows to a single tenant as a side effect of unrelated work — the
+exact anti-pattern §18 item 14 (parked separately) already warned against
+for a different table.
+
+**Alternatives considered:** Treating all unmatched rows as uniformly
+low-risk historical debris was rejected — the `tenant_members` population
+specifically needed the auth-account/sign-in check before that
+classification could be trusted, and the initial pass (checking
+`tenant_users` instead of `tenant_members` itself) produced a materially
+wrong risk read that was caught and corrected during this same
+investigation.
+
+**Risks accepted:** None beyond normal investigation risk — no mutation
+was performed; classification rests on read-only evidence recorded above.
+
+**Consequences:** TOM §18 item 4 is closed. Items 6-13 remain open. Any
+future cleanup/archival implementation must cite this classification's
+evidence rather than re-deriving it from scratch, and must still route
+through `AGENTS.md`'s normal schema/data-mutation authorization and audit
+rules — this ADR classifies, it does not authorize a migration.
+
+**Linked to:**
+- [Tenant Operating Model plan, §18 item 4](tenant-operating-model-data-architecture-plan-2026-09-02.md#18-decisions-carlvivacity-must-approve)
 - [Tenant Operating Model plan, §5.4 relationship integrity candidates](tenant-operating-model-data-architecture-plan-2026-09-02.md#54-relationship-integrity-candidates)
 
 ---
