@@ -46,7 +46,10 @@ this session's own changes, flag it — don't stash, commit, or revert it.
    For schema/RLS/trigger work, link the audit entry.
 5. **Default: do not auto-merge** — stop after PR creation. Merge only if the
    user explicitly asks in that session; a grant from an earlier session does
-   not carry forward.
+   not carry forward. Exception: a docs-only PR (see `AGENTS.md → Write
+   permissions & branch naming`'s 2026-09-10 standing exception) may be
+   merged once its documentation checks pass, without a fresh per-session
+   ask.
 6. Summarise what shipped: branch name, commit SHA, PR URL.
 
 If both `gh` CLI and GitHub MCP are unavailable: stop at push and report the

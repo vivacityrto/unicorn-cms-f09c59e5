@@ -627,6 +627,21 @@ Rules, uniformly:
 - Never push to `main` directly. The only path to `main` is merging a PR, and
   that always requires a fresh, explicit in-session ask from the user — a
   standing "yes" from an earlier session does not carry over.
+  - **Standing exception — docs-only PRs (added 2026-09-10):** a PR whose
+    entire diff is documentation (`docs/**`, `README*`, `CONTRIBUTING*`,
+    other `.md` files) and touches no `src/`, `supabase/`, dependency,
+    workflow, or other non-doc file may be merged once its required
+    documentation checks pass (`check:kb-links` for KB changes,
+    `check-kb-doc-size.mjs`, `git diff --check`, and any CI checks on the
+    PR) — no per-session ask needed. Unlike the general rule above, this
+    grant is persistent across sessions, not just this one. It does not
+    extend to a PR that also touches any non-doc file, however small — mix
+    in a single source/config/migration change and the whole PR reverts to
+    the general "explicit ask" rule. It also does not extend to a PR that
+    edits this "Write permissions & branch naming" section or the "Session
+    end (commit conventions)" merge-policy line — changes to the merge
+    policy itself always need an explicit ask, so this exception can't
+    silently expand itself.
 - Never force-push.
 - Never delete branches or tags without explicit user confirmation.
 - Never amend commits that have been pushed.
@@ -934,4 +949,7 @@ as exclusively MCP-deployed and do not assume a migration merged to
 Conventional-commits style: `fix:`, `feat:`, `hotfix:`, `chore:`, `docs:`,
 `audit:`. PR description includes what changed, and for schema/RLS/trigger
 work, a pointer to the audit entry. Default: do not auto-merge — stop after PR
-creation; merge only on explicit in-session instruction.
+creation; merge only on explicit in-session instruction. Exception: a
+docs-only PR (see "Write permissions & branch naming" → the 2026-09-10
+standing exception) may be merged once its documentation checks pass,
+without a fresh per-session ask.
