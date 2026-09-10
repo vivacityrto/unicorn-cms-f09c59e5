@@ -123,6 +123,11 @@ packets.
   preserves its invitation-id payload, response, and structured Edge detail
   handling. `revoke`, `copyLink`, and `resetPassword` remain separate future
   seams; no invitation was resent during verification.
+- The following bounded Stage 2 adapter is now implemented in the review
+  branch: `revokeClientInvite` owns only the existing `cancel-invite`
+  invocation and preserves its invitation-id/reason payload, response, and
+  structured Edge detail handling. `copyLink` and `resetPassword` remain
+  separate future seams; no invitation was revoked during verification.
 - Static source and migration review was completed from
   `origin/main@b63ea5fea`. The existing authenticated storage-state files were
   copied into the implementation worktree. The source PR's verification

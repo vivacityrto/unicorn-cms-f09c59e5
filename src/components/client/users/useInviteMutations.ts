@@ -8,6 +8,7 @@ import {
   type InviteInput,
 } from "@/features/client-identity/sendClientInvite";
 import { resendClientInvite } from "@/features/client-identity/resendClientInvite";
+import { revokeClientInvite } from "@/features/client-identity/revokeClientInvite";
 
 export type { InviteAccessLevel } from "@/features/client-identity/invite-policy";
 export type { InviteInput } from "@/features/client-identity/sendClientInvite";
@@ -66,16 +67,7 @@ export function useInviteMutations() {
   });
 
   const revoke = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const { data, error } = await supabase.functions.invoke("cancel-invite", {
-        body: { invitation_id: invitationId, reason: "Revoked by tenant admin" },
-      });
-      if (error) {
-        const edge = await extractEdgeError(error);
-        throw new Error(edge?.detail || error.message);
-      }
-      return data;
-    },
+    mutationFn: revokeClientInvite,
     onSuccess: () => {
       toast({ title: "Invitation revoked", description: "The link in their email will no longer work." });
       invalidate();
