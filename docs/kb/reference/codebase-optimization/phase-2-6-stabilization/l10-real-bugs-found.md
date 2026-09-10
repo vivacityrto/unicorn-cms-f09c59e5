@@ -1283,6 +1283,22 @@ Authenticated live click-through was inconclusive because no QA session was
 available in this environment. No schema, RLS, backend, or data changes were
 made; no audit entry is required.
 
+### Follow-up audit of remaining unstable-array candidates — no additional confirmed regression (2026-09-10)
+
+Re-reviewed the remaining candidates from the Phase 2.5 dependency scan after
+the two confirmed render-loop fixes. `AttendancePanel` can receive a fresh
+`participants` array from one live-meeting caller, but its processed-user ref
+prevents duplicate mutations. `MetricEditorDialogV2` can rerun its duplicate
+check when `existingNames` is omitted, but the result is an idempotent string
+state update. `AssessmentEditorTab`, `GeneratedDocumentsTab`,
+`useTenantTimeTracker`, `AcademyLessonViewerPage`, and
+`TeamCommunicationsPage` all guard their effects on loaded/non-empty data or a
+ref/primitive condition. `SharePointFileBrowser` similarly has completion and
+loading guards. No additional user-visible loop, repeated write, or data-loss
+path was confirmed, so no code change is warranted for those candidates at
+this point. They remain watch-list items if a concrete report reproduces a
+failure.
+
 ### ClientPackagesTab all-completed state repeatedly updated — FIXED (PR #1082)
 
 The client packages tab could enter a render loop for a tenant whose package

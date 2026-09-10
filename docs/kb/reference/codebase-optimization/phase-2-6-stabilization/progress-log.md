@@ -4,6 +4,16 @@
 
 ## Progress log
 
+**2026-09-10 — remaining unstable-array candidates re-reviewed:**
+Rechecked the candidates found during the Phase 2.5 dependency scan after the
+linked-note and `ClientPackagesTab` render-loop fixes. `AttendancePanel`,
+`MetricEditorDialogV2`, `AssessmentEditorTab`, `GeneratedDocumentsTab`,
+`useTenantTimeTracker`, `AcademyLessonViewerPage`, `TeamCommunicationsPage`,
+and `SharePointFileBrowser` are guarded, idempotent, or completion-gated in
+their current call paths. No additional user-visible loop, repeated write, or
+data-loss path was confirmed. They remain watch-list items rather than code
+fixes until a concrete reproduction appears.
+
 **2026-09-10 — ClientPackagesTab all-completed render loop diagnosed and
 fixed (PR #1082):**
 The Phase 2.5 dependency cleanup in PR #536 added the derived
