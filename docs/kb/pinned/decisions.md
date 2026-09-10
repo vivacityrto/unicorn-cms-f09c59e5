@@ -33,6 +33,7 @@ The legacy ADR-001 through ADR-010 records live in reference/decision-trail.md b
 - [ADR-025] [2026-09-10] First governed BI question — "which active clients need consultant attention this week, and why" via a real-signal watchlist (overdue tasks/invoices/renewals, orphaned stage-health data, activity silence), not a resurrected composite churn score — full: [reference/decision-trail.md#adr-025](../reference/decision-trail.md#adr-025)
 - [ADR-026] [2026-09-10] Xero source of truth — ratified as authoritative for invoices/accounting; connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's — full: [reference/decision-trail.md#adr-026](../reference/decision-trail.md#adr-026)
 - [ADR-027] [2026-09-10] Test environment process — `unicorn-qa` ratified as the shared standing disposable environment for Tenant Operating Model mutation/cross-tenant testing too, not a second parallel environment — full: [reference/decision-trail.md#adr-027](../reference/decision-trail.md#adr-027)
+- [ADR-028] [2026-09-10] Risk/rollback parameters — three-tier observation-window/canary-cohort/performance-budget template (Critical/High/Medium); Carl is rollback owner for every tier. Closes all 13 TOM §18 decisions — full: [reference/decision-trail.md#adr-028](../reference/decision-trail.md#adr-028)
 
 ---
 
