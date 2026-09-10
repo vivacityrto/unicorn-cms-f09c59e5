@@ -209,7 +209,6 @@ export default function ManageDocuments() {
   const [sortField, setSortField] = useState<"title" | "id" | "versiondate">("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [nextOrderNumber, setNextOrderNumber] = useState<number | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [currentUserTenantId, setCurrentUserTenantId] = useState<number | null>(null);
@@ -305,7 +304,6 @@ export default function ManageDocuments() {
   const [createStep, setCreateStep] = useState<'browse' | 'metadata'>('browse');
   const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
   const [importingTemplate, setImportingTemplate] = useState(false);
-  const [pendingImportDocId, setPendingImportDocId] = useState<number | null>(null);
   // Version label for the document's first import -- no prior version to bump
   // from, so this is just a baseline (current year), editable, still required.
   const [newDocDisplayVersion, setNewDocDisplayVersion] = useState('');
@@ -808,16 +806,6 @@ export default function ManageDocuments() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      setUploadedFiles(prev => [...prev, ...Array.from(files)]);
-    }
-  };
-  const handleRemoveFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
   // Fire-and-forget AI description draft. Never overwrites text the user
   // has already typed — only fills in if description is still blank when
   // the response lands, since staff can type faster than a round trip.
@@ -885,25 +873,11 @@ export default function ManageDocuments() {
 
   const handleCreateDocument = async () => {
     try {
-      // Upload new files to storage if any
-      const newFileUrls: string[] = [];
-      const newFileNames: string[] = [];
-      if (uploadedFiles.length > 0) {
-        for (const file of uploadedFiles) {
-          const fileName = `${Date.now()}-${file.name}`;
-          const {
-            data: uploadData,
-            error: uploadError
-          } = await supabase.storage.from("document-files").upload(fileName, file);
-          if (uploadError) throw uploadError;
-          newFileUrls.push(uploadData.path);
-          newFileNames.push(file.name);
-        }
-      }
-
-      // Combine existing files with new uploads
-      const allFileUrls = [...existingFiles.map(f => f.url), ...newFileUrls];
-      const allFileNames = [...existingFiles.map(f => f.name), ...newFileNames];
+      // Preserve the document's already-uploaded files across a metadata edit
+      // (there is no manual upload/replace affordance in this dialog --
+      // uploaded_files is only ever populated via the SharePoint import below).
+      const allFileUrls = existingFiles.map(f => f.url);
+      const allFileNames = existingFiles.map(f => f.name);
       if (editingDocumentId) {
         // Update existing document
         const {
@@ -969,7 +943,6 @@ export default function ManageDocuments() {
 
         // Import the selected SharePoint template. If this fails, keep the
         // document row and let the user retry — do not roll back.
-        setPendingImportDocId(newDocId);
         setImportingTemplate(true);
         try {
           const { data: importData, error: importError } = await supabase.functions.invoke(
@@ -1001,7 +974,6 @@ export default function ManageDocuments() {
           // Keep dialog closed but preserve document row
         } finally {
           setImportingTemplate(false);
-          setPendingImportDocId(null);
         }
 
         // Drill into the newly created document detail view
@@ -1028,7 +1000,6 @@ export default function ManageDocuments() {
         is_core: true,
         is_tenant_downloadable: true,
       });
-      setUploadedFiles([]);
       setExistingFiles([]);
       setEditingDocumentId(null);
       setSelectedTemplate(null);
@@ -1177,7 +1148,6 @@ export default function ManageDocuments() {
               is_core: true,
               is_tenant_downloadable: true,
             });
-            setUploadedFiles([]);
             setExistingFiles([]);
             setSelectedTemplate(null);
             setNewDocDisplayVersion('');

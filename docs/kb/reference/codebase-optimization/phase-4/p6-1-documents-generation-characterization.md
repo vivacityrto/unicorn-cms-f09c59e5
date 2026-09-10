@@ -264,15 +264,57 @@ in this one PR (394 lines), on top of the 207 already removed by the two
 earlier extractions — 2,788 → 2,187 total, about 21.5%, across three PRs in
 this slice so far.
 
+## Fourth pass: investigating the create/edit template flow
+
+Re-investigated the file for the next seam per the deepening rule. The
+create/edit dialog (`formData`, `createStep` two-step wizard, SharePoint
+browse/import, `handleCreateDocument`, `handleNextFromBrowse`,
+`maybeGenerateDescription`) is confirmed live and reachable end to end — no
+dead handlers there. But the same investigation found more dead state one
+level in: `uploadedFiles`/`handleFileUpload`/`handleRemoveFile` (a manual
+file-upload path with no `<input type="file">` left anywhere in the JSX —
+the SharePoint browser replaced it) and `pendingImportDocId` (set and
+cleared around the import call, but its value was never read anywhere).
+
+One correction to the investigation that surfaced this: `existingFiles` is
+**not** dead, despite looking similar in shape to `uploadedFiles` — it's
+populated on edit (from the document's already-uploaded files) and read on
+save to preserve them, since this dialog has no interactive replace/remove
+affordance. Verified directly (not just trusted) before removing anything
+adjacent to it, given the two states looked superficially identical.
+
+Removed: `uploadedFiles` state and its two dead handlers, `pendingImportDocId`
+and its two write-only call sites, and simplified `handleCreateDocument`'s
+file-array construction to read directly from `existingFiles` (the
+`uploadedFiles`-driven upload branch could never run, so removing it changes
+nothing observable). `ManageDocuments.tsx`: 2,187 → 2,157 lines.
+
+The create/edit dialog's real logic (the step machine, the two Supabase
+mutation branches, the SharePoint import call) remains untouched and is the
+next candidate — recommended smallest next cut: extract just the
+create/update Supabase calls plus `maybeGenerateDescription` into a
+`useDocumentTemplateSave`-style hook (mirroring `useDocumentTemplateDeletion`),
+leaving the step machine and dialog JSX in the parent. This flow has zero
+existing test coverage, so that extraction needs its own oracle chosen per
+the characterization-oracle rule before proceeding — not authorized by this
+packet.
+
+## Running total
+
+`ManageDocuments.tsx`: 2,788 → 2,157 lines (-631, ~22.6%) across four PRs in
+this slice, plus a real 9-month-old production regression found and
+resolved (Bulk Send) — none of it forced through a single large rewrite.
+
 ## Definition of done for this packet
 
 This characterization packet, plus its extractions and the Bulk Send
 retirement above, is complete once the full lint-ratchet/typecheck/test/
 build chain passes for each PR. No Playwright pass was required for any of
-the three PRs so far — two were compiler-/test-provable pure moves, and the
-third was deletion of code that was already unreachable, so there is no
-user-facing behavior to regress. Any further extraction (template CRUD
-create/edit, category-tree state, or the still-present category-fetch
-duplication between the local `fetchCategories` and the `useDocumentCategories`
-hook) needs its own oracle chosen per the characterization-oracle rule, and
-is not authorized by this packet.
+the four PRs so far — three were compiler-/test-provable pure moves or dead-
+code deletions, and the fourth (Bulk Send) deleted code that was already
+unreachable, so there was no user-facing behavior to regress in any of them.
+Any further extraction (the create/edit save logic, category-tree state, or
+the still-present category-fetch duplication between the local
+`fetchCategories` and the `useDocumentCategories` hook) needs its own oracle
+chosen per the characterization-oracle rule, and is not authorized by this
+packet.
