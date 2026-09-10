@@ -211,12 +211,68 @@ extraction is attempted here; that remains blocked on writing a real
 characterization test suite first, matching the Phase 3 precedent's own
 requirement.
 
+## Second extraction: delete/bulk-delete, plus two dead functions removed
+
+Deepening the same slice per the standing "iterate a slice across bounded
+PRs" practice: re-investigating the file after the pure-function PR found
+`handleDuplicateDocument` and a `window.confirm`-based `handleDeleteDocument`
+were both fully dead — zero call sites anywhere in the file, confirmed by
+occurrence-count grep before removal. The actual live delete flow (single-
+document delete with an impact preview, and bulk-delete) was inline JSX/
+closures with no name and no oracle. Extracted verbatim into
+`src/features/document-templates/useDocumentTemplateDeletion.ts`, with 8
+new focused unit tests as the oracle (per the AGENTS.md characterization-
+oracle rule) — no live Playwright pass, since the mutation logic now has
+real unit coverage and this file manages the shared production document-
+template catalogue, not tenant-scoped test data suitable for a live pass.
+
+## Third finding: Bulk Send has been silently dead since 2025-12-18 — retired, not fixed
+
+Continuing to deepen the same file, `isBulkSendDialogOpen`'s only `true`
+assignment was found to not exist anywhere in the file — the entire Bulk
+Send dialog (send selected documents to a specific user by email, or to a
+filtered list of tenants) was unreachable. `git log -S` traced this to a
+single Lovable auto-commit (`a8f1c8ad7`, 2025-12-18, author
+`gpt-engineer-app[bot]`) that restructured a JSX fragment holding two
+sibling buttons (Delete and Send) into a group with only one, silently
+dropping the Send trigger while leaving its handlers, dialog, and state
+fully intact underneath — the exact "Lovable bundles unrequested changes
+into an unrelated fix" failure mode this repo's own guardrail section
+already warns about. The feature was live and functional for however long
+it existed before that commit, then silently unreachable for roughly nine
+months with no error, log, or user report.
+
+Presented to Carl as a product decision (restore the trigger vs. retire the
+feature), not decided unilaterally. Carl's decision: **retire it.** The
+`GovernanceDeliveryDialog`/`deliver-governance-document` "Deliver to
+Clients" flow is the canonical multi-tenant delivery path — it does
+everything Bulk Send's tenant-send path did, plus real readiness gating
+(merge-field completeness, TGA snapshot staleness, SharePoint governance-
+folder presence) and per-tenant delivery-history tracking that Bulk Send
+never had. Bulk Send's only capability Deliver to Clients doesn't cover —
+sending to one specific individual by email rather than a tenant — was
+confirmed not needed.
+
+Removed entirely: the dialog JSX, both send handlers
+(`handleBulkSend`/`handleBulkSendToTenants`) and their dialog-close/
+selection helpers, `fetchBulkSendUsers`/`fetchBulkTenants` and their mount-
+time calls, all `bulkSend*`/`bulk*Tenant*` state (14 `useState` declarations
+total), and the now-unused `Send`/`Mail`/`Building2` icon imports. No
+replacement code — this was a straight deletion of unreachable code, not an
+extraction. Net effect: `ManageDocuments.tsx` went from 2,581 to 2,187 lines
+in this one PR (394 lines), on top of the 207 already removed by the two
+earlier extractions — 2,788 → 2,187 total, about 21.5%, across three PRs in
+this slice so far.
+
 ## Definition of done for this packet
 
-This characterization packet, plus its first bounded extraction (the
-pure-function boundary above), is complete once the full lint-ratchet/
-typecheck/test/build chain passes. No Playwright pass is required — the
-change is a pure code move with new tests, compiler- and test-provable, no
-component behavior altered. Any further extraction (state/query/mutation
-boundary for template CRUD or category-tree) needs its own characterization
-test suite written first, and is not authorized by this packet.
+This characterization packet, plus its extractions and the Bulk Send
+retirement above, is complete once the full lint-ratchet/typecheck/test/
+build chain passes for each PR. No Playwright pass was required for any of
+the three PRs so far — two were compiler-/test-provable pure moves, and the
+third was deletion of code that was already unreachable, so there is no
+user-facing behavior to regress. Any further extraction (template CRUD
+create/edit, category-tree state, or the still-present category-fetch
+duplication between the local `fetchCategories` and the `useDocumentCategories`
+hook) needs its own oracle chosen per the characterization-oracle rule, and
+is not authorized by this packet.
