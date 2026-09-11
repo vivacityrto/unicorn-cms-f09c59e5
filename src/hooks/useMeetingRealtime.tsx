@@ -1,26 +1,25 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import {
+  createMeetingRealtimeChannel,
+  type MeetingRealtimeCallbacks,
+  type OnlineUser,
+} from '@/hooks/meetingRealtimeChannel';
 
-export interface OnlineUser {
-  user_id: string;
-  name: string;
-  avatar_url?: string;
-  online_at: string;
-}
+export type { OnlineUser } from '@/hooks/meetingRealtimeChannel';
 
 interface UseRealtimeOptions {
   meetingId: string;
   userId?: string;
   userName?: string;
   avatarUrl?: string;
-  onSegmentChange?: (payload: unknown) => void;
-  onHeadlineChange?: (payload: unknown) => void;
-  onTodoChange?: (payload: unknown) => void;
-  onSegueChange?: (payload: unknown) => void;
-  onIssueChange?: (payload: unknown) => void;
-  onOnePhraseCloseChange?: (payload: unknown) => void;
-  onPresenceChange?: (payload: OnlineUser[]) => void;
+  onSegmentChange?: MeetingRealtimeCallbacks['onSegmentChange'];
+  onHeadlineChange?: MeetingRealtimeCallbacks['onHeadlineChange'];
+  onTodoChange?: MeetingRealtimeCallbacks['onTodoChange'];
+  onSegueChange?: MeetingRealtimeCallbacks['onSegueChange'];
+  onIssueChange?: MeetingRealtimeCallbacks['onIssueChange'];
+  onOnePhraseCloseChange?: MeetingRealtimeCallbacks['onOnePhraseCloseChange'];
+  onPresenceChange?: MeetingRealtimeCallbacks['onPresenceChange'];
 }
 
 export const useMeetingRealtime = ({
@@ -50,139 +49,12 @@ export const useMeetingRealtime = ({
   useEffect(() => {
     if (!meetingId) return;
 
-    const meetingChannel = supabase.channel(`meeting:${meetingId}`, {
-      config: {
-        presence: {
-          key: meetingId,
-        },
-      },
+    const meetingChannel = createMeetingRealtimeChannel({
+      meetingId,
+      getCallbacks: () => callbacksRef.current,
+      getUserInfo: () => userInfoRef.current,
+      onPresenceSync: setOnlineUsers,
     });
-
-    // Subscribe to segment changes
-    meetingChannel
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'eos_meeting_segments',
-          filter: `meeting_id=eq.${meetingId}`,
-        },
-        (payload) => {
-          callbacksRef.current.onSegmentChange?.(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'eos_headlines',
-          filter: `meeting_id=eq.${meetingId}`,
-        },
-        (payload) => {
-          callbacksRef.current.onHeadlineChange?.(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'eos_todos',
-          filter: `meeting_id=eq.${meetingId}`,
-        },
-        (payload) => {
-          callbacksRef.current.onTodoChange?.(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'eos_segue_shares',
-          filter: `meeting_id=eq.${meetingId}`,
-        },
-        (payload) => {
-          callbacksRef.current.onSegueChange?.(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'eos_issues',
-          filter: `meeting_id=eq.${meetingId}`,
-        },
-        (payload) => {
-          callbacksRef.current.onIssueChange?.(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'eos_meeting_one_phrase_closes',
-          filter: `meeting_id=eq.${meetingId}`,
-        },
-        (payload) => {
-          callbacksRef.current.onOnePhraseCloseChange?.(payload);
-        }
-      )
-      // Broadcast fallback: postgres_changes subscriptions for this project
-      // never actually register server-side (confirmed live 2026-07-24 -
-      // zero rows in realtime.subscription for eos_meeting_segments/
-      // eos_headlines/eos_todos despite an actively-joined channel with
-      // working presence), so no attendee ever receives a DB-driven change
-      // event. Presence on this same channel does work, so the mutating
-      // client now also broadcasts its own change directly over the
-      // channel - every other attendee's listener below reruns the same
-      // callback the postgres_changes handler above would have. Both stay
-      // wired in case Supabase's registration issue is fixed later.
-      .on('broadcast', { event: 'segment_change' }, ({ payload }) => {
-        callbacksRef.current.onSegmentChange?.(payload);
-      })
-      .on('broadcast', { event: 'headline_change' }, ({ payload }) => {
-        callbacksRef.current.onHeadlineChange?.(payload);
-      })
-      .on('broadcast', { event: 'todo_change' }, ({ payload }) => {
-        callbacksRef.current.onTodoChange?.(payload);
-      })
-      .on('broadcast', { event: 'segue_change' }, ({ payload }) => {
-        callbacksRef.current.onSegueChange?.(payload);
-      })
-      .on('broadcast', { event: 'issue_change' }, ({ payload }) => {
-        callbacksRef.current.onIssueChange?.(payload);
-      })
-      .on('broadcast', { event: 'one_phrase_close_change' }, ({ payload }) => {
-        callbacksRef.current.onOnePhraseCloseChange?.(payload);
-      })
-      .on('presence', { event: 'sync' }, () => {
-        const state = meetingChannel.presenceState();
-        const rawUsers = Object.values(state).flat() as unknown as OnlineUser[];
-        setOnlineUsers(rawUsers);
-        callbacksRef.current.onPresenceChange?.(rawUsers);
-      })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
-        console.log('User joined:', newPresences);
-      })
-      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        console.log('User left:', leftPresences);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          const { userId, userName, avatarUrl } = userInfoRef.current;
-          await meetingChannel.track({
-            user_id: userId || 'anonymous',
-            name: userName || 'Anonymous',
-            avatar_url: avatarUrl || null,
-            online_at: new Date().toISOString(),
-          });
-        }
-      });
 
     setChannel(meetingChannel);
 
