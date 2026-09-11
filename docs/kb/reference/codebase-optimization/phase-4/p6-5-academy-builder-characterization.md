@@ -150,3 +150,40 @@ video), `handleGenerate`/`handleConfirmSplit` (workshop/video-split mode,
 parallel to the showcase mode), and `handleSave` (the actual course
 create/update write). Each still needs its own oracle decision before
 extraction.
+
+## Deliberately paused (2026-09-11)
+
+Slice 5 stops here after 4 merged seams (PRs #1138, #1140, #1141, #1143;
+`AcademyAddCoursePage.tsx` 2,530 -> 2,388 lines, -5.6%), matching the
+Phase 4 deepening standing practice's stop condition: the remaining
+seams are meaningfully more coupled than what's already been cut, not
+comparably-sized siblings of the ones just done.
+
+- `handleGenerate`: ~125 lines, sequential multi-step pipeline (Vimeo
+  transcript fetch -> optional DB duplicate-course check -> either
+  workshop-segment AI generation or classification+description AI
+  generation), fanning out to 12+ page state setters
+  (`setTranscript`/`setHasTranscript`/`setDurationSeconds`/
+  `setThumbnailUrl`/`setTitle`/`setEpisodeTitle`/
+  `setTranscriptTimestamped`/`setDrafts`/`setSplitConfirmed`/
+  `setSegments`/`setSegmentsFallback`/`setTargetAudience`/`setDifficulty`/
+  `setTags`/`setShortDescription`/`setDescription`/`setGenerated`/
+  `setDuplicateVideo`). A verbatim extraction would need to either return
+  a large combined result object the wrapper unpacks into all of those
+  setters (weak isolation, most of the value of "no Supabase calls in
+  the page" is lost since the function's whole point is data flowing
+  into page state), or be split into 3+ smaller pure-command pieces
+  (transcript fetch, duplicate check, segment/classification generation)
+  each with their own oracle -- a real future packet, not a quick next
+  seam.
+- `handleConfirmSplit`: per-segment loop calling further Edge Functions,
+  same shape/risk class as the already-deferred `handleConfirmShowcase`.
+- `handleSave`: the actual course create/update database write -- by far
+  the highest-risk remaining handler in this file, deserves its own
+  dedicated characterization pass, not a quick cut alongside a lower-risk
+  seam.
+
+**Do not restart this slice without a fresh reason** -- per the Phase 4
+exit-checkpoint plan (`codebase-optimization-plan-2026-08-28.md`'s P6
+note), this file will also get another look during the cross-initiative
+exit re-audit once slices 5-8 are all through their current pass.
