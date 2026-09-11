@@ -50,6 +50,7 @@ import { fetchClientTenantStatus } from '@/hooks/fetchClientTenantStatus';
 import { fetchTenantHeadOfficeTransferDate } from '@/hooks/fetchTenantHeadOfficeTransferDate';
 import { fetchTgaDebugData } from '@/hooks/fetchTgaDebugData';
 import { fetchInitialRegistrationContext } from '@/hooks/fetchInitialRegistrationContext';
+import { transferTgaPrimaryContact } from '@/hooks/transferTgaPrimaryContact';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -661,26 +662,8 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
     setIsTransferringContact(true);
     try {
-      // Prefer Chief executive contact, fallback to first contact
-      const contact = tgaData.contacts.find((c) =>
-        c.contact_type?.toLowerCase().includes('chief executive') ||
-        c.contact_type === 'ChiefExecutive'
-      ) || tgaData.contacts[0];
-      const updates: TablesInsert<'tenant_profile'> = {
-        tenant_id: profile.tenant_id,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-        primary_contact_name: contact.name || null,
-        primary_contact_email: contact.email || null,
-        primary_contact_phone: contact.phone || null,
-      };
-
-      const { error } = await supabase
-        .from('tenant_profile')
-        .upsert(updates, { onConflict: 'tenant_id' });
-      if (error) throw error;
-
-      toast.success(`Contact "${contact.name}" transferred as primary contact`);
+      const contactName = await transferTgaPrimaryContact(profile.tenant_id, user.id, tgaData.contacts);
+      toast.success(`Contact "${contactName}" transferred as primary contact`);
     } catch (err) {
       console.error('Transfer contact error:', err);
       toast.error('Failed to transfer contact: ' + (err instanceof Error ? err.message : 'Unknown error'));
