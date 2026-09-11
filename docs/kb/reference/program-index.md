@@ -20,8 +20,8 @@ initiatives. Start here for "where does this program stand," go to
 | Initiative | Status | Current phase/packet | Master plan |
 |---|---|---|---|
 | Codebase Optimization | active | Phase 4 hotspot program resuming at slice 5 (Academy builder), 2026-09-11 — Carl/Claude/Codex agreed to finish slices 5-8 before running one cross-initiative exit re-audit (see the plan's §P6 note) rather than re-auditing mid-backlog | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
-| RBAC v6 | planning | Implementation plan only — §13 policy baseline agreed 2026-09-10 for read-only/shadow preparation; no production migration, Edge deployment, permission grant, or role change authorized yet | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
-| Tenant Operating Model | planning | All 13 §18 decisions closed 2026-09-10 (ADR-017 through ADR-028); Phase P0/P1 implementation scoping not yet started or authorized | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
+| RBAC v6 | planning | Implementation plan only — all 15 §13 items now have a recorded disposition (item 1 permanently decided 2026-09-11 via ADR-030; items 2-13 baselined 2026-09-10; items 14/15 parked); no production migration, Edge deployment, permission grant, or role change authorized yet; exact capability rows and implementation sequencing remain packet-level work | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
+| Tenant Operating Model | planning | All 13 §18 decisions closed (items 2-13 on 2026-09-10 via ADR-017 through ADR-028; item 1 on 2026-09-11 via ADR-030 — the last of the 13 to actually resolve); Phase P0/P1 implementation scoping not yet started or authorized | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | Current implementation reconciliation (2026-09-08): P3-A has contained the legacy stage-health signal on the main dashboard, executive widget, triage views, and Ask Viv hotspot tool | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
 
 ## Active work
@@ -34,20 +34,23 @@ real-time state.
 | Initiative | Current phase/packet | Branch | Owner/tool | Started |
 |---|---|---|---|---|
 | Codebase Optimization | Phase 4 slice 5 (Academy builder) starting | — | Claude Code / Codex | 2026-09-11 |
-| RBAC v6 | §13 policy baseline recorded; implementation packet not authorized | — | — | — |
-| Tenant Operating Model | §18 items 2-13 closed (item 1 tracks with RBAC v6 §13 item 1); Phase P0/P1 scoping not yet started | — | — | — |
+| RBAC v6 | §13 fully dispositioned (item 1 permanently decided 2026-09-11); implementation packet not authorized | — | — | — |
+| Tenant Operating Model | §18 items 1-13 all closed (item 1 closed 2026-09-11); Phase P0/P1 scoping not yet started | — | — | — |
 | Client Health Activity Analytics | P3-A consumer containment closed 2026-09-08 | — | — | — |
 
 ## Dependencies and gates
 
-- **RBAC v6** is a prerequisite for wider Tenant Operating Model rollout:
-  the tenant plan's own §18 item 1 (same decision as RBAC v6 §13 item 1)
-  gates tenant P1/P2 implementation and any new directory/context/AI/BI
-  permission surface behind RBAC v6's staff-scope and shadow-cutover
-  decisions (see
-  `tenant-operating-model-data-architecture-plan-2026-09-02.md`'s own
-  "Stop gate" language — corrected from a prior mis-citation of item 3,
-  which is the unrelated canonical-key decision, closed by ADR-018).
+- **RBAC v6's staff-scope decision (§13 item 1 = TOM §18 item 1) closed
+  2026-09-11 via ADR-030** — broad internal-staff tenant read access is
+  now the permanent policy, not an open design question. This was the one
+  decision gating TOM P1/P2 implementation and RBAC v6's own P1
+  (capability-row catalogue) behind an unresolved staff-scope question
+  (see `tenant-operating-model-data-architecture-plan-2026-09-02.md`'s
+  own "Stop gate" language). Both plans can now proceed to actual P1
+  scoping work without this specific blocker — remaining gates are the
+  concrete capability-catalogue/implementation-sequencing work itself
+  (packet-level, not a Carl/Vivacity decision) and each plan's own
+  not-yet-authorized production/migration steps.
 - **Client Health Activity Analytics** is architecturally a *child* of
   Tenant Operating Model, not a fully independent peer — its own header
   names Tenant Operating Model as "Parent architecture." It's tracked as
@@ -63,17 +66,24 @@ real-time state.
 
 ## Open decisions blocking further work
 
-- RBAC v6 §13 — policy baseline agreed 2026-09-10 for read-only/shadow
-  preparation (broad internal-staff context, seat/profile taxonomy, hard-SA
-  boundary, grants, messaging, AI context, QA, and shadow thresholds); exact
-  capability rows and implementation sequencing remain packet-level work, while
-  items 14/15 remain explicitly parked — see the plan itself for the full
-  disposition.
-- Tenant Operating Model §18 — items 2-13 closed 2026-09-10 (ADR-017
-  through ADR-028 in `decision-trail.md`); item 1 tracks with RBAC v6 §13
-  item 1 above. Phase P0/P1 implementation is not yet scoped or
-  authorized by these decisions alone. Item 14 (a §18 sub-item, not a
-  14th top-level decision): how the 72 tenant-less `public.users` rows
+- **RBAC v6 §13 item 1 = TOM §18 item 1 — closed 2026-09-11 (ADR-030):**
+  broad internal-staff tenant read access is now the permanent policy;
+  no future portfolio/assignment-scope narrowing. This was the last
+  Carl/Vivacity decision blocking either plan's P1 work.
+- RBAC v6 §13 — all 15 items now have a recorded disposition: item 1 per
+  ADR-030 above; items 2-13 baselined 2026-09-10 (broad internal-staff
+  context, seat/profile taxonomy, hard-SA boundary, grants, messaging, AI
+  context, QA, and shadow thresholds); items 14/15 remain explicitly
+  parked. What's left is not a Carl/Vivacity decision but packet-level
+  work: the exact capability-row catalogue and implementation sequencing
+  (RBAC v6 plan §7 P1) — see the plan itself for the full disposition.
+- Tenant Operating Model §18 — all 13 numbered decisions now closed:
+  items 2-13 on 2026-09-10 (ADR-017 through ADR-028 in
+  `decision-trail.md`), item 1 on 2026-09-11 (ADR-030). Phase P0/P1
+  implementation is not yet scoped or authorized by these decisions
+  alone — that scoping is the next packet-level work, not a further
+  Carl/Vivacity decision. Item 14 (a §18 sub-item, not a 14th top-level
+  decision, still open): how the 72 tenant-less `public.users` rows
   should actually be classified/assigned (parked 2026-09-08 during the
   notification-preferences fix — see
   `docs/audit-log/entries/2026-09-08-allow-tenant-less-notification-prefs.md`).

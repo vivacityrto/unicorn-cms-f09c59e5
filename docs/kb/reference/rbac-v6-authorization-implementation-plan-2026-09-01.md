@@ -816,7 +816,7 @@ LOC reduction is a secondary benefit expected in P8. Do not trade visible duplic
 
 ## 13. Decisions required from Vivacity before implementation
 
-1. Is every active internal employee intended to have read access to every tenant, or should read/write scopes follow assigned portfolios?
+1. ~~Is every active internal employee intended to have read access to every tenant, or should read/write scopes follow assigned portfolios?~~ **Decided 2026-09-11 (ADR-030):** every active internal staff member keeps all-tenant read access permanently; no future narrowing to portfolio/assignment scope. Sensitive writes/actions remain separately capability- and scope-controlled. See [decision-trail.md#adr-030](decision-trail.md#adr-030).
 2. What are the authoritative responsibilities of CSC, BGT, CET, Integrator, Team Leader, and the legacy Team Member seat?
 3. Which actions must remain hard Super Admin, which may be delegated with approval, and does Unicorn need dedicated true break-glass accounts separate from daily Super Admin use?
 4. Should temporary grants require a second approver, or is non-delegability the practical control for high-risk actions?
@@ -863,9 +863,11 @@ enforcement, or role/permission changes. The numbered questions above remain the
 historical decision record; this subsection records their current disposition
 without deleting that history.
 
-1. Active internal staff retain broad cross-tenant read and approved AI-context
-   access while the current operating model remains overlapping. Sensitive
-   writes, destructive actions, approvals, exports, configuration, and external
+1. **Permanent policy, not a shadow-prep baseline (ADR-030, 2026-09-11):**
+   active internal staff retain broad cross-tenant read and approved
+   AI-context access permanently — there is no future narrowing to
+   portfolio/assignment scope to design toward. Sensitive writes, destructive
+   actions, approvals, exports, configuration, and external
    sharing are separately capability- and scope-controlled. Client users remain
    restricted to their own tenant and approved relationships; assignment is not
    silently made an internal authorization boundary.
