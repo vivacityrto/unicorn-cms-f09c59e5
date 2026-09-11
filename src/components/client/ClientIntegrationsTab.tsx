@@ -39,8 +39,8 @@ import {
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
 import type { TablesInsert } from '@/integrations/supabase/types';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
@@ -52,6 +52,7 @@ import { fetchTgaDebugData } from '@/hooks/fetchTgaDebugData';
 import { fetchInitialRegistrationContext } from '@/hooks/fetchInitialRegistrationContext';
 import { transferTgaPrimaryContact } from '@/hooks/transferTgaPrimaryContact';
 import { transferTgaDetails } from '@/hooks/transferTgaDetails';
+import { transferTgaContactsAsUsers } from '@/hooks/transferTgaContactsAsUsers';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -655,60 +656,10 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
     setIsTransferringUsers(true);
     try {
-      // Deduplicate contacts by email
-      const uniqueByEmail = new Map<string, (typeof tgaData.contacts)[number]>();
-      for (const contact of tgaData.contacts) {
-        if (contact.email && !uniqueByEmail.has(contact.email.toLowerCase())) {
-          uniqueByEmail.set(contact.email.toLowerCase(), contact);
-        }
-      }
-
-      const contacts = Array.from(uniqueByEmail.values());
-      let created = 0;
-      let skipped = 0;
-      const errors: string[] = [];
-
-      for (const contact of contacts) {
-        // Parse first/last name from contact name (e.g. "Mr Brenton Myatt")
-        const nameParts = (contact.name || '').replace(/^(Mrs|Miss|Ms|Mr|Dr|Prof)\.?\s*/i, '').trim().split(/\s+/);
-        const firstName = nameParts[0] || 'Unknown';
-        const lastName = nameParts.slice(1).join(' ') || 'Unknown';
-        
-        // Chief executive gets Admin role, others get User
-        const isChief = contact.contact_type?.toLowerCase().includes('chief executive') || 
-                        contact.contact_type === 'ChiefExecutive';
-        const role = isChief ? 'Admin' : 'User';
-
-        try {
-          const { data, error } = await supabase.functions.invoke('invite-user', {
-            body: {
-              email: contact.email.toLowerCase().trim(),
-              first_name: firstName,
-              last_name: lastName,
-              invite_as: 'CLIENT',
-              tenant_id: profile.tenant_id,
-              unicorn_role: role,
-              skip_email: true,
-              job_title: contact.position || null,
-              phone_number: contact.phone || null,
-            },
-          });
-
-          if (error) throw error;
-          if (data?.ok === false && data?.code === 'ALREADY_MEMBER') {
-            skipped++;
-          } else {
-            created++;
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : JSON.stringify(err);
-          if (msg.includes('ALREADY_MEMBER') || msg.includes('already')) {
-            skipped++;
-          } else {
-            errors.push(`${contact.email}: ${msg}`);
-          }
-        }
-      }
+      const { created, skipped, errors } = await transferTgaContactsAsUsers(
+        profile.tenant_id,
+        tgaData.contacts
+      );
 
       if (errors.length > 0) {
         toast.warning(`Created ${created}, skipped ${skipped}, errors: ${errors.length}`, {
