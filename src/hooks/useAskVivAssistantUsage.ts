@@ -1,13 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { fetchAskVivAssistantUsage, type AskVivAssistantUsage } from "./askVivAssistantUsage";
 
-export interface AskVivAssistantUsage {
-  usedTokens: number;
-  capTokens: number;
-  percentUsed: number; // 0-100, capped for display even if somehow over
-  unlimited: boolean;
-}
+export type { AskVivAssistantUsage } from "./askVivAssistantUsage";
 
 export const ASK_VIV_ASSISTANT_USAGE_QUERY_KEY = "ask-viv-assistant-usage";
 
@@ -25,30 +20,7 @@ export function useAskVivAssistantUsage() {
   const { data, isLoading } = useQuery({
     queryKey: [ASK_VIV_ASSISTANT_USAGE_QUERY_KEY, user?.id],
     enabled: !!user?.id,
-    queryFn: async (): Promise<AskVivAssistantUsage> => {
-      const today = new Date().toISOString().slice(0, 10);
-      const [{ data: settings }, { data: usage }] = await Promise.all([
-        supabase
-          .from("app_settings")
-          .select("ask_viv_assistant_daily_token_cap, ask_viv_assistant_unlimited_user_ids")
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("ask_viv_assistant_usage")
-          .select("input_tokens, output_tokens")
-          .eq("user_id", user!.id)
-          .eq("usage_date", today)
-          .maybeSingle(),
-      ]);
-
-      const capTokens = settings?.ask_viv_assistant_daily_token_cap ?? 500_000;
-      const unlimitedIds: string[] = settings?.ask_viv_assistant_unlimited_user_ids || [];
-      const unlimited = unlimitedIds.includes(user!.id);
-      const usedTokens = (usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0);
-      const percentUsed = capTokens > 0 ? Math.min(100, Math.round((usedTokens / capTokens) * 100)) : 0;
-
-      return { usedTokens, capTokens, percentUsed, unlimited };
-    },
+    queryFn: () => fetchAskVivAssistantUsage(user!.id),
     staleTime: 15_000,
   });
 
