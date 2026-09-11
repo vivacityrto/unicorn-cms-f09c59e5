@@ -48,6 +48,7 @@ import { saveTenantRtoNumber } from '@/hooks/saveTenantRtoNumber';
 import { fetchTgaLinkSyncStatus } from '@/hooks/fetchTgaLinkSyncStatus';
 import { fetchClientTenantStatus } from '@/hooks/fetchClientTenantStatus';
 import { fetchTenantHeadOfficeTransferDate } from '@/hooks/fetchTenantHeadOfficeTransferDate';
+import { fetchTgaDebugData } from '@/hooks/fetchTgaDebugData';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -514,28 +515,14 @@ export function ClientIntegrationsTab({
     if (!isSuperAdmin || !profile?.tenant_id || !showDebug) return;
     
     const fetchDebugInfo = async () => {
-      const [runRes, payloadRes] = await Promise.all([
-        supabase.from('tga_rest_sync_jobs')
-          .select('id, status, created_at, rto_id, scope_counts, last_error, payload')
-          .eq('tenant_id', profile.tenant_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase.from('tga_debug_payloads')
-          .select('record_count, fetched_at, endpoint, http_status, payload')
-          .eq('tenant_id', profile.tenant_id)
-          .eq('rto_code', profile.rto_number)
-          .order('fetched_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      ]);
+      const { runData, payloadData } = await fetchTgaDebugData(profile.tenant_id, profile.rto_number);
       
       setDebugInfo({
-        lastSyncRun: runRes.data
-          ? { ...runRes.data, payload: runRes.data.payload as unknown as TgaSyncJobPayload | undefined }
+        lastSyncRun: runData
+          ? { ...runData, payload: runData.payload as unknown as TgaSyncJobPayload | undefined }
           : null,
-        debugPayload: payloadRes.data
-          ? { ...payloadRes.data, payload: payloadRes.data.payload as unknown as TgaDebugPayload | undefined }
+        debugPayload: payloadData
+          ? { ...payloadData, payload: payloadData.payload as unknown as TgaDebugPayload | undefined }
           : null,
       });
     };
