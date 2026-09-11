@@ -2,8 +2,8 @@
 
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** planning — scoping only, no implementation started
-> **Owner:** Claude Code (this scoping doc); implementation owner not yet assigned
+> **Status:** P0.1-a delivered 2026-09-11 — see [P0.1-a static inventory](p0-1-a-static-inventory.md). P0.1-b (live read-only Supabase MCP inventory) not started.
+> **Owner:** Claude Code (this scoping doc, and P0.1-a); P0.1-b owner not yet assigned
 > **Scope:** carve the plan's §7 P0.1 ("generate a versioned inventory of routes, nav entries, raw role checks, `usePermission` calls, public RPCs, effective live RLS policies/functions/triggers/grants/owners, role rows, matrix gaps, assignments, system identities, and helper dependencies") into the smallest independently authorizable first packet
 > **Dependencies:** none technical; requires Carl/Vivacity's go-ahead to start (see "Open questions" below) — this doc does not itself authorize starting P0.1
 > **Exit criteria:** a versioned inventory artifact exists covering every item the plan's P0.1 line names, each with a real source citation (file/line, live query result, or explicit "not found")

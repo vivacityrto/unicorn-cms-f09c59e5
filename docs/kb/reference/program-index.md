@@ -20,7 +20,7 @@ initiatives. Start here for "where does this program stand," go to
 | Initiative | Status | Current phase/packet | Master plan |
 |---|---|---|---|
 | Codebase Optimization | active | Phase 4 hotspot program resuming at slice 5 (Academy builder), 2026-09-11 — Carl/Claude/Codex agreed to finish slices 5-8 before running one cross-initiative exit re-audit (see the plan's §P6 note) rather than re-auditing mid-backlog | [`codebase-optimization-plan-2026-08-28.md`](codebase-optimization-plan-2026-08-28.md) |
-| RBAC v6 | planning | Implementation plan only — all 15 §13 items now have a recorded disposition (item 1 permanently decided 2026-09-11 via ADR-030; items 2-13 baselined 2026-09-10; items 14/15 parked); no production migration, Edge deployment, permission grant, or role change authorized yet; exact capability rows and implementation sequencing remain packet-level work | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
+| RBAC v6 | planning | All 15 §13 items dispositioned (item 1 permanently decided 2026-09-11 via ADR-030; items 2-13 baselined 2026-09-10; items 14/15 parked). Packet P0.1-a (frontend/static authorization inventory) delivered 2026-09-11 — see [`p0-1-a-static-inventory.md`](rbac-v6/p0/p0-1-a-static-inventory.md); P0.1-b (live read-only DB inventory) not started. No production migration, Edge deployment, permission grant, or role change authorized yet. | [`rbac-v6-authorization-implementation-plan-2026-09-01.md`](rbac-v6-authorization-implementation-plan-2026-09-01.md) |
 | Tenant Operating Model | planning | All 13 §18 decisions closed (items 2-13 on 2026-09-10 via ADR-017 through ADR-028; item 1 on 2026-09-11 via ADR-030 — the last of the 13 to actually resolve); Phase P0/P1 implementation scoping not yet started or authorized | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | Current implementation reconciliation (2026-09-08): P3-A has contained the legacy stage-health signal on the main dashboard, executive widget, triage views, and Ask Viv hotspot tool | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
 
@@ -34,7 +34,7 @@ real-time state.
 | Initiative | Current phase/packet | Branch | Owner/tool | Started |
 |---|---|---|---|---|
 | Codebase Optimization | Phase 4 slice 5 (Academy builder) starting | — | Claude Code / Codex | 2026-09-11 |
-| RBAC v6 | §13 fully dispositioned (item 1 permanently decided 2026-09-11); implementation packet not authorized | — | — | — |
+| RBAC v6 | §13 fully dispositioned; Packet P0.1-a delivered 2026-09-11 | hotfix/rbac-p0-1-static-inventory | Claude Code | 2026-09-11 |
 | Tenant Operating Model | §18 items 1-13 all closed (item 1 closed 2026-09-11); Phase P0/P1 scoping not yet started | — | — | — |
 | Client Health Activity Analytics | P3-A consumer containment closed 2026-09-08 | — | — | — |
 

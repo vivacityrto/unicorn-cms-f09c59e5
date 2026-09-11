@@ -1,0 +1,2206 @@
+{
+  "generatedAt": "2026-09-11T05:08:45.108Z",
+  "counts": {
+    "usePermissionCalls": 36,
+    "permissionGateUsages": 5,
+    "rawRoleComparisons": 59,
+    "edgeFunctionsTotal": 193,
+    "edgeFunctionsWithNoRecognizedGate": 14,
+    "edgeFunctionsOptedOutOfAuthGate": 8,
+    "edgeFunctionsWithNamedHelper": 90
+  },
+  "usePermissionCalls": [
+    {
+      "file": "src/components/audit/workspace/ReportTab.tsx",
+      "line": 146,
+      "args": [
+        "audits.report"
+      ]
+    },
+    {
+      "file": "src/components/client/ClientPackagesTab.tsx",
+      "line": 105,
+      "args": [
+        "packages.create"
+      ]
+    },
+    {
+      "file": "src/components/client/ClientPackagesTab.tsx",
+      "line": 106,
+      "args": [
+        "packages.close"
+      ]
+    },
+    {
+      "file": "src/components/eos/configurations/EosConfigurationEditor.tsx",
+      "line": 143,
+      "args": [
+        "eos.configurations.manage",
+        "full"
+      ]
+    },
+    {
+      "file": "src/components/eos/MeetingTypeSelector.tsx",
+      "line": 12,
+      "args": [
+        "eos.meetings.l10.create"
+      ]
+    },
+    {
+      "file": "src/components/eos/MeetingTypeSelector.tsx",
+      "line": 13,
+      "args": [
+        "eos.meetings.samepage"
+      ]
+    },
+    {
+      "file": "src/components/eos/MeetingTypeSelector.tsx",
+      "line": 14,
+      "args": [
+        "eos.meetings.quarterly"
+      ]
+    },
+    {
+      "file": "src/components/tenant/TenantLifecycleActions.tsx",
+      "line": 23,
+      "args": [
+        "clients.deactivate"
+      ]
+    },
+    {
+      "file": "src/components/tenant/TenantLifecycleActions.tsx",
+      "line": 24,
+      "args": [
+        "clients.activate"
+      ]
+    },
+    {
+      "file": "src/pages/AdminEOSProcesses.tsx",
+      "line": 70,
+      "args": [
+        "eos.processes.create"
+      ]
+    },
+    {
+      "file": "src/pages/AdminEOSProcesses.tsx",
+      "line": 71,
+      "args": [
+        "eos.processes.publish"
+      ]
+    },
+    {
+      "file": "src/pages/AuditsAssessments.tsx",
+      "line": 29,
+      "args": [
+        "audits.setup"
+      ]
+    },
+    {
+      "file": "src/pages/ClientDetail.tsx",
+      "line": 263,
+      "args": [
+        "clients.details.edit",
+        "limited"
+      ]
+    },
+    {
+      "file": "src/pages/EosClientImpactDetail.tsx",
+      "line": 13,
+      "args": [
+        "eos.client_impact.view"
+      ]
+    },
+    {
+      "file": "src/pages/EosFlightPlan.tsx",
+      "line": 24,
+      "args": [
+        "eos.flight_plan.edit"
+      ]
+    },
+    {
+      "file": "src/pages/EosMeetings.tsx",
+      "line": 31,
+      "args": [
+        "eos.meetings.l10.create"
+      ]
+    },
+    {
+      "file": "src/pages/EosMeetings.tsx",
+      "line": 33,
+      "args": [
+        "eos.configurations.manage"
+      ]
+    },
+    {
+      "file": "src/pages/EosQC.tsx",
+      "line": 84,
+      "args": [
+        "eos.qc.create"
+      ]
+    },
+    {
+      "file": "src/pages/EosQC.tsx",
+      "line": 85,
+      "args": [
+        "eos.qc.all"
+      ]
+    },
+    {
+      "file": "src/pages/EosRocks.tsx",
+      "line": 80,
+      "args": [
+        "eos.rocks.company.create"
+      ]
+    },
+    {
+      "file": "src/pages/EosRocks.tsx",
+      "line": 81,
+      "args": [
+        "eos.rocks.own.manage"
+      ]
+    },
+    {
+      "file": "src/pages/EosScorecard.tsx",
+      "line": 67,
+      "args": [
+        "eos.scorecard.manage"
+      ]
+    },
+    {
+      "file": "src/pages/EosTodos.tsx",
+      "line": 15,
+      "args": [
+        "eos.todos.others"
+      ]
+    },
+    {
+      "file": "src/pages/EosVto.tsx",
+      "line": 18,
+      "args": [
+        "eos.mission_control.edit"
+      ]
+    },
+    {
+      "file": "src/pages/ManageTenants.tsx",
+      "line": 129,
+      "args": [
+        "clients.create"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyAddCoursePage.tsx",
+      "line": 397,
+      "args": [
+        "academy.builder.publish"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyBuilderCourse.tsx",
+      "line": 320,
+      "args": [
+        "academy.builder.edit"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyBuilderCourse.tsx",
+      "line": 321,
+      "args": [
+        "academy.builder.publish"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyBuilderLibrary.tsx",
+      "line": 172,
+      "args": [
+        "academy.builder.edit"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyBuilderLibrary.tsx",
+      "line": 173,
+      "args": [
+        "academy.builder.publish"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyCertificatesPage.tsx",
+      "line": 75,
+      "args": [
+        "academy.certificates.issue"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+      "line": 126,
+      "args": [
+        "academy.enrolments.create"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+      "line": 127,
+      "args": [
+        "academy.enrolments.revoke",
+        "full"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+      "line": 128,
+      "args": [
+        "academy.enrolments.revoke"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyPackageCourseRulesPage.tsx",
+      "line": 30,
+      "args": [
+        "academy.mapping.edit"
+      ]
+    },
+    {
+      "file": "src/pages/superadmin/AcademyTenantAccessPage.tsx",
+      "line": 43,
+      "args": [
+        "academy.tenant_access.manage"
+      ]
+    }
+  ],
+  "permissionGateUsages": [
+    {
+      "file": "src/routes/dashboardRoutes.tsx",
+      "line": 623,
+      "props": {
+        "featureKey": "academy.mapping.view",
+        "minLevel": "full"
+      }
+    },
+    {
+      "file": "src/routes/dashboardRoutes.tsx",
+      "line": 744,
+      "props": {
+        "featureKey": "eos.client_impact.view",
+        "redirectTo": "/eos"
+      }
+    },
+    {
+      "file": "src/routes/dashboardRoutes.tsx",
+      "line": 755,
+      "props": {
+        "featureKey": "eos.gwc_trends.view",
+        "redirectTo": "/eos"
+      }
+    },
+    {
+      "file": "src/routes/dashboardRoutes.tsx",
+      "line": 766,
+      "props": {
+        "featureKey": "eos.rock_analysis.view",
+        "redirectTo": "/eos"
+      }
+    },
+    {
+      "file": "src/routes/dashboardRoutes.tsx",
+      "line": 777,
+      "props": {
+        "featureKey": "eos.leadership_dashboard.view",
+        "redirectTo": "/eos"
+      }
+    }
+  ],
+  "rawRoleComparisons": [
+    {
+      "file": "src/auth/access.ts",
+      "line": 13,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/client/ClientTimeTab.tsx",
+      "line": 1388,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/components/client/LegacyDataDiagnostics.tsx",
+      "line": 29,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/client/MembershipWeightsPanel.tsx",
+      "line": 36,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/components/client/PackageStagesManager.tsx",
+      "line": 321,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/eos/accountability/ChartBuilder.tsx",
+      "line": 45,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/eos/accountability/RecommendationsPanel.tsx",
+      "line": 68,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/components/eos/accountability/TeamMemberRow.tsx",
+      "line": 39,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/components/eos/accountability/TeamMemberRow.tsx",
+      "line": 46,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Team Member'"
+    },
+    {
+      "file": "src/components/eos/accountability/TeamMembersSection.tsx",
+      "line": 176,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/components/eos/LiveMeetingView.tsx",
+      "line": 404,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/components/eos/LiveMeetingView.tsx",
+      "line": 405,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Integrator'"
+    },
+    {
+      "file": "src/components/eos/qc/QCScheduler.tsx",
+      "line": 56,
+      "operator": "===",
+      "expression": "u.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/eos/qc/QCScheduler.tsx",
+      "line": 56,
+      "operator": "===",
+      "expression": "u.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/components/profile/ProfileHeader.tsx",
+      "line": 80,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/profile/ProfileHeader.tsx",
+      "line": 81,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/components/profile/ProfileHeader.tsx",
+      "line": 86,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/profile/ProfileHeader.tsx",
+      "line": 87,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/components/profile/TeamProfileFields.tsx",
+      "line": 91,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/profile/TeamProfileFields.tsx",
+      "line": 91,
+      "operator": "===",
+      "expression": "user.unicorn_role === 'Team Member'"
+    },
+    {
+      "file": "src/components/support-tickets/NewTicketModal.tsx",
+      "line": 66,
+      "operator": "===",
+      "expression": "profile.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/components/support-tickets/NewTicketModal.tsx",
+      "line": 66,
+      "operator": "===",
+      "expression": "profile.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/components/support-tickets/NewTicketModal.tsx",
+      "line": 66,
+      "operator": "===",
+      "expression": "profile.unicorn_role === 'Team Member'"
+    },
+    {
+      "file": "src/hooks/useAccountabilityChart.tsx",
+      "line": 53,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/hooks/useAccountabilityChart.tsx",
+      "line": 53,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Integrator'"
+    },
+    {
+      "file": "src/hooks/useDashboardTriage.ts",
+      "line": 133,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/hooks/useRBAC.tsx",
+      "line": 230,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/hooks/useSeatScorecard.tsx",
+      "line": 356,
+      "operator": "===",
+      "expression": "profile.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/hooks/useSeatSuccession.tsx",
+      "line": 52,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/pages/admin/BulkInvite.tsx",
+      "line": 101,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"Super Admin\""
+    },
+    {
+      "file": "src/pages/admin/BulkInvite.tsx",
+      "line": 389,
+      "operator": "!==",
+      "expression": "profile.unicorn_role !== \"Super Admin\""
+    },
+    {
+      "file": "src/pages/admin/QASmokeTest.tsx",
+      "line": 80,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/pages/Dashboard.tsx",
+      "line": 23,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"Admin\""
+    },
+    {
+      "file": "src/pages/Dashboard.tsx",
+      "line": 23,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"User\""
+    },
+    {
+      "file": "src/pages/EosLeadershipDashboard.tsx",
+      "line": 44,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Member'"
+    },
+    {
+      "file": "src/pages/EosMeetings.tsx",
+      "line": 45,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/pages/EosMeetings.tsx",
+      "line": 45,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Integrator'"
+    },
+    {
+      "file": "src/pages/ManageTenants.tsx",
+      "line": 127,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"Super Admin\""
+    },
+    {
+      "file": "src/pages/ManageTenants.tsx",
+      "line": 128,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"Team Leader\""
+    },
+    {
+      "file": "src/pages/ManageUsers.tsx",
+      "line": 116,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/pages/ManageUsers.tsx",
+      "line": 117,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/pages/ManageUsers.tsx",
+      "line": 155,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/pages/ProcessDetail.tsx",
+      "line": 52,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/pages/ProcessDetail.tsx",
+      "line": 53,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/pages/Processes.tsx",
+      "line": 110,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/pages/Processes.tsx",
+      "line": 111,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/pages/Processes.tsx",
+      "line": 112,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/pages/Processes.tsx",
+      "line": 113,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Member'"
+    },
+    {
+      "file": "src/pages/SuggestionDetail.tsx",
+      "line": 39,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/pages/SuggestionDetail.tsx",
+      "line": 40,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Leader'"
+    },
+    {
+      "file": "src/pages/SuggestionDetail.tsx",
+      "line": 41,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Team Member'"
+    },
+    {
+      "file": "src/pages/TeamCommunicationsPage.tsx",
+      "line": 88,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"Super Admin\""
+    },
+    {
+      "file": "src/pages/TeamCommunicationsPage.tsx",
+      "line": 89,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === \"Team Leader\""
+    },
+    {
+      "file": "src/pages/TeamSettings.tsx",
+      "line": 588,
+      "operator": "===",
+      "expression": "profile?.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/pages/UserProfile.tsx",
+      "line": 201,
+      "operator": "===",
+      "expression": "currentUser.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/pages/UserProfile.tsx",
+      "line": 203,
+      "operator": "===",
+      "expression": "currentUser.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/pages/UserProfile.tsx",
+      "line": 238,
+      "operator": "===",
+      "expression": "currentUser.unicorn_role === 'Super Admin'"
+    },
+    {
+      "file": "src/pages/UserProfile.tsx",
+      "line": 240,
+      "operator": "===",
+      "expression": "currentUser.unicorn_role === 'Admin'"
+    },
+    {
+      "file": "src/test/rbac/useRBAC.test.ts",
+      "line": 101,
+      "operator": "===",
+      "expression": "profile.unicorn_role === 'Super Admin'"
+    }
+  ],
+  "edgeFunctions": [
+    {
+      "function": "academy-ai-generate",
+      "file": "supabase/functions/academy-ai-generate/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "academy-backfill-course-thumbnails",
+      "file": "supabase/functions/academy-backfill-course-thumbnails/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "academy-fetch-vimeo-transcript",
+      "file": "supabase/functions/academy-fetch-vimeo-transcript/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "academy-import-vimeo-showcase",
+      "file": "supabase/functions/academy-import-vimeo-showcase/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "activate-ghost-user",
+      "file": "supabase/functions/activate-ghost-user/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "add-missing-packages",
+      "file": "supabase/functions/add-missing-packages/index.ts",
+      "authHelpers": [
+        "requireCaller",
+        "requireSuperAdmin"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "addin-auth-exchange",
+      "file": "supabase/functions/addin-auth-exchange/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "addin-diagnostics-usage",
+      "file": "supabase/functions/addin-diagnostics-usage/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "addin-email-capture",
+      "file": "supabase/functions/addin-email-capture/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "addin-email-create-task",
+      "file": "supabase/functions/addin-email-create-task/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "addin-email-link-attachments",
+      "file": "supabase/functions/addin-email-link-attachments/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "addin-meeting-capture",
+      "file": "supabase/functions/addin-meeting-capture/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "addin-meeting-create-time-draft",
+      "file": "supabase/functions/addin-meeting-create-time-draft/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "ai-generate-suggestions",
+      "file": "supabase/functions/ai-generate-suggestions/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "ai-orchestrator",
+      "file": "supabase/functions/ai-orchestrator/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "ai-suggest-rock",
+      "file": "supabase/functions/ai-suggest-rock/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "analyse-evidence",
+      "file": "supabase/functions/analyse-evidence/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "analyze-document",
+      "file": "supabase/functions/analyze-document/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "ask-viv-assistant",
+      "file": "supabase/functions/ask-viv-assistant/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "ask-viv-assistant-client",
+      "file": "supabase/functions/ask-viv-assistant-client/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "assistant-answer",
+      "file": "supabase/functions/assistant-answer/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "backfill-vimeo-durations",
+      "file": "supabase/functions/backfill-vimeo-durations/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "browse-sharepoint-folder",
+      "file": "supabase/functions/browse-sharepoint-folder/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-account-actions",
+      "file": "supabase/functions/bulk-account-actions/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-generate-documents-launcher",
+      "file": "supabase/functions/bulk-generate-documents-launcher/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-generate-documents-resume-stalled",
+      "file": "supabase/functions/bulk-generate-documents-resume-stalled/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-generate-documents-worker",
+      "file": "supabase/functions/bulk-generate-documents-worker/index.ts",
+      "authHelpers": [
+        "requireCaller",
+        "requireSharedSecret"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-generate-phase-documents",
+      "file": "supabase/functions/bulk-generate-phase-documents/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-reassign-team-member",
+      "file": "supabase/functions/bulk-reassign-team-member/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "bulk-send-invitations",
+      "file": "supabase/functions/bulk-send-invitations/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "bulk-user-action",
+      "file": "supabase/functions/bulk-user-action/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "calculate-predictive-risk",
+      "file": "supabase/functions/calculate-predictive-risk/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "cancel-invite",
+      "file": "supabase/functions/cancel-invite/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "capture-outlook-email",
+      "file": "supabase/functions/capture-outlook-email/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "check-tenant-sharepoint-liveness",
+      "file": "supabase/functions/check-tenant-sharepoint-liveness/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "chunk-document",
+      "file": "supabase/functions/chunk-document/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "clickup-ai-search",
+      "file": "supabase/functions/clickup-ai-search/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "client-ai-companion",
+      "file": "supabase/functions/client-ai-companion/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "cohort-access-sender-worker",
+      "file": "supabase/functions/cohort-access-sender-worker/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "compliance-assistant",
+      "file": "supabase/functions/compliance-assistant/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "consume-token",
+      "file": "supabase/functions/consume-token/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "copilot-chat",
+      "file": "supabase/functions/copilot-chat/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "create-client-audit",
+      "file": "supabase/functions/create-client-audit/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "create-meeting-time-drafts",
+      "file": "supabase/functions/create-meeting-time-drafts/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "create-tasks-from-minutes",
+      "file": "supabase/functions/create-tasks-from-minutes/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "create-tenant",
+      "file": "supabase/functions/create-tenant/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "dashboard-test-seed",
+      "file": "supabase/functions/dashboard-test-seed/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "delete-incomplete-audit",
+      "file": "supabase/functions/delete-incomplete-audit/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "delete-user",
+      "file": "supabase/functions/delete-user/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "deliver-governance-document",
+      "file": "supabase/functions/deliver-governance-document/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "draft-executive-summary",
+      "file": "supabase/functions/draft-executive-summary/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "draft-finding",
+      "file": "supabase/functions/draft-finding/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "embed-ask-viv-corpus",
+      "file": "supabase/functions/embed-ask-viv-corpus/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "embed-ask-viv-documents",
+      "file": "supabase/functions/embed-ask-viv-documents/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "embed-srto-corpus",
+      "file": "supabase/functions/embed-srto-corpus/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "export-client-timeline-pdf",
+      "file": "supabase/functions/export-client-timeline-pdf/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "export-compliance-pack",
+      "file": "supabase/functions/export-compliance-pack/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "export-pdp-audit-pack",
+      "file": "supabase/functions/export-pdp-audit-pack/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "extract-copilot-minutes",
+      "file": "supabase/functions/extract-copilot-minutes/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "extract-document-fields",
+      "file": "supabase/functions/extract-document-fields/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "extract-note-title",
+      "file": "supabase/functions/extract-note-title/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "fetch-clickup-comments",
+      "file": "supabase/functions/fetch-clickup-comments/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-ask-viv-faqs",
+      "file": "supabase/functions/generate-ask-viv-faqs/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-certificate-pdf",
+      "file": "supabase/functions/generate-certificate-pdf/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-client-audit-report",
+      "file": "supabase/functions/generate-client-audit-report/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-client-audit-report-docx",
+      "file": "supabase/functions/generate-client-audit-report-docx/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-document",
+      "file": "supabase/functions/generate-document/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-document-description",
+      "file": "supabase/functions/generate-document-description/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "generate-email-note",
+      "file": "supabase/functions/generate-email-note/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-excel-document",
+      "file": "supabase/functions/generate-excel-document/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-meeting-recurrence",
+      "file": "supabase/functions/generate-meeting-recurrence/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-meeting-summary",
+      "file": "supabase/functions/generate-meeting-summary/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-membership-certificate",
+      "file": "supabase/functions/generate-membership-certificate/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-minutes-draft",
+      "file": "supabase/functions/generate-minutes-draft/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-minutes-from-transcript",
+      "file": "supabase/functions/generate-minutes-from-transcript/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-notifications",
+      "file": "supabase/functions/generate-notifications/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-pack",
+      "file": "supabase/functions/generate-pack/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-recovery-link",
+      "file": "supabase/functions/generate-recovery-link/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-release-documents",
+      "file": "supabase/functions/generate-release-documents/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "generate-staff-checklist",
+      "file": "supabase/functions/generate-staff-checklist/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "get-message-attachment-url",
+      "file": "supabase/functions/get-message-attachment-url/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "get-organisation-details",
+      "file": "supabase/functions/get-organisation-details/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "get-sharepoint-parent-folder",
+      "file": "supabase/functions/get-sharepoint-parent-folder/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "handle-email-intake",
+      "file": "supabase/functions/handle-email-intake/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "help-center-chat",
+      "file": "supabase/functions/help-center-chat/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "import-clickup-csv",
+      "file": "supabase/functions/import-clickup-csv/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "import-sharepoint-template",
+      "file": "supabase/functions/import-sharepoint-template/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "import-unicorn1-client",
+      "file": "supabase/functions/import-unicorn1-client/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "invite-or-reset-user",
+      "file": "supabase/functions/invite-or-reset-user/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "invite-user",
+      "file": "supabase/functions/invite-user/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "issue-token",
+      "file": "supabase/functions/issue-token/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "kpi-email-log-sync",
+      "file": "supabase/functions/kpi-email-log-sync/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "lookup-unicorn1-client",
+      "file": "supabase/functions/lookup-unicorn1-client/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "mailgun-send",
+      "file": "supabase/functions/mailgun-send/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "mailgun-webhook",
+      "file": "supabase/functions/mailgun-webhook/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "mark-token-used",
+      "file": "supabase/functions/mark-token-used/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "mark-unicorn1-user-mapped",
+      "file": "supabase/functions/mark-unicorn1-user-mapped/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "notify-action-shared",
+      "file": "supabase/functions/notify-action-shared/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "notify-chat",
+      "file": "supabase/functions/notify-chat/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "notify-merge-fields-updated",
+      "file": "supabase/functions/notify-merge-fields-updated/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "notify-suggestion-submitted",
+      "file": "supabase/functions/notify-suggestion-submitted/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "outlook-auth",
+      "file": "supabase/functions/outlook-auth/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "outlook-time-draft-worker",
+      "file": "supabase/functions/outlook-time-draft-worker/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "pdp-auto-evidence",
+      "file": "supabase/functions/pdp-auto-evidence/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "process-notification-outbox",
+      "file": "supabase/functions/process-notification-outbox/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "process-notification-queue",
+      "file": "supabase/functions/process-notification-queue/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "provision-m365-user",
+      "file": "supabase/functions/provision-m365-user/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "provision-tenant-sharepoint-folder",
+      "file": "supabase/functions/provision-tenant-sharepoint-folder/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "publish-meeting-minutes",
+      "file": "supabase/functions/publish-meeting-minutes/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "query-knowledge-graph",
+      "file": "supabase/functions/query-knowledge-graph/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "reconcile-invite-delivery-status",
+      "file": "supabase/functions/reconcile-invite-delivery-status/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "record-completed-audit",
+      "file": "supabase/functions/record-completed-audit/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "record-executive-summary-decision",
+      "file": "supabase/functions/record-executive-summary-decision/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "record-finding-decision",
+      "file": "supabase/functions/record-finding-decision/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "regulator-watch-check",
+      "file": "supabase/functions/regulator-watch-check/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "release-audit-report",
+      "file": "supabase/functions/release-audit-report/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "repair-staff-uuids",
+      "file": "supabase/functions/repair-staff-uuids/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-answer",
+      "file": "supabase/functions/research-answer/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-audit-intelligence",
+      "file": "supabase/functions/research-audit-intelligence/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-enrich-tenant",
+      "file": "supabase/functions/research-enrich-tenant/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-evidence-gap-check",
+      "file": "supabase/functions/research-evidence-gap-check/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-public-snapshot",
+      "file": "supabase/functions/research-public-snapshot/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-scrape",
+      "file": "supabase/functions/research-scrape/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-tas-context",
+      "file": "supabase/functions/research-tas-context/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "research-template-gap-analysis",
+      "file": "supabase/functions/research-template-gap-analysis/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "resend-invite",
+      "file": "supabase/functions/resend-invite/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "resolve-sharepoint-folder-url",
+      "file": "supabase/functions/resolve-sharepoint-folder-url/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "resolve-tenant-folder",
+      "file": "supabase/functions/resolve-tenant-folder/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "retrieve-srto-context",
+      "file": "supabase/functions/retrieve-srto-context/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "risk-command-engine",
+      "file": "supabase/functions/risk-command-engine/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "run-retention-forecast",
+      "file": "supabase/functions/run-retention-forecast/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "run-stage-health-monitor",
+      "file": "supabase/functions/run-stage-health-monitor/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "run-strategic-signal-analysis",
+      "file": "supabase/functions/run-strategic-signal-analysis/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "run-tenant-risk-forecast",
+      "file": "supabase/functions/run-tenant-risk-forecast/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "run-workflow-optimisation",
+      "file": "supabase/functions/run-workflow-optimisation/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "run-workload-forecast",
+      "file": "supabase/functions/run-workload-forecast/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "scan-document",
+      "file": "supabase/functions/scan-document/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "scan-risk-radar",
+      "file": "supabase/functions/scan-risk-radar/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "scorecard-refresh",
+      "file": "supabase/functions/scorecard-refresh/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "search-organisations",
+      "file": "supabase/functions/search-organisations/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "search-unicorn1-users",
+      "file": "supabase/functions/search-unicorn1-users/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-action-item-due-reminders",
+      "file": "supabase/functions/send-action-item-due-reminders/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-automated-email",
+      "file": "supabase/functions/send-automated-email/index.ts",
+      "authHelpers": [
+        "requireCaller",
+        "requireInternalEmailSecret"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-broadcast-campaign",
+      "file": "supabase/functions/send-broadcast-campaign/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-composed-email",
+      "file": "supabase/functions/send-composed-email/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-email",
+      "file": "supabase/functions/send-email/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-email-graph",
+      "file": "supabase/functions/send-email-graph/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-enhanced-email",
+      "file": "supabase/functions/send-enhanced-email/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-invitation-email",
+      "file": "supabase/functions/send-invitation-email/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-magic-link",
+      "file": "supabase/functions/send-magic-link/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-mailgun-template",
+      "file": "supabase/functions/send-mailgun-template/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-notification-email",
+      "file": "supabase/functions/send-notification-email/index.ts",
+      "authHelpers": [
+        "requireCaller",
+        "requireInternalEmailSecret"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-password-reset",
+      "file": "supabase/functions/send-password-reset/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-self-password-reset",
+      "file": "supabase/functions/send-self-password-reset/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-staff-onboarding-email",
+      "file": "supabase/functions/send-staff-onboarding-email/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-stage-email",
+      "file": "supabase/functions/send-stage-email/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "send-test-email",
+      "file": "supabase/functions/send-test-email/index.ts",
+      "authHelpers": [
+        "requireCaller",
+        "requireSuperAdmin"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "set-invite-password",
+      "file": "supabase/functions/set-invite-password/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "staff-onboarding-workbook",
+      "file": "supabase/functions/staff-onboarding-workbook/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "strategic-orchestration",
+      "file": "supabase/functions/strategic-orchestration/index.ts",
+      "authHelpers": [
+        "requireCaller",
+        "requireSuperAdmin"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "summarize-daily-notes",
+      "file": "supabase/functions/summarize-daily-notes/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "sync-clickup-tasks",
+      "file": "supabase/functions/sync-clickup-tasks/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "sync-clickup-time",
+      "file": "supabase/functions/sync-clickup-time/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "sync-meeting-artifacts",
+      "file": "supabase/functions/sync-meeting-artifacts/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "sync-outlook-calendar",
+      "file": "supabase/functions/sync-outlook-calendar/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "sync-outlook-calendar-cron",
+      "file": "supabase/functions/sync-outlook-calendar-cron/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "tenant-lifecycle",
+      "file": "supabase/functions/tenant-lifecycle/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "tga-fetch-scope",
+      "file": "supabase/functions/tga-fetch-scope/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "tga-integration",
+      "file": "supabase/functions/tga-integration/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "tga-rto-import",
+      "file": "supabase/functions/tga-rto-import/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "tga-rto-preview",
+      "file": "supabase/functions/tga-rto-preview/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "tga-rto-sync",
+      "file": "supabase/functions/tga-rto-sync/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "tga-search-training",
+      "file": "supabase/functions/tga-search-training/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": true
+    },
+    {
+      "function": "tga-sync",
+      "file": "supabase/functions/tga-sync/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "toggle-user-status",
+      "file": "supabase/functions/toggle-user-status/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "unlink-email",
+      "file": "supabase/functions/unlink-email/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "update-role-permission",
+      "file": "supabase/functions/update-role-permission/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "update-user-profile",
+      "file": "supabase/functions/update-user-profile/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "update-user-role",
+      "file": "supabase/functions/update-user-role/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "upload-message-attachment",
+      "file": "supabase/functions/upload-message-attachment/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "upload-portal-document",
+      "file": "supabase/functions/upload-portal-document/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "upload-sharepoint-file",
+      "file": "supabase/functions/upload-sharepoint-file/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "validate-sharepoint-root-folder",
+      "file": "supabase/functions/validate-sharepoint-root-folder/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "vector-index-rebuild",
+      "file": "supabase/functions/vector-index-rebuild/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "vector-index-remove",
+      "file": "supabase/functions/vector-index-remove/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "vector-index-update",
+      "file": "supabase/functions/vector-index-update/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "vector-search",
+      "file": "supabase/functions/vector-search/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "verify-compliance-folder",
+      "file": "supabase/functions/verify-compliance-folder/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "xero-auth",
+      "file": "supabase/functions/xero-auth/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "xero-invoice-list",
+      "file": "supabase/functions/xero-invoice-list/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "xero-invoice-status",
+      "file": "supabase/functions/xero-invoice-status/index.ts",
+      "authHelpers": [
+        "requireCaller"
+      ],
+      "optedOutOfAuthGate": false,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "xero-invoice-sync-all",
+      "file": "supabase/functions/xero-invoice-sync-all/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    },
+    {
+      "function": "xero-webhook",
+      "file": "supabase/functions/xero-webhook/index.ts",
+      "authHelpers": [],
+      "optedOutOfAuthGate": true,
+      "hasNoRecognizedGate": false
+    }
+  ]
+}
