@@ -39,6 +39,7 @@ import {
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
 import type { TablesInsert } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
