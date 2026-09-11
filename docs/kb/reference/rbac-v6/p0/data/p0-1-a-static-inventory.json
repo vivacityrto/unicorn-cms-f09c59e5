@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-11T05:08:45.108Z",
+  "generatedAt": "2026-09-11T06:30:34.243Z",
   "counts": {
     "usePermissionCalls": 36,
     "permissionGateUsages": 5,
     "rawRoleComparisons": 59,
-    "edgeFunctionsTotal": 193,
-    "edgeFunctionsWithNoRecognizedGate": 14,
+    "edgeFunctionsTotal": 192,
+    "edgeFunctionsWithNoRecognizedGate": 5,
     "edgeFunctionsOptedOutOfAuthGate": 8,
     "edgeFunctionsWithNamedHelper": 90
   },
@@ -724,49 +724,42 @@
         "requireCaller"
       ],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "addin-email-capture",
       "file": "supabase/functions/addin-email-capture/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "addin-email-create-task",
       "file": "supabase/functions/addin-email-create-task/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "addin-email-link-attachments",
       "file": "supabase/functions/addin-email-link-attachments/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "addin-meeting-capture",
       "file": "supabase/functions/addin-meeting-capture/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "addin-meeting-create-time-draft",
       "file": "supabase/functions/addin-meeting-create-time-draft/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
-    },
-    {
-      "function": "ai-generate-suggestions",
-      "file": "supabase/functions/ai-generate-suggestions/index.ts",
-      "authHelpers": [],
-      "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "ai-orchestrator",
@@ -1536,7 +1529,7 @@
       "file": "supabase/functions/reconcile-invite-delivery-status/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "record-completed-audit",
@@ -1979,7 +1972,7 @@
       "file": "supabase/functions/sync-outlook-calendar-cron/index.ts",
       "authHelpers": [],
       "optedOutOfAuthGate": false,
-      "hasNoRecognizedGate": true
+      "hasNoRecognizedGate": false
     },
     {
       "function": "tenant-lifecycle",

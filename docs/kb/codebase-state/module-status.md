@@ -310,8 +310,13 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 **Status:** 🟡 Partial
 
 **What exists:**
-- `ai-generate-suggestions` edge function ([supabase/functions/ai-generate-suggestions/](../../../supabase/functions/ai-generate-suggestions/))
-- `useAISuggestions` hook
+- ~~`ai-generate-suggestions` edge function~~ — retired 2026-09-11 (had zero
+  frontend callers since its only consumer, `useAISuggestions`, was retired
+  as dead code 2026-09-08; the Edge Function itself was found unauthenticated
+  during RBAC v6 P0.1-a triage and removed rather than patched — see
+  `docs/audit-log/entries/2026-09-11-retire-ai-generate-suggestions.md`)
+- ~~`useAISuggestions` hook~~ — retired 2026-09-08 (see
+  `docs/kb/reference/codebase-optimization/cross-cutting/dead-code-feature-consolidation-investigation.md`)
 
 **Now present in this codebase:**
 - `analyze-document` — ✅ exists
