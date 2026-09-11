@@ -34,6 +34,7 @@ import {
   moveShowcaseItemToModule as moveShowcaseItemToModulePure,
   reorderShowcaseItemsByDragEvent,
 } from "@/features/academy/showcaseOrdering";
+import { uploadThumbnail } from "@/features/academy/uploadThumbnail";
 import type { Json } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -600,35 +601,12 @@ export default function AcademyAddCoursePage() {
 
   const [saving, setSaving] = useState(false);
 
-  const uploadThumbnailFile = async (file: File, prefix: string): Promise<string | null> => {
-    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-    if (!allowedTypes.has(file.type)) {
-      toast.error("Choose a JPG, PNG, or WebP image");
-      return null;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Thumbnail images must be 5 MB or smaller");
-      return null;
-    }
-    try {
-      const extension = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
-      const path = `pending/${prefix}${crypto.randomUUID()}.${extension}`;
-      const { error } = await supabase.storage
-        .from("academy-thumbnails")
-        .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "3600" });
-      if (error) throw error;
-      return supabase.storage.from("academy-thumbnails").getPublicUrl(path).data.publicUrl;
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload image");
-      return null;
-    }
-  };
-
   const handleThumbnailUpload = async (file: File) => {
     setIsThumbnailUploading(true);
     try {
-      const url = await uploadThumbnailFile(file, "");
-      if (url) setThumbnailUrl(url);
+      const result = await uploadThumbnail(file, "");
+      if (result.ok && result.url) setThumbnailUrl(result.url);
+      else if (result.error) toast.error(result.error);
     } finally {
       setIsThumbnailUploading(false);
     }
@@ -637,8 +615,9 @@ export default function AcademyAddCoursePage() {
   const handleBannerThumbnailUpload = async (file: File) => {
     setIsBannerThumbnailUploading(true);
     try {
-      const url = await uploadThumbnailFile(file, "banner-");
-      if (url) setBannerThumbnailUrl(url);
+      const result = await uploadThumbnail(file, "banner-");
+      if (result.ok && result.url) setBannerThumbnailUrl(result.url);
+      else if (result.error) toast.error(result.error);
     } finally {
       setIsBannerThumbnailUploading(false);
     }
