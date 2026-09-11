@@ -124,7 +124,7 @@ const AUTH_HELPERS = ["requireCaller", "requireSuperAdmin", "requireSharedSecret
 // legitimate idioms (inline auth.getUser()+check_permission(), cron-secret
 // gating, webhook signature verification, etc.). Keep these two patterns in
 // sync if the guardrail script's AUTH_PATTERN changes.
-const GUARDRAIL_AUTH_PATTERN = /requireCaller\(|requireSharedSecret\(|requireInternalEmailSecret\(|requireSuperAdmin\(|isCronAuthorized\(|checkSuperAdmin\(|check_permission|auth\.getUser\(|auth\.getClaims\(|verifyAuth\(|MAILGUN_WEBHOOK_SIGNING_KEY|constantTimeEqual\(/;
+const GUARDRAIL_AUTH_PATTERN = /requireCaller\(|requireSharedSecret\(|requireInternalEmailSecret\(|requireSuperAdmin\(|isCronAuthorized\(|checkSuperAdmin\(|check_permission|auth\.getUser\(|auth\.getClaims\(|verifyAuth\(|MAILGUN_WEBHOOK_SIGNING_KEY|constantTimeEqual\(|verifyAddinToken\(|authorizeCronInvoke\(/;
 const AUTH_GATE_OPT_OUT_PATTERN = /\/\/ *auth-gate: *none\b/;
 
 /** Plain-text scan of one Edge Function's index.ts for which auth helper(s)
