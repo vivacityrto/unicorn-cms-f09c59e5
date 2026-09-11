@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRouteTenantContext } from "@/hooks/useRouteTenantContext";
 import { requestAskVivAssistant } from "@/hooks/askVivAssistantRequest";
+import { fetchAskVivAssistantMessages } from "@/hooks/askVivAssistantMessages";
 
 export interface AssistantSourceUsed {
   tool: string;
@@ -84,21 +85,8 @@ export function useAskVivAssistantChat() {
   }, []);
 
   const openConversation = useCallback(async (id: string) => {
-    const { data, error } = await supabase
-      .from("ask_viv_turns")
-      .select("id, role, content, created_at")
-      .eq("conversation_id", id)
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-
-    setMessages(
-      (data || []).map((t) => ({
-        id: t.id,
-        role: t.role === "assistant" ? "assistant" : "user",
-        content: t.content,
-        created_at: t.created_at,
-      }))
-    );
+    const messages = await fetchAskVivAssistantMessages(id);
+    setMessages(messages);
     setConversationId(id);
   }, []);
 
