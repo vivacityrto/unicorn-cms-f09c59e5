@@ -1,7 +1,7 @@
 # Tenant P0.1 Source-of-Truth Inventory
 
-Generated: 2026-09-11 19:05 +08:00
-Source baseline: `origin/main@5f1c6501498308d7ac0866a5fa1ee0e2c9d9765b`
+Generated: 2026-09-11 20:30 +08:00
+Source baseline: `origin/main@0c332d04a29ac696959037554f43e3e0bcbb6934`
 Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-11
 
 > This artifact is evidence, not authority. It records current frontend source and read-only live metadata. It does not create a directory contract, change authorization, repair unmatched rows, or authorize a schema/RLS/function/trigger/grant change.
@@ -316,6 +316,73 @@ active/inactive divergence need provenance and status decisions before a
 backfill, cleanup, or authorization interpretation. RBAC must not infer
 authorization from overlap alone; Client Health must not use either table as
 an authoritative active-membership denominator until the crosswalk is owned.
+
+### Field, lifecycle, and policy compatibility matrix
+
+The following matrix is a current-contract comparison from the live catalog
+and repository writers. It is not a proposed schema. `tenant_users` is the
+relationship/contact ledger currently consumed by the client-facing flows;
+`tenant_members` is the TOM target membership ledger currently consumed by
+seat-limit and selected authorization paths. The two rows cannot be swapped
+without an explicit mapping and rollout contract.
+
+| Concern | `tenant_users` current contract | `tenant_members` current contract | Migration / owner gate |
+|---|---|---|---|
+| Row identity | `bigint` identity `id`; unique `(tenant_id,user_id)`; FKs to `tenants.id` and `users.user_uuid` | UUID `id`; unique `(tenant_id,user_id)`; FK to `users.user_uuid` only in the live catalog; no live FK from `tenant_id` to `tenants.id` was observed | TOM must choose whether the membership ledger receives a tenant FK and how the 349 tenant-orphan rows are handled; do not infer referential repair from the counts |
+| Tenant/user keys | Required `bigint tenant_id`, required UUID `user_id` | Required `bigint tenant_id`, required UUID `user_id` | Key types align, but equal pair counts do not establish equal membership semantics |
+| Role vocabulary | `role` is `parent` or `child`; client flows derive parent from primary/secondary contacts and child from user/academy relationship | `role` is `Admin` or `General User` | RBAC/TOM must ratify the mapping; current invite writers map primary/secondary to `Admin`, `user` to `General User`, and `academy_user` to `General User` with inactive status |
+| Lifecycle/status | No membership `status` column; pending invitations live in `user_invitations`, while a created `tenant_users` row is the relationship record | `status` is `active`, `inactive`, or `pending`; live snapshot is 506 Admin/active, 329 Admin/inactive, 53 General User/active, 48 General User/inactive, with no observed `pending` rows | TOM must define whether pending is represented in this ledger or only in invitation records, and whether inactive means access-denied, historical, or a product-specific state |
+| Invitation timestamps | No `invited_at`/`joined_at`; invitation lifecycle is external to the row | `invited_at` nullable, `joined_at` nullable default `now()`; all 936 live rows currently have `invited_at IS NULL` and `joined_at IS NOT NULL` | Existing timestamps do not prove invitation history; acceptance/backfill rules require an owner decision and evidence from `user_invitations`/activation flows |
+| Contact relationship | `relationship_role` FK to `dd_relationship_role`; current values drive primary, secondary, full user, and academy-user behavior | No relationship/contact columns | TOM must decide where these fields live after ADR-019; Client Health must retain relationship provenance if it consumes contact or ownership signals |
+| Contact flags | Nullable `primary_contact`, non-null `secondary_contact DEFAULT false`; trigger derives flags from `relationship_role` and prevents both flags being true | Not present | Do not map booleans by role alone without preserving the trigger's current precedence and null behavior |
+| Access scope | Non-null `access_scope DEFAULT 'full'`, constrained to `full`/`academy_only`; parent plus `academy_only` is rejected | Not present | RBAC must own the target capability/scope resolver; a membership-row role cannot silently replace this plan/access distinction |
+| Position type | Nullable `position_type` FK to `dd_position_type`; edited directly by `TenantUsers` and `TenantUsersTab` | Not present | TOM must assign this relationship attribute to the target model or a linked profile/contact relation before any move |
+| Audit / side effects | INSERT/UPDATE/DELETE audit triggers capture role, access scope, relationship role, and contact flags; primary/secondary changes also synchronize `tenant_profile` | Only `BEFORE UPDATE` trigger sets `updated_at` | A table move must preserve both audit events and the secondary-contact profile synchronization, or explicitly replace them with an equivalent server path |
+| Writer behavior | UI and Edge writers read/write this row directly; `invite-user` and `activate-ghost-user` also write the second ledger | `invite-user` and `activate-ghost-user` mirror selected role/status fields; `provision-m365-user` has an inspected path that writes only `tenant_users` | Writer inventory is not yet a synchronization guarantee; every writer needs a chosen source-of-truth and failure/rollback behavior |
+
+The current invite mapping is evidence of implementation behavior, not a
+ratified authorization mapping. In both `invite-user`'s direct-add path and
+`activate-ghost-user`, `primary_contact` and `secondary_contact` become
+`tenant_users.role='parent'` and `tenant_members.role='Admin', status='active'`;
+`user` becomes `child` plus `General User/active`; and `academy_user` becomes
+`child` plus `General User/inactive`. The email invitation path records the
+pending invitation separately and does not populate `tenant_members.invited_at`
+or `status='pending'`. This explains why the live rows cannot be read as a
+complete invitation ledger and why the mapping must be tested against the
+acceptance and activation flows before any backfill.
+
+### Membership RLS, grants, and trigger boundary comparison
+
+Both tables have RLS enabled and `relforcerowsecurity=false` in the live
+catalog. The catalog also reports broad table privileges for `anon` and
+`authenticated`; effective row access is therefore policy-driven, and the
+base grant list must not be mistaken for an authorization contract.
+
+The live policy boundaries differ materially:
+
+- `tenant_users` SELECT permits the subject, a tenant parent, Super Admin, or
+  Vivacity staff. Its INSERT and UPDATE paths are tenant-parent/Super-Admin
+  scoped; DELETE is tenant-parent/Super-Admin scoped. The current catalog also
+  contains an authenticated `tenant_users_restrict_scoped` ALL policy whose
+  `USING` includes Vivacity staff while its `WITH CHECK` remains restricted to
+  tenant parent/Super Admin; this is a policy-composition detail to preserve
+  in any RBAC review.
+- `tenant_members` SELECT permits the subject, Vivacity team, Super Admin, or
+  a tenant admin. INSERT, UPDATE, and DELETE are Super Admin or tenant-admin
+  scoped. There is no tenant-parent or contact-role predicate in the live
+  membership policies.
+- `tenant_members` has one `BEFORE UPDATE` `updated_at` trigger. `tenant_users`
+  has the audit triggers plus `trg_sync_primary_contact` and
+  `trg_sync_secondary_contact`; the latter recomputes the tenant profile's
+  secondary-contact snapshot after inserts, deletes, and relevant updates.
+
+Consequently, replacing a `tenant_users` read with `tenant_members` would
+change both visible relationship data and the effective RLS boundary. A
+replacement write would additionally need to account for audit rows, contact
+flag derivation, tenant-profile synchronization, and the fact that current
+tenant-admin/contact authorization is not equivalent to the current
+tenant-membership policy. No RLS, grant, trigger, schema, or data change is
+authorized by this evidence packet.
 
 ### CSC ownership is a relationship fact, not an authorization grant
 
