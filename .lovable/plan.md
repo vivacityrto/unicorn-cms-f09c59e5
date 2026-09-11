@@ -1,25 +1,32 @@
-# Fix build errors in current edit branch
+# Verification of the 5 monitoring findings
 
-## Context
-The current working tree (clean) on the Lovable edit branch has three TypeScript build errors that block the preview. These need to be resolved before continuing with the regulatory-updates work.
+I re-checked every finding against the code as it stands today. Three are real, two have already been fixed since they were raised.
 
-## Errors to fix
+## Confirmed real (3)
 
-1. **`src/components/client/StageDocumentsSection.tsx:100` — TS2589**
-   `supabase.from('bulk_document_job_items').select('job_id, bulk_document_jobs!inner(status)')...`
-   The typed Supabase client is recursing on the `!inner` foreign-table join.
-   **Fix:** Add an explicit `.returns<{ job_id: string }[]>()` (or equivalent cast) to break the deep type instantiation.
+### 1. App flashes "Loading..." and loses typed work when the login session renews — high
+Evidence: in `src/auth/session.ts` the auth listener clears the profile, profile error and memberships on **every** auth event (including a silent token refresh), before re-fetching. `src/components/ProtectedRoute.tsx` renders a full-screen "Loading..." whenever the profile is empty, so the whole page unmounts and any half-filled form is lost. Confirmed by reading both files.
 
-2. **`src/hooks/useAcademyCourses.ts:101` — TS2322**
-   Mapped rows have `thumbnail_fit: string`, but `AcademyCourseRow` expects `"contain" | "cover"`.
-   **Fix:** Cast the spread course object's `thumbnail_fit` to the union type, e.g. `thumbnail_fit: c.thumbnail_fit as AcademyCourse['thumbnail_fit']`.
+### 2. KPI reviews and sign-off missing from My KPI dashboard — medium
+Evidence: `src/components/kpi/MyKpiSignOffSection.tsx` no longer exists (only 7 files remain in `src/components/kpi/`), and a project-wide search for `kpi_review` / `MyKpiSignOff` outside the generated database types returns nothing. There is no replacement screen, while the database tables and the save routine are still in place.
 
-3. **`src/pages/ManageDocuments.tsx:2407/2433` — TS2339**
-   `doc.stage` no longer exists on the `Document` type after the multi-stage association migration (`document_stage_links` replaces the single `stage` column).
-   **Fix:**
-   - Query the document's primary stage from `document_stage_links` (or include it in the existing fetch).
-   - Replace `doc.stage` references with the resolved primary stage value.
-   - Update the `update({ stage: ... })` call to write to `document_stage_links` instead, or use the existing `DocumentAdditionalStagesField` / primary-stage helper already in use elsewhere.
+### 3. Edit Time: client contacts appear in the "Person" list — medium
+Evidence: `EditTimeDialog.tsx` builds `teamMembers` as Vivacity staff **plus** the client's own portal users (`tenant_users` -> `users` lookup), and the "Person" selector at line 360 renders that combined list. The list is only meant to hold Vivacity staff, so billable hours can be attributed to a client user.
 
-## Verification
-Run `npm run build` (or `npx tsc --noEmit`) and confirm zero errors before returning to the regulatory-updates feature.
+## Already fixed — not actionable (2)
+
+### 4. Client portal admins can remove their own login
+`ClientUsersPage.tsx` line 618 now guards the action with `row.user_id !== profile?.user_uuid`, matching the staff-side screen. Stale.
+
+### 5. Past meeting summaries no longer show cascade messages
+`MeetingSummaryCard.tsx` lines 40 and 315 keep the legacy cascade card and render it when a summary has no One Phrase Close. Stale.
+
+## Proposed fixes
+
+1. **Session refresh:** only clear the profile and memberships when the signed-in user actually changes or there is no session; on a token refresh keep the existing profile and refresh it in the background. Keep the "Loading..." gate for genuinely first-time loads.
+2. **Edit Time person list:** restore a staff-only list for the "Person" selector, and keep the combined staff + client list for the notification-recipient selector only.
+3. **KPI sign-off:** confirm with you whether its removal was deliberate. If it was, I mark the finding as expected; if not, restoring the panel is a separate piece of work and I would scope it on its own.
+
+## Notes
+
+No database, security policy or permission changes are involved in items 1 and 2 — they are frontend-only.
