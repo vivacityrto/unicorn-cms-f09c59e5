@@ -83,6 +83,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [staffMembers, setStaffMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -146,6 +147,9 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
             }));
         }
       }
+
+      const dedupedStaff = (staffData || []).filter(m => m.user_uuid !== user?.id);
+      setStaffMembers(dedupedStaff);
 
       const allMembers = [...(staffData || []), ...tenantUsers];
       const seen = new Set<string>();
@@ -357,7 +361,11 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                     <span className="font-medium">Me (current user)</span>
                   </SelectItem>
                 )}
-                {teamMembers
+                {/* Staff only -- billable hours must never be attributed to
+                    a client portal contact. The combined staff+client list
+                    stays in teamMembers, used only by the Notify selector
+                    below. */}
+                {staffMembers
                   .filter(m => m.user_uuid !== user?.id)
                   .map(member => (
                     <SelectItem key={member.user_uuid} value={member.user_uuid}>

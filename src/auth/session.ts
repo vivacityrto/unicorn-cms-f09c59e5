@@ -32,6 +32,14 @@ export function useAuthSession(onSignedOut: () => void): AuthSessionState {
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
   const authGenerationRef = useRef(0);
+  // Tracks the signed-in user id we last cleared/fetched profile+memberships
+  // for, so a same-user auth event (a silent token refresh, USER_UPDATED,
+  // etc.) can refresh in the background instead of clearing profile to null
+  // first -- ProtectedRoute full-screen-gates on `!profile`, so clearing it
+  // for every auth event (not just a real sign-in/sign-out/user-change)
+  // unmounted the whole page and lost any in-progress form on every silent
+  // token refresh.
+  const lastUserIdRef = useRef<string | null>(null);
 
   const fetchUserProfile = async (userId: string, generation: number) => {
     setProfileError(null);
@@ -86,20 +94,36 @@ export function useAuthSession(onSignedOut: () => void): AuthSessionState {
         setSession(session);
         setUser(session?.user ?? null);
 
-        const generation = ++authGenerationRef.current;
-        setProfile(null);
-        setProfileError(null);
-        setMemberships([]);
+        const nextUserId = session?.user?.id ?? null;
+        const identityChanged = nextUserId !== lastUserIdRef.current;
+        lastUserIdRef.current = nextUserId;
 
-        if (session?.user) {
-          // Fetch user profile with setTimeout to avoid deadlock
+        if (identityChanged) {
+          const generation = ++authGenerationRef.current;
+          setProfile(null);
+          setProfileError(null);
+          setMemberships([]);
+
+          if (session?.user) {
+            // Fetch user profile with setTimeout to avoid deadlock
+            setTimeout(() => {
+              if (!mountedRef.current || generation !== authGenerationRef.current) return;
+              fetchUserProfile(session.user.id, generation);
+              fetchMemberships(session.user.id, generation);
+            }, 0);
+          } else {
+            setLoading(false);
+          }
+        } else if (session?.user) {
+          // Same signed-in user (e.g. a silent token refresh, or
+          // USER_UPDATED) -- keep the existing profile/memberships visible
+          // and refresh them in the background rather than clearing first.
+          const generation = authGenerationRef.current;
           setTimeout(() => {
             if (!mountedRef.current || generation !== authGenerationRef.current) return;
             fetchUserProfile(session.user.id, generation);
             fetchMemberships(session.user.id, generation);
           }, 0);
-        } else {
-          setLoading(false);
         }
       }
     );
@@ -108,6 +132,7 @@ export function useAuthSession(onSignedOut: () => void): AuthSessionState {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      lastUserIdRef.current = session?.user?.id ?? null;
 
       const generation = ++authGenerationRef.current;
       setProfile(null);
@@ -129,6 +154,7 @@ export function useAuthSession(onSignedOut: () => void): AuthSessionState {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    lastUserIdRef.current = null;
     setUser(null);
     setSession(null);
     setProfile(null);
