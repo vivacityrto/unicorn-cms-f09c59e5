@@ -388,6 +388,29 @@ Do not create one “large-files cleanup” PR. Use one workflow slice per PR:
 | 7 | Current Audits | template builder controller; status transition; report model | error vs empty, completion/action sync, linked-stage navigation |
 | 8 | AI and integrations | orchestration services and telemetry | usage evidence first; preserve external contracts and timeout behavior |
 
+**This register is a snapshot, not a ceiling (recorded 2026-09-11, joint
+Claude/Codex decision, Carl approved).** `src/pages/AdminStageDetail.tsx`
+(2,720 lines when this plan was written, 2,703 as of 2026-09-11 — the
+single largest frontend file in the repo) was already named as a hotspot
+in this plan's own evidence (§4, "52 state hooks and multiple stage/
+document responsibilities") but was never added to the ranked list above —
+a pre-existing omission, not new drift. Current measured progress (`npm
+run metrics`, 2026-09-11): 115 files over 600 lines and 32 over 1000,
+against this plan's own §10 targets of under 80 and under 20 — slices 1-4
+closed and slices 5-8 alone will not reach those targets. **Do not run a
+fresh hotspot audit mid-backlog** (respects the workflow-efficiency
+practice of pausing at phase boundaries, not mid-phase). Instead: finish
+slices 5-8 as ranked above, then run one bounded Phase 4 exit re-audit
+(fresh `npm run metrics` + a top-N largest/most-complex-file review,
+explicitly including `AdminStageDetail.tsx`) before declaring Phase 4
+complete or moving to Phase 5. That re-audit must be **cross-initiative**,
+not Codebase-Optimization-only: any candidate touching tenant identity,
+authorization, messaging, or health analytics (e.g. `ManageTenants.tsx`,
+`TenantUsersTab.tsx`) gets reconciled against RBAC v6's/Tenant Operating
+Model's/Client Health's own discovery scope first, per this plan's own
+routing crosswalk above — one shared characterization and one clear owner,
+never separate per-initiative characterization of the same file.
+
 Per-slice targets:
 
 - page/component orchestrator under about 600 lines where the split is natural;
