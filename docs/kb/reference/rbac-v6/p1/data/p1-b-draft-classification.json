@@ -1,0 +1,1560 @@
+[
+  {
+    "feature_key": "academy.builder.view",
+    "label": "View course library",
+    "module": "Academy",
+    "category": "Academy — Builder",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "academy.builder.edit",
+    "label": "Create / edit courses",
+    "module": "Academy",
+    "category": "Academy — Builder",
+    "proposed_action_verb": "edit",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.builder.publish",
+    "label": "Publish / unpublish course",
+    "module": "Academy",
+    "category": "Academy — Builder",
+    "proposed_action_verb": "publish",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.certificates.view",
+    "label": "View all certificates",
+    "module": "Academy",
+    "category": "Academy — Certificates",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "academy.certificates.issue",
+    "label": "Issue / revoke certificate",
+    "module": "Academy",
+    "category": "Academy — Certificates",
+    "proposed_action_verb": "issue",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.enrolments.view",
+    "label": "View all enrolments",
+    "module": "Academy",
+    "category": "Academy — Enrolments",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "academy.enrolments.create",
+    "label": "Enrol a client in training",
+    "module": "Academy",
+    "category": "Academy — Enrolments",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.enrolments.revoke",
+    "label": "Revoke / expire enrolment",
+    "module": "Academy",
+    "category": "Academy — Enrolments",
+    "proposed_action_verb": "revoke",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.mapping.view",
+    "label": "View mapping matrix",
+    "module": "Academy",
+    "category": "Academy — Mapping",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.mapping.edit",
+    "label": "Create / edit mapping rules",
+    "module": "Academy",
+    "category": "Academy — Mapping",
+    "proposed_action_verb": "edit",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "academy.tenant_access.manage",
+    "label": "Manage tenant access",
+    "module": "Academy",
+    "category": "Academy — Tenant Access",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability."
+    ]
+  },
+  {
+    "feature_key": "admin.team_users.manage",
+    "label": "Team user management",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.tenant_users.manage",
+    "label": "Tenant user management",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.invites.manage",
+    "label": "Manage invites",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.cohort.send",
+    "label": "Cohort sender",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "send",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.broadcast.send",
+    "label": "Send broadcast campaigns",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "send",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.audit_log.view",
+    "label": "System audit logs",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.email_templates.manage",
+    "label": "Email templates (system)",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "High-risk per plan section 5.7: system configuration (system-wide templates).",
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.system_config.manage",
+    "label": "System / kit config",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "High-risk per plan section 5.7: system configuration.",
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.permissions.manage",
+    "label": "Edit role permissions",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "High-risk per plan section 5.7: permission/role/grant administration.",
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.migration.unicorn1",
+    "label": "Unicorn 1 migration tools",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "unicorn1",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: migration tooling.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.testing.seed",
+    "label": "Dashboard test seed",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "seed",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: destructive seeding/test-data control.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.vector.manage",
+    "label": "Vector index admin",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "High-risk per plan section 5.7: system configuration (vector index admin).",
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.integrations.xero_connect",
+    "label": "Connect / disconnect Xero",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "xero_connect",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: external shared credential connect/disconnect.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.academy_mgmt.manage",
+    "label": "Academy management console",
+    "module": "Administration",
+    "category": "Administration",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "audits.setup",
+    "label": "Set up / create an audit",
+    "module": "Audits",
+    "category": "Audits",
+    "proposed_action_verb": "setup",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "audits.operate",
+    "label": "Operate / run the audit",
+    "module": "Audits",
+    "category": "Audits",
+    "proposed_action_verb": "operate",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "audits.view",
+    "label": "View audit results",
+    "module": "Audits",
+    "category": "Audits",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "audits.report",
+    "label": "Generate & release report",
+    "module": "Audits",
+    "category": "Audits",
+    "proposed_action_verb": "report",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "audits.export_pack",
+    "label": "Export compliance pack",
+    "module": "Audits",
+    "category": "Audits",
+    "proposed_action_verb": "export_pack",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: cross-tenant/unredacted export.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "clients.profile.view",
+    "label": "View client profile & timeline",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "clients.login_history.view",
+    "label": "View client login history",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "clients.details.edit",
+    "label": "Edit client details",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "edit",
+    "levels_present": [
+      "full",
+      "limited",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Evidence check (src/pages/ClientDetail.tsx:263): the only call site is usePermission('clients.details.edit','limited') -- a single boolean gate. 'full' and 'limited' are behaviorally IDENTICAL today at this call site (both satisfy the >= limited ordinal check); there is no second call site distinguishing them. Proposing this collapses to one action (edit) with no separate 'limited' scope in the target model, but flagging for product confirmation since a distinction may have been intended and just never wired."
+    ]
+  },
+  {
+    "feature_key": "clients.activate",
+    "label": "Activate a client",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "activate",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: destructive tenant lifecycle (reactivation)."
+    ]
+  },
+  {
+    "feature_key": "clients.create",
+    "label": "Create / set up client",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "clients.deactivate",
+    "label": "Deactivate / close client",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "deactivate",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: destructive tenant lifecycle."
+    ]
+  },
+  {
+    "feature_key": "clients.emails.manage",
+    "label": "Manage linked emails",
+    "module": "Clients",
+    "category": "Client Management",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "admin.documents.bulk_generate",
+    "label": "Bulk generate documents",
+    "module": "Documents",
+    "category": "Documents — Admin",
+    "proposed_action_verb": "bulk_generate",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "high",
+    "delegable": "no",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "High-risk per plan section 5.7: bulk cross-tenant document generation (already machine-only via Bulk Generate Automation role).",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.gwc_trends.view",
+    "label": "GWC Trends",
+    "module": "EOS",
+    "category": "EOS — Analytics",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.rock_analysis.view",
+    "label": "Rock Success Analysis",
+    "module": "EOS",
+    "category": "EOS — Analytics",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.client_impact.view",
+    "label": "Client Impact Reporting",
+    "module": "EOS",
+    "category": "EOS — Analytics",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.leadership_dashboard.view",
+    "label": "Leadership Dashboard",
+    "module": "EOS",
+    "category": "EOS — Dashboard",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.flight_plan.view",
+    "label": "Flight Plan — view",
+    "module": "EOS",
+    "category": "EOS — Flight Plan",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.flight_plan.edit",
+    "label": "Flight Plan — edit",
+    "module": "EOS",
+    "category": "EOS — Flight Plan",
+    "proposed_action_verb": "edit",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.meetings.l10.participate",
+    "label": "L10 — participate",
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "proposed_action_verb": "participate",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.meetings.l10.create",
+    "label": "L10 — create / configure",
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.meetings.samepage",
+    "label": "Same Page Meeting",
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "proposed_action_verb": "samepage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.meetings.quarterly",
+    "label": "Quarterly / Annual — create",
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "proposed_action_verb": "quarterly",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.configurations.manage",
+    "label": "Meeting Configurations — manage",
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability."
+    ]
+  },
+  {
+    "feature_key": "eos.mission_control.view",
+    "label": "Mission Control — view",
+    "module": "EOS",
+    "category": "EOS — Mission Control",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.mission_control.edit",
+    "label": "Mission Control — edit",
+    "module": "EOS",
+    "category": "EOS — Mission Control",
+    "proposed_action_verb": "edit",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.overview.view",
+    "label": "EOS Overview — view",
+    "module": "EOS",
+    "category": "EOS — Overview",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.processes.view",
+    "label": "View processes",
+    "module": "EOS",
+    "category": "EOS — Processes",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.processes.create",
+    "label": "Create / edit process",
+    "module": "EOS",
+    "category": "EOS — Processes",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.processes.publish",
+    "label": "Approve / publish process",
+    "module": "EOS",
+    "category": "EOS — Processes",
+    "proposed_action_verb": "publish",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.qc.create",
+    "label": "Create QC (schedule)",
+    "module": "EOS",
+    "category": "EOS — Quarterly Conversations",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.qc.own",
+    "label": "View & submit own QC",
+    "module": "EOS",
+    "category": "EOS — Quarterly Conversations",
+    "proposed_action_verb": "own",
+    "levels_present": [
+      "full",
+      "owner_only"
+    ],
+    "proposed_scope": "own_resource (for the owner_only grant); global (for the full grant)",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "owner_only maps to action=own + scope=own_resource per plan section 5.4's explicit example; full grant scope follows the module default.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.qc.all",
+    "label": "View all QCs (manager)",
+    "module": "EOS",
+    "category": "EOS — Quarterly Conversations",
+    "proposed_action_verb": "all",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.rocks.company.create",
+    "label": "Company Rock — create/edit",
+    "module": "EOS",
+    "category": "EOS — Rocks",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "eos.rocks.view",
+    "label": "Company Rock — view",
+    "module": "EOS",
+    "category": "EOS — Rocks",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.rocks.own.manage",
+    "label": "Rock — tasks on own Rock",
+    "module": "EOS",
+    "category": "EOS — Rocks",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability."
+    ]
+  },
+  {
+    "feature_key": "eos.scorecard.view",
+    "label": "Scorecard — view",
+    "module": "EOS",
+    "category": "EOS — Scorecard",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.scorecard.update_own",
+    "label": "Scorecard — update own metric",
+    "module": "EOS",
+    "category": "EOS — Scorecard",
+    "proposed_action_verb": "update_own",
+    "levels_present": [
+      "full",
+      "owner_only"
+    ],
+    "proposed_scope": "own_resource (for the owner_only grant); global (for the full grant)",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "owner_only maps to action=update_own + scope=own_resource per plan section 5.4's explicit example; full grant scope follows the module default.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.scorecard.manage",
+    "label": "Scorecard — configure",
+    "module": "EOS",
+    "category": "EOS — Scorecard",
+    "proposed_action_verb": "manage",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability."
+    ]
+  },
+  {
+    "feature_key": "eos.todos.own",
+    "label": "Add To-Do for yourself",
+    "module": "EOS",
+    "category": "EOS — To-Dos",
+    "proposed_action_verb": "own",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "eos.todos.others",
+    "label": "Add To-Do for others",
+    "module": "EOS",
+    "category": "EOS — To-Dos",
+    "proposed_action_verb": "others",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "packages.view",
+    "label": "View package & progress",
+    "module": "Packages",
+    "category": "Packages",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "packages.items.tick",
+    "label": "Tick off package items",
+    "module": "Packages",
+    "category": "Packages",
+    "proposed_action_verb": "tick",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "packages.notes.add",
+    "label": "Add notes / log time / share",
+    "module": "Packages",
+    "category": "Packages",
+    "proposed_action_verb": "add",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "packages.create",
+    "label": "Create / start a package",
+    "module": "Packages",
+    "category": "Packages",
+    "proposed_action_verb": "create",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "packages.close",
+    "label": "Close a package",
+    "module": "Packages",
+    "category": "Packages",
+    "proposed_action_verb": "close",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "all_tenants",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": true,
+    "confidence": "draft",
+    "notes": []
+  },
+  {
+    "feature_key": "resource_hub.view",
+    "label": "View / browse resources",
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "proposed_action_verb": "view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "resource_hub.upload",
+    "label": "Upload / create resource",
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "proposed_action_verb": "upload",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "resource_hub.approve",
+    "label": "Approve & publish resource",
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "proposed_action_verb": "approve",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "resource_hub.archive",
+    "label": "Archive / remove resource",
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "proposed_action_verb": "archive",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.internal",
+    "label": "Vivacity staff (generic)",
+    "module": "Staff",
+    "category": "Staff",
+    "proposed_action_verb": "internal",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+      "This gates 'is Vivacity staff' generically, not a specific operation -- plan section 5.1 says not to reuse an identity/visibility check as an authorization predicate. Likely belongs to principal-state/role-seat modeling rather than the capability catalogue; flagging for product decision on whether to retire this as a 'capability' at all."
+    ]
+  },
+  {
+    "feature_key": "staff.addin.use",
+    "label": "Outlook add-in",
+    "module": "Staff",
+    "category": "Staff — Add-in",
+    "proposed_action_verb": "use",
+    "levels_present": [
+      "full",
+      "none"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.ai.use",
+    "label": "Staff AI assistants",
+    "module": "Staff",
+    "category": "Staff — AI",
+    "proposed_action_verb": "use",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.billing.xero_view",
+    "label": "View Xero invoice status",
+    "module": "Staff",
+    "category": "Staff — Billing",
+    "proposed_action_verb": "xero_view",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.documents.generate",
+    "label": "Generate / deliver documents",
+    "module": "Staff",
+    "category": "Staff — Documents",
+    "proposed_action_verb": "generate",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.email.send",
+    "label": "Send composed / Graph email",
+    "module": "Staff",
+    "category": "Staff — Email",
+    "proposed_action_verb": "send",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.integrations.tga",
+    "label": "TGA integration",
+    "module": "Staff",
+    "category": "Staff — Integrations",
+    "proposed_action_verb": "tga",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "draft",
+    "notes": [
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.meetings.use",
+    "label": "Meeting artefacts",
+    "module": "Staff",
+    "category": "Staff — Meetings",
+    "proposed_action_verb": "use",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.research.use",
+    "label": "Research / knowledge tools",
+    "module": "Staff",
+    "category": "Staff — Research",
+    "proposed_action_verb": "use",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  },
+  {
+    "feature_key": "staff.sharepoint.use",
+    "label": "SharePoint browse / provision",
+    "module": "Staff",
+    "category": "Staff — SharePoint",
+    "proposed_action_verb": "use",
+    "levels_present": [
+      "full"
+    ],
+    "proposed_scope": "global",
+    "risk_class": "standard",
+    "delegable": "needs_review",
+    "observed_frontend_gate": false,
+    "confidence": "needs_product_input",
+    "notes": [
+      "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+      "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job)."
+    ]
+  }
+]
