@@ -49,6 +49,7 @@ import { fetchTgaLinkSyncStatus } from '@/hooks/fetchTgaLinkSyncStatus';
 import { fetchClientTenantStatus } from '@/hooks/fetchClientTenantStatus';
 import { fetchTenantHeadOfficeTransferDate } from '@/hooks/fetchTenantHeadOfficeTransferDate';
 import { fetchTgaDebugData } from '@/hooks/fetchTgaDebugData';
+import { fetchInitialRegistrationContext } from '@/hooks/fetchInitialRegistrationContext';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -429,34 +430,8 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id) return;
     let cancelled = false;
     const check = async () => {
-      const matches = (txt?: string | null) =>
-        !!txt && /initial|registration/i.test(txt);
-
-      const { data: tenantRow } = await supabase
-        .from('tenants')
-        .select('lifecycle_status')
-        .eq('id', profile.tenant_id)
-        .maybeSingle();
-      if (matches(tenantRow?.lifecycle_status)) {
-        if (!cancelled) setIsInitialRegistration(true);
-        return;
-      }
-
-      const { data: ents } = await supabase
-        .from('package_instances')
-        .select('package_id')
-        .eq('tenant_id', profile.tenant_id);
-      const pkgIds = Array.from(new Set((ents || []).map((e) => e.package_id).filter(Boolean)));
-      if (pkgIds.length === 0) {
-        if (!cancelled) setIsInitialRegistration(false);
-        return;
-      }
-      const { data: pkgs } = await supabase
-        .from('packages')
-        .select('name, slug')
-        .in('id', pkgIds);
-      const hit = (pkgs || []).some((p) => matches(p?.name) || matches(p?.slug));
-      if (!cancelled) setIsInitialRegistration(hit);
+      const initialRegistration = await fetchInitialRegistrationContext(profile.tenant_id);
+      if (!cancelled) setIsInitialRegistration(initialRegistration);
     };
     check();
     return () => {
