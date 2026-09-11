@@ -9,6 +9,7 @@ import {
 } from "@/features/client-identity/sendClientInvite";
 import { resendClientInvite } from "@/features/client-identity/resendClientInvite";
 import { revokeClientInvite } from "@/features/client-identity/revokeClientInvite";
+import { copyClientInviteLink } from "@/features/client-identity/copyClientInviteLink";
 
 export type { InviteAccessLevel } from "@/features/client-identity/invite-policy";
 export type { InviteInput } from "@/features/client-identity/sendClientInvite";
@@ -78,19 +79,7 @@ export function useInviteMutations() {
   });
 
   const copyLink = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const { data, error } = await supabase.functions.invoke("resend-invite", {
-        body: { invitation_id: invitationId, skip_email: true },
-      });
-      if (error) {
-        const edge = await extractEdgeError(error);
-        throw new Error(edge?.detail || error.message);
-      }
-      if (!data?.action_link) {
-        throw new Error("The resend-invite function did not return a link.");
-      }
-      return data as { action_link: string };
-    },
+    mutationFn: copyClientInviteLink,
     onSuccess: async (data) => {
       try {
         await navigator.clipboard.writeText(data.action_link);

@@ -134,6 +134,13 @@ packets.
   `skip_email: false`, and `job_title: null` contract. UI state, toasts,
   contact refresh, and capacity invalidation remain in the component; no
   contact was promoted during verification.
+- The next bounded Stage 2 adapter is implemented in the copy-link review
+  branch: `copyClientInviteLink` owns the existing `resend-invite` invocation
+  with `skip_email: true`, structured Edge detail fallback, and missing-link
+  validation. Clipboard access, link-ready/link-copied toasts, invitation-user
+  invalidation, recent-action confirmation, and pending UI state remain in
+  the existing hook/page boundary; no invitation email or other production
+  write is performed by this extraction.
 - Static source and migration review was completed from
   `origin/main@b63ea5fea`. The existing authenticated storage-state files were
   copied into the implementation worktree. The source PR's verification
