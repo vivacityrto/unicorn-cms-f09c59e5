@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRouteTenantContext } from "@/hooks/useRouteTenantContext";
 import { requestAskVivAssistant } from "@/hooks/askVivAssistantRequest";
 import { fetchAskVivAssistantMessages } from "@/hooks/askVivAssistantMessages";
+import { deleteAskVivAssistantConversation } from "@/hooks/deleteAskVivAssistantConversation";
 
 export interface AssistantSourceUsed {
   tool: string;
@@ -92,8 +93,7 @@ export function useAskVivAssistantChat() {
 
   const deleteConversation = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("ask_viv_conversations").delete().eq("id", id);
-      if (error) throw error;
+      await deleteAskVivAssistantConversation(id);
       setConversationList((prev) => prev.filter((c) => c.id !== id));
       if (conversationId === id) {
         startNewConversation();
