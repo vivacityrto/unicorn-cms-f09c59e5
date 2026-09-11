@@ -10,6 +10,7 @@ import {
 import { resendClientInvite } from "@/features/client-identity/resendClientInvite";
 import { revokeClientInvite } from "@/features/client-identity/revokeClientInvite";
 import { copyClientInviteLink } from "@/features/client-identity/copyClientInviteLink";
+import { resetClientPassword } from "@/features/client-identity/resetClientPassword";
 
 export type { InviteAccessLevel } from "@/features/client-identity/invite-policy";
 export type { InviteInput } from "@/features/client-identity/sendClientInvite";
@@ -98,18 +99,7 @@ export function useInviteMutations() {
   });
 
   const resetPassword = useMutation({
-    mutationFn: async (userUuid: string) => {
-      const { data, error } = await supabase.functions.invoke("send-password-reset", {
-        body: { user_uuid: userUuid },
-      });
-      if (error) {
-        const edge = await extractEdgeError(error);
-        const wrapped = new Error(edge?.detail || error.message) as Error & { code?: string };
-        wrapped.code = edge?.code;
-        throw wrapped;
-      }
-      return data as { ok?: boolean; email?: string };
-    },
+    mutationFn: resetClientPassword,
     onSuccess: (data) => {
       toast({
         title: "Password reset sent",
