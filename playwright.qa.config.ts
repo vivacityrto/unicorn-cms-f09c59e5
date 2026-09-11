@@ -4,15 +4,24 @@ import { defineConfig, devices } from "@playwright/test";
 // playwright.config.ts (which always targets PRODUCTION), never merged into
 // it, so a QA run can never be silently pointed at production or vice versa.
 //
-// src/integrations/supabase/client.ts is a Lovable-generated file that
-// hardcodes the target project's URL/anon key as literal strings -- it does
-// NOT read import.meta.env.VITE_SUPABASE_URL at runtime, so there is no
-// env-var or --mode flag that redirects the frontend to a different backend.
-// Running this suite therefore requires *temporarily* editing those two
-// literals in client.ts to unicorn-qa's values, running this config, then
-// reverting client.ts to its committed (production) content before anything
-// is ever committed or pushed -- never do so on a shared/non-worktree
-// checkout, and never merge a client.ts change pointed at unicorn-qa.
+// src/integrations/supabase/client.ts is a Lovable-generated file. As of the
+// env-driven QA client change, it reads
+// import.meta.env.VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY at
+// runtime, falling back to the hardcoded production values only when those
+// env vars are absent -- so a QA run no longer requires hand-editing and
+// reverting client.ts. Point `npm run dev` at unicorn-qa by setting both env
+// vars before starting it (matching the convention already used by
+// scripts/qa-seed-e2e-personas.mjs and the qa:rls/qa:contract/etc. GitHub
+// Actions workflows):
+//   VITE_SUPABASE_URL=https://qfpxvumcrnzrjyvqkicq.supabase.co \
+//   VITE_SUPABASE_PUBLISHABLE_KEY=<unicorn-qa anon key> \
+//   npm run dev
+// Never commit a `.env`/`.env.local` with these QA values checked in as the
+// active values for a normal dev session -- set them inline or in a
+// gitignored local file for the duration of a QA run only. A Lovable remix
+// may overwrite client.ts back to hardcoded-only literals; if so, reapply
+// the env-var read (see client.ts's own header comment) before relying on
+// this again.
 //
 // Personas: a persistent Super Admin and a persistent client, seeded once
 // via `node scripts/qa-seed-e2e-personas.mjs` (see
@@ -23,7 +32,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Storage states generated the same way as production's:
 // `E2E_EMAIL=... E2E_PASSWORD=... node e2e/auth-setup.mjs qa-superadmin` /
 // `qa-client` (requires `npm run dev` already running against the
-// QA-pointed client.ts).
+// QA-pointed environment above).
 export default defineConfig({
   testDir: "./e2e/qa",
   fullyParallel: false,
