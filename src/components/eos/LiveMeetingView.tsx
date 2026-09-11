@@ -31,6 +31,7 @@ import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { useLiveMeetingViewingState } from '@/hooks/useLiveMeetingViewingState';
+import { useLiveMeetingSegmentNavigation } from '@/hooks/useLiveMeetingSegmentNavigation';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { ClientBadge } from '@/components/eos/ClientBadge';
@@ -77,8 +78,6 @@ export const LiveMeetingView = () => {
   const [rockFormOpen, setRockFormOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
   const [myPhraseDraft, setMyPhraseDraft] = useState('');
-  const isNavigatingRef = useRef(false);
-  const [isNavigatingUI, setIsNavigatingUI] = useState(false);
 
   // Fetch meeting details first (needed for tenant_id)
   const { data: meeting, isLoading: meetingLoading } = useQuery({
@@ -276,6 +275,13 @@ export const LiveMeetingView = () => {
     isViewingLive,
     facilitatorAdvancedWhileBrowsing,
   } = useLiveMeetingViewingState(segments);
+  const { isNavigatingUI, handleAdvanceSegment, handlePreviousSegment } = useLiveMeetingSegmentNavigation({
+    segmentsFetching,
+    advanceSegment,
+    goToPreviousSegment,
+    setViewingSegmentId,
+    broadcastChange,
+  });
 
   const completedSegments = useMemo(() => 
     segments?.filter(s => s.completed_at) || [], 
@@ -498,45 +504,6 @@ export const LiveMeetingView = () => {
     setSelectedIssue(issue);
     setIdsDialogOpen(true);
   };
-
-  // Throttled segment navigation handlers to prevent double-clicks.
-  // Own action always snaps the acting facilitator's view back to live
-  // (no nudge needed for your own click) - other attendees who've browsed
-  // away keep their local viewingSegmentId and see the jump-to-live nudge
-  // instead, since realtime only invalidates the segments query, it never
-  // touches viewingSegmentId.
-  const handleAdvanceSegment = async () => {
-    if (isNavigatingRef.current || segmentsFetching) return;
-    isNavigatingRef.current = true;
-    setIsNavigatingUI(true);
-    try {
-      await advanceSegment.mutateAsync();
-      setViewingSegmentId(null);
-      broadcastChange('segment_change');
-    } finally {
-      setTimeout(() => {
-        isNavigatingRef.current = false;
-        setIsNavigatingUI(false);
-      }, 1000);
-    }
-  };
-
-  const handlePreviousSegment = async () => {
-    if (isNavigatingRef.current || segmentsFetching) return;
-    isNavigatingRef.current = true;
-    setIsNavigatingUI(true);
-    try {
-      await goToPreviousSegment.mutateAsync();
-      setViewingSegmentId(null);
-      broadcastChange('segment_change');
-    } finally {
-      setTimeout(() => {
-        isNavigatingRef.current = false;
-        setIsNavigatingUI(false);
-      }, 1000);
-    }
-  };
-
 
   const handleToggleTodo = async (todo: EosTodo) => {
     const newStatus = todo.status === 'Complete' ? 'Open' : 'Complete';
