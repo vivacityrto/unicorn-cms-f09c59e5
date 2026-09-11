@@ -1,7 +1,7 @@
 # Tenant P0.1 Source-of-Truth Inventory
 
-Generated: 2026-09-11 18:05 +08:00
-Source baseline: `origin/main@05a09815d9b450410d1021d2a6fde0a7d78c3495`
+Generated: 2026-09-11 19:05 +08:00
+Source baseline: `origin/main@5f1c6501498308d7ac0866a5fa1ee0e2c9d9765b`
 Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-11
 
 > This artifact is evidence, not authority. It records current frontend source and read-only live metadata. It does not create a directory contract, change authorization, repair unmatched rows, or authorize a schema/RLS/function/trigger/grant change.
@@ -281,6 +281,83 @@ also found no current publication-maintenance statement that would reconcile
 the `useTenantNotes` listener with live publication membership. This remains a
 live operational gap, not a reason to change the publication in this packet.
 
+## Cross-initiative ownership and membership reconciliation
+
+This section intentionally does not inspect or revisit the four objects under
+Carl's remediation hold (`v_client_package_dashboard`, `v_package_burndown`,
+`start_client_package`, and `transition_membership_state`). It records only
+the independent TOM/RBAC/Client Health intersection for membership, ownership,
+and notes.
+
+### `tenant_users` versus `tenant_members`
+
+TOM ADR-019 establishes `tenant_members` as the target canonical membership
+ledger, with `tenant_users`' contact and relationship columns to migrate onto
+that model. Current code is not yet on one ledger:
+
+- `TenantUsersTab.tsx`, `TenantUsers.tsx`, `useTenantContacts`, and the
+  Manage-Tenants source graph still read or write `tenant_users` for current
+  contacts, relationship roles, position types, and primary/secondary flags.
+- `useSeatLimits` reads active rows from `tenant_members` instead. The
+  `invite-user` skip-email path mirrors a new association into both tables;
+  `activate-ghost-user` explicitly upserts both tables. `provision-m365-user`
+  still inserts only the Vivacity `tenant_users` association in its inspected
+  path. These are different write contracts, not a proven one-to-one mirror.
+- Read-only live counts show 936 `tenant_members` rows (559 active, 377
+  inactive), 576 `tenant_users` rows, and 570 overlapping `(tenant_id,user_id)`
+  pairs. `tenant_members` has 349 rows whose tenant no longer exists and no
+  rows whose user is missing. Only 196 active `tenant_members` rows overlap a
+  `tenant_users` pair; 363 active membership rows have no `tenant_users` row,
+  while 380 `tenant_users` rows have no active `tenant_members` counterpart.
+
+This is sufficient to rule out an implicit table swap or a count-based
+directory contract. The 349 active-ledger tenant orphans and the two-way
+active/inactive divergence need provenance and status decisions before a
+backfill, cleanup, or authorization interpretation. RBAC must not infer
+authorization from overlap alone; Client Health must not use either table as
+an authoritative active-membership denominator until the crosswalk is owned.
+
+### CSC ownership is a relationship fact, not an authorization grant
+
+The live assignment snapshot has 60 tenants with an open primary
+`tenant_csc_assignments` row, while 88 tenants still have the legacy
+`tenants.assigned_consultant_user_id` populated. The two representations differ
+for 28 tenants; all open primary assignment rows map to an existing `users`
+row. This independently confirms the TOM and Client Health plans' warning
+that the legacy tenant column and assignment table cannot be silently treated
+as interchangeable ownership sources. RBAC's approved broad staff-read
+decision does not turn CSC assignment into a read-scope grant; sensitive
+assignment writes remain a separate capability/relationship contract.
+
+### Notes ownership boundary
+
+The current Manage Tenants graph still reads both `notes` and `client_notes`,
+while Client Health H0.1 characterizes notes/tasks separately and explicitly
+requires source sensitivity, tenant authorization, and provenance to survive
+into any analytical projection. The writer census remains split: note hooks,
+editors, ClickUp-note persistence, and `unlink-email` write `notes`, while
+`useClientManagementData` owns the observed `client_notes` delete path. No
+cross-store collapse or “latest note” authority is introduced by this packet;
+the existing browser merge remains current behavior only.
+
+### Cross-initiative disposition
+
+- TOM owns the current-to-target membership crosswalk and the canonical
+  ownership/source-of-truth decision; this packet supplies evidence only.
+- RBAC owns the capability/relationship interpretation. Current membership
+  rows, CSC assignment rows, and connected-tenant rows must not be promoted
+  into authorization scope without a named resolver and server-side target
+  binding.
+- Client Health owns analytical consumers and must retain source table,
+  sensitivity, as-of time, ownership history, and authorization provenance;
+  no health or engagement metric may use the divergent ledgers as if they
+  were interchangeable.
+
+The next safe step is owner review of this crosswalk and a separately scoped
+ADR or evidence packet for the `tenant_users` → `tenant_members` migration
+boundary. No migration, cleanup, RLS/grant change, authorization change, or
+analytics projection is authorized here.
+
 ## Current evidence gaps and exit status
 
 P0.1 is materially advanced but remains **in progress**, not complete:
@@ -299,10 +376,17 @@ P0.1 is materially advanced but remains **in progress**, not complete:
    need named owner decisions; the historical connected-tenant rows need a
    retention/cleanup policy, not an inferred delete.
 6. The Realtime publication mismatch is confirmed and remains unreconciled.
-   P0.1 can close its evidence-gathering portion after the TOM/RBAC/Client
-   Health owners review these findings, but no P1 directory contract should
-   proceed until the view/RPC authorization findings have an explicit owner
-   and disposition. No directory migration, RLS change, grant change,
-   cleanup, or production-data correction is implied by this document.
+7. The independent cross-initiative pass confirms that `tenant_users` and
+   `tenant_members` are materially divergent live ledgers, and that the
+   legacy consultant column differs from the open primary assignment table.
+   These findings are now owned as TOM/RBAC/Client Health crosswalk inputs;
+   they do not reopen or bypass the remediation hold on the four reported
+   view/RPC objects.
+8. P0.1 can close its evidence-gathering portion after the TOM/RBAC/Client
+   Health owners review these findings and Carl directs the held-object
+   remediation path. No P1 directory contract should proceed until those
+   findings and the membership crosswalk have explicit owners and
+   dispositions. No directory migration, RLS change, grant change, cleanup,
+   or production-data correction is implied by this document.
 
 **Audit entry:** none needed — this change is a read-only documentation inventory with no schema, RLS, trigger, grant, production-data, or user-visible behavior change.
