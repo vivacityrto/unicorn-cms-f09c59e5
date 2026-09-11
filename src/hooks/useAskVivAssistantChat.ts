@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useRouteTenantContext } from "@/hooks/useRouteTenantContext";
 import { requestAskVivAssistant } from "@/hooks/askVivAssistantRequest";
 import { fetchAskVivAssistantMessages } from "@/hooks/askVivAssistantMessages";
 import { deleteAskVivAssistantConversation } from "@/hooks/deleteAskVivAssistantConversation";
+import { fetchAskVivAssistantHistory } from "@/hooks/askVivAssistantHistory";
 
 export interface AssistantSourceUsed {
   tool: string;
@@ -56,27 +56,8 @@ export function useAskVivAssistantChat() {
   const loadConversationHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
-      const { data: turnRows, error: turnErr } = await supabase
-        .from("ask_viv_turns")
-        .select("conversation_id")
-        .eq("mode", "assistant");
-      if (turnErr) throw turnErr;
-
-      const uniqueIds = [...new Set((turnRows || []).map((r) => r.conversation_id))];
-      if (uniqueIds.length === 0) {
-        setConversationList([]);
-        return;
-      }
-
-      const { data: conversations, error: convErr } = await supabase
-        .from("ask_viv_conversations")
-        .select("id, title, updated_at")
-        .in("id", uniqueIds)
-        .order("updated_at", { ascending: false })
-        .limit(30);
-      if (convErr) throw convErr;
-
-      setConversationList(conversations || []);
+      const conversations = await fetchAskVivAssistantHistory();
+      setConversationList(conversations);
     } catch (err) {
       console.error("Failed to load Ask Viv Assistant conversation history:", err);
       setConversationList([]);
