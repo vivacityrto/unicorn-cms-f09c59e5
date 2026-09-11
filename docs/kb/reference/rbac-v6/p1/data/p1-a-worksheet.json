@@ -1,0 +1,1375 @@
+[
+  {
+    "label": "View course library",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Builder",
+    "is_active": true,
+    "sort_order": 660,
+    "feature_key": "academy.builder.view"
+  },
+  {
+    "label": "Create / edit courses",
+    "roles": {
+      "BGT": "full",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Builder",
+    "is_active": true,
+    "sort_order": 670,
+    "feature_key": "academy.builder.edit"
+  },
+  {
+    "label": "Publish / unpublish course",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Builder",
+    "is_active": true,
+    "sort_order": 680,
+    "feature_key": "academy.builder.publish"
+  },
+  {
+    "label": "View all certificates",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Certificates",
+    "is_active": true,
+    "sort_order": 640,
+    "feature_key": "academy.certificates.view"
+  },
+  {
+    "label": "Issue / revoke certificate",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Certificates",
+    "is_active": true,
+    "sort_order": 650,
+    "feature_key": "academy.certificates.issue"
+  },
+  {
+    "label": "View all enrolments",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Enrolments",
+    "is_active": true,
+    "sort_order": 610,
+    "feature_key": "academy.enrolments.view"
+  },
+  {
+    "label": "Enrol a client in training",
+    "roles": {
+      "BGT": "full",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Enrolments",
+    "is_active": true,
+    "sort_order": 620,
+    "feature_key": "academy.enrolments.create"
+  },
+  {
+    "label": "Revoke / expire enrolment",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Enrolments",
+    "is_active": true,
+    "sort_order": 630,
+    "feature_key": "academy.enrolments.revoke"
+  },
+  {
+    "label": "View mapping matrix",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Mapping",
+    "is_active": true,
+    "sort_order": 690,
+    "feature_key": "academy.mapping.view"
+  },
+  {
+    "label": "Create / edit mapping rules",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Mapping",
+    "is_active": true,
+    "sort_order": 700,
+    "feature_key": "academy.mapping.edit"
+  },
+  {
+    "label": "Manage tenant access",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Academy",
+    "category": "Academy — Tenant Access",
+    "is_active": true,
+    "sort_order": 600,
+    "feature_key": "academy.tenant_access.manage"
+  },
+  {
+    "label": "Team user management",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 10,
+    "feature_key": "admin.team_users.manage"
+  },
+  {
+    "label": "Tenant user management",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 20,
+    "feature_key": "admin.tenant_users.manage"
+  },
+  {
+    "label": "Manage invites",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 30,
+    "feature_key": "admin.invites.manage"
+  },
+  {
+    "label": "Cohort sender",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 40,
+    "feature_key": "admin.cohort.send"
+  },
+  {
+    "label": "Send broadcast campaigns",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 45,
+    "feature_key": "admin.broadcast.send"
+  },
+  {
+    "label": "System audit logs",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 50,
+    "feature_key": "admin.audit_log.view"
+  },
+  {
+    "label": "Email templates (system)",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 60,
+    "feature_key": "admin.email_templates.manage"
+  },
+  {
+    "label": "System / kit config",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 70,
+    "feature_key": "admin.system_config.manage"
+  },
+  {
+    "label": "Edit role permissions",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none",
+      "Team Member": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 71,
+    "feature_key": "admin.permissions.manage"
+  },
+  {
+    "label": "Unicorn 1 migration tools",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none",
+      "Team Member": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 72,
+    "feature_key": "admin.migration.unicorn1"
+  },
+  {
+    "label": "Dashboard test seed",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none",
+      "Team Member": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 73,
+    "feature_key": "admin.testing.seed"
+  },
+  {
+    "label": "Vector index admin",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none",
+      "Team Member": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 74,
+    "feature_key": "admin.vector.manage"
+  },
+  {
+    "label": "Connect / disconnect Xero",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "none",
+      "Team Member": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 75,
+    "feature_key": "admin.integrations.xero_connect"
+  },
+  {
+    "label": "Academy management console",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Administration",
+    "category": "Administration",
+    "is_active": true,
+    "sort_order": 80,
+    "feature_key": "admin.academy_mgmt.manage"
+  },
+  {
+    "label": "Set up / create an audit",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Audits",
+    "category": "Audits",
+    "is_active": true,
+    "sort_order": 900,
+    "feature_key": "audits.setup"
+  },
+  {
+    "label": "Operate / run the audit",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Audits",
+    "category": "Audits",
+    "is_active": true,
+    "sort_order": 910,
+    "feature_key": "audits.operate"
+  },
+  {
+    "label": "View audit results",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Audits",
+    "category": "Audits",
+    "is_active": true,
+    "sort_order": 920,
+    "feature_key": "audits.view"
+  },
+  {
+    "label": "Generate & release report",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Audits",
+    "category": "Audits",
+    "is_active": true,
+    "sort_order": 930,
+    "feature_key": "audits.report"
+  },
+  {
+    "label": "Export compliance pack",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none",
+      "Team Member": "none"
+    },
+    "module": "Audits",
+    "category": "Audits",
+    "is_active": true,
+    "sort_order": 931,
+    "feature_key": "audits.export_pack"
+  },
+  {
+    "label": "View client profile & timeline",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 100,
+    "feature_key": "clients.profile.view"
+  },
+  {
+    "label": "View client login history",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 110,
+    "feature_key": "clients.login_history.view"
+  },
+  {
+    "label": "Edit client details",
+    "roles": {
+      "BGT": "limited",
+      "CET": "none",
+      "CSC": "limited",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 120,
+    "feature_key": "clients.details.edit"
+  },
+  {
+    "label": "Activate a client",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 130,
+    "feature_key": "clients.activate"
+  },
+  {
+    "label": "Create / set up client",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 140,
+    "feature_key": "clients.create"
+  },
+  {
+    "label": "Deactivate / close client",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 150,
+    "feature_key": "clients.deactivate"
+  },
+  {
+    "label": "Manage linked emails",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Clients",
+    "category": "Client Management",
+    "is_active": true,
+    "sort_order": 160,
+    "feature_key": "clients.emails.manage"
+  },
+  {
+    "label": "Bulk generate documents",
+    "roles": {
+      "Bulk Generate Automation": "full"
+    },
+    "module": "Documents",
+    "category": "Documents — Admin",
+    "is_active": true,
+    "sort_order": 0,
+    "feature_key": "admin.documents.bulk_generate"
+  },
+  {
+    "label": "GWC Trends",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Analytics",
+    "is_active": true,
+    "sort_order": 510,
+    "feature_key": "eos.gwc_trends.view"
+  },
+  {
+    "label": "Rock Success Analysis",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Analytics",
+    "is_active": true,
+    "sort_order": 520,
+    "feature_key": "eos.rock_analysis.view"
+  },
+  {
+    "label": "Client Impact Reporting",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Analytics",
+    "is_active": true,
+    "sort_order": 530,
+    "feature_key": "eos.client_impact.view"
+  },
+  {
+    "label": "Leadership Dashboard",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Dashboard",
+    "is_active": true,
+    "sort_order": 310,
+    "feature_key": "eos.leadership_dashboard.view"
+  },
+  {
+    "label": "Flight Plan — view",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Flight Plan",
+    "is_active": true,
+    "sort_order": 370,
+    "feature_key": "eos.flight_plan.view"
+  },
+  {
+    "label": "Flight Plan — edit",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Flight Plan",
+    "is_active": true,
+    "sort_order": 380,
+    "feature_key": "eos.flight_plan.edit"
+  },
+  {
+    "label": "L10 — participate",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "is_active": true,
+    "sort_order": 440,
+    "feature_key": "eos.meetings.l10.participate"
+  },
+  {
+    "label": "L10 — create / configure",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "is_active": true,
+    "sort_order": 450,
+    "feature_key": "eos.meetings.l10.create"
+  },
+  {
+    "label": "Same Page Meeting",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "is_active": true,
+    "sort_order": 460,
+    "feature_key": "eos.meetings.samepage"
+  },
+  {
+    "label": "Quarterly / Annual — create",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "is_active": true,
+    "sort_order": 470,
+    "feature_key": "eos.meetings.quarterly"
+  },
+  {
+    "label": "Meeting Configurations — manage",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "EOS",
+    "category": "EOS — Meetings",
+    "is_active": true,
+    "sort_order": 480,
+    "feature_key": "eos.configurations.manage"
+  },
+  {
+    "label": "Mission Control — view",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Mission Control",
+    "is_active": true,
+    "sort_order": 350,
+    "feature_key": "eos.mission_control.view"
+  },
+  {
+    "label": "Mission Control — edit",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Mission Control",
+    "is_active": true,
+    "sort_order": 360,
+    "feature_key": "eos.mission_control.edit"
+  },
+  {
+    "label": "EOS Overview — view",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Overview",
+    "is_active": true,
+    "sort_order": 300,
+    "feature_key": "eos.overview.view"
+  },
+  {
+    "label": "View processes",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Processes",
+    "is_active": true,
+    "sort_order": 540,
+    "feature_key": "eos.processes.view"
+  },
+  {
+    "label": "Create / edit process",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Processes",
+    "is_active": true,
+    "sort_order": 550,
+    "feature_key": "eos.processes.create"
+  },
+  {
+    "label": "Approve / publish process",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Processes",
+    "is_active": true,
+    "sort_order": 560,
+    "feature_key": "eos.processes.publish"
+  },
+  {
+    "label": "Create QC (schedule)",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Quarterly Conversations",
+    "is_active": true,
+    "sort_order": 480,
+    "feature_key": "eos.qc.create"
+  },
+  {
+    "label": "View & submit own QC",
+    "roles": {
+      "BGT": "owner_only",
+      "CET": "owner_only",
+      "CSC": "owner_only",
+      "Integrator": "owner_only",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Quarterly Conversations",
+    "is_active": true,
+    "sort_order": 490,
+    "feature_key": "eos.qc.own"
+  },
+  {
+    "label": "View all QCs (manager)",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Quarterly Conversations",
+    "is_active": true,
+    "sort_order": 500,
+    "feature_key": "eos.qc.all"
+  },
+  {
+    "label": "Company Rock — create/edit",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Rocks",
+    "is_active": true,
+    "sort_order": 390,
+    "feature_key": "eos.rocks.company.create"
+  },
+  {
+    "label": "Company Rock — view",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Rocks",
+    "is_active": true,
+    "sort_order": 400,
+    "feature_key": "eos.rocks.view"
+  },
+  {
+    "label": "Rock — tasks on own Rock",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Rocks",
+    "is_active": true,
+    "sort_order": 410,
+    "feature_key": "eos.rocks.own.manage"
+  },
+  {
+    "label": "Scorecard — view",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Scorecard",
+    "is_active": true,
+    "sort_order": 320,
+    "feature_key": "eos.scorecard.view"
+  },
+  {
+    "label": "Scorecard — update own metric",
+    "roles": {
+      "BGT": "owner_only",
+      "CET": "owner_only",
+      "CSC": "owner_only",
+      "Integrator": "owner_only",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Scorecard",
+    "is_active": true,
+    "sort_order": 330,
+    "feature_key": "eos.scorecard.update_own"
+  },
+  {
+    "label": "Scorecard — configure",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — Scorecard",
+    "is_active": true,
+    "sort_order": 340,
+    "feature_key": "eos.scorecard.manage"
+  },
+  {
+    "label": "Add To-Do for yourself",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — To-Dos",
+    "is_active": true,
+    "sort_order": 420,
+    "feature_key": "eos.todos.own"
+  },
+  {
+    "label": "Add To-Do for others",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "EOS",
+    "category": "EOS — To-Dos",
+    "is_active": true,
+    "sort_order": 430,
+    "feature_key": "eos.todos.others"
+  },
+  {
+    "label": "View package & progress",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Packages",
+    "category": "Packages",
+    "is_active": true,
+    "sort_order": 200,
+    "feature_key": "packages.view"
+  },
+  {
+    "label": "Tick off package items",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Packages",
+    "category": "Packages",
+    "is_active": true,
+    "sort_order": 210,
+    "feature_key": "packages.items.tick"
+  },
+  {
+    "label": "Add notes / log time / share",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Packages",
+    "category": "Packages",
+    "is_active": true,
+    "sort_order": 220,
+    "feature_key": "packages.notes.add"
+  },
+  {
+    "label": "Create / start a package",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Packages",
+    "category": "Packages",
+    "is_active": true,
+    "sort_order": 230,
+    "feature_key": "packages.create"
+  },
+  {
+    "label": "Close a package",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "none"
+    },
+    "module": "Packages",
+    "category": "Packages",
+    "is_active": true,
+    "sort_order": 240,
+    "feature_key": "packages.close"
+  },
+  {
+    "label": "View / browse resources",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "is_active": true,
+    "sort_order": 800,
+    "feature_key": "resource_hub.view"
+  },
+  {
+    "label": "Upload / create resource",
+    "roles": {
+      "BGT": "full",
+      "CET": "none",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "is_active": true,
+    "sort_order": 810,
+    "feature_key": "resource_hub.upload"
+  },
+  {
+    "label": "Approve & publish resource",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "is_active": true,
+    "sort_order": 820,
+    "feature_key": "resource_hub.approve"
+  },
+  {
+    "label": "Archive / remove resource",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full"
+    },
+    "module": "Resource Hub",
+    "category": "Resource Hub",
+    "is_active": true,
+    "sort_order": 830,
+    "feature_key": "resource_hub.archive"
+  },
+  {
+    "label": "Vivacity staff (generic)",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff",
+    "is_active": true,
+    "sort_order": 50,
+    "feature_key": "staff.internal"
+  },
+  {
+    "label": "Outlook add-in",
+    "roles": {
+      "BGT": "none",
+      "CET": "none",
+      "CSC": "none",
+      "Integrator": "none",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Add-in",
+    "is_active": true,
+    "sort_order": 59,
+    "feature_key": "staff.addin.use"
+  },
+  {
+    "label": "Staff AI assistants",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — AI",
+    "is_active": true,
+    "sort_order": 54,
+    "feature_key": "staff.ai.use"
+  },
+  {
+    "label": "View Xero invoice status",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Billing",
+    "is_active": true,
+    "sort_order": 57,
+    "feature_key": "staff.billing.xero_view"
+  },
+  {
+    "label": "Generate / deliver documents",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Documents",
+    "is_active": true,
+    "sort_order": 53,
+    "feature_key": "staff.documents.generate"
+  },
+  {
+    "label": "Send composed / Graph email",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Email",
+    "is_active": true,
+    "sort_order": 52,
+    "feature_key": "staff.email.send"
+  },
+  {
+    "label": "TGA integration",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Integrations",
+    "is_active": true,
+    "sort_order": 58,
+    "feature_key": "staff.integrations.tga"
+  },
+  {
+    "label": "Meeting artefacts",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Meetings",
+    "is_active": true,
+    "sort_order": 56,
+    "feature_key": "staff.meetings.use"
+  },
+  {
+    "label": "Research / knowledge tools",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — Research",
+    "is_active": true,
+    "sort_order": 55,
+    "feature_key": "staff.research.use"
+  },
+  {
+    "label": "SharePoint browse / provision",
+    "roles": {
+      "BGT": "full",
+      "CET": "full",
+      "CSC": "full",
+      "Integrator": "full",
+      "Super Admin": "full",
+      "Team Leader": "full",
+      "Team Member": "full"
+    },
+    "module": "Staff",
+    "category": "Staff — SharePoint",
+    "is_active": true,
+    "sort_order": 51,
+    "feature_key": "staff.sharepoint.use"
+  }
+]
