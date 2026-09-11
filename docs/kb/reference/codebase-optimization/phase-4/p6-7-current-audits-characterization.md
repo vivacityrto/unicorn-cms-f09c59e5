@@ -81,3 +81,28 @@ set), delete (match + no-op), and update (merge + untouched siblings).
   rendering concern, not touched by this seam.
 - Response-set create/edit dialogs and their own state -- not yet
   investigated.
+
+## Deliberately paused (2026-09-11)
+
+Slice 7 stops here after 1 merged seam (PR #1146; `AuditTemplateBuilder.tsx`
+2,378 -> 2,318 lines, -2.5%), matching the same Phase 4 deepening standing
+practice stop condition slice 5 hit: the remaining candidates are not
+comparably-sized next cuts.
+
+- The question-preview sub-component's `updatePreviewResponse`/
+  `handleValueChange` are tightly coupled to that sub-component's own
+  props (`previewMode`, `onResponseChange`, `question`) and hooks
+  (`useState`/`useEffect`, `useVivacityTeamUsers`) within the same render
+  scope -- extracting them cleanly would mean extracting the whole
+  sub-component, not a function, a materially bigger undertaking than
+  this seam.
+- `handleSaveTemplate` remains the only other extractable handler and is
+  already flagged as the highest-risk one in the file (tenant-scoped
+  writes, a delete-then-reinsert pattern) -- deserves its own dedicated
+  characterization and RBAC/TOM ownership check, not a quick cut
+  alongside something smaller.
+
+**Do not restart this slice without a fresh reason** -- same standing
+note as slice 5: this file will get another look during the Phase 4
+cross-initiative exit re-audit once all of slices 5-8 are through their
+current pass.
