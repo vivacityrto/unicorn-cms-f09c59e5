@@ -40,6 +40,16 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+// The hook schedules its post-auth-event fetch via a real `setTimeout(fn, 0)`
+// (deliberately, to avoid a Supabase auth-callback deadlock -- see
+// src/auth/session.ts). That's a macrotask: awaiting a microtask
+// (`await Promise.resolve()`) does NOT guarantee it has run yet, since
+// ordering between a pending macrotask and the test's own continuation is
+// otherwise unspecified. Queuing another real setTimeout(0) here and awaiting
+// it guarantees same-delay FIFO ordering, so the hook's earlier-queued timer
+// always fires first.
+const flushSetTimeout = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 describe("useAuthSession", () => {
   let authCallback: AuthCallback;
   const onSignedOut = vi.fn();
@@ -89,7 +99,7 @@ describe("useAuthSession", () => {
     });
     // Flush the setTimeout(..., 0) the hook uses before calling loadUserProfile.
     await act(async () => {
-      await Promise.resolve();
+      await flushSetTimeout();
     });
 
     // Still the old profile -- not cleared to null while the background
@@ -126,9 +136,11 @@ describe("useAuthSession", () => {
     // resolves -- this is a genuine identity change, not a token refresh.
     expect(result.current.profile).toBeNull();
 
+    // Flush the setTimeout(..., 0) the hook uses before calling
+    // loadUserProfile/fetchMemberships, same as the token-refresh case above.
     await act(async () => {
       newUserProfile.resolve({ data: { user_uuid: "user-2" }, error: null });
-      await Promise.resolve();
+      await flushSetTimeout();
     });
     expect(result.current.profile).toEqual({ user_uuid: "user-2" });
   });
