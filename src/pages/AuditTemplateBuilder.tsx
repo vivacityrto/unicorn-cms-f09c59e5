@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +26,16 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { useQuery } from '@tanstack/react-query';
 import { useReusableAuditTemplates, ResponseOption } from '@/hooks/useReusableAuditTemplates';
+import {
+  type CanvasQuestion,
+  type QuestionOption,
+  type ResponseSet,
+  type QuestionType,
+  reorderCanvasQuestions,
+  buildCanvasQuestion,
+  deleteCanvasQuestion as deleteCanvasQuestionPure,
+  updateCanvasQuestion as updateCanvasQuestionPure,
+} from '@/features/audits/templateCanvas';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -134,22 +144,6 @@ function VivacityTeamDropdownPreview({ value, onValueChange, hasError }: { value
   }, [users]);
   return <Combobox options={userOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading team members..." : "Search Vivacity Team..."} searchPlaceholder="Type to search team members..." emptyText="No team members found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
 }
-interface ResponseSet {
-  id: string;
-  name: string;
-  options: {
-    label: string;
-    color?: string;
-  }[];
-}
-interface QuestionType {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  color: string;
-  category: 'title_page' | 'other_responses';
-}
-
 // Default response sets are now fetched from the database via useReusableAuditTemplates hook
 
 const questionTypes: QuestionType[] = [{
@@ -243,16 +237,6 @@ const questionTypes: QuestionType[] = [{
   color: 'text-indigo-500',
   category: 'other_responses'
 }];
-// Question option shape. `_scoring_enabled` is a sentinel object appended to
-// (and filtered back out of) the options array to persist the scoring toggle
-// through the `options` Json column, rather than adding a dedicated column.
-interface QuestionOption {
-  id?: string;
-  label?: string;
-  color?: string;
-  _scoring_enabled?: boolean;
-}
-
 type SimpleResponseValue = string | number | boolean | null | undefined;
 interface WrappedResponseValue {
   value?: SimpleResponseValue;
@@ -260,25 +244,6 @@ interface WrappedResponseValue {
   media_files?: { name: string; url: string }[];
 }
 type QuestionResponseValue = SimpleResponseValue | WrappedResponseValue;
-
-interface CanvasQuestion {
-  id: string;
-  tempId?: string;
-  question_type: string;
-  label: string;
-  order_index: number;
-  options?: QuestionOption[];
-  category: string;
-  placeholder?: string;
-  description?: string;
-  required?: boolean;
-  notes?: string;
-  scoring_enabled?: boolean;
-  media_files?: {
-    name: string;
-    url: string;
-  }[];
-}
 
 // Check if a question has compliance-related options (Compliant/Non-Compliant)
 const hasComplianceOptions = (options?: QuestionOption[]) => {
@@ -1303,44 +1268,19 @@ export default function AuditTemplateBuilder() {
     setActiveId(event.active.id as string);
   };
   const handleDragEnd = (event: DragEndEvent) => {
-    const {
-      active,
-      over
-    } = event;
     setActiveId(null);
-    if (over && active.id !== over.id) {
-      setCanvasQuestions(items => {
-        const oldIndex = items.findIndex(i => i.id === active.id);
-        const newIndex = items.findIndex(i => i.id === over.id);
-        const newItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({
-          ...item,
-          order_index: index
-        }));
-        return newItems;
-      });
-    }
+    setCanvasQuestions(items => reorderCanvasQuestions(items, event) ?? items);
   };
   const addQuestionToCanvas = useCallback((type: QuestionType, responseSet?: ResponseSet) => {
-    const newQuestion: CanvasQuestion = {
-      id: `temp-${Date.now()}`,
-      tempId: `temp-${Date.now()}`,
-      question_type: responseSet ? 'multiple_choice' : type.id,
-      label: '',
-      order_index: canvasQuestions.length,
-      options: responseSet ? responseSet.options : [],
-      category: type.category
-    };
+    const newQuestion = buildCanvasQuestion(type, canvasQuestions.length, responseSet);
     setCanvasQuestions(prev => [...prev, newQuestion]);
     toast.success(`Added "${newQuestion.label}" to template`);
   }, [canvasQuestions.length]);
   const deleteCanvasQuestion = useCallback((id: string) => {
-    setCanvasQuestions(prev => prev.filter(q => q.id !== id));
+    setCanvasQuestions(prev => deleteCanvasQuestionPure(prev, id));
   }, []);
   const updateCanvasQuestion = useCallback((id: string, updates: Partial<CanvasQuestion>) => {
-    setCanvasQuestions(prev => prev.map(q => q.id === id ? {
-      ...q,
-      ...updates
-    } : q));
+    setCanvasQuestions(prev => updateCanvasQuestionPure(prev, id, updates));
   }, []);
   const handleSaveTemplate = async () => {
     if (!profile?.tenant_id) {
