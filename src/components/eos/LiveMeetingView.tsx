@@ -30,6 +30,7 @@ import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { useEosConfigurations } from '@/hooks/useEosConfigurations';
+import { useLiveMeetingViewingState } from '@/hooks/useLiveMeetingViewingState';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { ClientBadge } from '@/components/eos/ClientBadge';
@@ -267,38 +268,14 @@ export const LiveMeetingView = () => {
     return present >= Math.ceil(total * 0.5);
   }, [attendees]);
 
-  // Computed segment states.
-  // liveSegment = server state, facilitator-controlled - this is what's
-  // officially running, unchanged from before this split.
-  const liveSegment = useMemo(() =>
-    segments?.find(s => s.started_at && !s.completed_at),
-    [segments]
-  );
-
-  // viewingSegment = local/client-only, per-user, never written to the DB.
-  // Defaults to following live (viewingSegmentId === null). Set by clicking
-  // any segment in the sidebar - segment content is already loaded
-  // client-side, so this never touches the network.
-  const [viewingSegmentId, setViewingSegmentId] = useState<string | null>(null);
-  const viewingSegment = useMemo(
-    () => (viewingSegmentId ? segments?.find(s => s.id === viewingSegmentId) : liveSegment),
-    [viewingSegmentId, segments, liveSegment],
-  );
-  const isViewingLive = viewingSegmentId === null || viewingSegmentId === liveSegment?.id;
-
-  // Tracks the live segment as of the last moment this viewer was actually
-  // following it, so the jump-to-live nudge can tell "the facilitator
-  // advanced while I was browsing elsewhere" apart from "I just clicked to
-  // browse away from an unchanged live position" - the latter isn't the
-  // facilitator moving anywhere and shouldn't say so.
-  const [lastSeenLiveSegmentId, setLastSeenLiveSegmentId] = useState<string | null>(null);
-  useEffect(() => {
-    if (isViewingLive) {
-      setLastSeenLiveSegmentId(liveSegment?.id ?? null);
-    }
-  }, [isViewingLive, liveSegment?.id]);
-  const facilitatorAdvancedWhileBrowsing =
-    !isViewingLive && !!liveSegment && liveSegment.id !== lastSeenLiveSegmentId;
+  const {
+    liveSegment,
+    viewingSegment,
+    viewingSegmentId,
+    setViewingSegmentId,
+    isViewingLive,
+    facilitatorAdvancedWhileBrowsing,
+  } = useLiveMeetingViewingState(segments);
 
   const completedSegments = useMemo(() => 
     segments?.filter(s => s.completed_at) || [], 
