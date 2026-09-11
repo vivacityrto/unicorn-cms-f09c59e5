@@ -106,3 +106,34 @@ module).
   writes — separate seam.
 - `handleSave`: the actual course create/update write path — separate,
   higher-risk seam requiring its own oracle decision.
+
+## Progress log
+
+- **Seam 1 (showcase reorder/metadata, PR #1138, merged):** pure logic, no
+  Supabase calls. Oracle (1), 25 tests.
+- **Seam 2 (thumbnail upload, PR #1140, merged):** narrow Supabase Storage
+  boundary. Oracle (1), 6 tests, mocked storage client.
+- **Seam 3 (`handlePreviewShowcase`, this PR):** extracted into
+  `src/features/academy/previewShowcase.ts` — validates the Vimeo showcase
+  URL/series selection, calls `academy-import-vimeo-showcase`, normalizes
+  the response into a `ShowcasePreview` (reusing the types already moved
+  out in seam 1). Also moved the now-single-caller `validateShowcaseUrl`
+  helper into the same module; `extractEdgeError` was duplicated rather
+  than shared, matching the precedent set by the client-identity command
+  extractions, since 13 other handlers in this page still use their own
+  copy and moving a 14-call-site helper is out of scope for one seam.
+  One behavior-preservation detail worth recording: the wrapper keeps a
+  synchronous `getPreviewShowcaseValidationError` pre-check so the
+  `generating` loading state is still never toggled for a validation
+  failure, exactly matching the original's early-return structure — a
+  naive verbatim move would have introduced a one-tick loading-state
+  flash for invalid input. Oracle (1), 16 tests. `AcademyAddCoursePage.tsx`
+  now 2,442 -> 2,401 lines (this seam); 2,530 -> 2,401 overall (-5.1%)
+  across all three merged seams.
+
+Remaining after this seam: `handleConfirmShowcase` (the biggest, most
+coupled remaining handler — loops calling two more Edge Functions per
+video), `handleGenerate`/`handleConfirmSplit` (workshop/video-split mode,
+parallel to the showcase mode), `handleGenerateQuiz`, and `handleSave`
+(the actual course create/update write). Each still needs its own
+oracle decision before extraction.

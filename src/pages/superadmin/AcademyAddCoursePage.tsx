@@ -35,6 +35,7 @@ import {
   reorderShowcaseItemsByDragEvent,
 } from "@/features/academy/showcaseOrdering";
 import { uploadThumbnail } from "@/features/academy/uploadThumbnail";
+import { getPreviewShowcaseValidationError, previewShowcase } from "@/features/academy/previewShowcase";
 import type { Json } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -245,24 +246,6 @@ function validateVimeoUrl(raw: string): string | null {
     return "Couldn't find a video ID in that link. Use the video's Vimeo page URL, e.g. https://vimeo.com/1215370924";
   }
 
-  return null;
-}
-
-/** Returns an error message when the pasted Showcase URL cannot be resolved, else null. */
-function validateShowcaseUrl(raw: string): string | null {
-  if (/^\d+$/.test(raw.trim())) return null;
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return "That doesn't look like a valid URL. Paste the full Showcase link, e.g. https://vimeo.com/showcase/12364831";
-  }
-  if (!/(^|\.)vimeo\.com$/.test(url.hostname)) {
-    return "Only Vimeo links are supported.";
-  }
-  if (!/\/showcase\/\d+/.test(url.pathname)) {
-    return "Couldn't find a showcase id in that link. Use the showcase's own URL, e.g. https://vimeo.com/showcase/12364831";
-  }
   return null;
 }
 
@@ -928,44 +911,20 @@ export default function AcademyAddCoursePage() {
   // ── Step 2 (showcase mode): fetch the album and parse its titles ──
   const handlePreviewShowcase = async () => {
     setGenerateError(null);
-    if (!showcaseUrl.trim()) { setGenerateError("Vimeo Showcase URL is required"); return; }
-    if (!series) { setGenerateError("Select a series before generating."); return; }
-    const urlProblem = validateShowcaseUrl(showcaseUrl.trim());
-    if (urlProblem) { setGenerateError(urlProblem); return; }
+    const validationError = getPreviewShowcaseValidationError(showcaseUrl, series);
+    if (validationError) { setGenerateError(validationError); return; }
     setGenerating(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "academy-import-vimeo-showcase",
-        { body: { showcase_url: showcaseUrl.trim() } },
-      );
-      if (fnError) {
-        throw new Error(await extractEdgeError(fnError, "Couldn't read that Vimeo showcase"));
+      const result = await previewShowcase(showcaseUrl, series);
+      if (result.ok && result.preview) {
+        setShowcasePreview(result.preview);
+        setShowcaseItems([]);
+        setGenerated(false);
+        const count = result.preview.parsed.length;
+        toast.success(`${count} video${count === 1 ? "" : "s"} found — reorder below if needed, then draft with AI`);
+      } else if (result.error) {
+        setGenerateError(result.error);
       }
-      if (data?.error) throw new Error(String(data.error));
-
-      const parsed: ShowcaseParsedItem[] = Array.isArray(data?.parsed)
-        ? data.parsed.map((item: ShowcaseParsedItem) => ({
-          ...item,
-          // Keep a client-side copy too so restore remains available when an
-          // older edge-function response does not include original_title.
-          original_title: item.original_title || item.title,
-        }))
-        : [];
-      const unmatched: ShowcaseUnmatchedItem[] = Array.isArray(data?.unmatched) ? data.unmatched : [];
-      if (parsed.length === 0 && unmatched.length === 0) {
-        throw new Error("That showcase has no videos.");
-      }
-      setShowcasePreview({
-        albumId: String(data.album_id),
-        videoCount: Number(data.video_count) || parsed.length + unmatched.length,
-        parsed,
-        unmatched,
-      });
-      setShowcaseItems([]);
-      setGenerated(false);
-      toast.success(`${parsed.length} video${parsed.length === 1 ? "" : "s"} found — reorder below if needed, then draft with AI`);
-    } catch (e: unknown) {
-      setGenerateError(String(e instanceof Error ? e.message : "Failed to read that showcase"));
     } finally {
       setGenerating(false);
     }
