@@ -47,6 +47,7 @@ import { toast } from 'sonner';
 import { saveTenantRtoNumber } from '@/hooks/saveTenantRtoNumber';
 import { fetchTgaLinkSyncStatus } from '@/hooks/fetchTgaLinkSyncStatus';
 import { fetchClientTenantStatus } from '@/hooks/fetchClientTenantStatus';
+import { fetchTenantHeadOfficeTransferDate } from '@/hooks/fetchTenantHeadOfficeTransferDate';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -554,13 +555,8 @@ export function ClientIntegrationsTab({
   useEffect(() => {
     if (!profile?.tenant_id) return;
     const fetchLastTransferDate = async () => {
-      const { data } = await supabase
-        .from('tenant_addresses')
-        .select('transfer_date')
-        .eq('tenant_id', profile.tenant_id)
-        .eq('address_type', 'HO')
-        .maybeSingle();
-      setLastTransferDate(data?.transfer_date ?? null);
+      const transferDate = await fetchTenantHeadOfficeTransferDate(profile.tenant_id);
+      setLastTransferDate(transferDate);
     };
     fetchLastTransferDate();
   }, [profile?.tenant_id]);
