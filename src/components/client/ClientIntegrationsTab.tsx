@@ -45,6 +45,7 @@ import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import { saveTenantRtoNumber } from '@/hooks/saveTenantRtoNumber';
+import { fetchTgaLinkSyncStatus } from '@/hooks/fetchTgaLinkSyncStatus';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -508,14 +509,8 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id || !profile?.rto_number) return;
 
     const fetchTgaLinkRow = async () => {
-      const { data } = await supabase
-        .from('tga_links')
-        .select('last_sync_at, last_sync_status, last_sync_error')
-        .eq('tenant_id', profile.tenant_id)
-        .eq('rto_number', profile.rto_number)
-        .maybeSingle();
-
-      setTgaLinkRow(data ?? null);
+      const data = await fetchTgaLinkSyncStatus(profile.tenant_id, profile.rto_number);
+      setTgaLinkRow(data);
     };
 
     fetchTgaLinkRow();
