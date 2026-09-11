@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Send, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { saveTenantClickUpAISummaryNote } from "@/hooks/saveTenantClickUpAISummaryNote";
 
 interface TenantClickUpAISearchProps {
   tenantId: number;
@@ -113,24 +114,16 @@ export function TenantClickUpAISearch({ tenantId }: TenantClickUpAISearchProps) 
         return;
       }
 
-      const noteContent = `[ClickUp AI Summary]\n\n**Question:** ${question}\n\n${response}`;
-
-      const { error } = await supabase.from("notes").insert({
-        tenant_id: tenantId,
-        title: `ClickUp AI: ${question.slice(0, 80)}`,
-        note_details: noteContent,
-        note_type: "ai_summary",
-        created_by: session.user.id,
-        parent_type: "tenant",
-        parent_id: tenantId,
+      await saveTenantClickUpAISummaryNote({
+        tenantId,
+        question,
+        response,
+        userId: session.user.id,
       });
-
-      if (error) {
-        console.error("Save note error:", error);
-        toast.error("Failed to save note");
-      } else {
-        toast.success("Saved as tenant note");
-      }
+      toast.success("Saved as tenant note");
+    } catch (error) {
+      console.error("Save note error:", error);
+      toast.error("Failed to save note");
     } finally {
       setIsSaving(false);
     }
