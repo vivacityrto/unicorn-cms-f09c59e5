@@ -1,11 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAskVivSuggestedFaqs, type AskVivSuggestedFaq } from "./askVivSuggestedFaqs";
 
-export interface AskVivSuggestedFaq {
-  id: string;
-  prompt: string;
-  category: string | null;
-}
+export type { AskVivSuggestedFaq } from "./askVivSuggestedFaqs";
 
 /**
  * FAQ-style suggested prompts mined from real staff usage of Ask Viv
@@ -17,15 +13,7 @@ export interface AskVivSuggestedFaq {
 export function useAskVivSuggestedFaqs() {
   const { data, isLoading } = useQuery({
     queryKey: ["ask-viv-suggested-faqs"],
-    queryFn: async (): Promise<AskVivSuggestedFaq[]> => {
-      const { data, error } = await supabase
-        .from("ask_viv_suggested_faqs")
-        .select("id, prompt_text, category")
-        .order("rank", { ascending: true });
-
-      if (error) throw error;
-      return (data || []).map((row) => ({ id: row.id, prompt: row.prompt_text, category: row.category }));
-    },
+    queryFn: fetchAskVivSuggestedFaqs,
     staleTime: 60 * 60 * 1000,
   });
 
