@@ -90,6 +90,15 @@
       "owner": "Carl",
       "reason": "False positive, same shape as l10-31-swap-tenant-user-to-contact-self-guard and p4d-18-allow-tenant-less-notification-prefs above: the flagged 'UPDATE unicorn1.users' statement is inside the CREATE OR REPLACE FUNCTION body for the new mark_unicorn1_user_mapped(bigint, uuid) RPC - it is not executed at migration-apply time, only later, per-caller, when the mark-unicorn1-user-mapped Edge Function invokes the RPC (gated on FeatureKeys.adminUnicorn1 via requireCaller, same as the existing search_unicorn1_users read-side function this mirrors). The migration itself performs no direct data mutation; it only creates the function and revokes PUBLIC/authenticated/anon EXECUTE. Carl explicitly authorized this L10 #33 hotfix in-session (directed applying the migration, reviewing the follow-up PUBLIC-grant-revoke fix, and instructing the merge) before this allowlist entry was added for the standard CI review path.",
       "expires": "2026-10-09"
+    },
+    {
+      "id": "tenant-package-security-fixes-function-bodies",
+      "file": "supabase/migrations/20260911210000_fix_tenant_isolation_gaps_package_dashboard_burndown.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive, same shape as p4d-18/l10-31/l10-33 above: all flagged INSERT/UPDATE statements are inside the CREATE OR REPLACE FUNCTION bodies for start_client_package and transition_membership_state (package_instances/stage_instances/staff_task_instances/client_task_instances/email_instances/document_instances/client_audit_log inserts, package_instance_state_log insert, package_instances/tenants updates) - unchanged from each function's existing production behavior, only executed later, per-caller, when a SuperAdmin/staff user actually calls the RPC. The migration itself performs no direct data mutation; it only adds an app.user_can_access_tenant() authorization check ahead of each existing, unmodified body, revokes SELECT on two views, creates one new read-only SECURITY DEFINER RPC (get_package_burndown), and drops/recreates get_tenant_user_capacity without its spoofable p_caller_id parameter. Carl explicitly authorized all four fixes (\"proceed on all four\") after independent live re-verification of each finding by both Claude and Codex, then explicitly authorized the merge. See docs/audit-log/entries/2026-09-11-tenant-package-security-fixes.md.",
+      "expires": "2026-10-11"
     }
   ]
 }

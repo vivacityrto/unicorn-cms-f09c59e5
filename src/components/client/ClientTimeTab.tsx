@@ -369,10 +369,7 @@ function PackageBurndownCards({ tenantId, singleSelectedPackageId, selectedPerio
 
       // 2. Fetch burndown data only for active instances
       const { data: burndownData, error: bdErr } = await supabase
-        .from('v_package_burndown')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .in('package_instance_id', activeIds);
+        .rpc('get_package_burndown', { p_tenant_id: tenantId, p_package_instance_ids: activeIds });
       if (bdErr) throw bdErr;
 
       // Use activeIds as primary source so packages without time entries still appear

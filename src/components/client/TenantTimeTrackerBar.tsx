@@ -96,10 +96,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName, unicorn1Id }: Tenan
       const activeIds = (activeInstances || []).map((r) => r.id);
       if (activeIds.length === 0) return { used: 0, included: 0 };
       const { data: bd } = await supabase
-        .from('v_package_burndown')
-        .select('used_minutes, included_minutes')
-        .eq('tenant_id', tenantId)
-        .in('package_instance_id', activeIds);
+        .rpc('get_package_burndown', { p_tenant_id: tenantId, p_package_instance_ids: activeIds });
       let used = 0, included = 0;
       (bd || []).forEach((r) => { used += r.used_minutes ?? 0; included += r.included_minutes ?? 0; });
       return { used, included };
