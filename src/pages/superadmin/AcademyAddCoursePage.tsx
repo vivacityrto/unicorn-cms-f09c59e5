@@ -11,7 +11,6 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -20,6 +19,21 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  type ShowcaseParsedItem,
+  type ShowcaseUnmatchedItem,
+  type ShowcasePreview,
+  applyShowcaseOrder as applyShowcaseOrderPure,
+  reorderShowcaseByDragEvent,
+  moveShowcaseByDirection,
+  autoOrganiseShowcase,
+  hasShowcaseMetadataToRemove,
+  removeShowcaseMetadata,
+  hasShowcaseMetadataToRestore,
+  restoreShowcaseMetadata,
+  moveShowcaseItemToModule as moveShowcaseItemToModulePure,
+  reorderShowcaseItemsByDragEvent,
+} from "@/features/academy/showcaseOrdering";
 import type { Json } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -166,29 +180,6 @@ interface ShowcaseItemDraft {
   alreadyImported: boolean;
   existingCourses: Array<{ id: number; title: string; status: string | null }>;
 }
-
-type ShowcaseParsedItem = {
-  module_number: number;
-  lesson_number: number;
-  title: string;
-  lesson_title?: string;
-  original_title?: string;
-  vimeo_id: string;
-  link: string;
-  duration_seconds: number | null;
-  thumbnail_url: string | null;
-  already_imported: boolean;
-  existing_courses: Array<{ id: number; title: string; status: string | null }>;
-};
-
-type ShowcaseUnmatchedItem = { title: string; vimeo_id: string | null; link: string | null };
-
-type ShowcasePreview = {
-  albumId: string;
-  videoCount: number;
-  parsed: ShowcaseParsedItem[];
-  unmatched: ShowcaseUnmatchedItem[];
-};
 
 function generateSlug(title: string): string {
   return title
@@ -499,122 +490,65 @@ export default function AcademyAddCoursePage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const resequenceParsed = (items: ShowcaseParsedItem[]) => {
-    const nextLessonByModule = new Map<number, number>();
-    return items.map((item) => {
-      const lessonNumber = (nextLessonByModule.get(item.module_number) ?? 0) + 1;
-      nextLessonByModule.set(item.module_number, lessonNumber);
-      return { ...item, lesson_number: lessonNumber };
-    });
-  };
-
   const applyShowcaseOrder = (ordered: ShowcaseParsedItem[]) => {
-    const resequenced = resequenceParsed(ordered);
-    setShowcasePreview((prev) => prev ? { ...prev, parsed: resequenced } : prev);
-    setShowcaseItems((prev) => {
-      if (prev.length === 0) return prev;
-      const byVimeoId = new Map(prev.map((item) => [item.vimeoId, item]));
-      return resequenced
-        .map((item) => {
-          const draft = byVimeoId.get(item.vimeo_id);
-          return draft ? { ...draft, lessonNumber: item.lesson_number } : null;
-        })
-        .filter((item): item is ShowcaseItemDraft => item !== null);
-    });
+    const applied = applyShowcaseOrderPure(showcasePreview?.parsed ?? [], showcaseItems, ordered);
+    setShowcasePreview((prev) => prev ? { ...prev, parsed: applied.parsed } : prev);
+    setShowcaseItems(applied.items);
   };
 
   // Reordering the review list decides lesson order — resequence lesson_number
   // to match, and keep any already-drafted items (showcaseItems) in step with
   // it so a reorder after drafting doesn't require a full AI redraft.
   const handleShowcaseReorder = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !showcasePreview) return;
-    const oldIndex = showcasePreview.parsed.findIndex((p) => p.vimeo_id === active.id);
-    const newIndex = showcasePreview.parsed.findIndex((p) => p.vimeo_id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    applyShowcaseOrder(arrayMove(showcasePreview.parsed, oldIndex, newIndex));
+    if (!showcasePreview) return;
+    const reordered = reorderShowcaseByDragEvent(showcasePreview.parsed, event);
+    if (reordered) applyShowcaseOrder(reordered);
   };
 
   const handleShowcaseMove = (index: number, direction: -1 | 1) => {
     if (!showcasePreview) return;
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= showcasePreview.parsed.length) return;
-    const next = [...showcasePreview.parsed];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    applyShowcaseOrder(next);
+    const moved = moveShowcaseByDirection(showcasePreview.parsed, index, direction);
+    if (moved) applyShowcaseOrder(moved);
   };
 
   const handleAutoOrganiseShowcase = () => {
     if (!showcasePreview) return;
-    const ordered = [...showcasePreview.parsed].sort(
-      (a, b) => a.module_number - b.module_number || a.lesson_number - b.lesson_number,
-    );
-    applyShowcaseOrder(ordered);
+    applyShowcaseOrder(autoOrganiseShowcase(showcasePreview.parsed));
     toast.success("Showcase ordered by detected module and lesson numbers");
   };
 
   const handleRemoveShowcaseMetadata = () => {
     if (!showcasePreview) return;
-    const hasMetadata = showcasePreview.parsed.some(
-      (item) => item.lesson_title && item.lesson_title !== item.title,
-    ) || showcaseItems.some((item) => item.metadataFreeTitle !== item.title);
-    if (!hasMetadata) return;
+    if (!hasShowcaseMetadataToRemove(showcasePreview.parsed, showcaseItems)) return;
     const confirmed = window.confirm(
       "Remove the Module/Lesson numbering from these titles? This changes the preview and drafted lesson titles, but keeps the Module sections and lesson order.",
     );
     if (!confirmed) return;
-
-    setShowcasePreview((prev) => prev ? {
-      ...prev,
-      parsed: prev.parsed.map((item) => ({
-        ...item,
-        title: item.lesson_title || item.title,
-      })),
-    } : prev);
-    setShowcaseItems((prev) => prev.map((item) => ({
-      ...item,
-      title: item.metadataFreeTitle,
-    })));
+    const updated = removeShowcaseMetadata(showcasePreview.parsed, showcaseItems);
+    setShowcasePreview((prev) => prev ? { ...prev, parsed: updated.parsed } : prev);
+    setShowcaseItems(updated.items);
     toast.success("Title numbering removed from the showcase lessons");
   };
 
   const handleRestoreShowcaseMetadata = () => {
     if (!showcasePreview) return;
-    const hasCleanTitles = showcasePreview.parsed.some(
-      (item) => item.original_title && item.original_title !== item.title,
-    ) || showcaseItems.some((item) => item.originalTitle !== item.title);
-    if (!hasCleanTitles) return;
+    if (!hasShowcaseMetadataToRestore(showcasePreview.parsed, showcaseItems)) return;
     const confirmed = window.confirm(
       "Restore the original Vimeo titles, including Module/Lesson numbering? This updates the preview and any drafted lesson titles.",
     );
     if (!confirmed) return;
-
-    setShowcasePreview((prev) => prev ? {
-      ...prev,
-      parsed: prev.parsed.map((item) => ({
-        ...item,
-        title: item.original_title || item.title,
-      })),
-    } : prev);
-    setShowcaseItems((prev) => prev.map((item) => ({
-      ...item,
-      title: item.originalTitle,
-    })));
+    const updated = restoreShowcaseMetadata(showcasePreview.parsed, showcaseItems);
+    setShowcasePreview((prev) => prev ? { ...prev, parsed: updated.parsed } : prev);
+    setShowcaseItems(updated.items);
     toast.success("Original Vimeo titles restored");
   };
 
   const handleMoveShowcaseItemToModule = (vimeoId: string, moduleNumber: number) => {
     if (!showcasePreview) return;
-    const item = showcasePreview.parsed.find((candidate) => candidate.vimeo_id === vimeoId);
-    if (!item || item.module_number === moduleNumber) return;
-    const withoutItem = showcasePreview.parsed.filter((candidate) => candidate.vimeo_id !== vimeoId);
-    const destinationIndex = withoutItem.reduce(
-      (lastIndex, candidate, candidateIndex) => candidate.module_number === moduleNumber ? candidateIndex : lastIndex,
-      -1,
-    );
-    withoutItem.splice(destinationIndex + 1, 0, { ...item, module_number: moduleNumber });
-    applyShowcaseOrder(withoutItem);
-    toast.success(`${item.title} moved to Module ${moduleNumber}`);
+    const result = moveShowcaseItemToModulePure(showcasePreview.parsed, vimeoId, moduleNumber);
+    if (!result) return;
+    applyShowcaseOrder(result.ordered);
+    toast.success(`${result.movedTitle} moved to Module ${moduleNumber}`);
   };
 
   // Reordering the drafted-lessons strip (after AI drafting) — keeps the
@@ -622,20 +556,19 @@ export default function AcademyAddCoursePage() {
   // the content is already drafted and re-running it would just burn tokens
   // to produce the same text.
   const handleShowcaseItemsReorder = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = showcaseItems.findIndex((d) => d.key === active.id);
-    const newIndex = showcaseItems.findIndex((d) => d.key === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(showcaseItems, oldIndex, newIndex);
-    if (selectedShowcaseItem === oldIndex) setSelectedShowcaseItem(newIndex);
-    const orderedParsed = showcasePreview
-      ? reordered
-          .map((draft) => showcasePreview.parsed.find((item) => item.vimeo_id === draft.vimeoId))
-          .filter((item): item is ShowcaseParsedItem => item !== undefined)
-      : [];
-    if (orderedParsed.length > 0) applyShowcaseOrder(orderedParsed);
-    else setShowcaseItems(reordered);
+    const result = reorderShowcaseItemsByDragEvent(
+      showcasePreview?.parsed ?? [],
+      showcaseItems,
+      Boolean(showcasePreview),
+      event,
+      selectedShowcaseItem,
+    );
+    if (!result) return;
+    if (result.nextSelectedIndex !== selectedShowcaseItem) setSelectedShowcaseItem(result.nextSelectedIndex);
+    if (result.changed === "applied") {
+      setShowcasePreview((prev) => prev ? { ...prev, parsed: result.parsed } : prev);
+    }
+    setShowcaseItems(result.items);
   };
 
   // Step 3 editable fields (single-video mode)
