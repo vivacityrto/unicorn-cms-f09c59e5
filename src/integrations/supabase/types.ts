@@ -70867,6 +70867,17 @@ export type Database = {
           video_url: string
         }[]
       }
+      get_package_burndown: {
+        Args: { p_package_instance_ids?: number[]; p_tenant_id: number }
+        Returns: {
+          included_minutes: number
+          package_instance_id: number
+          percent_used: number
+          remaining_minutes: number
+          tenant_id: number
+          used_minutes: number
+        }[]
+      }
       get_package_stats: {
         Args: { p_package_id: number }
         Returns: {
@@ -71043,7 +71054,7 @@ export type Database = {
         Returns: Json
       }
       get_tenant_user_capacity: {
-        Args: { p_caller_id?: string; p_tenant_id: number }
+        Args: { p_tenant_id: number }
         Returns: {
           is_unlimited: boolean
           limit: number
