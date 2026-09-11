@@ -100,3 +100,20 @@ test("Client Time tab: package burn-down renders for a tenant with an active pac
   await expect(page.getByText(/package burn-?down/i).first()).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
 });
+
+// Phase 4 P6-4 (Messaging/broadcast): TeamCommunicationsPage.tsx's "New
+// Message" flow was updated to surface a skipped-participant toast instead
+// of only console.error'ing it. This confirms the dialog still opens and
+// renders correctly post-edit -- read-only, no conversation created, no
+// message sent.
+
+test("Team Communications: New Message dialog opens", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/communications");
+  await expect(page).not.toHaveURL(/\/login/);
+  await page.getByRole("button", { name: /new message/i }).click();
+  await expect(page.getByText(/new message to client/i)).toBeVisible({ timeout: 10_000 });
+  expect(errors).toEqual([]);
+});

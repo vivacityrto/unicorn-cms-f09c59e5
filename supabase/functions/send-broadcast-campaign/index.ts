@@ -150,6 +150,13 @@ Deno.serve(async (req) => {
           .from("tenant_users")
           .select("user_id")
           .eq("tenant_id", tenantId);
+        // Recipients whose conversation_participants upsert was skipped (a
+        // stale tenant_users row with no matching auth.users account) --
+        // surfaced below instead of only console.error'd, so a partial
+        // failure within an otherwise-successful tenant is visible in
+        // broadcast_recipients.failure_reason and total_failed, not just
+        // Edge Function logs.
+        const skippedUserIds = new Map<string, string>();
         if (tenantUsers?.length) {
           const clientRows = tenantUsers.map((u: { user_id: string }) => ({
             conversation_id: conv.id,
@@ -169,6 +176,7 @@ Deno.serve(async (req) => {
                 .upsert(row, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
               if (rowErr) {
                 console.error(`Tenant ${tenantId}: skipping participant ${row.user_id} — ${rowErr.message}`);
+                skippedUserIds.set(row.user_id, rowErr.message);
               }
             }
           }
@@ -204,17 +212,40 @@ Deno.serve(async (req) => {
           if (attErr) throw new Error(`attachment insert: ${attErr.message}`);
         }
 
-        // Mark all this tenant's recipient rows as sent
-        await svc
-          .from("broadcast_recipients")
-          .update({
-            delivery_status: "sent",
-            sent_at: new Date().toISOString(),
-            conversation_id: conv.id,
-          })
-          .in("id", recipientIds);
+        // Mark this tenant's recipient rows as sent -- except any recipient
+        // whose participant upsert was skipped above, which is marked
+        // failed instead so the gap is visible in broadcast_recipients and
+        // total_failed, not just server-side logs.
+        const skippedRows = skippedUserIds.size > 0
+          ? rows.filter((r) => skippedUserIds.has(r.user_id))
+          : [];
+        const sentRows = skippedRows.length > 0
+          ? rows.filter((r) => !skippedUserIds.has(r.user_id))
+          : rows;
 
-        totalSent += rows.length;
+        if (sentRows.length > 0) {
+          await svc
+            .from("broadcast_recipients")
+            .update({
+              delivery_status: "sent",
+              sent_at: new Date().toISOString(),
+              conversation_id: conv.id,
+            })
+            .in("id", sentRows.map((r) => r.id));
+        }
+        for (const skipped of skippedRows) {
+          await svc
+            .from("broadcast_recipients")
+            .update({
+              delivery_status: "failed",
+              conversation_id: conv.id,
+              failure_reason: `Participant could not be added: ${skippedUserIds.get(skipped.user_id)}`.slice(0, 500),
+            })
+            .eq("id", skipped.id);
+        }
+
+        totalSent += sentRows.length;
+        totalFailed += skippedRows.length;
         conversationsCreated += 1;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

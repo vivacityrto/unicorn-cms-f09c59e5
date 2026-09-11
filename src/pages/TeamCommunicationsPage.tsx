@@ -870,6 +870,11 @@ function NewTeamMessageDialog({
         .eq("tenant_id", tid);
       if (tenantUsersError) throw tenantUsersError;
 
+      // Recipients whose participant upsert was skipped below (a stale
+      // tenant_users row with no matching auth.users account) -- surfaced
+      // to the staff member via a toast, not just console.error'd, so a
+      // partial failure isn't invisible (Phase 4 P6-4).
+      let skippedParticipantCount = 0;
       if (tenantUsers?.length) {
         const clientRows = tenantUsers.map((u) => ({
           conversation_id: conv.id,
@@ -890,7 +895,10 @@ function NewTeamMessageDialog({
             const { error: rowErr } = await supabase
               .from("conversation_participants")
               .upsert(row, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
-            if (rowErr) console.error(`Skipping participant ${row.user_id} — ${rowErr.message}`);
+            if (rowErr) {
+              console.error(`Skipping participant ${row.user_id} — ${rowErr.message}`);
+              skippedParticipantCount += 1;
+            }
           }
         }
       }
@@ -918,6 +926,11 @@ function NewTeamMessageDialog({
         }
       }
 
+      if (skippedParticipantCount > 0) {
+        toast.warning(
+          `Conversation started, but ${skippedParticipantCount} client user${skippedParticipantCount > 1 ? "s" : ""} could not be added (no matching account). Check the console/logs for details.`,
+        );
+      }
       onCreated(conv.id);
       setTenantId("");
       setSubject("");
