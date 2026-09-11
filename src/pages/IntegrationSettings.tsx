@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Send, FolderOpen, ExternalLink, Save, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchAppIntegrationSettings, saveSharepointSiteUrl, saveStaffOnboardingUrls } from '@/hooks/appIntegrationSettings';
 
 export default function IntegrationSettings() {
   const { profile } = useAuth();
@@ -29,26 +29,17 @@ export default function IntegrationSettings() {
   const [savingOnboarding, setSavingOnboarding] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from('app_settings')
-      .select('sharepoint_site_url, staff_induction_video_url, staff_onboarding_workbook_url')
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data?.sharepoint_site_url) setSharepointSiteUrl(data.sharepoint_site_url);
-        if (data?.staff_induction_video_url) setInductionVideoUrl(data.staff_induction_video_url);
-        if (data?.staff_onboarding_workbook_url) setWorkbookUrl(data.staff_onboarding_workbook_url);
-      });
+    fetchAppIntegrationSettings().then((data) => {
+      if (data?.sharepoint_site_url) setSharepointSiteUrl(data.sharepoint_site_url);
+      if (data?.staff_induction_video_url) setInductionVideoUrl(data.staff_induction_video_url);
+      if (data?.staff_onboarding_workbook_url) setWorkbookUrl(data.staff_onboarding_workbook_url);
+    });
   }, []);
 
   const handleSaveSharepointUrl = async () => {
     setSavingSharepoint(true);
     try {
-      const { error } = await supabase
-        .from('app_settings')
-        .update({ sharepoint_site_url: sharepointSiteUrl.trim() || null })
-        .eq('id', 1);
-      if (error) throw error;
+      await saveSharepointSiteUrl(sharepointSiteUrl);
       toast({ title: 'SharePoint site URL saved' });
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save', variant: 'destructive' });
@@ -60,14 +51,7 @@ export default function IntegrationSettings() {
   const handleSaveOnboardingUrls = async () => {
     setSavingOnboarding(true);
     try {
-      const { error } = await supabase
-        .from('app_settings')
-        .update({
-          staff_induction_video_url: inductionVideoUrl.trim() || null,
-          staff_onboarding_workbook_url: workbookUrl.trim() || null,
-        })
-        .eq('id', 1);
-      if (error) throw error;
+      await saveStaffOnboardingUrls(inductionVideoUrl, workbookUrl);
       toast({ title: 'Staff onboarding URLs saved' });
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save', variant: 'destructive' });
