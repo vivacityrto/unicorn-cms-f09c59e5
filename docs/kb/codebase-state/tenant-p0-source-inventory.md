@@ -1,7 +1,7 @@
 # Tenant P0.1 Source-of-Truth Inventory
 
-Generated: 2026-09-11 17:15 +08:00
-Source baseline: `origin/main@debe29ee269070cfb43c0931d34bca6081495c16`
+Generated: 2026-09-11 18:05 +08:00
+Source baseline: `origin/main@05a09815d9b450410d1021d2a6fde0a7d78c3495`
 Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-11
 
 > This artifact is evidence, not authority. It records current frontend source and read-only live metadata. It does not create a directory contract, change authorization, repair unmatched rows, or authorize a schema/RLS/function/trigger/grant change.
@@ -121,6 +121,16 @@ The `supabase_realtime` publication exists but no scoped table in this packet ap
 | `v_client_package_dashboard` | No direct caller; the page assembles its own package data | Owner `postgres`; `reloptions` is null (no `security_invoker` option observed); `anon` and `authenticated` have SELECT | Required effective-security review before reuse; do not substitute it into the directory |
 | `v_package_burndown` | No direct caller; `useTenantPackages` reimplements a related calculation | Owner `postgres`; `reloptions` null; `anon` SELECT false, `authenticated` SELECT true | Required parity/security review before reuse; browser math is not proven equivalent |
 
+The follow-up definition review makes that disposition stronger: the live
+`v_client_package_dashboard` definition applies `app.user_can_access_tenant`
+inside several aggregate CTEs but has no tenant predicate on its final
+`package_instances` SELECT, while `v_package_burndown` has no tenant-access
+predicate at all. Both are ordinary views owned by `postgres` with no observed
+`security_invoker` reloption, so underlying table RLS should not be treated as
+an effective substitute for a view-level boundary. Neither view is a safe
+directory source without an explicit security fix and parity review; this
+packet does not make that fix.
+
 ### RPCs and Edge boundaries
 
 The relevant live routines are `SECURITY DEFINER`, owned by `postgres`, and executable by `authenticated` and `service_role` (not `anon` in the observed grants):
@@ -152,6 +162,125 @@ This graph covers direct writers and known server side effects reachable from th
 | `notes` / `client_notes` | none in Manage Tenants | none in this slice | timeline triggers on INSERT; `updated_at` on client notes | No Realtime publication membership observed; Client Health H0 must preserve two stores |
 | `tga_rto_summary` | none in Manage Tenants | TGA Edge/RPC paths outside the page | no direct trigger in scoped trigger query | 3 unmatched tenant IDs; preserve as unresolved |
 
+## P0.1 follow-up — repository writers, boundary review, and orphan classification
+
+This follow-up was run from `origin/main@05a09815d9b450410d1021d2a6fde0a7d78c3495`.
+The writer census used an independent repository scan of `.from('<table>')`
+chains across `src/` and `supabase/functions/`, followed by manual inspection
+of the direct writers and the live definitions below. It is a current-code
+census, not a claim that historical migrations are runtime writers.
+
+### Writer census
+
+- `connected_tenants`: `ManageTenants.tsx` is the only runtime writer found
+  (single/all `upsert`, disconnect `delete`).
+- `package_instances`: direct UI writers include `ClientPackagesTab`,
+  `PackageDataManager`, `RenewalConfirmDialog`, `StartPackageDialog`,
+  `EditPackageDialog`, `PackageBuilderEditor`, and `TenantStatusDropdown`;
+  Edge writers include `import-clickup-csv` and `import-unicorn1-client`.
+- `tenants`: direct UI writers include `AddTenantDialog`, tenant-management
+  dialogs/cards, `TenantStatusDropdown`, and the client-management hooks;
+  Edge writers include `tenant-lifecycle`, `tga-rto-sync`, and the Xero
+  invoice/webhook paths. The trigger graph therefore remains part of the
+  authority review for any tenant-field contract.
+- `tenant_identifiers`: `AddTenantDialog` is the direct runtime insert found;
+  the normalization trigger remains the effective value-shaping side effect.
+- `tenant_users`: `TenantUsersTab`/`TenantUsers` update or delete rows;
+  `invite-user`, `provision-m365-user`, and `activate-ghost-user` insert or
+  upsert them. This is shared RBAC/TOM ownership, not a Manage Tenants-only
+  authority.
+- `tenant_csc_assignments`: direct hook writers are
+  `useClientCommunications` (upsert) and `useDocumentRequests` (insert), in
+  addition to the assignment RPCs and bulk CSC RPC/Edge path.
+- `notes`/`client_notes`: note editor/hooks and the `unlink-email` and
+  dashboard seed functions write `notes`; `useClientManagementData` deletes
+  `client_notes`. Client Health must preserve these as distinct stores.
+- `tga_rto_summary`: only the TGA sync paths (`tga-rto-sync` and `tga-sync`)
+  were found as runtime upsert writers.
+- `packages` and `users` have broader builder/profile/admin writers and are
+  not safe to infer from the Manage Tenants page. The `dd_*` tables were
+  observed as lookup reads, not runtime writers, in this census.
+
+### Live RPC and Edge authorization evidence
+
+The live RPC review found the following current boundaries. All listed
+functions are `SECURITY DEFINER` owned by `postgres`; ordinary authenticated
+execution is granted unless noted.
+
+- `admin_set_tenant_csc_assignment`, `admin_remove_tenant_csc_assignment`,
+  `rpc_auto_assign_consultant`, the consultant-capacity routines, and
+  `bulk_reassign_primary_csc` have explicit Super Admin, Vivacity-staff, or
+  Super Admin/Team Leader checks as appropriate. The bulk Edge function only
+  checks for an Authorization header, but its authenticated-only RPC enforces
+  the actual role boundary.
+- `check_tenant_duplicates`, `client_tga_link_set`,
+  `client_tga_link_verify`, and `swap_tenant_user_to_contact` have explicit
+  authentication/role or tenant-access checks. The latter is `anon`-executable
+  at the catalog grant layer but still fails closed on a null caller; that
+  grant should remain an RBAC/security review item rather than being treated
+  as harmless.
+- `start_client_package` is authenticated-executable and writes
+  `package_instances` plus stage/task/document instances, but its live body
+  contains no actor, tenant-access, or role check before the write. It records
+  `auth.uid()` only in the audit row. This is a high-priority authorization
+  gap for the RBAC/TOM owners; no caller-side gate is authoritative enough to
+  promote this routine into a directory contract.
+- `transition_membership_state` is also authenticated-executable and writes
+  `package_instances`/tenant status, but its live body validates the target
+  state and instance existence without an actor, tenant-access, or role check.
+  It is an adjacent package writer, not a Manage Tenants action, and remains
+  explicitly out of scope for a read-only packet.
+- `get_client_tenant_users` and `get_tenant_user_capacity` are both
+  `anon`-executable despite being `SECURITY DEFINER`. The former filters its
+  result through a caller authorization CTE. The latter authorizes
+  `COALESCE(p_caller_id, auth.uid())`, so a caller-supplied identity is part
+  of the effective boundary; this needs an RBAC/security decision before any
+  client-facing reuse.
+- `get_client_package_dashboard` is a separate guarded RPC: its body calls
+  `app.user_can_access_tenant` and intentionally sets `row_security=off`.
+  That explicit helper gate is materially different from the two unsafe
+  ordinary views above.
+- Live Edge metadata and source were checked for the scoped boundaries:
+  `tga-rto-preview` v665 (`verify_jwt=false`, no in-function caller gate),
+  `tga-rto-sync` v694 (`verify_jwt=false`, in-function `requireCaller` plus
+  tenant access), `tga-sync` v785 (`verify_jwt=false`, bearer validation plus
+  `adminSystemConfig` permission), `bulk-reassign-team-member` v207
+  (`verify_jwt=false`, header presence then guarded RPC),
+  `lookup-unicorn1-client` v426 and `import-unicorn1-client` v439
+  (`verify_jwt=false`, both in-function `requireCaller`), and
+  `tenant-lifecycle` v526 (`verify_jwt=false`, in-function `requireCaller`).
+  The preview endpoint is a pre-creation public RTO lookup; whether that
+  intentional unauthenticated posture is acceptable is a product/security
+  decision, not an assumption made by this packet.
+
+### Read-only classification of unmatched rows
+
+- Of the 25 `package_instances` rows whose tenant is absent, 24 are
+  `is_complete=true`, `is_active=false`, `membership_state='complete'`, all
+  created on 2026-03-03; one is still `is_complete=false`, `is_active=true`,
+  and `membership_state='active'`. The two rows whose package is absent are
+  separately `is_complete=true`, `is_active=false`, and `membership_state`
+  `cancelled`, created in May/June 2026. The active tenant orphan is not safe
+  to clean up automatically.
+- All 57 orphaned `connected_tenants` rows still map to an existing user and
+  have a nonblank stored tenant name. Fifty-five were connected before
+  2026-01-01 and two from 2026 onward. This looks consistent with stale or
+  historical workspace selections, but it is not proof of deletion intent;
+  preserve them pending owner classification.
+- The three orphaned `tga_rto_summary` rows have two `status='current'` rows
+  and one null-status row; one lacks a registration end date. Their fetched
+  timestamps are from January 2026. Current rows require a tenant-identity
+  reconciliation before any cleanup or remapping.
+
+### Realtime evidence
+
+The production `supabase_realtime` and
+`supabase_realtime_messages_publication` publications contain none of the
+scoped tables in `pg_publication_tables`. Repository migration/source search
+also found no current publication-maintenance statement that would reconcile
+the `useTenantNotes` listener with live publication membership. This remains a
+live operational gap, not a reason to change the publication in this packet.
+
 ## Current evidence gaps and exit status
 
 P0.1 is materially advanced but remains **in progress**, not complete:
@@ -159,7 +288,21 @@ P0.1 is materially advanced but remains **in progress**, not complete:
 1. The source-of-truth matrix now covers every displayed field, filter, action, and derived stat in the Manage Tenants surface, with explicit source/writer/security ownership or an unresolved flag.
 2. The identity ledger covers every tenant/client/user identifier in the scoped source and the live rows most directly feeding the page. Orphan counts are recorded; no row is changed or classified by guess.
 3. The view/RPC catalogue and write graph now include direct callers, server boundaries, security-definer status, grants, triggers, and the two directory-overlap views.
-4. The remaining P0.1 evidence gaps are: full repository-wide writer census for the same tables; full definitions/authorization review for every invoked Edge Function and RPC; classification of the 25 package-instance, 57 connection, and 3 TGA-summary unmatched rows; effective security review of both package views; and confirmation/reconciliation of the Realtime publication mismatch.
-5. The next safe packet is evidence-only: attach the missing writer/function/publication evidence and have TOM/RBAC/Client Health owners review the matrix. No P1 directory contract, migration, RLS change, grant change, cleanup, or production data correction is implied by this document.
+4. The repository writer census and the scoped RPC/Edge review are now
+   materially attached. They found two adjacent `SECURITY DEFINER` writer
+   gaps (`start_client_package` and `transition_membership_state`), an
+   identity-parameter concern in `get_tenant_user_capacity`, and an ordinary
+   view-boundary concern in both package views. These are findings for
+   RBAC/TOM/security owners, not fixes authorized by P0.1.
+5. The unmatched rows are classified by status, age, and linkage evidence,
+   but remain untouched. The active package orphan and current TGA orphans
+   need named owner decisions; the historical connected-tenant rows need a
+   retention/cleanup policy, not an inferred delete.
+6. The Realtime publication mismatch is confirmed and remains unreconciled.
+   P0.1 can close its evidence-gathering portion after the TOM/RBAC/Client
+   Health owners review these findings, but no P1 directory contract should
+   proceed until the view/RPC authorization findings have an explicit owner
+   and disposition. No directory migration, RLS change, grant change,
+   cleanup, or production-data correction is implied by this document.
 
 **Audit entry:** none needed — this change is a read-only documentation inventory with no schema, RLS, trigger, grant, production-data, or user-visible behavior change.
