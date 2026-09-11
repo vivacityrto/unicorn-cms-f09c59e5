@@ -51,6 +51,7 @@ import { fetchTenantHeadOfficeTransferDate } from '@/hooks/fetchTenantHeadOffice
 import { fetchTgaDebugData } from '@/hooks/fetchTgaDebugData';
 import { fetchInitialRegistrationContext } from '@/hooks/fetchInitialRegistrationContext';
 import { transferTgaPrimaryContact } from '@/hooks/transferTgaPrimaryContact';
+import { transferTgaDetails } from '@/hooks/transferTgaDetails';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -621,31 +622,7 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id || !user?.id || !tgaData.summary) return;
     setIsTransferringDetails(true);
     try {
-      const s = tgaData.summary;
-      const updates: TablesInsert<'tenant_profile'> = {
-        tenant_id: profile.tenant_id,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      };
-      if (s.legal_name) updates.legal_name = decodeHtmlEntities(s.legal_name);
-      if (s.trading_name) updates.trading_name = decodeHtmlEntities(s.trading_name);
-      if (s.abn) updates.abn = s.abn;
-      if (s.acn) updates.acn = s.acn;
-      if (s.web_address) updates.website = s.web_address;
-      if (s.organisation_type) updates.org_type = s.organisation_type.toLowerCase().replace(/\s+/g, '_');
-
-      const { error } = await supabase
-        .from('tenant_profile')
-        .upsert(updates, { onConflict: 'tenant_id' });
-      if (error) throw error;
-
-      // Also update tenant name to match legal name
-      if (s.legal_name) {
-        await supabase
-          .from('tenants')
-          .update({ name: decodeHtmlEntities(s.legal_name), updated_at: new Date().toISOString() })
-          .eq('id', profile.tenant_id);
-      }
+      await transferTgaDetails(profile.tenant_id, user.id, tgaData.summary);
 
       toast.success('TGA details transferred to tenant profile');
     } catch (err) {
