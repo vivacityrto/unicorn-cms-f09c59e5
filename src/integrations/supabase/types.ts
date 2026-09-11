@@ -36490,57 +36490,6 @@ export type Database = {
           },
         ]
       }
-      notification_schedule: {
-        Row: {
-          created_at: string | null
-          entity_id: string
-          entity_type: string
-          error_message: string | null
-          escalated_to: string | null
-          escalation_level: number | null
-          id: string
-          notification_type: string
-          scheduled_for: string
-          sent_at: string | null
-          status: string | null
-          tenant_id: number
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          entity_id: string
-          entity_type: string
-          error_message?: string | null
-          escalated_to?: string | null
-          escalation_level?: number | null
-          id?: string
-          notification_type: string
-          scheduled_for: string
-          sent_at?: string | null
-          status?: string | null
-          tenant_id: number
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          entity_id?: string
-          entity_type?: string
-          error_message?: string | null
-          escalated_to?: string | null
-          escalation_level?: number | null
-          id?: string
-          notification_type?: string
-          scheduled_for?: string
-          sent_at?: string | null
-          status?: string | null
-          tenant_id?: number
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       notification_tenants: {
         Row: {
           created_at: string
@@ -58424,7 +58373,7 @@ export type Database = {
           id: string
           inapp_enabled: boolean | null
           quiet_hours: Json | null
-          tenant_id: number
+          tenant_id: number | null
           updated_at: string | null
           user_id: string
         }
@@ -58436,7 +58385,7 @@ export type Database = {
           id?: string
           inapp_enabled?: boolean | null
           quiet_hours?: Json | null
-          tenant_id: number
+          tenant_id?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -58448,7 +58397,7 @@ export type Database = {
           id?: string
           inapp_enabled?: boolean | null
           quiet_hours?: Json | null
-          tenant_id?: number
+          tenant_id?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -71468,6 +71417,10 @@ export type Database = {
       mark_tenant_contact_promoted: {
         Args: { p_contact_id: number; p_user_id: string }
         Returns: Json
+      }
+      mark_unicorn1_user_mapped: {
+        Args: { p_legacy_id: number; p_mapped_user_uuid: string }
+        Returns: undefined
       }
       match_ask_viv_corpus: {
         Args: {
