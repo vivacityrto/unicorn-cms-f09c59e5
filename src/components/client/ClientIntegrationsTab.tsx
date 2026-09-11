@@ -46,6 +46,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import { saveTenantRtoNumber } from '@/hooks/saveTenantRtoNumber';
 import { fetchTgaLinkSyncStatus } from '@/hooks/fetchTgaLinkSyncStatus';
+import { fetchClientTenantStatus } from '@/hooks/fetchClientTenantStatus';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -486,18 +487,9 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id) return;
 
     const fetchTenantStatus = async () => {
-      const { data } = await supabase
-        .from('tenants')
-        .select('status, metadata')
-        .eq('id', profile.tenant_id)
-        .single();
-
+      const data = await fetchClientTenantStatus(profile.tenant_id);
       if (data) {
-        const metadata = data.metadata as Record<string, unknown> | null;
-        setTenantStatus({
-          status: data.status,
-          mergedInto: metadata?.merged_into as number | undefined
-        });
+        setTenantStatus(data);
       }
     };
 
