@@ -131,9 +131,22 @@ module).
   now 2,442 -> 2,401 lines (this seam); 2,530 -> 2,401 overall (-5.1%)
   across all three merged seams.
 
+- **Seam 4 (`handleGenerateQuiz`, this PR):** extracted into
+  `src/features/academy/generateQuiz.ts` — calls `academy-ai-generate`'s
+  `generate_questions` action and normalizes the response into
+  `QuizQuestion[]`. `QuizQuestion`/`QuizOption`/`RawAiQuestion` and the
+  `normaliseOptions`/`extractEdgeError` helpers were duplicated rather
+  than moved, since all four are used by 2-13 other handlers still in
+  the page (same "don't move a widely-shared helper for one seam"
+  precedent as seam 3). Oracle (1), 8 tests, including one that pinned
+  down `normaliseOptions`' actual (not assumed) fallback behavior when an
+  option has no `label` — it stringifies the whole raw option object,
+  not an empty string, unless the option itself is nullish. Net LOC this
+  seam: 2,401 -> 2,388 lines.
+
 Remaining after this seam: `handleConfirmShowcase` (the biggest, most
 coupled remaining handler — loops calling two more Edge Functions per
 video), `handleGenerate`/`handleConfirmSplit` (workshop/video-split mode,
-parallel to the showcase mode), `handleGenerateQuiz`, and `handleSave`
-(the actual course create/update write). Each still needs its own
-oracle decision before extraction.
+parallel to the showcase mode), and `handleSave` (the actual course
+create/update write). Each still needs its own oracle decision before
+extraction.

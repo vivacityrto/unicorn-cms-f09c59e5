@@ -36,6 +36,7 @@ import {
 } from "@/features/academy/showcaseOrdering";
 import { uploadThumbnail } from "@/features/academy/uploadThumbnail";
 import { getPreviewShowcaseValidationError, previewShowcase } from "@/features/academy/previewShowcase";
+import { generateQuiz } from "@/features/academy/generateQuiz";
 import type { Json } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1059,27 +1060,13 @@ export default function AcademyAddCoursePage() {
     if (!vTitle.trim()) { toast.error("A title is required first"); return; }
     setGeneratingQuiz(true);
     try {
-      const { data, error } = await supabase.functions.invoke("academy-ai-generate", {
-        body: {
-          action: "generate_questions",
-          title: vTitle.trim(),
-          target_audience: vTargetAudience,
-          context_text: vTranscript,
-        },
-      });
-      if (error) throw new Error(await extractEdgeError(error, "Failed to generate questions"));
-      const raw = Array.isArray(data?.questions) ? data.questions : Array.isArray(data) ? data : [];
-      setVQuestions(() =>
-        raw.map((q: RawAiQuestion, i: number) => ({
-          key: `q-${Date.now()}-${i}`,
-          question_text: String(q?.question_text ?? ""),
-          explanation: String(q?.explanation ?? ""),
-          options: normaliseOptions(q?.options),
-        })),
-      );
-      toast.success(`${raw.length} questions drafted`);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to generate questions");
+      const result = await generateQuiz(vTitle.trim(), vTargetAudience, vTranscript);
+      if (result.ok && result.questions) {
+        setVQuestions(() => result.questions!);
+        toast.success(`${result.questions.length} questions drafted`);
+      } else {
+        toast.error(result.error ?? "Failed to generate questions");
+      }
     } finally {
       setGeneratingQuiz(false);
     }
