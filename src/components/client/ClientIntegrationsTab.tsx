@@ -44,6 +44,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
+import { saveTenantRtoNumber } from '@/hooks/saveTenantRtoNumber';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -468,11 +469,7 @@ export function ClientIntegrationsTab({
     }
     setSavingRto(true);
     try {
-      const { error } = await supabase
-        .from('tenants')
-        .update({ rto_id: trimmed, updated_at: new Date().toISOString() })
-        .eq('id', profile.tenant_id);
-      if (error) throw error;
+      await saveTenantRtoNumber(profile.tenant_id, trimmed);
       setLocalRtoNumber(trimmed);
       setRtoInput('');
       toast.success('RTO number saved');
