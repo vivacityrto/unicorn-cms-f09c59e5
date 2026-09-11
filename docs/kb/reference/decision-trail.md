@@ -1,6 +1,6 @@
 # Decision Trail (ADRs)
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score); ADR-026 added 2026-09-10 records the TOM §18 item 11 decision (Xero ratified as financial source of truth; the connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's); ADR-027 added 2026-09-10 records the TOM §18 item 12 decision (`unicorn-qa` ratified as the shared standing disposable environment for TOM mutation/cross-tenant testing too, not a second parallel environment); ADR-028 added 2026-09-10 records the TOM §18 item 13 decision (a three-tier observation-window/canary-cohort/performance-budget template, Carl as rollback owner for every tier), closing all 13 TOM §18 decisions. The future portfolio-scope, capability-catalogue, delegation, and break-glass decisions remain open (RBAC v6 track, separate from TOM). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-028 are canonical for current state.
+> **Last updated:** 2026-09-11 · **Reconsider by:** 2027-05-15 · **Confidence:** medium — ADR-003 tenant ID corrected to 6372 (April 2026 audit). ADRs 001–004 and 006–010 are reconstructed from code and sibling-project docs; ADR-005 and ADR-008 are verbatim from sibling-project incidents and may or may not have occurred identically here. ADR-011 added 2026-04-27 to document the current operating model (no peer review; Lovable owns schema in practice). ADR-013 added 2026-05-15 to record the flagship-surfaces reframing (CSC workflow + Client Portal + Vivacity Academy; EOS reclassified as internal operating system; amends ADR-006). ADR-014 added 2026-09-01, amending ADR-011's "no gate for hand-written code" claim to reflect the current branch+PR discipline in `AGENTS.md` (Lovable's own direct-to-main behavior, per ADR-011, is unchanged). ADR-015 added 2026-09-09 to record the bounded RBAC staff-read compatibility baseline; ADR-016 added 2026-09-09 to record the bounded hard-Super-Admin control baseline. ADR-017 through ADR-023 (all added 2026-09-10) record the Tenant Operating Model §18 items 2-8 in sequence: status/lifecycle/access vocabulary and single-writer consolidation (017); `tenants.id` ratified as the canonical key, `id_uuid` mandatory for external integrations (018); `tenant_profile`/`tenant_members`/`package_instances` unmatched-row classification, quarantine not deletion (020, filed after 019 since it built on that decision); `tenant_members` ratified as the canonical membership/access-authority table over `tenant_users` (019); `package_instances`/`stage_instances` ratified as authoritative for service assignments (021); Manage Tenants KPI cards moved to bounded-freshness server-side aggregates (022); the paginated directory itself stays live/real-time by default post-redesign (023). ADR-024 added 2026-09-10 records the TOM §18 item 9 decision (Ask Viv source/retention/deletion/capability-scope policy); ADR-025 added 2026-09-10 records the TOM §18 item 10 decision (first governed BI question is a real-signal consultant-attention watchlist, not a resurrected/composite churn score); ADR-026 added 2026-09-10 records the TOM §18 item 11 decision (Xero ratified as financial source of truth; the connected account confirmed as Vivacity Coaching & Consulting's Xero organisation, not ComplyHub.ai's); ADR-027 added 2026-09-10 records the TOM §18 item 12 decision (`unicorn-qa` ratified as the shared standing disposable environment for TOM mutation/cross-tenant testing too, not a second parallel environment); ADR-028 added 2026-09-10 records the TOM §18 item 13 decision (a three-tier observation-window/canary-cohort/performance-budget template, Carl as rollback owner for every tier), closing all 13 TOM §18 decisions. ADR-029 added 2026-09-10 defers Phase 3 item 5 (page-local `requireSuperAdmin` check cleanup) entirely to RBAC v6. ADR-030 added 2026-09-11 closes the one decision RBAC v6 §13 item 1 and TOM §18 item 1 shared: broad internal-staff tenant read access is now the permanent policy, not a provisional baseline (supersedes that specific point in ADR-015). The capability-catalogue, delegation, and break-glass decisions remain open (RBAC v6 track). RJ should review legacy ADRs before treating as canonical; ADR-011, ADR-013, ADR-014, ADR-015, ADR-016, and ADR-017 through ADR-030 are canonical for current state.
 >
 > Architecture Decision Records for Unicorn 2.0.
 > Purpose: preserve the *why* behind each decision so it isn't re-litigated, create a defensible paper trail, and give future devs (and Claude) context for judgment calls.
@@ -375,7 +375,7 @@ This reframing is documentation-only. No code changes. ADR-006 (EOS Level 10 as 
 
 ### ADR-015: Preserve broad internal-staff tenant read access as the RBAC compatibility baseline {#adr-015}
 **Date:** 2026-09-09
-**Status:** Decided for the current baseline; future portfolio scope remains open
+**Status:** Superseded by [ADR-030](#adr-030) (2026-09-11) — the "future portfolio scope remains open" framing below is no longer current; broad staff read access is now the permanent policy, not a provisional baseline. The write/action-scoping boundaries below remain in force.
 **Decided by:** Carl
 
 **Context:** The current database helper `has_tenant_access_safe` grants broad
@@ -1472,6 +1472,85 @@ that specific edit).
 - [Codebase Optimization plan, §3](codebase-optimization-plan-2026-08-28.md)
 - [dashboard-direct-layout-migration-plan-2026-09-01.md](dashboard-direct-layout-migration-plan-2026-09-01.md)
 - [ADR-016](#adr-016)
+
+---
+
+### ADR-030: Broad internal-staff tenant read access is the permanent policy — no future narrowing to portfolio/assignment scope {#adr-030}
+**Date:** 2026-09-11
+**Status:** Decided
+**Decided by:** Carl
+
+**Context:** ADR-015 (2026-09-09) preserved broad internal-staff tenant
+read access as a *compatibility baseline for shadow/characterization
+work only*, explicitly leaving open whether staff read access should
+eventually narrow to assigned portfolios — its own Consequences section
+required the decision to "be revisited before any v6 cutover that
+narrowly scopes staff reads." This is the same open question as RBAC v6
+plan §13 item 1 and Tenant Operating Model plan §18 item 1 (the two
+plans cross-reference one shared decision, not two separate ones), and
+was the single remaining item blocking both plans' P1 work (RBAC's
+capability-row catalogue, TOM's directory-contract finalization) from
+moving past read-only/shadow preparation.
+
+**Decision:** Every active internal Vivacity staff member keeps
+all-tenant read access permanently. RBAC v6 will not introduce
+portfolio- or assignment-scoped read narrowing for internal staff. This
+replaces ADR-015's "future portfolio scope remains open" status with a
+final answer: there is no future narrowing to design toward. Sensitive
+writes, destructive actions, approvals, exports, configuration, and
+external sharing remain separately capability- and scope-controlled per
+RBAC v6 §13.1 point 1 — this decision concerns **read** access only, and
+does not relax any of those separately-gated write/action controls.
+Client users remain restricted to their own tenant and approved
+relationships, unaffected by this decision.
+
+**Reasoning:** Internal staff operate across the client book as a normal
+part of daily work (cross-client coordination, coverage during absence,
+cross-portfolio pattern-matching); a portfolio-scoped read model would
+require either a proven, well-maintained assignment relationship as a
+hard authorization boundary (which RBAC v6's own evidence found assignment
+currently is not — it organizes work, it is not an authorization boundary
+today) or ongoing exception-granting overhead for every legitimate
+cross-portfolio need. Ratifying the status quo removes a standing
+design question from both RBAC v6's and TOM's remaining implementation
+work without requiring new evidence-gathering or a migration.
+
+**Alternatives considered:**
+- **Narrow to assigned-portfolio read scope.** Rejected — would require
+  first proving assignment data is complete and current enough to serve
+  as an authorization boundary (not established), plus a migration path
+  and exception-handling design for legitimate cross-portfolio work;
+  disproportionate cost for a policy that already functions today.
+- **Leave the decision open indefinitely (ADR-015's original posture).**
+  Rejected now that RBAC v6 P1 (capability-row catalogue) and TOM P1
+  (directory-contract finalization) are the next real implementation
+  steps for both plans — both need a settled answer to this question to
+  proceed, and re-litigating it per packet would be worse than deciding
+  it once.
+
+**Risks accepted:** None new relative to current production behavior —
+this ratifies the status quo rather than changing it. The accepted risk
+is the one already inherent in broad internal read access today (a
+compromised or malicious staff account can read across the full client
+book), which is why sensitive actions stay separately capability-gated
+regardless of this decision.
+
+**Consequences:** ADR-015 is superseded on this specific point (its
+compatibility-baseline framing is no longer provisional) but its
+boundaries around write/action scoping remain in force. RBAC v6 §13 item
+1 and TOM §18 item 1 are both closed by this ADR — the same shared
+decision, recorded once. RBAC v6 P1's capability-row catalogue and TOM
+P1's directory-contract work may now proceed without this open question
+blocking them. No code, schema, RLS, grant, Edge, or production-data
+change follows from this ADR by itself — implementation of any
+capability catalogue or directory contract remains separately
+authorized.
+
+**Linked to:**
+- [ADR-015](#adr-015) (superseded on the open-portfolio-scope point)
+- [RBAC v6 authorization plan §13 item 1 / §13.1 point 1](rbac-v6-authorization-implementation-plan-2026-09-01.md)
+- [Tenant Operating Model plan §18 item 1](tenant-operating-model-data-architecture-plan-2026-09-02.md)
+- [Program Index](program-index.md)
 
 ---
 
