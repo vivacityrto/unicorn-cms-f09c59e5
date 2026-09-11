@@ -38,8 +38,6 @@ import {
 } from 'lucide-react';
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
-import type { TablesInsert } from '@/integrations/supabase/types';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -53,6 +51,7 @@ import { fetchInitialRegistrationContext } from '@/hooks/fetchInitialRegistratio
 import { transferTgaPrimaryContact } from '@/hooks/transferTgaPrimaryContact';
 import { transferTgaDetails } from '@/hooks/transferTgaDetails';
 import { transferTgaContactsAsUsers } from '@/hooks/transferTgaContactsAsUsers';
+import { transferTgaAddresses } from '@/hooks/transferTgaAddresses';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -531,84 +530,15 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id || !user?.id) return;
     setIsTransferring(true);
     try {
-      const tenantId = profile.tenant_id;
-      const now = new Date().toISOString();
-      const dateLabel = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+      const { count, transferDate } = await transferTgaAddresses(
+        profile.tenant_id,
+        user.id,
+        tgaData.addresses,
+        tgaData.deliveryLocations
+      );
 
-      // 1. Delete existing tenant_addresses
-      const { error: deleteError } = await supabase
-        .from('tenant_addresses')
-        .delete()
-        .eq('tenant_id', tenantId);
-      if (deleteError) throw deleteError;
-
-      // 2. Build address rows from TGA data
-      let hoAssigned = false;
-      let poAssigned = false;
-      const rows: TablesInsert<'tenant_addresses'>[] = [];
-
-      // Registered addresses
-      for (const addr of tgaData.addresses) {
-        let addressType = 'OT';
-        if (addr.address_type === 'headOffice' && !hoAssigned) {
-          addressType = 'HO'; hoAssigned = true;
-        } else if (addr.address_type === 'postal' && !poAssigned) {
-          addressType = 'PO'; poAssigned = true;
-        }
-        const suburb = addr.suburb?.toUpperCase() || '';
-        const state = addr.state?.toUpperCase() || '';
-        rows.push({
-          tenant_id: tenantId,
-          address_type: addressType,
-          address1: addr.address_line_1 || '',
-          address2: addr.address_line_2 || null,
-          suburb,
-          state,
-          postcode: addr.postcode || null,
-          country: 'Australia',
-          country_code: 'AU',
-          full_address: [addr.address_line_1, addr.address_line_2, suburb, state, addr.postcode].filter(Boolean).join(', '),
-          notes: `Imported from TGA on ${dateLabel}`,
-          created_by: user.id,
-          updated_by: user.id,
-          transfer_date: now,
-          inactive: false,
-        });
-      }
-
-      // Delivery locations
-      for (const loc of tgaData.deliveryLocations) {
-        const suburb = loc.suburb?.toUpperCase() || '';
-        const state = loc.state?.toUpperCase() || '';
-        rows.push({
-          tenant_id: tenantId,
-          address_type: 'DS',
-          address1: loc.address_line_1 || '',
-          address2: loc.address_line_2 || null,
-          suburb,
-          state,
-          postcode: loc.postcode || null,
-          country: 'Australia',
-          country_code: 'AU',
-          full_address: [loc.address_line_1, loc.address_line_2, suburb, state, loc.postcode].filter(Boolean).join(', '),
-          tga_site_name: loc.location_name || null,
-          notes: `Imported from TGA on ${dateLabel}`,
-          created_by: user.id,
-          updated_by: user.id,
-          transfer_date: now,
-          inactive: false,
-        });
-      }
-
-      if (rows.length > 0) {
-        const { error: insertError } = await supabase
-          .from('tenant_addresses')
-          .insert(rows);
-        if (insertError) throw insertError;
-      }
-
-      setLastTransferDate(now);
-      toast.success(`${rows.length} address(es) transferred to tenant successfully.`);
+      setLastTransferDate(transferDate);
+      toast.success(`${count} address(es) transferred to tenant successfully.`);
     } catch (err) {
       console.error('Transfer addresses error:', err);
       toast.error('Failed to transfer addresses: ' + (err instanceof Error ? err.message : 'Unknown error'));
