@@ -141,6 +141,13 @@ packets.
   invalidation, recent-action confirmation, and pending UI state remain in
   the existing hook/page boundary; no invitation email or other production
   write is performed by this extraction.
+- The final named Stage 2 adapter is implemented in the reset-password review
+  branch: `resetClientPassword` owns the existing `send-password-reset`
+  invocation and preserves its `user_uuid` payload, returned `{ ok, email }`
+  shape, structured Edge detail fallback, and error-code propagation. The
+  hook retains the success/error toasts, including the `AUTH_USER_NOT_FOUND`
+  not-activated-account message, and pending UI state; no reset email or
+  other production write is performed by this extraction.
 - Static source and migration review was completed from
   `origin/main@b63ea5fea`. The existing authenticated storage-state files were
   copied into the implementation worktree. The source PR's verification
