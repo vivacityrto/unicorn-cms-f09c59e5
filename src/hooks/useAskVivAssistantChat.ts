@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRouteTenantContext } from "@/hooks/useRouteTenantContext";
+import { requestAskVivAssistant } from "@/hooks/askVivAssistantRequest";
 
 export interface AssistantSourceUsed {
   tool: string;
@@ -128,14 +129,11 @@ export function useAskVivAssistantChat() {
       setIsSending(true);
 
       try {
-        const { data, error } = await supabase.functions.invoke("ask-viv-assistant", {
-          body: {
-            message: trimmed,
-            conversation_id: conversationId,
-            page_context: pageTenantId ? { tenant_id: pageTenantId } : null,
-          },
+        const data = await requestAskVivAssistant({
+          message: trimmed,
+          conversationId,
+          pageTenantId: pageTenantId ?? null,
         });
-        if (error) throw new Error(error.message || "Failed to get a response");
 
         if (data.conversation_id && data.conversation_id !== conversationId) {
           setConversationId(data.conversation_id);
