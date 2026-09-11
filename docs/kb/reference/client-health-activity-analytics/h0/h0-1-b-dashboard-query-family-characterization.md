@@ -151,11 +151,12 @@ regulator-change rows.
 - **"Scheduled functions, cron/log outcomes"** — done: full 18-job
   inventory above, cross-referenced against every risk/forecast table.
 - **Synthetic characterization fixtures** (high activity/healthy, distressed,
-  stalled, missing-sources, future-timestamps) — not attempted in this
-  packet; a separate, larger undertaking.
-- **Mark July dashboard-health KB conclusions historical/superseded** — not
-  located/actioned in this packet; needs a follow-up to find the specific
-  July doc.
+  stalled, missing-sources, future-timestamps) — not implemented in this
+  packet; the bounded scope is recorded in
+  [`H0.1-c — dashboard query synthetic fixture scope`](h0-1-c-dashboard-query-synthetic-fixture-scope.md).
+- **Mark July dashboard-health KB conclusions historical/superseded** — done
+  for [`dashboard-overhaul-mockup.md`](../../dashboard-overhaul-mockup.md),
+  which is retained as history with an explicit superseded banner.
 
 ## Recommendation (not a decision — Carl's call)
 

@@ -1,5 +1,12 @@
 # Dashboard Overhaul Mockup
 
+> **Status: historical/superseded for current Client Health semantics.** This
+> 2026-07-03 snapshot is retained as decision history. Its stage-health
+> formula, labels, values, and dashboard assumptions predate P3-A containment
+> and the September H0.1 characterization; use
+> [`H0.1-b — dashboard query family characterization`](client-health-activity-analytics/h0/h0-1-b-dashboard-query-family-characterization.md)
+> for current evidence.
+
 > **Last updated:** 2026-07-03 · **Reconsider by:** 2026-08-03 (data snapshot goes stale fast — re-pull before using for a real Lovable prompt) · **Confidence:** high on schema/formula facts (queried live), low on presentation choices (my judgment calls on how to reframe mismatched panels)
 >
 > **Reflects commit:** `<codebase>@89aefd4e` (2026-07-03) · **Data pulled from:** Supabase project `yxkgdalkbrriasiyyrwk` (Unicorn 2.0 prod), read-only queries, same date
