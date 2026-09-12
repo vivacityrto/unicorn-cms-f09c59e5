@@ -1281,7 +1281,7 @@ This program is complete when:
 | Phase | Status | PR | Evidence/result |
 |---|---|---|---|
 | Planning and live read-only investigation | Complete 2026-09-02 | — | this council-reviewed plan; no production changes |
-| P0.1 operating-model inventory | In progress 2026-09-05 | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Corrected source inventory and dated read-only catalog snapshot; identity ledger, policy text/effective grants, view/RPC security, and complete write-path evidence remain open. See [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). |
+| P0.1 operating-model inventory | In progress 2026-09-05 | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Source-of-truth matrix, identity ledger, membership crosswalk, policy/grant and view/RPC security evidence, writer census, and write-path graph are attached in [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md); remaining work is owner disposition of unmatched/cross-initiative findings plus post-#1185 live verification. |
 | P0.2 disposable verification environment | Not started | — | — |
 | P0.3 browser/query baseline | Not started | — | — |
 | P1+ implementation | Not started | — | requires phase approval |
