@@ -3,6 +3,7 @@
 > **Last updated:** 2026-09-12 · **Status:** planning/scoping draft; lifecycle decisions closed, no implementation or production mutation authorized
 > **Owner:** TOM, with RBAC and Client Health review
 > **Dependencies:** TOM P0.1 owner dispositions; P1.1 membership compatibility scope; invitation/auth contract review
+> **Retirement evidence:** [P1.2-c `activate-ghost-user` retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 
 ## Purpose
 
