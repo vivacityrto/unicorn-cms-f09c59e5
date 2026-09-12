@@ -14,11 +14,13 @@
 This is the first evidence-ledger pass authorized by R1. It carries all 85
 P1-b feature keys forward, joins them to the generated P0.1-a
 `usePermission()`/`PermissionGate` inventory, and scans `src/**` and
-`supabase/functions/**` for exact feature-key references. References in shared
-authorization registries and tests are retained for traceability but are not
-counted as live caller evidence. The ledger deliberately leaves the server
-boundary, relationship proof, and negative case unresolved until each row is
-reconciled against its actual route, RPC, Edge, and RLS path.
+`supabase/functions/**` for exact feature-key references. A second Edge pass
+resolves `FeatureKeys.*` constants and literal keys in non-test Edge entry
+points to concrete `requireCaller`/`check_permission` call sites. References in
+shared authorization registries and tests are retained for traceability but
+are not counted as live caller evidence. The ledger deliberately leaves the
+server boundary, relationship proof, and negative case unresolved until each
+row is reconciled against its actual route, RPC, Edge, and RLS path.
 
 This prevents two opposite errors: treating a missing frontend gate as proof
 of missing enforcement, and treating a string in a shared auth allowlist as a
@@ -33,8 +35,12 @@ packet.
 | Recognized frontend gate call sites | 41 | 36 `usePermission()` calls plus 5 `PermissionGate` usages |
 | Feature rows with a recognized frontend gate | 34 | Direct caller evidence exists, but server enforcement is still unverified |
 | Feature rows without a recognized frontend gate | 51 | Reconciliation queue; not proof of an authorization gap |
+| Feature keys with concrete Edge gate references | 25 | 122 `FeatureKeys.*`/literal references in non-test Edge entry points |
+| Feature rows with any recognized frontend or Edge gate | 56 | Direct client or Edge evidence exists; target/RLS scope is still unverified |
+| Feature rows with neither recognized frontend nor Edge gate | 29 | Highest-priority reconciliation queue; not proof that RLS or another boundary is absent |
+| Feature keys referenced in migrations | 85 | 319 historical/seed references; migration text is not proof of current live enforcement |
 | Raw `unicorn_role` comparisons | 59 | Context for direct-role and route-boundary review |
-| Edge Function inventory entries | 192 | Context from P0.1-a; not automatically mapped to capability rows |
+| Edge Function inventory entries | 192 | Context from P0.1-a; 122 concrete key references are mapped in the ledger |
 | Bundled `manage`/`use` rows | 18 | **Correction:** 13 `manage` + 5 `use`, not the 14 stated in earlier packet prose |
 | Additional special policy rows | 2 | `clients.details.edit` and `staff.internal` |
 | High-risk rows | 11 | Security review before delegation or role defaults |
@@ -88,10 +94,16 @@ The 18-row count is itself a corrected evidence finding. Any prior packet text
 that calls this queue “14” should be read as stale; this ledger is authoritative
 for the static count at the stated source commit.
 
-## Queue B — no recognized frontend gate
+## Queue B — no recognized frontend gate or concrete Edge key
 
-The full 51-key list is retained in the JSON ledger. The queue must be handled
-as an evidence reconciliation, not a blanket “add a gate” exercise. Prioritize
+The full 51-key frontend-gap list and the narrower 29-key no-recognized-gate
+list are retained in the JSON ledger. The queue must be handled as an evidence
+reconciliation, not a blanket “add a gate” exercise. A feature can be in the
+51-key list and still have a concrete Edge gate; it is in the 29-key list only
+when neither the recognized frontend inventory nor the Edge key pass found a
+concrete reference. Migration references are useful for locating seed/catalogue
+history, but do not turn a row into current enforcement evidence without a
+live-schema or source-boundary reconciliation. Prioritize
 in this order:
 
 1. protected writes, destructive actions, exports, credential/external side
