@@ -89,8 +89,7 @@ This is the real policy gate, not a coding detail. The safe recommendation is:
   effects into separate actions;
 - keep the 11 high-risk candidates non-delegable by default until security
   reviews target resolution, approval, expiry/revocation, and audit evidence;
-- keep `clients.details.edit` unresolved until product states whether
-  `limited` and `full` equivalence is intentional;
+- use the approved [P1-f client-details contract](../../rbac-v6/p1/p1-f-client-details-capability-semantics.md): one ordinary profile-edit action, no inferred `limited`/`full` distinction, and no page-wide permission alias; hold implementation until field/source and server-boundary evidence is complete;
 - keep `staff.internal` as an identity/principal-state question until its
   consumers are inventoried; do not treat it as broad action authority; and
 - defer job-role defaults and the AJ/CSC pilot until the golden rows and
