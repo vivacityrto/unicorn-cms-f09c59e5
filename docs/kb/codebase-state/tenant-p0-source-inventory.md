@@ -1,7 +1,7 @@
 # Tenant P0.1 Source-of-Truth Inventory
 
-Generated: 2026-09-11 20:30 +08:00
-Source baseline: `origin/main@0c332d04a29ac696959037554f43e3e0bcbb6934`
+Generated: 2026-09-12 10:55 +08:00
+Source baseline: `origin/main@f34cb49e22f517d34fe5f9f95101156acf37ac7c`
 Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-11
 
 > This artifact is evidence, not authority. It records current frontend source and read-only live metadata. It does not create a directory contract, change authorization, repair unmatched rows, or authorize a schema/RLS/function/trigger/grant change.
@@ -203,9 +203,16 @@ census, not a claim that historical migrations are runtime writers.
 
 ### Live RPC and Edge authorization evidence
 
-The live RPC review found the following current boundaries. All listed
+The live RPC review on 2026-09-11 found the following boundaries. All listed
 functions are `SECURITY DEFINER` owned by `postgres`; ordinary authenticated
 execution is granted unless noted.
+
+The five security findings in this snapshot were remediated in merged PR
+[#1185](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1185), with
+the corresponding audit entry linked from the program index. This document
+does not claim a fresh live deployed-definition or grant recheck after that
+remediation; such a recheck is operational follow-up, not a reason to rewrite
+the historical evidence below.
 
 - `admin_set_tenant_csc_assignment`, `admin_remove_tenant_csc_assignment`,
   `rpc_auto_assign_consultant`, the consultant-capacity routines, and
@@ -446,14 +453,17 @@ P0.1 is materially advanced but remains **in progress**, not complete:
 7. The independent cross-initiative pass confirms that `tenant_users` and
    `tenant_members` are materially divergent live ledgers, and that the
    legacy consultant column differs from the open primary assignment table.
-   These findings are now owned as TOM/RBAC/Client Health crosswalk inputs;
-   they do not reopen or bypass the remediation hold on the four reported
-   view/RPC objects.
+   These findings are now owned as TOM/RBAC/Client Health crosswalk inputs.
+   The four reported view/RPC objects, plus the caller-identity RPC finding,
+   were remediated in merged PR #1185; this packet records the repository
+   merge and audit trail but does not substitute for a fresh live grant/body
+   verification.
 8. P0.1 can close its evidence-gathering portion after the TOM/RBAC/Client
-   Health owners review these findings and Carl directs the held-object
-   remediation path. No P1 directory contract should proceed until those
-   findings and the membership crosswalk have explicit owners and
-   dispositions. No directory migration, RLS change, grant change, cleanup,
-   or production-data correction is implied by this document.
+   Health owners review these findings, the post-#1185 live verification is
+   recorded, and the remaining unmatched rows and membership crosswalk have
+   explicit owners and dispositions. No P1 directory contract should
+   proceed until those findings have those dispositions. No directory
+   migration, RLS change, grant change, cleanup, or production-data
+   correction is implied by this document.
 
 **Audit entry:** none needed — this change is a read-only documentation inventory with no schema, RLS, trigger, grant, production-data, or user-visible behavior change.
