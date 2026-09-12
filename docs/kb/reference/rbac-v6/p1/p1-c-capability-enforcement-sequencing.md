@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md)
 > **Inputs:** [P0.1-a static inventory](../p0/p0-1-a-static-inventory.md), [P0.1-b live inventory](../p0/p0-1-b-live-inventory.md), [P1-a review worksheet](p1-a-review-worksheet.md), [P1-b draft classification](p1-b-draft-classification.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Follow-up packet:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md)
+> **Follow-up packets:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md)
 > **Status:** preparation worksheet; not a golden access matrix and not an authorization decision
 > **Owner:** RBAC v6, with product/security approval required for target rows
 > **Audit entry:** none needed — analysis/documentation only; no permission, role, RLS, grant, or production change
@@ -64,8 +64,9 @@ current frontend visibility, or a broad staff role.
 
 ### Queue A — decompose bundled verbs first
 
-The 18 `*.manage`/`*.use` rows are not one action each. The next static pass
-should enumerate the actual sub-operations and their first privileged boundary:
+The 18 `*.manage`/`*.use` rows are not one action each. [P1-e](p1-e-bundled-verb-decomposition.md)
+records the first source-backed decomposition pass; the next pass must still
+enumerate each sub-operation's first privileged boundary:
 
 | Feature family | Required decomposition | Stop condition |
 | --- | --- | --- |
@@ -132,7 +133,7 @@ missing frontend gate by granting a new one.
 
 | Decision | Why it matters | Owner | Minimum evidence before approval |
 | --- | --- | --- | --- |
-| Exact sub-actions for the 14 bundled features | Prevents a single `manage` row from granting unrelated powers | Product + security | Source/caller decomposition and action-specific risk notes |
+| Exact sub-actions for the 18 bundled features | Prevents a single `manage` row from granting unrelated powers | Product + security | Source/caller decomposition and action-specific risk notes |
 | `clients.details.edit` target semantics | Current `limited` and `full` are equivalent at the only observed gate | Product | Call-site review and intended role behavior |
 | `staff.internal` catalogue fate | Identity visibility is not an action permission | Product + security | Principal-state model and replacement consumers |
 | High-risk non-delegability and approval model | Prevents role/grant expansion through defaults | Security | Action branches, target resolution, audit/expiry/revocation contract |
@@ -145,7 +146,7 @@ missing frontend gate by granting a new one.
 This packet is ready for the next review when:
 
 - all 85 rows have a readiness state and cited source input;
-- the 14 bundled rows have source-backed sub-operation inventories or an
+- the 18 bundled rows have source-backed sub-operation inventories or an
   explicit `needs_product_input` disposition;
 - all 51 frontend-unrecognized rows have an enforcement-ledger entry or an
   explicit owner/blocker;

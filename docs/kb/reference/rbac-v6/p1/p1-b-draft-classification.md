@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §7 P1, §5.1-5.4
 > **Sibling packet:** [P1-a review worksheet](p1-a-review-worksheet.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** draft delivered 2026-09-11 — **this is a straw-man for Carl/product to react to and correct, not an approved classification.** Carl chose this path explicitly (over "you/product take the first pass" or "hold P1 for now") when asked how to proceed.
+> **Status:** draft delivered 2026-09-11 — **this is a straw-man for Carl/product to react to and correct, not an approved classification.** Carl chose this path explicitly (over "you/product take the first pass" or "hold P1 for now") when asked how to proceed. The bundled rows now have a source-backed decomposition in [P1-e](p1-e-bundled-verb-decomposition.md).
 > **Next preparation worksheet:** [P1-c capability enforcement and sequencing](p1-c-capability-enforcement-sequencing.md)
 > **Owner:** Claude Code (draft only — approval owner is product/security per plan §7 P1 exit gate)
 > **Evidence:** generated 2026-09-11 from [P1-a's worksheet](data/p1-a-worksheet.json) + P0.1-a's static inventory, at `origin/main@dac48b268`
@@ -115,7 +115,7 @@ something to hand-wave in a classification draft.
 ## What Carl/product needs to do with this
 
 This is an input to react to, per the path chosen: correct any
-module-default scope that's wrong, decide the 14 bundling-verb features'
+module-default scope that's wrong, decide the 18 bundling-verb features'
 real sub-actions, confirm or reject the `clients.details.edit` finding,
 decide `staff.internal`'s fate, and — separately, not started here at all —
 define job-role defaults with a seat representative and stand up the
