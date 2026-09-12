@@ -47,7 +47,7 @@ and A2 remain blocked under their named owners and unblock conditions.
 | ID | Gate | Recommended disposition | Decision owner | Current state |
 | --- | --- | --- | --- | --- |
 | R1 | RBAC P1 evidence-ledger pass | Approve packet-level static/source reconciliation; keep grants, role defaults, and cutover out of scope | Carl + product/security | Approved in session; preparation only |
-| R2 | RBAC capability semantics | Decompose bundled verbs; default high-risk actions to non-delegable pending explicit review; do not turn P1-b into policy | Product + security | Decision packet prepared; blocked on row decisions |
+| R2 | RBAC capability semantics | Decompose bundled verbs; default high-risk actions to non-delegable pending explicit review; do not turn P1-b into policy | Product + security | [P1-h high-risk control worksheet](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md) delivered; row decisions and implementation remain gated |
 | T1 | TOM P0.2/P0.3 QA run | Approve one synthetic, read-only run in `unicorn-qa` | Carl + security/environment owner | Plan and preflight packet prepared; execution blocked on credential/operator/artifact gates |
 | T2 | TOM P1 implementation | Keep schema/writer/directory/RLS work deferred until evidence and RBAC contracts are approved | Carl/product/data/security | Blocked by design |
 | H1 | Client Health 54-tenant defaults | Prefer `unavailable`/unknown for empty, failed, or stale burn/retention sources | Carl + Client Health/product | Decision approved; implementation separately gated |
@@ -87,8 +87,9 @@ This is the real policy gate, not a coding detail. The safe recommendation is:
 - do not approve a broad `manage`/`use` meaning; split list/read, create,
   edit, role/relationship change, disable, invite, export, and external side
   effects into separate actions;
-- keep the 11 high-risk candidates non-delegable by default until security
-  reviews target resolution, approval, expiry/revocation, and audit evidence;
+- keep the 11 high-risk candidates non-delegable by default; [P1-h](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md)
+  now defines the target-resolution, approval, expiry/revocation, audit, and
+  negative-probe evidence required before security can approve an exception;
 - use the approved [P1-f client-details contract](../../rbac-v6/p1/p1-f-client-details-capability-semantics.md): one ordinary profile-edit action, no inferred `limited`/`full` distinction, and no page-wide permission alias; hold implementation until field/source and server-boundary evidence is complete;
 - use the approved [P1-g staff-internal consumer inventory](../../rbac-v6/p1/p1-g-staff-internal-consumer-inventory.md): preserve internal identity as principal state, replace each direct action gate with an endpoint-specific capability, and retire the catalogue row only after those replacements are migrated; do not treat it as broad action authority; and
 - defer job-role defaults and the AJ/CSC pilot until the golden rows and
