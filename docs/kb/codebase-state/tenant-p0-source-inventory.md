@@ -24,6 +24,20 @@ The source slice is `/manage-tenants` and its direct data and action dependencie
 
 Observed evidence was collected by inspecting those files from `origin/main` and querying the production catalog with read-only `list_tables`, `execute_sql`, and advisor calls. No row payloads or credentials are included here. Counts are current observations, not a promise that the live database is static.
 
+### Statistics and Advisor window caveat
+
+The live `pg_stat_statements_info.stats_reset` value was
+`2026-07-15 03:55:10.476508+00`. Therefore any `pg_stat_statements` call
+counts or execution totals are cumulative observations over that window, not
+a normalized current-rate or release-to-release comparison. A bounded
+2026-09-12 sample confirmed repeated PostgREST shapes against
+`tenant_users`, `tenant_members`, `package_instances`, and
+`connected_tenants`, but this packet does not use those counters as a
+performance budget or optimization authorization. The Supabase security
+Advisor read on the same date returned broad project findings, including
+unrelated objects; it is recorded as a baseline/triage input, not as
+deletion or remediation authority for this packet.
+
 ## Request and dependency graph
 
 | Caller | Reads / network calls | Writes or mutation boundary | Current contract / caveat |
