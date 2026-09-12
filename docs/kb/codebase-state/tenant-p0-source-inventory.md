@@ -1,7 +1,7 @@
 # Tenant P0.1 Source-of-Truth Inventory
 
-Generated: 2026-09-12 11:15 +08:00
-Source baseline: `origin/main@5fbf425c3efec6b4aaddf80ff8daf6a0babb4bce`
+Generated: 2026-09-12 11:35 +08:00
+Source baseline: `origin/main@b59c23d8e8805af4021ec29e1a4920103a255531`
 Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-12; the historical 2026-09-11 snapshot is labeled where retained
 
 > This artifact is evidence, not authority. It records current frontend source and read-only live metadata. It does not create a directory contract, change authorization, repair unmatched rows, or authorize a schema/RLS/function/trigger/grant change.
@@ -315,22 +315,32 @@ findings and is not treated as evidence that these four targeted checks failed.
   timestamps are from January 2026. Current rows require a tenant-identity
   reconciliation before any cleanup or remapping.
 
+A fresh read-only aggregate recheck on 2026-09-12 reproduced the same
+classification counts: 27 package-instance/package orphans (24 completed
+inactive tenant orphans, one active tenant orphan, and two missing-package
+rows), 57 connected-tenant rows whose tenant is absent (all 57 still point to
+an existing user; 55 predate 2026 and two do not), and three TGA summary
+orphans (two current, one null-status, one missing registration end date).
+This confirms the existing evidence has not drifted since the prior snapshot;
+it does not turn any row into a deletion candidate.
+
 ### Realtime evidence
 
 The production `supabase_realtime` and
 `supabase_realtime_messages_publication` publications contain none of the
 scoped tables in `pg_publication_tables`. Repository migration/source search
 also found no current publication-maintenance statement that would reconcile
-the `useTenantNotes` listener with live publication membership. This remains a
-live operational gap, not a reason to change the publication in this packet.
+the `useTenantNotes` listener with live publication membership. A fresh
+read-only query on 2026-09-12 again returned no rows for the scoped tables.
+This remains a live operational gap, not a reason to change the publication
+in this packet.
 
 ## Cross-initiative ownership and membership reconciliation
 
-This section intentionally does not inspect or revisit the four objects under
-Carl's remediation hold (`v_client_package_dashboard`, `v_package_burndown`,
-`start_client_package`, and `transition_membership_state`). It records only
-the independent TOM/RBAC/Client Health intersection for membership, ownership,
-and notes.
+The four previously held view/RPC objects are handled in the post-#1185 live
+verification above. This section does not re-open that security remediation;
+it records only the independent TOM/RBAC/Client Health intersection for
+membership, ownership, and notes.
 
 ### `tenant_users` versus `tenant_members`
 
@@ -352,6 +362,14 @@ that model. Current code is not yet on one ledger:
   rows whose user is missing. Only 196 active `tenant_members` rows overlap a
   `tenant_users` pair; 363 active membership rows have no `tenant_users` row,
   while 380 `tenant_users` rows have no active `tenant_members` counterpart.
+
+A fresh read-only aggregate on 2026-09-12 reproduced those membership counts:
+936 `tenant_members` rows (559 active, 377 inactive), 349 tenant-orphan rows,
+zero missing-user rows, and 576 `tenant_users` rows with 570 overlapping
+pairs. Only 196 active membership rows overlap a `tenant_users` pair; the
+remaining 363 active membership rows have no `tenant_users` row. Six
+`tenant_users` rows have no membership overlap at all, and 380 have no active
+membership counterpart; these remain part of the two-way divergence.
 
 This is sufficient to rule out an implicit table swap or a count-based
 directory contract. The 349 active-ledger tenant orphans and the two-way
