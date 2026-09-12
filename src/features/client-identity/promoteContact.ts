@@ -9,7 +9,7 @@ import type { RelationshipRole } from "@/lib/roles/relationshipRole";
  */
 export async function promoteContactViaInvite(
   tenantId: number,
-  contact: TenantContact,
+  contact: Pick<TenantContact, "email" | "first_name" | "last_name">,
   promoteRole: RelationshipRole,
 ) {
   const { data: sessionData } = await supabase.auth.getSession();

@@ -43,7 +43,7 @@ import { toast } from 'sonner';
 import { isValidEmail, RELATIONSHIP_ROLE_OPTIONS, type RelationshipRole } from '@/lib/roles/relationshipRole';
 import { type PositionTypeOption, positionTypeLabel } from '@/lib/roles/positionType';
 import { useInvalidateUserCapacity } from '@/hooks/useUserCapacity';
-import type { TenantContact } from '@/features/client-identity/models';
+import type { LegacyTenantContact, TenantContact } from '@/features/client-identity/models';
 import { promoteContactViaInvite } from '@/features/client-identity/promoteContact';
 
 interface ContactFormState {
@@ -60,9 +60,22 @@ interface TenantContactsSectionProps {
   tenantName: string;
   canManage: boolean;
   positionTypeOptions: PositionTypeOption[];
+  legacyContacts?: LegacyTenantContact[];
 }
 
-export function TenantContactsSection({ tenantId, tenantName, canManage, positionTypeOptions }: TenantContactsSectionProps) {
+type ContactListItem = TenantContact | LegacyTenantContact;
+
+function isLegacyContact(contact: ContactListItem): contact is LegacyTenantContact {
+  return 'isLegacyGhost' in contact;
+}
+
+export function TenantContactsSection({
+  tenantId,
+  tenantName,
+  canManage,
+  positionTypeOptions,
+  legacyContacts = [],
+}: TenantContactsSectionProps) {
   const [contacts, setContacts] = useState<TenantContact[]>([]);
   const [loading, setLoading] = useState(true);
   const invalidateCapacity = useInvalidateUserCapacity();
@@ -76,7 +89,7 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
   const [deleting, setDeleting] = useState(false);
   const [updatingPositionType, setUpdatingPositionType] = useState<number | null>(null);
 
-  const [promotingContact, setPromotingContact] = useState<TenantContact | null>(null);
+  const [promotingContact, setPromotingContact] = useState<ContactListItem | null>(null);
   const [promoteRole, setPromoteRole] = useState<RelationshipRole>('user');
   const [promoting, setPromoting] = useState(false);
 
@@ -206,7 +219,7 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
     fetchContacts();
   };
 
-  const openPromote = (contact: TenantContact) => {
+  const openPromote = (contact: ContactListItem) => {
     setPromoteRole('user');
     setPromotingContact(contact);
   };
@@ -247,7 +260,12 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
     }
   };
 
-  const activeContacts = contacts.filter((c) => !c.promoted_to_user_id);
+  const persistedActiveContacts = contacts.filter((c) => c.status === 'active' && !c.promoted_to_user_id);
+  const persistedEmails = new Set(persistedActiveContacts.map((contact) => contact.email.toLowerCase()));
+  const displayedLegacyContacts = legacyContacts.filter(
+    (contact) => !persistedEmails.has(contact.email.toLowerCase()),
+  );
+  const activeContacts: ContactListItem[] = [...persistedActiveContacts, ...displayedLegacyContacts];
 
   return (
     <Card>
@@ -276,19 +294,23 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
           </p>
         ) : (
           <div className="divide-y">
-            {activeContacts.map((contact) => (
+            {activeContacts.map((contact) => {
+              const legacy = isLegacyContact(contact);
+              return (
               <div key={contact.id} className="flex items-center justify-between py-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium truncate">
                       {contact.first_name} {contact.last_name || ''}
                     </span>
-                    <Badge variant={contact.status === 'active' ? 'secondary' : 'outline'}>{contact.status}</Badge>
+                    <Badge variant={legacy ? 'outline' : 'secondary'}>
+                      {legacy ? 'Legacy contact' : contact.status}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{contact.email}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {canManage ? (
+                  {!legacy && canManage ? (
                     <Select
                       value={contact.position_type || '__none__'}
                       onValueChange={(value) => handlePositionTypeChange(contact, value)}
@@ -310,10 +332,12 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
                         ))}
                       </SelectContent>
                     </Select>
-                  ) : (
+                  ) : !legacy ? (
                     <span className="text-sm text-muted-foreground hidden sm:inline">
                       {positionTypeLabel(contact.position_type, positionTypeOptions)}
                     </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground hidden sm:inline">No login yet</span>
                   )}
                   {canManage && (
                     <DropdownMenu>
@@ -323,38 +347,45 @@ export function TenantContactsSection({ tenantId, tenantName, canManage, positio
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(contact)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
+                        {!legacy && (
+                          <DropdownMenuItem onClick={() => openEdit(contact)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => openPromote(contact)}>
                           <ArrowUpRight className="mr-2 h-4 w-4" />
                           Promote to User
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleArchive(contact)}>
-                          {contact.status === 'active' ? (
-                            <>
-                              <Archive className="mr-2 h-4 w-4" />
-                              Archive
-                            </>
-                          ) : (
-                            <>
-                              <RotateCcw className="mr-2 h-4 w-4" />
-                              Reactivate
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => setContactToDelete(contact)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {!legacy && (
+                          <>
+                            <DropdownMenuItem onClick={() => toggleArchive(contact)}>
+                              {contact.status === 'active' ? (
+                                <>
+                                  <Archive className="mr-2 h-4 w-4" />
+                                  Archive
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCcw className="mr-2 h-4 w-4" />
+                                  Reactivate
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={() => setContactToDelete(contact)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

@@ -125,14 +125,10 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
   const [ghostUserIds, setGhostUserIds] = useState<Set<string>>(new Set());
-  const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
 
   // RBAC: Check permissions using helper functions
   const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId) || isVivacityTeam;
   const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId) || isVivacityTeam;
-  // Only Vivacity staff can activate ghost accounts — never expose in client portal.
-  const canActivateGhosts = isSuperAdmin() || isVivacityTeam;
-
   const capacity = useUserCapacity(tenantId);
   const invalidateCapacity = useInvalidateUserCapacity();
 
@@ -162,10 +158,10 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     setPositionTypeOptions(data || []);
   };
 
-  // Detect ghost users (rows in public.users with no auth.users row) so staff
-  // can offer one-click activation. Only Vivacity staff see the result.
+  // Detect legacy member rows whose public profile has no auth account. They
+  // are projected into Contacts until the person accepts a real invitation.
   useEffect(() => {
-    if (!canActivateGhosts || members.length === 0) {
+    if (members.length === 0) {
       setGhostUserIds(new Set());
       return;
     }
@@ -183,51 +179,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       }
     })();
     return () => { cancelled = true; };
-  }, [members, canActivateGhosts]);
-
-  const handleActivateGhost = async (member: TenantMemberInfo) => {
-    if (!canActivateGhosts) return;
-    setActivatingUserId(member.user_id);
-    try {
-      const { data, error } = await supabase.functions.invoke('activate-ghost-user', {
-        body: { user_uuid: member.user_id, tenant_id: tenantId },
-      });
-      if (error) throw error;
-      if (!data?.ok) {
-        toast.error(data?.detail || 'Activation failed');
-        return;
-      }
-      setGhostUserIds((prev) => {
-        const n = new Set(prev);
-        n.delete(member.user_id);
-        return n;
-      });
-      if (data.email_sent) {
-        toast.success(`Account activated — welcome email sent to ${data.email}`);
-      } else if (data.action_link) {
-        toast.success(`Account activated for ${data.email} — welcome email could not be sent`, {
-          action: {
-            label: 'Copy link',
-            onClick: async () => {
-              try {
-                await navigator.clipboard.writeText(data.action_link);
-                toast.success('Link copied — paste it into Teams or email to the user directly.');
-              } catch {
-                toast.message('Copy manually', { description: data.action_link });
-              }
-            },
-          },
-        });
-      } else {
-        toast.success(`Account activated for ${data.email} — welcome email could not be sent`);
-      }
-    } catch (err) {
-      console.error('activate-ghost-user failed', err);
-      toast.error(err instanceof Error ? err.message : 'Activation failed');
-    } finally {
-      setActivatingUserId(null);
-    }
-  };
+  }, [members]);
 
   // Per-row in-flight tracker for password reset / recovery link actions.
   const [actionUserId, setActionUserId] = useState<string | null>(null);
@@ -269,7 +221,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         return;
       }
       if (payload?.code === 'AUTH_USER_NOT_FOUND') {
-        toast.info("This user hasn't activated their account yet — use Activate account instead");
+        toast.info("This user doesn't have a login yet — use Contacts → Promote to User instead");
         return;
       }
       if (error && !payload?.code) {
@@ -317,7 +269,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         return;
       }
       if (payload?.code === 'AUTH_USER_NOT_FOUND') {
-        toast.info("This user hasn't activated their account yet — use Activate account instead");
+        toast.info("This user doesn't have a login yet — use Contacts → Promote to User instead");
         return;
       }
       if (error && !payload?.code) {
@@ -336,7 +288,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
   // ───────── Bulk state-aware actions ─────────
   type AccountState = 'ghost' | 'invited' | 'active' | 'disabled';
-  type BulkAction = 'activate' | 'reset';
+  type BulkAction = 'reset';
   type BulkOutcome = 'sent' | 'skipped' | 'failed' | 'aborted';
   interface BulkResultRow {
     user_uuid: string;
@@ -359,6 +311,8 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     setSelectedIds(new Set());
   }, [tenantId]);
 
+  const visibleMembers = members.filter((member) => !ghostUserIds.has(member.user_id));
+
   const computeState = (m: TenantMemberInfo): AccountState => {
     if (m.users.disabled) return 'disabled';
     if (ghostUserIds.has(m.user_id)) return 'ghost';
@@ -369,12 +323,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   // Returns null when the action is valid for the state, otherwise a skip reason.
   const invalidReason = (state: AccountState, action: BulkAction): string | null => {
     if (state === 'disabled') return 'Account disabled — re-enable first';
-    if (action === 'activate') {
-      if (state === 'ghost') return null;
-      return 'Already activated — use Send password reset';
-    }
-    // reset
-    if (state === 'ghost') return 'No auth account yet — use Activate';
+    if (state === 'ghost') return 'No login yet — promote from Contacts first';
     return null;
   };
 
@@ -387,17 +336,17 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     });
   };
 
-  const allSelected = members.length > 0 && members.every((m) => selectedIds.has(m.user_id));
+  const allSelected = visibleMembers.length > 0 && visibleMembers.every((m) => selectedIds.has(m.user_id));
   const someSelected = selectedIds.size > 0 && !allSelected;
   const toggleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? new Set(members.map((m) => m.user_id)) : new Set());
+    setSelectedIds(checked ? new Set(visibleMembers.map((m) => m.user_id)) : new Set());
   };
 
   const selectByPredicate = (pred: (m: TenantMemberInfo) => boolean) => {
-    setSelectedIds(new Set(members.filter(pred).map((m) => m.user_id)));
+    setSelectedIds(new Set(visibleMembers.filter(pred).map((m) => m.user_id)));
   };
 
-  const selectedMembers = members.filter((m) => selectedIds.has(m.user_id));
+  const selectedMembers = visibleMembers.filter((m) => selectedIds.has(m.user_id));
   const previewSplit = (action: BulkAction) => {
     let run = 0;
     let skip = 0;
@@ -526,7 +475,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     // Single-primary swap: if promoting to primary while another user already
     // holds primary, ask first; the actual swap runs in confirmPrimarySwap.
     if (newRR === 'primary_contact') {
-      const existingPrimary = members.find(
+      const existingPrimary = visibleMembers.find(
         (m) => m.user_id !== member.user_id && getMemberRelationshipRole(m) === 'primary_contact',
       );
       if (existingPrimary) {
@@ -560,7 +509,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const confirmPrimarySwap = async () => {
     const target = primarySwapTarget;
     if (!target) return;
-    const existingPrimary = members.find(
+    const existingPrimary = visibleMembers.find(
       (m) => m.user_id !== target.user_id && getMemberRelationshipRole(m) === 'primary_contact',
     );
     if (!existingPrimary) {
@@ -809,7 +758,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
             }
           : m
       ));
-      onCountChange?.(members.length);
+      onCountChange?.(visibleMembers.length);
       toast.success('User updated successfully');
       setEditingMember(null);
     } catch (error) {
@@ -876,7 +825,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         <div>
           <h3 className="text-lg font-semibold">Team Members</h3>
           <p className="text-sm text-muted-foreground">
-            {members.length} user{members.length !== 1 ? 's' : ''} in this organisation
+            {visibleMembers.length} user{visibleMembers.length !== 1 ? 's' : ''} in this organisation
           </p>
         </div>
         {canManageUsers && (
@@ -956,7 +905,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       )}
 
       {/* Bulk action toolbar — staff only, when there are members */}
-      {canManageUsers && members.length > 0 && (
+      {canManageUsers && visibleMembers.length > 0 && (
         <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2 flex-wrap">
@@ -974,18 +923,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  selectByPredicate((m) => {
-                    const s = computeState(m);
-                    return s === 'ghost' || s === 'invited';
-                  })
-                }
-              >
-                Select all not-yet-activated
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() => selectByPredicate((m) => !m.users.last_sign_in_at && !m.users.disabled)}
               >
                 Select all never-logged-in
@@ -999,26 +936,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           </div>
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
-              {canActivateGhosts && (() => {
-                const { run, skip } = previewSplit('activate');
-                return (
-                  <Button
-                    size="sm"
-                    onClick={() => runBulk('activate')}
-                    disabled={bulkRunning !== null || run === 0}
-                  >
-                    {bulkRunning === 'activate' ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    Activate accounts
-                    <Badge variant="secondary" className="ml-2">
-                      {run} will run · {skip} skipped
-                    </Badge>
-                  </Button>
-                );
-              })()}
               {(() => {
                 const { run, skip } = previewSplit('reset');
                 return (
@@ -1049,7 +966,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
       <Card>
         <CardContent className="p-0">
-          {members.length === 0 ? (
+          {visibleMembers.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <UserIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No users in this organisation yet</p>
@@ -1066,7 +983,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
             </div>
           ) : (
             <div className="divide-y">
-              {members.map(member => {
+              {visibleMembers.map(member => {
                 const user = member.users;
                 return (
                   <div
@@ -1190,24 +1107,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                         })()
                       )}
 
-                      {/* Ghost activation — staff only */}
-                      {canActivateGhosts && ghostUserIds.has(member.user_id) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={activatingUserId === member.user_id}
-                          onClick={(e) => { e.stopPropagation(); handleActivateGhost(member); }}
-                          title="Create the auth account and email a setup link"
-                        >
-                          {activatingUserId === member.user_id ? (
-                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                          ) : (
-                            <KeyRound className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Activate account
-                        </Button>
-                      )}
-
                       <span className="text-xs text-muted-foreground min-w-20">
                         Added {formatDate(member.created_at)}
                       </span>
@@ -1285,6 +1184,18 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         tenantName={tenantName}
         canManage={canManageUsers}
         positionTypeOptions={positionTypeOptions}
+        legacyContacts={members.filter((member) => ghostUserIds.has(member.user_id)).map((member) => ({
+          id: `legacy:${member.user_id}`,
+          first_name: member.users.first_name || member.users.email.split('@')[0],
+          last_name: member.users.last_name,
+          email: member.users.email,
+          position_type: member.position_type || null,
+          status: 'active' as const,
+          promoted_to_user_id: null,
+          promoted_at: null,
+          created_at: member.created_at,
+          isLegacyGhost: true as const,
+        }))}
       />
 
       {/* Edit User Drawer */}
@@ -1524,13 +1435,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
             <AlertDialogTitle>Swap Primary Contact?</AlertDialogTitle>
             <AlertDialogDescription>
               {(() => {
-                const existing = members.find(
+                const existing = visibleMembers.find(
                   (m) =>
                     primarySwapTarget &&
                     m.user_id !== primarySwapTarget.user_id &&
                     getMemberRelationshipRole(m) === 'primary_contact',
                 );
-                const otherSecondary = members.find(
+                const otherSecondary = visibleMembers.find(
                   (m) =>
                     primarySwapTarget &&
                     m.user_id !== primarySwapTarget.user_id &&
@@ -1573,7 +1484,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {bulkResults?.action === 'activate' ? 'Activate accounts' : 'Send password reset'} — results
+              Send password reset — results
             </DialogTitle>
             <DialogDescription>
               {bulkResults && (() => {
@@ -1607,7 +1518,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                   <TableRow key={r.user_uuid + r.outcome}>
                     <TableCell className="font-mono text-xs">{r.email || r.user_uuid}</TableCell>
                     <TableCell className="text-xs">
-                      {r.action === 'activate' ? 'Activate' : 'Reset'}
+                      Reset
                     </TableCell>
                     <TableCell>
                       {r.outcome === 'sent' && (
