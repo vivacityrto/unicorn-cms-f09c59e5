@@ -12,7 +12,7 @@
 > **Program index:** [Program Index](program-index.md)
 > **Scope:** client health/activity metrics, consultant triage, and intervention analytics surfaced on the triage dashboard, main dashboard, client-activity view, tenant detail, and staff Ask Viv
 > **Exit criteria:** not yet defined at the program level — tracked per phase (see P3-A in [`codebase-optimization/phase-3/`](codebase-optimization/phase-3/))
-> **Evidence:** "Current implementation reconciliation" below, plus [`codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md`](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md)
+> **Evidence:** "Current implementation reconciliation" below, plus [`codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md`](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md) and the [`consultant research project pack`](../handoffs/client-health-consultant-research-project-pack.md)
 > **Audit entry:** none at the program level — implementation PRs record their own per the Production rule above
 
 ---
@@ -36,6 +36,33 @@ The Phase 2.6 M4 decision now retires the legacy forecast/health cron lane
 (jobs 14, 15, 20 and 21); its tables, historical rows and Edge Functions are
 retained as evidence, and any replacement schedule requires a new Client
 Health contract, tests and audit entry.
+
+### Current research dependency — consultant operational input outstanding
+
+The technical reconciliation is not a substitute for operating knowledge from
+the consultants who use the triage and client-health workflows. The [research
+project pack](../handoffs/client-health-consultant-research-project-pack.md)
+records the outstanding request for AJ/Ezel operational input on:
+
+- normal versus concerning engagement cadence and response behavior;
+- how consultants distinguish client-owned blockers from service-team blockers;
+- commitment ownership, intervention patterns, and warning signs;
+- quiet or data-insufficient client examples; and
+- which explanations and review actions would be useful in a pilot.
+
+Until those reports are supplied and consolidated, H1 metric definitions,
+health/attention thresholds, confidence semantics, pilot cohorts, and
+consultant-usefulness acceptance criteria remain provisional. H0 may continue
+read-only technical characterization, synthetic fixtures, source-quality
+inventory, and behavior-restricting containment already authorized by the
+plan, but it must not turn the current data defects into a replacement score
+or infer consultant policy from repository/live data alone.
+
+The input must be operational guidance rather than raw client notes or
+identifiable client material. Any examples carried into the repository must be
+synthetic, deidentified, or irreversibly redacted. The next H1 packet should
+link the consolidated reports and record which proposed dimensions, unknown
+states, and pilot acceptance criteria they support or leave unresolved.
 
 ---
 
