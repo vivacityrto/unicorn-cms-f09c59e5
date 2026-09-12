@@ -639,6 +639,11 @@ Every PR starts from fresh `origin/main` in its own worktree. Regenerate source/
 - Remove misleading healthy/stable defaults across dashboard, Ask Viv and executive consumers after characterization.
 - Ship independently from any replacement score.
 
+**Preparation packet:** [H0.3 risk/retention consumers and unknown-state disposition](client-health-activity-analytics/h0/h0-3-risk-retention-consumer-unknown-state-packet.md)
+defines the current consumer inventory, source-state vocabulary, job evidence
+requirements, consultant-data dependency, and implementation gates. It does
+not authorize a forecast repair or consumer change.
+
 **Exit:** jobs either produce validated versioned shadow outputs or expose explicit unavailable state; no silent zero-risk fallback.
 
 #### H0.4 — Verification environment, measured baselines and proposed budgets
