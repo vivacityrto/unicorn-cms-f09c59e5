@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md)
 > **Inputs:** [P0.1-a static inventory](../p0/p0-1-a-static-inventory.md), [P0.1-b live inventory](../p0/p0-1-b-live-inventory.md), [P1-a review worksheet](p1-a-review-worksheet.md), [P1-b draft classification](p1-b-draft-classification.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Follow-up packets:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-f client-details semantics](p1-f-client-details-capability-semantics.md)
+> **Follow-up packets:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-f client-details semantics](p1-f-client-details-capability-semantics.md), [P1-g staff-internal consumer inventory](p1-g-staff-internal-consumer-inventory.md)
 > **Status:** preparation worksheet; not a golden access matrix and not an authorization decision
 > **Owner:** RBAC v6, with product/security approval required for target rows
 > **Audit entry:** none needed — analysis/documentation only; no permission, role, RLS, grant, or production change
@@ -103,8 +103,10 @@ missing frontend gate by granting a new one.
 - `clients.details.edit` design is approved as one ordinary profile-edit action
   with no inferred `limited`/`full` distinction; its field ownership,
   relationship, and server-boundary contract remain to be evidenced.
-- `staff.internal` needs a product answer on whether it remains an identity/
-  principal-state predicate or is retired from the capability catalogue.
+- `staff.internal` consumer inventory is complete in [P1-g](p1-g-staff-internal-consumer-inventory.md);
+  the recommended direction is to retire it as an action capability while
+  preserving canonical internal-principal state and adding action-specific
+  replacement gates per endpoint.
 - The 11 high-risk candidates need security review, explicit approval/control
   semantics, and direct negative probes before any role default is proposed.
 - The four `owner_only` rows can use `own_resource` as a candidate scope from
@@ -136,7 +138,7 @@ missing frontend gate by granting a new one.
 | --- | --- | --- | --- |
 | Exact sub-actions for the 18 bundled features | Prevents a single `manage` row from granting unrelated powers | Product + security | Source/caller decomposition and action-specific risk notes |
 | `clients.details.edit` target semantics | One ordinary profile-edit action; no page-wide alias or inferred level distinction | Product | [P1-f contract](p1-f-client-details-capability-semantics.md), field/source review, and server-boundary evidence |
-| `staff.internal` catalogue fate | Identity visibility is not an action permission | Product + security | Principal-state model and replacement consumers |
+| `staff.internal` catalogue fate | Consumer inventory recommends principal-state treatment, not an action permission | Product + security | [P1-g consumer map](p1-g-staff-internal-consumer-inventory.md) and endpoint replacement gates |
 | High-risk non-delegability and approval model | Prevents role/grant expansion through defaults | Security | Action branches, target resolution, audit/expiry/revocation contract |
 | Job-role default bundles | Converts rows into actual seats without privilege creep | Product/operations | Named seat representatives and affected-feature review |
 | AJ/CSC scope and pilot cohort | Determines tenant/resource relationship rules | Carl/Vivacity | Approved cohort, persona fixtures, observation and rollback owner |
