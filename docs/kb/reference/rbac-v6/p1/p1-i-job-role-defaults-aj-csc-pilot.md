@@ -1,7 +1,7 @@
 # RBAC v6 — Packet P1-i: job-role defaults and AJ/CSC pilot worksheet
 
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §5.6, §7 P1, §12 P4
-> **Inputs:** [P1-c enforcement and sequencing worksheet](p1-c-capability-enforcement-sequencing.md), [P1-d static enforcement ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-h high-risk delegability controls](p1-h-high-risk-delegability-control-worksheet.md), [R2 approval packet](../../codebase-optimization/cross-cutting/remaining-gated-approval-packets-2026-09-12.md)
+> **Inputs:** [P1-c enforcement and sequencing worksheet](p1-c-capability-enforcement-sequencing.md), [P1-d static enforcement ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-h high-risk delegability controls](p1-h-high-risk-delegability-control-worksheet.md), [P1-j shadow evidence contract](p1-j-aj-csc-shadow-evidence.md), [R2 approval packet](../../codebase-optimization/cross-cutting/remaining-gated-approval-packets-2026-09-12.md)
 > **Program index:** [Program Index](../../program-index.md)
 > **Status:** preparation worksheet delivered 2026-09-13 — policy baseline translated into reviewable bundle/pilot gates; no role or capability grant, route, RLS, or pilot state changed
 > **Owner:** Product/operations + Carl/Vivacity, with security review of the pilot and golden matrix
