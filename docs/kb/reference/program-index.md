@@ -15,6 +15,9 @@ superseded status of *every* doc in `docs/kb/`, not just these four
 initiatives. Start here for "where does this program stand," go to
 `README.md` for "is this specific doc still current."
 
+Current cross-initiative approval coordination is consolidated in the
+[unattended preparation authorization matrix](codebase-optimization/cross-cutting/unattended-preparation-authorization-matrix-2026-09-13.md).
+
 ## The four initiatives
 
 | Initiative | Status | Current phase/packet | Master plan |
