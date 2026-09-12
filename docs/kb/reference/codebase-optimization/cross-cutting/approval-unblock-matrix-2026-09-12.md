@@ -1,6 +1,6 @@
 # Cross-initiative approval-unblock matrix — 2026-09-12
 
-> **Status:** decision-ready planning packet; no approval is implied by this document
+> **Status:** decision-ready planning packet; R1, A1, T1, and H1 were explicitly approved in-session on 2026-09-12, with the execution prerequisites and remaining gates preserved below
 > **Parent context:** [Program Index](../../program-index.md) and the four initiative plans
 > **Inputs:** RBAC P1-c, TOM P0.2/P0.3, Client Health H0.3, and the `AdminStageDetail.tsx` joint ownership matrix
 > **Owner:** Carl, with product/security/data owners named per row
@@ -21,18 +21,38 @@ This separates three things that must not be conflated:
 Approval of a preparation row never implies approval of implementation. A
 missing credential, owner, or consultant report is `blocked`, not a pass.
 
+## Decisions recorded — 2026-09-12
+
+Carl explicitly approved the following rows in-session:
+
+- **R1:** proceed with the RBAC P1 static/source evidence-ledger pass only;
+  grants, role changes, RLS changes, Edge deployment, and route cutover remain
+  out of scope.
+- **A1:** proceed with the shared `AdminStageDetail.tsx`
+  characterization and ownership/test-planning pass; do not extract behavior
+  yet.
+- **T1:** prepare the disposable, synthetic, read-only `unicorn-qa` run plan;
+  execution remains blocked until the QA credential, operator, fixture, and
+  artifact gates are satisfied.
+- **H1:** use `unavailable`/unknown semantics for empty, failed, stale, or
+  invalid Client Health sources; implementation remains separately gated and
+  does not authorize a forecast-job restart or production change.
+
+These approvals authorize preparation and packet work only. R2, T2, H2, H3,
+and A2 remain blocked under their named owners and unblock conditions.
+
 ## Gate summary
 
 | ID | Gate | Recommended disposition | Decision owner | Current state |
 | --- | --- | --- | --- | --- |
-| R1 | RBAC P1 evidence-ledger pass | Approve packet-level static/source reconciliation; keep grants, role defaults, and cutover out of scope | Carl + product/security | Ready for approval |
+| R1 | RBAC P1 evidence-ledger pass | Approve packet-level static/source reconciliation; keep grants, role defaults, and cutover out of scope | Carl + product/security | Approved in session; preparation only |
 | R2 | RBAC capability semantics | Decompose bundled verbs; default high-risk actions to non-delegable pending explicit review; do not turn P1-b into policy | Product + security | Blocked on row decisions |
-| T1 | TOM P0.2/P0.3 QA run | Approve one synthetic, read-only run in `unicorn-qa` | Carl + security/environment owner | Blocked on credential/operator/artifact gates |
+| T1 | TOM P0.2/P0.3 QA run | Approve one synthetic, read-only run in `unicorn-qa` | Carl + security/environment owner | Plan approved; execution blocked on credential/operator/artifact gates |
 | T2 | TOM P1 implementation | Keep schema/writer/directory/RLS work deferred until evidence and RBAC contracts are approved | Carl/product/data/security | Blocked by design |
-| H1 | Client Health 54-tenant defaults | Prefer `unavailable`/unknown for empty, failed, or stale burn/retention sources | Carl + Client Health/product | Blocked on explicit product decision |
+| H1 | Client Health 54-tenant defaults | Prefer `unavailable`/unknown for empty, failed, or stale burn/retention sources | Carl + Client Health/product | Decision approved; implementation separately gated |
 | H2 | Forecast job disposition | Keep jobs retired/marked unavailable; do not restart until source/consumer evidence and a shadow contract exist | Client Health/data owner + Carl | Blocked on owner/evidence |
 | H3 | Consultant operational input | Obtain AJ/Ezel reports before H1 thresholds, confidence semantics, or pilot acceptance | AJ/Ezel/consultants + Carl | Blocked externally |
-| A1 | `AdminStageDetail.tsx` characterization | Approve shared static/call-graph and test planning pass; no extraction yet | Codebase coordinator + RBAC/TOM | Ready for approval |
+| A1 | `AdminStageDetail.tsx` characterization | Approve shared static/call-graph and test planning pass; no extraction yet | Codebase coordinator + RBAC/TOM | Approved in session; characterization only |
 | A2 | `AdminStageDetail.tsx` extraction | Allow only pure policy-neutral display seams after A1; route behavior-bearing seams to owners | RBAC/TOM, Client Health if linked | Blocked pending A1 |
 
 ## Decision-ready rows
