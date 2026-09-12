@@ -3,6 +3,7 @@
 > **Parent plan:** [Tenant Operating Model Data Architecture Plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Program index:** [Program Index](../../program-index.md)
 > **Related design packet:** [TOM P1.2 — ghost-user retirement and contact promotion scope](p1-2-ghost-user-retirement-contact-promotion-scope.md)
+> **Execution packet:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
 > **Status:** planning; read-only evidence contract only; no implementation or production mutation authorized
 > **Owner:** TOM, with RBAC and Client Health review
 > **Scope:** define the deterministic, idempotent report that must precede any ghost-profile contact projection
