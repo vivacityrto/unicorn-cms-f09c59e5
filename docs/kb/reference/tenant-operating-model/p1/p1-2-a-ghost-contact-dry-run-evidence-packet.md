@@ -154,6 +154,27 @@ handling, contact promotion markers, or migration metadata requires a
 separate review of the current schema, triggers, RLS, and the unused
 `mark_tenant_contact_promoted` RPC.
 
+## Checked-in read-only artifact
+
+The report contract is implemented as a guarded CLI for reproducible future
+execution:
+
+- [`scripts/ghost-contact-dry-run.mjs`](../../../../../scripts/ghost-contact-dry-run.mjs)
+  reads only `v_auth_user_state`, `users`, `tenant_users`,
+  `tenant_members`, `tenant_contacts`, and `user_invitations`;
+- [`scripts/ghost-contact-dry-run.test.mjs`](../../../../../scripts/ghost-contact-dry-run.test.mjs)
+  characterizes normalization, candidate projection, multi-tenant grain,
+  missing-tenant quarantine, contact collisions, pending invitations, and
+  duplicate ghost collisions;
+- `npm run tenant:ghost-dry-run` is the named entry point.
+
+The CLI refuses browser credentials, targets `unicorn-qa` by default, and
+redacts identifiers unless `--include-identifiers` is explicitly supplied.
+Production requires the separate `--allow-production-read-only` flag and
+remains read-only even then. It has no insert, update, delete, invitation-send,
+or mutation-RPC code path. The first credentialed run still requires an
+approved controlled environment and output-retention owner.
+
 ## Reconciliation and rollback evidence
 
 Each dry-run artifact must include a count reconciliation table:
