@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "kind": "tom-p0-2-p0-3-fixture-manifest",
+  "status": "planning-only",
+  "generatedAt": "2026-09-12",
+  "source": {
+    "commitSha": "49fa5e71c401e046c82071a7ba3b05e6d78c373f",
+    "packet": "p0-2-p0-3-disposable-baseline-characterization.md",
+    "purpose": "offline fixture and observation-plan preparation; not a hosted run manifest"
+  },
+  "target": {
+    "name": "unicorn-qa",
+    "projectRef": "qfpxvumcrnzrjyvqkicq",
+    "url": "https://qfpxvumcrnzrjyvqkicq.supabase.co",
+    "allowlisted": true,
+    "productionTarget": false
+  },
+  "naming": {
+    "runIdPattern": "tom-p0-2-p0-3-${timestamp}-${randomSuffix}",
+    "fixtureTagPattern": "tom_qa_${runId}",
+    "identifierRule": "Use generated run-scoped labels only; never copy production UUIDs, names, emails, or storage state"
+  },
+  "tenantStrata": [
+    {
+      "key": "small-empty",
+      "minimumTenants": 1,
+      "purpose": "Empty or near-empty tenant, first viewport, empty-state and null-child behavior",
+      "checks": ["list", "count", "detail", "search", "no-child-row"]
+    },
+    {
+      "key": "representative",
+      "minimumTenants": 1,
+      "purpose": "Normal synthetic tenant with representative membership, contact, package, and stage relationships",
+      "checks": ["list", "detail", "filters", "safe-read-export", "realtime"]
+    },
+    {
+      "key": "skewed",
+      "minimumTenants": 1,
+      "purpose": "High child-row cardinality to expose pagination, count, payload, and accidental whole-table transfer",
+      "checks": ["pagination", "counts", "query-plan", "payload-size"]
+    },
+    {
+      "key": "disabled",
+      "minimumTenants": 1,
+      "purpose": "Disabled tenant and disabled-user edge behavior without false active access",
+      "checks": ["status-filter", "detail-denial", "no-accidental-access"]
+    },
+    {
+      "key": "cross-tenant-a-b",
+      "minimumTenants": 2,
+      "purpose": "Same-named synthetic resources in separate tenants for isolation and scope checks",
+      "checks": ["cross-tenant-list", "cross-tenant-search", "cross-tenant-detail", "cross-tenant-export", "cross-tenant-realtime", "cross-tenant-Ask-Viv"]
+    }
+  ],
+  "fixtureDomains": [
+    "tenants",
+    "users",
+    "tenant_users",
+    "tenant_members",
+    "tenant_contacts",
+    "packages",
+    "package_stages",
+    "stages",
+    "tenant_audit_events",
+    "tenant_messages",
+    "tenant_conversations"
+  ],
+  "personas": [
+    {
+      "key": "client-admin-a",
+      "tenantContext": "tenant-a",
+      "coverage": ["own-tenant-list", "count", "detail", "search", "safe-read-export", "rpc-read", "realtime"]
+    },
+    {
+      "key": "client-user-a",
+      "tenantContext": "tenant-a",
+      "coverage": ["same-tenant-allowed-subset", "denied-admin-actions", "denied-cross-tenant"]
+    },
+    {
+      "key": "client-admin-b",
+      "tenantContext": "tenant-b",
+      "coverage": ["own-tenant-reads", "separation-from-tenant-a"]
+    },
+    {
+      "key": "csc",
+      "tenantContext": "approved-internal-staff-context",
+      "coverage": ["broad-internal-read-baseline", "tenant-relationship-behavior", "no-write-inference"]
+    },
+    {
+      "key": "super-admin",
+      "tenantContext": "internal-staff-context",
+      "coverage": ["approved-admin-read-only-paths", "negative-client-boundaries"]
+    },
+    {
+      "key": "service-principal",
+      "tenantContext": "non-browser-qa-identity",
+      "coverage": ["explicitly-approved-read-contracts-only"]
+    }
+  ],
+  "readOnlyChecks": [
+    "directory list/search/filter/count",
+    "tenant detail and child joins",
+    "safe read-only export or download path",
+    "Realtime subscription and cross-tenant denial",
+    "RPC, Edge, and Ask Viv structured/retrieval reads",
+    "query plans and metadata fingerprints on QA fixture only",
+    "visible loading, empty, error, and denied states"
+  ],
+  "ghostClassifierOracle": [
+    "membershipless row",
+    "multi-tenant row",
+    "malformed email",
+    "existing contact",
+    "pending invite",
+    "identity collision"
+  ],
+  "browserBaseline": {
+    "warmupRuns": 1,
+    "measuredRunsPerPersonaAndStratum": 3,
+    "capture": ["navigation response", "page errors", "skeleton time", "first-row time", "settled UI time", "Supabase request method/status/duration", "redacted payload size", "waterfall", "concurrency", "browser/version/viewport/region/fixture hash/commit"],
+    "failedLoginDisposition": "inconclusive-harness-failure",
+    "budgetDisposition": "pending-owner-review"
+  },
+  "queryFamilies": [
+    "first-page tenant ID selection",
+    "search and lifecycle/assignment/package filters",
+    "counts and child joins",
+    "tenant detail and contact/member/package relations",
+    "safe export/read-only download",
+    "Realtime publication/listener",
+    "RPC/Edge/Ask Viv structured and retrieval reads"
+  ],
+  "preflightGates": [
+    "Carl confirms QA target and observation window",
+    "security provides a short-lived QA-only read identity or marks missing personas inconclusive",
+    "TOM approves synthetic fixture and reset/retention method",
+    "named operator is recorded",
+    "private artifact location and retention owner are recorded"
+  ],
+  "safetyInvariants": [
+    "No production URL, production UUID, production row, or production browser storage state",
+    "No service key or browser credential committed or bundled",
+    "No mutation, migration, schema, RLS, grant, cron, deployment, or outbound email",
+    "Ghost classifier must report writes_performed=0 and an empty write_operations list",
+    "All missing or unexercised evidence is Inconclusive, never Pass",
+    "Fixture cleanup is run-scoped, reverse-order, and failure-visible"
+  ]
+}
