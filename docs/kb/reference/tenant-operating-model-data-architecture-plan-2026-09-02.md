@@ -1282,6 +1282,6 @@ This program is complete when:
 |---|---|---|---|
 | Planning and live read-only investigation | Complete 2026-09-02 | — | this council-reviewed plan; no production changes |
 | P0.1 operating-model inventory | In progress 2026-09-05 | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Source-of-truth matrix, identity ledger, membership crosswalk, policy/grant and view/RPC security evidence, writer census, and write-path graph are attached in [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). The 2026-09-12 read-only check confirms the #1185 deployed grants/guards; the [owner-disposition register](tenant-operating-model/p0/p0-1-owner-disposition-register.md) makes the remaining unmatched, Realtime, and cross-initiative decisions explicit. |
-| P0.2 disposable verification environment | Not started | — | — |
-| P0.3 browser/query baseline | Not started | — | — |
+| P0.2 disposable verification environment | Planning packet ready; execution not authorized | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) defines synthetic fixtures, personas, read-only evidence, and gates |
+| P0.3 browser/query baseline | Planning packet ready; execution not authorized | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) defines QA-only network/timing/query measurements and inconclusive handling |
 | P1+ implementation | Not started | — | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) drafted for planning only; implementation still requires packet and phase approval |
