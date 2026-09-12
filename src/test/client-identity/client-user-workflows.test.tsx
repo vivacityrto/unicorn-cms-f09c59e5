@@ -168,8 +168,8 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({ children, onClick, onSelect }: { children: React.ReactNode; onClick?: () => void; onSelect?: (event: Event) => void }) => (
-    <button role="menuitem" onClick={(event) => { onClick?.(); onSelect?.(event.nativeEvent); }}>{children}</button>
+  DropdownMenuItem: ({ children, onClick, onSelect, disabled }: { children: React.ReactNode; onClick?: () => void; onSelect?: (event: Event) => void; disabled?: boolean }) => (
+    <button role="menuitem" disabled={disabled} onClick={(event) => { onClick?.(); onSelect?.(event.nativeEvent); }}>{children}</button>
   ),
   DropdownMenuSeparator: () => null,
 }));
@@ -337,6 +337,19 @@ describe("client identity promotion and swap characterization", () => {
       }),
     })));
     expect(toastSuccess).toHaveBeenCalledWith(expect.stringContaining("Invitation sent to taylor@example.com"));
+  });
+
+  it("keeps a contact visible while disabling duplicate promotion for a pending invitation", async () => {
+    from.mockImplementation((table: string) => {
+      if (table === "tenant_contacts") return queryResult([contact]);
+      if (table === "user_invitations") return queryResult([{ email: contact.email }]);
+      return queryResult([]);
+    });
+
+    renderWithQuery(<TenantContactsSection tenantId={42} tenantName="Demo RTO" canManage positionTypeOptions={[]} />);
+    await waitFor(() => expect(screen.getByText("Pending invitation")).toBeInTheDocument());
+    expect(screen.getByRole("menuitem", { name: "Invitation pending" })).toBeDisabled();
+    expect(screen.getByText("Taylor Contact")).toBeInTheDocument();
   });
 
   it("promotes a legacy contact through the same real-email invite path without edit or archive controls", async () => {
