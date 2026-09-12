@@ -6,9 +6,37 @@
 >
 > **Prepared:** 2026-09-08
 >
+> **Last updated:** 2026-09-12
+>
 > **Status:** research and product-definition input only. This pack does not
 > authorize implementation, production changes, client communications, or use
 > of identifiable client data.
+
+## Current research dependency — consultant operational input outstanding
+
+The repository and live read-only investigation provide a technical baseline,
+but the Client Health metrics initiative is still waiting for operational data
+from the consultants. In this context, “operational data” means AJ's and
+Ezel's documented experience of real delivery patterns: expected cadence by
+package and lifecycle, normal versus concerning client situations,
+client-owned versus Vivacity-owned commitments, meaningful warning signs,
+useful interventions, and examples of quiet-but-on-plan or data-insufficient
+engagements.
+
+This input is required before the team can finalize the H1 metric definitions,
+cohort rules, attention reasons, confidence thresholds, or pilot usefulness
+criteria. The existing system findings must therefore remain labelled as
+dated technical evidence, not as the business definition of client health.
+Until both consultant research reports are supplied and consolidated, the
+initiative should not promote proposed dimensions or formulas into an
+approved metric catalogue, score, client-facing label, or automated workflow.
+
+Consultants must not provide raw client notes, identifiable records, email
+bodies, meeting transcripts, production exports, credentials, or other
+sensitive material. Use operational knowledge, synthetic examples,
+deidentified observations, or irreversibly redacted cases only. Missing
+consultant input is an explicit evidence gap, not permission to infer a
+metric from the current database fields.
 
 ## 1. Recommended use
 
