@@ -145,7 +145,13 @@ vi.mock("react-router-dom", async () => {
 });
 
 vi.mock("@/components/client/TenantContactsSection", () => ({
-  TenantContactsSection: () => <div data-testid="contacts-section" />,
+  TenantContactsSection: ({ legacyContacts = [] }: { legacyContacts?: Array<{ id: string; first_name: string; last_name: string | null }> }) => (
+    <div data-testid="contacts-section">
+      {legacyContacts.map((contact) => (
+        <span key={contact.id}>{contact.first_name} {contact.last_name}</span>
+      ))}
+    </div>
+  ),
 }));
 vi.mock("@/components/client/TenantInviteDialog", () => ({
   TenantInviteDialog: () => null,
@@ -249,8 +255,23 @@ describe("client identity promotion and swap characterization", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("projects a ghost returned by the client user RPC into Contacts", async () => {
+    rpc.mockImplementation(async (name: string, args: { p_user_uuid?: string }) => ({
+      data: name === "is_ghost_user" && args.p_user_uuid === "ghost-user",
+      error: null,
+    }));
+
+    renderWithQuery(<ClientUsersPage />);
+
+    await waitFor(() => expect(screen.getByTestId("contacts-section")).toHaveTextContent("Ghost User"));
+    expect(screen.queryByText("Never signed in")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Reset password" })).not.toBeInTheDocument();
+  });
+
   it("surfaces an RPC swap failure and leaves the backend ghost/FK disposition untouched", async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: new Error("ghost profile audit FK skipped") });
+    rpc.mockImplementation(async (name: string) => name === "is_ghost_user"
+      ? { data: false, error: null }
+      : { data: null, error: new Error("ghost profile audit FK skipped") });
     renderWithQuery(<ClientUsersPage />);
     fireEvent.click(screen.getByRole("menuitem", { name: "Swap to Contact" }));
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Swap to Contact" }));
@@ -283,6 +304,20 @@ describe("client identity promotion and swap characterization", () => {
     }));
   });
 
+  it("projects a confirmed ghost member into Contacts instead of Users", async () => {
+    rpc.mockImplementation(async (name: string, args: { p_user_uuid?: string }) => ({
+      data: name === "is_ghost_user" && args.p_user_uuid === "target",
+      error: null,
+    }));
+
+    renderWithQuery(<TenantUsersTab tenantId={42} tenantName="Demo RTO" />);
+
+    await waitFor(() => expect(screen.getByTestId("contacts-section")).toHaveTextContent("Target Contact"));
+    expect(screen.getByText("Primary Contact")).toBeInTheDocument();
+    expect(screen.queryByText("target@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("Activate account")).not.toBeInTheDocument();
+  });
+
   it("promotes a contact through invite-user with the role ceiling and real-email path", async () => {
     renderWithQuery(<TenantContactsSection tenantId={42} tenantName="Demo RTO" canManage positionTypeOptions={[]} />);
     await waitFor(() => expect(screen.getByText("Taylor Contact")).toBeInTheDocument());
@@ -302,6 +337,47 @@ describe("client identity promotion and swap characterization", () => {
       }),
     })));
     expect(toastSuccess).toHaveBeenCalledWith(expect.stringContaining("Invitation sent to taylor@example.com"));
+  });
+
+  it("promotes a legacy contact through the same real-email invite path without edit or archive controls", async () => {
+    from.mockImplementation((table: string) => table === "tenant_contacts" ? queryResult([]) : queryResult([]));
+    renderWithQuery(
+      <TenantContactsSection
+        tenantId={42}
+        tenantName="Demo RTO"
+        canManage
+        positionTypeOptions={[]}
+        legacyContacts={[{
+          id: "legacy:ghost-user",
+          first_name: "Legacy",
+          last_name: "Contact",
+          email: "legacy@example.com",
+          position_type: null,
+          status: "active",
+          promoted_to_user_id: null,
+          promoted_at: null,
+          created_at: "2026-01-01T00:00:00Z",
+          isLegacyGhost: true,
+        }]}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Legacy Contact")).toBeInTheDocument());
+    expect(screen.getByText("Legacy contact")).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Archive" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Promote to User" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Promote" }));
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("invite-user", expect.objectContaining({
+      body: expect.objectContaining({
+        email: "legacy@example.com",
+        first_name: "Legacy",
+        last_name: "Contact",
+        skip_email: false,
+      }),
+    })));
   });
 
   it("surfaces an invite-user failure without archiving the contact locally", async () => {

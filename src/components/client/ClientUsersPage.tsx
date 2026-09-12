@@ -80,6 +80,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TenantContactsSection } from "./TenantContactsSection";
 import { type PositionTypeOption } from "@/lib/roles/positionType";
 import { swapTenantUserToContact } from "@/features/client-identity/swapToContact";
+import type { LegacyTenantContact } from "@/features/client-identity/models";
 
 
 function getInitials(name: string): string {
@@ -394,6 +395,7 @@ export default function ClientUsersPage() {
   const [contactsRefreshKey, setContactsRefreshKey] = useState(0);
   const [userToSwap, setUserToSwap] = useState<ClientTenantUserRow | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const [ghostUserIds, setGhostUserIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase
@@ -457,7 +459,51 @@ export default function ClientUsersPage() {
 
 
   const rows = useMemo<ClientTenantUserRow[]>(() => data ?? [], [data]);
-  const activeCount = rows.filter((r) => r.row_type === "active").length;
+  const ghostCandidates = rows.filter((row) => row.row_type === "active" && row.user_id);
+  const ghostCandidateKey = ghostCandidates.map((row) => row.user_id).join(",");
+  useEffect(() => {
+    if (ghostCandidates.length === 0) {
+      setGhostUserIds(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all(
+        ghostCandidates.map(async (row) => {
+          const { data: isGhost, error } = await supabase.rpc("is_ghost_user", {
+            p_user_uuid: row.user_id,
+          });
+          if (error || isGhost !== true) return null;
+          return row.user_id;
+        }),
+      );
+      if (!cancelled) {
+        setGhostUserIds(new Set(results.filter((userId): userId is string => !!userId)));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ghostCandidateKey]);
+
+  const visibleRows = rows.filter((row) => !row.user_id || !ghostUserIds.has(row.user_id));
+  const legacyContacts: LegacyTenantContact[] = rows
+    .filter((row) => row.user_id && ghostUserIds.has(row.user_id))
+    .map((row) => ({
+      id: `legacy:${row.user_id}`,
+      first_name: row.first_name || row.display_name,
+      last_name: row.last_name,
+      email: row.email || "",
+      position_type: null,
+      status: "active",
+      promoted_to_user_id: null,
+      promoted_at: null,
+      created_at: row.member_since || new Date(0).toISOString(),
+      isLegacyGhost: true,
+    }));
+  const activeCount = visibleRows.filter((r) => r.row_type === "active").length;
   const invitedCount = rows.filter((r) => r.row_type === "invited").length;
 
   const inviteButton = (
@@ -500,7 +546,7 @@ export default function ClientUsersPage() {
           </Alert>
         ) : null}
 
-        {!isError && rows.length === 0 && !isLoading ? (
+        {!isError && visibleRows.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <UsersIcon className="h-6 w-6 text-muted-foreground" />
@@ -527,7 +573,7 @@ export default function ClientUsersPage() {
                 {isLoading ? (
                   <LoadingSkeleton />
                 ) : (
-                  rows.map((row) => (
+                  visibleRows.map((row) => (
                     <TableRow key={`${row.row_type}:${row.row_key}`}>
                       <TableCell>
                         <UserCell row={row} />
@@ -640,6 +686,7 @@ export default function ClientUsersPage() {
             tenantName={tenantName || ""}
             canManage={canManagePortalUsers && !isReadOnly}
             positionTypeOptions={positionTypeOptions}
+            legacyContacts={legacyContacts}
           />
         )}
 

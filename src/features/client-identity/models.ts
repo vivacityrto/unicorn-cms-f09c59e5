@@ -109,6 +109,15 @@ export interface TenantContact {
   created_at: string;
 }
 
+/**
+ * Transitional UI projection for a legacy tenant member without an auth
+ * account. It is intentionally not a persisted tenant_contacts row.
+ */
+export interface LegacyTenantContact extends Omit<TenantContact, "id"> {
+  id: string;
+  isLegacyGhost: true;
+}
+
 /** Canonical role, with legacy flag fallback for unmigrated member rows. */
 export function resolveTenantMemberRelationshipRole(member: Pick<
   TenantMemberInfo,
