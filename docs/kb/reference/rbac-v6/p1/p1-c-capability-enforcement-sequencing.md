@@ -3,6 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md)
 > **Inputs:** [P0.1-a static inventory](../p0/p0-1-a-static-inventory.md), [P0.1-b live inventory](../p0/p0-1-b-live-inventory.md), [P1-a review worksheet](p1-a-review-worksheet.md), [P1-b draft classification](p1-b-draft-classification.md)
 > **Program index:** [Program Index](../../program-index.md)
+> **Follow-up packet:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md)
 > **Status:** preparation worksheet; not a golden access matrix and not an authorization decision
 > **Owner:** RBAC v6, with product/security approval required for target rows
 > **Audit entry:** none needed — analysis/documentation only; no permission, role, RLS, grant, or production change
@@ -27,7 +28,7 @@ The delivered P0/P1 evidence establishes:
   parent-plan figures;
 - P1-b proposes action/scope/risk/delegability for all 85 rows, but marks the
   result as a discussion draft;
-- 20 rows need product input, including 14 bundled `manage`/`use` features,
+- 20 rows need product input, including 18 bundled `manage`/`use` features,
   `clients.details.edit`, and `staff.internal`;
 - 11 rows are proposed high-risk/non-delegable candidates, including
   permission administration, system configuration, migration/testing,
@@ -63,7 +64,7 @@ current frontend visibility, or a broad staff role.
 
 ### Queue A — decompose bundled verbs first
 
-The 14 `*.manage`/`*.use` rows are not one action each. The next static pass
+The 18 `*.manage`/`*.use` rows are not one action each. The next static pass
 should enumerate the actual sub-operations and their first privileged boundary:
 
 | Feature family | Required decomposition | Stop condition |

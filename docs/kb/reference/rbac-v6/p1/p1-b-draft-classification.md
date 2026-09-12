@@ -63,7 +63,7 @@ changed.
 Three distinct reasons, not one blanket "unsure":
 
 **1. The verb may bundle multiple sub-actions of different risk (§5.3 rule 3)
-— 14 features.** Every `*.manage` and `*.use` feature key
+— 18 features.** Every `*.manage` and `*.use` feature key
 (`academy.tenant_access.manage`, `admin.team_users.manage`,
 `admin.tenant_users.manage`, `admin.invites.manage`,
 `admin.email_templates.manage`, `admin.system_config.manage`,

@@ -1,0 +1,3142 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12",
+  "sourceCommit": "49fa5e71c401e046c82071a7ba3b05e6d78c373f",
+  "inputClassification": "docs/kb/reference/rbac-v6/p1/data/p1-b-draft-classification.json",
+  "inputStaticInventory": "docs/kb/reference/rbac-v6/p0/data/p0-1-a-static-inventory.json",
+  "method": "Static source scan of src/** and supabase/functions/** for each of the 85 feature keys, joined to the generated P0.1-a usePermission/PermissionGate inventory. Exact key references in shared auth registries and tests are retained but not treated as live caller evidence.",
+  "counts": {
+    "features": 85,
+    "featuresWithFrontendGate": 34,
+    "featuresWithoutFrontendGate": 51,
+    "recognizedFrontendCalls": 41,
+    "usePermissionCalls": 36,
+    "permissionGateUsages": 5,
+    "rawRoleComparisons": 59,
+    "edgeFunctions": 192,
+    "bundledVerbRows": 18,
+    "manageRows": 13,
+    "useRows": 5,
+    "highRiskRows": 11,
+    "needsProductInputRows": 16,
+    "needsEnforcementInventoryRows": 58,
+    "needsSecurityReviewRows": 11
+  },
+  "rows": [
+    {
+      "feature_key": "academy.builder.view",
+      "label": "View course library",
+      "module": "Academy",
+      "category": "Academy — Builder",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "academy.builder.edit",
+      "label": "Create / edit courses",
+      "module": "Academy",
+      "category": "Academy — Builder",
+      "proposed_action_verb": "edit",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyBuilderCourse.tsx",
+          "line": 320,
+          "args": [
+            "academy.builder.edit"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyBuilderLibrary.tsx",
+          "line": 172,
+          "args": [
+            "academy.builder.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\lib\\academy\\courseResources.test.ts",
+          "line": 61,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\lib\\academy\\courseResources.ts",
+          "line": 17,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderCourse.tsx",
+          "line": 320,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderCourse.tsx",
+          "line": 323,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderLibrary.tsx",
+          "line": 172,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\auth-gate.test.mjs",
+          "line": 4,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\auth-gate.test.mjs",
+          "line": 22,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 19,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 80,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 69,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.builder.publish",
+      "label": "Publish / unpublish course",
+      "module": "Academy",
+      "category": "Academy — Builder",
+      "proposed_action_verb": "publish",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyAddCoursePage.tsx",
+          "line": 397,
+          "args": [
+            "academy.builder.publish"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyBuilderCourse.tsx",
+          "line": 321,
+          "args": [
+            "academy.builder.publish"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyBuilderLibrary.tsx",
+          "line": 173,
+          "args": [
+            "academy.builder.publish"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyAddCoursePage.tsx",
+          "line": 397,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderCourse.tsx",
+          "line": 321,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderLibrary.tsx",
+          "line": 173,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.certificates.view",
+      "label": "View all certificates",
+      "module": "Academy",
+      "category": "Academy — Certificates",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "academy.certificates.issue",
+      "label": "Issue / revoke certificate",
+      "module": "Academy",
+      "category": "Academy — Certificates",
+      "proposed_action_verb": "issue",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyCertificatesPage.tsx",
+          "line": 75,
+          "args": [
+            "academy.certificates.issue"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyCertificatesPage.tsx",
+          "line": 75,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.enrolments.view",
+      "label": "View all enrolments",
+      "module": "Academy",
+      "category": "Academy — Enrolments",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "academy.enrolments.create",
+      "label": "Enrol a client in training",
+      "module": "Academy",
+      "category": "Academy — Enrolments",
+      "proposed_action_verb": "create",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+          "line": 126,
+          "args": [
+            "academy.enrolments.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyEnrolmentsPage.tsx",
+          "line": 126,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.enrolments.revoke",
+      "label": "Revoke / expire enrolment",
+      "module": "Academy",
+      "category": "Academy — Enrolments",
+      "proposed_action_verb": "revoke",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+          "line": 127,
+          "args": [
+            "academy.enrolments.revoke",
+            "full"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+          "line": 128,
+          "args": [
+            "academy.enrolments.revoke"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyEnrolmentsPage.tsx",
+          "line": 127,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyEnrolmentsPage.tsx",
+          "line": 128,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.mapping.view",
+      "label": "View mapping matrix",
+      "module": "Academy",
+      "category": "Academy — Mapping",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 623,
+          "props": {
+            "featureKey": "academy.mapping.view",
+            "minLevel": "full"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\PermissionGate.tsx",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyPackageCourseRulesPage.tsx",
+          "line": 15,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 269,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 623,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.mapping.edit",
+      "label": "Create / edit mapping rules",
+      "module": "Academy",
+      "category": "Academy — Mapping",
+      "proposed_action_verb": "edit",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyPackageCourseRulesPage.tsx",
+          "line": 30,
+          "args": [
+            "academy.mapping.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyPackageCourseRulesPage.tsx",
+          "line": 30,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "academy.tenant_access.manage",
+      "label": "Manage tenant access",
+      "module": "Academy",
+      "category": "Academy — Tenant Access",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyTenantAccessPage.tsx",
+          "line": 43,
+          "args": [
+            "academy.tenant_access.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyTenantAccessPage.tsx",
+          "line": 43,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification."
+      ]
+    },
+    {
+      "feature_key": "admin.team_users.manage",
+      "label": "Team user management",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\UserProfile.tsx",
+          "line": 148,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\activate-ghost-user\\index.ts",
+          "line": 58,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\bulk-account-actions\\index.ts",
+          "line": 69,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\bulk-user-action\\index.ts",
+          "line": 75,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\delete-user\\index.ts",
+          "line": 53,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-recovery-link\\index.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-staff-checklist\\index.ts",
+          "line": 33,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\allowlist.test.ts",
+          "line": 71,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 8,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 115,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\invite-or-reset-user\\index.ts",
+          "line": 76,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\invite-user\\index.ts",
+          "line": 130,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\invite-user\\index.ts",
+          "line": 145,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 14,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 273,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 34,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 9,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 76,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 87,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 5,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 44,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-password-reset\\index.ts",
+          "line": 75,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 8,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 117,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\auth-gate.test.mjs",
+          "line": 5,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\auth-gate.test.mjs",
+          "line": 15,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\auth-gate.test.mjs",
+          "line": 52,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\index.ts",
+          "line": 30,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\index.ts",
+          "line": 33,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\auth-gate.test.mjs",
+          "line": 22,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 5,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 7,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 280,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\toggle-user-status\\index.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\update-user-profile\\index.ts",
+          "line": 41,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\update-user-profile\\privilege-escalation.test.ts",
+          "line": 4,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\update-user-role\\index.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\admin-authorization.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\email-hardening.test.mjs",
+          "line": 161,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\email-hardening.test.mjs",
+          "line": 166,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\email-hardening.test.mjs",
+          "line": 171,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 24,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 63,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.tenant_users.manage",
+      "label": "Tenant user management",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.invites.manage",
+      "label": "Manage invites",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\bulk-send-invitations\\auth-gate.test.mjs",
+          "line": 18,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\bulk-send-invitations\\index.ts",
+          "line": 68,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\cancel-invite\\index.ts",
+          "line": 51,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\resend-invite\\index.ts",
+          "line": 117,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 10,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 152,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 184,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 64,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.cohort.send",
+      "label": "Cohort sender",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "send",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\cohort-access-sender-worker\\index.ts",
+          "line": 62,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 65,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.broadcast.send",
+      "label": "Send broadcast campaigns",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "send",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\send-broadcast-campaign\\index.ts",
+          "line": 46,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 66,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.audit_log.view",
+      "label": "System audit logs",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.email_templates.manage",
+      "label": "Email templates (system)",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 61,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: system configuration (system-wide templates).",
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.system_config.manage",
+      "label": "System / kit config",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 123,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 124,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 155,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 156,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 162,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 168,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\pdp-auto-evidence\\index.ts",
+          "line": 186,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 62,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: system configuration.",
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.permissions.manage",
+      "label": "Edit role permissions",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 68,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 55,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: permission/role/grant administration.",
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.migration.unicorn1",
+      "label": "Unicorn 1 migration tools",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "unicorn1",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 69,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 56,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: migration tooling.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.testing.seed",
+      "label": "Dashboard test seed",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "seed",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 70,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 57,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: destructive seeding/test-data control.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.vector.manage",
+      "label": "Vector index admin",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\vector-index-response-auth.test.mjs",
+          "line": 13,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 71,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 58,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: system configuration (vector index admin).",
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.integrations.xero_connect",
+      "label": "Connect / disconnect Xero",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "xero_connect",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 72,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 59,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: external shared credential connect/disconnect.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.academy_mgmt.manage",
+      "label": "Academy management console",
+      "module": "Administration",
+      "category": "Administration",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "audits.setup",
+      "label": "Set up / create an audit",
+      "module": "Audits",
+      "category": "Audits",
+      "proposed_action_verb": "setup",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/AuditsAssessments.tsx",
+          "line": 29,
+          "args": [
+            "audits.setup"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\AuditsAssessments.tsx",
+          "line": 29,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 425,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "audits.operate",
+      "label": "Operate / run the audit",
+      "module": "Audits",
+      "category": "Audits",
+      "proposed_action_verb": "operate",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "audits.view",
+      "label": "View audit results",
+      "module": "Audits",
+      "category": "Audits",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "audits.report",
+      "label": "Generate & release report",
+      "module": "Audits",
+      "category": "Audits",
+      "proposed_action_verb": "report",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/audit/workspace/ReportTab.tsx",
+          "line": 146,
+          "args": [
+            "audits.report"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\audit\\workspace\\ReportTab.tsx",
+          "line": 146,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 10,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 229,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 16,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 17,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 81,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 121,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 70,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "audits.export_pack",
+      "label": "Export compliance pack",
+      "module": "Audits",
+      "category": "Audits",
+      "proposed_action_verb": "export_pack",
+      "proposed_scope": "all_tenants",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 73,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 60,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: cross-tenant/unredacted export.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "clients.profile.view",
+      "label": "View client profile & timeline",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "clients.login_history.view",
+      "label": "View client login history",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "clients.details.edit",
+      "label": "Edit client details",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "edit",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/ClientDetail.tsx",
+          "line": 263,
+          "args": [
+            "clients.details.edit",
+            "limited"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\ClientDetail.tsx",
+          "line": 263,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Evidence check (src/pages/ClientDetail.tsx:263): the only call site is usePermission('clients.details.edit','limited') -- a single boolean gate. 'full' and 'limited' are behaviorally IDENTICAL today at this call site (both satisfy the >= limited ordinal check); there is no second call site distinguishing them. Proposing this collapses to one action (edit) with no separate 'limited' scope in the target model, but flagging for product confirmation since a distinction may have been intended and just never wired."
+      ]
+    },
+    {
+      "feature_key": "clients.activate",
+      "label": "Activate a client",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "activate",
+      "proposed_scope": "all_tenants",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/tenant/TenantLifecycleActions.tsx",
+          "line": 24,
+          "args": [
+            "clients.activate"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\tenant\\TenantLifecycleActions.tsx",
+          "line": 24,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: destructive tenant lifecycle (reactivation)."
+      ]
+    },
+    {
+      "feature_key": "clients.create",
+      "label": "Create / set up client",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "create",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/ManageTenants.tsx",
+          "line": 129,
+          "args": [
+            "clients.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\ManageTenants.tsx",
+          "line": 129,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\create-tenant\\index.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 68,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "clients.deactivate",
+      "label": "Deactivate / close client",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "deactivate",
+      "proposed_scope": "all_tenants",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/tenant/TenantLifecycleActions.tsx",
+          "line": 23,
+          "args": [
+            "clients.deactivate"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\tenant\\TenantLifecycleActions.tsx",
+          "line": 23,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: destructive tenant lifecycle."
+      ]
+    },
+    {
+      "feature_key": "clients.emails.manage",
+      "label": "Manage linked emails",
+      "module": "Clients",
+      "category": "Client Management",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\unlink-email\\index.ts",
+          "line": 11,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\unlink-email\\index.ts",
+          "line": 30,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "admin.documents.bulk_generate",
+      "label": "Bulk generate documents",
+      "module": "Documents",
+      "category": "Documents — Admin",
+      "proposed_action_verb": "bulk_generate",
+      "proposed_scope": "global",
+      "risk_class": "high",
+      "delegable": "no",
+      "readiness": "needs_security_review",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\provision-tenant-sharepoint-folder\\index.ts",
+          "line": 388,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 67,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "High-risk per plan section 5.7: bulk cross-tenant document generation (already machine-only via Bulk Generate Automation role).",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.gwc_trends.view",
+      "label": "GWC Trends",
+      "module": "EOS",
+      "category": "EOS — Analytics",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 755,
+          "props": {
+            "featureKey": "eos.gwc_trends.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 385,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 755,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.rock_analysis.view",
+      "label": "Rock Success Analysis",
+      "module": "EOS",
+      "category": "EOS — Analytics",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 766,
+          "props": {
+            "featureKey": "eos.rock_analysis.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 385,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 766,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.client_impact.view",
+      "label": "Client Impact Reporting",
+      "module": "EOS",
+      "category": "EOS — Analytics",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosClientImpactDetail.tsx",
+          "line": 13,
+          "args": [
+            "eos.client_impact.view"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 744,
+          "props": {
+            "featureKey": "eos.client_impact.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosClientImpactDetail.tsx",
+          "line": 13,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 384,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 400,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 744,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.leadership_dashboard.view",
+      "label": "Leadership Dashboard",
+      "module": "EOS",
+      "category": "EOS — Dashboard",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 777,
+          "props": {
+            "featureKey": "eos.leadership_dashboard.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 386,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 777,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.flight_plan.view",
+      "label": "Flight Plan — view",
+      "module": "EOS",
+      "category": "EOS — Flight Plan",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.flight_plan.edit",
+      "label": "Flight Plan — edit",
+      "module": "EOS",
+      "category": "EOS — Flight Plan",
+      "proposed_action_verb": "edit",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosFlightPlan.tsx",
+          "line": 24,
+          "args": [
+            "eos.flight_plan.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosFlightPlan.tsx",
+          "line": 24,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.meetings.l10.participate",
+      "label": "L10 — participate",
+      "module": "EOS",
+      "category": "EOS — Meetings",
+      "proposed_action_verb": "participate",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.meetings.l10.create",
+      "label": "L10 — create / configure",
+      "module": "EOS",
+      "category": "EOS — Meetings",
+      "proposed_action_verb": "create",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/MeetingTypeSelector.tsx",
+          "line": 12,
+          "args": [
+            "eos.meetings.l10.create"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/EosMeetings.tsx",
+          "line": 31,
+          "args": [
+            "eos.meetings.l10.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\MeetingTypeSelector.tsx",
+          "line": 12,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\EosMeetings.tsx",
+          "line": 31,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\EosMeetings.tsx",
+          "line": 38,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.meetings.samepage",
+      "label": "Same Page Meeting",
+      "module": "EOS",
+      "category": "EOS — Meetings",
+      "proposed_action_verb": "samepage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/MeetingTypeSelector.tsx",
+          "line": 13,
+          "args": [
+            "eos.meetings.samepage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\MeetingTypeSelector.tsx",
+          "line": 13,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.meetings.quarterly",
+      "label": "Quarterly / Annual — create",
+      "module": "EOS",
+      "category": "EOS — Meetings",
+      "proposed_action_verb": "quarterly",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/MeetingTypeSelector.tsx",
+          "line": 14,
+          "args": [
+            "eos.meetings.quarterly"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\MeetingTypeSelector.tsx",
+          "line": 14,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.configurations.manage",
+      "label": "Meeting Configurations — manage",
+      "module": "EOS",
+      "category": "EOS — Meetings",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/configurations/EosConfigurationEditor.tsx",
+          "line": 143,
+          "args": [
+            "eos.configurations.manage",
+            "full"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/EosMeetings.tsx",
+          "line": 33,
+          "args": [
+            "eos.configurations.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\configurations\\EosConfigurationEditor.tsx",
+          "line": 143,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\EosMeetings.tsx",
+          "line": 33,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification."
+      ]
+    },
+    {
+      "feature_key": "eos.mission_control.view",
+      "label": "Mission Control — view",
+      "module": "EOS",
+      "category": "EOS — Mission Control",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.mission_control.edit",
+      "label": "Mission Control — edit",
+      "module": "EOS",
+      "category": "EOS — Mission Control",
+      "proposed_action_verb": "edit",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosVto.tsx",
+          "line": 18,
+          "args": [
+            "eos.mission_control.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosVto.tsx",
+          "line": 18,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.overview.view",
+      "label": "EOS Overview — view",
+      "module": "EOS",
+      "category": "EOS — Overview",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.processes.view",
+      "label": "View processes",
+      "module": "EOS",
+      "category": "EOS — Processes",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.processes.create",
+      "label": "Create / edit process",
+      "module": "EOS",
+      "category": "EOS — Processes",
+      "proposed_action_verb": "create",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/AdminEOSProcesses.tsx",
+          "line": 70,
+          "args": [
+            "eos.processes.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\AdminEOSProcesses.tsx",
+          "line": 70,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.processes.publish",
+      "label": "Approve / publish process",
+      "module": "EOS",
+      "category": "EOS — Processes",
+      "proposed_action_verb": "publish",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/AdminEOSProcesses.tsx",
+          "line": 71,
+          "args": [
+            "eos.processes.publish"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\AdminEOSProcesses.tsx",
+          "line": 71,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.qc.create",
+      "label": "Create QC (schedule)",
+      "module": "EOS",
+      "category": "EOS — Quarterly Conversations",
+      "proposed_action_verb": "create",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosQC.tsx",
+          "line": 84,
+          "args": [
+            "eos.qc.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosQC.tsx",
+          "line": 84,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.qc.own",
+      "label": "View & submit own QC",
+      "module": "EOS",
+      "category": "EOS — Quarterly Conversations",
+      "proposed_action_verb": "own",
+      "proposed_scope": "own_resource (for the owner_only grant); global (for the full grant)",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "owner_only maps to action=own + scope=own_resource per plan section 5.4's explicit example; full grant scope follows the module default.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.qc.all",
+      "label": "View all QCs (manager)",
+      "module": "EOS",
+      "category": "EOS — Quarterly Conversations",
+      "proposed_action_verb": "all",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosQC.tsx",
+          "line": 85,
+          "args": [
+            "eos.qc.all"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosQC.tsx",
+          "line": 85,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.rocks.company.create",
+      "label": "Company Rock — create/edit",
+      "module": "EOS",
+      "category": "EOS — Rocks",
+      "proposed_action_verb": "create",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosRocks.tsx",
+          "line": 80,
+          "args": [
+            "eos.rocks.company.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosRocks.tsx",
+          "line": 80,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "eos.rocks.view",
+      "label": "Company Rock — view",
+      "module": "EOS",
+      "category": "EOS — Rocks",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.rocks.own.manage",
+      "label": "Rock — tasks on own Rock",
+      "module": "EOS",
+      "category": "EOS — Rocks",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosRocks.tsx",
+          "line": 81,
+          "args": [
+            "eos.rocks.own.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosRocks.tsx",
+          "line": 81,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification."
+      ]
+    },
+    {
+      "feature_key": "eos.scorecard.view",
+      "label": "Scorecard — view",
+      "module": "EOS",
+      "category": "EOS — Scorecard",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.scorecard.update_own",
+      "label": "Scorecard — update own metric",
+      "module": "EOS",
+      "category": "EOS — Scorecard",
+      "proposed_action_verb": "update_own",
+      "proposed_scope": "own_resource (for the owner_only grant); global (for the full grant)",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "owner_only maps to action=update_own + scope=own_resource per plan section 5.4's explicit example; full grant scope follows the module default.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.scorecard.manage",
+      "label": "Scorecard — configure",
+      "module": "EOS",
+      "category": "EOS — Scorecard",
+      "proposed_action_verb": "manage",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosScorecard.tsx",
+          "line": 67,
+          "args": [
+            "eos.scorecard.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosScorecard.tsx",
+          "line": 67,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification."
+      ]
+    },
+    {
+      "feature_key": "eos.todos.own",
+      "label": "Add To-Do for yourself",
+      "module": "EOS",
+      "category": "EOS — To-Dos",
+      "proposed_action_verb": "own",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "eos.todos.others",
+      "label": "Add To-Do for others",
+      "module": "EOS",
+      "category": "EOS — To-Dos",
+      "proposed_action_verb": "others",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosTodos.tsx",
+          "line": 15,
+          "args": [
+            "eos.todos.others"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosTodos.tsx",
+          "line": 15,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "packages.view",
+      "label": "View package & progress",
+      "module": "Packages",
+      "category": "Packages",
+      "proposed_action_verb": "view",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "packages.items.tick",
+      "label": "Tick off package items",
+      "module": "Packages",
+      "category": "Packages",
+      "proposed_action_verb": "tick",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "packages.notes.add",
+      "label": "Add notes / log time / share",
+      "module": "Packages",
+      "category": "Packages",
+      "proposed_action_verb": "add",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "packages.create",
+      "label": "Create / start a package",
+      "module": "Packages",
+      "category": "Packages",
+      "proposed_action_verb": "create",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/client/ClientPackagesTab.tsx",
+          "line": 105,
+          "args": [
+            "packages.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\AddStageDialog.tsx",
+          "line": 123,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\components\\client\\ClientPackagesTab.tsx",
+          "line": 105,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\ManageStages.tsx",
+          "line": 136,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "packages.close",
+      "label": "Close a package",
+      "module": "Packages",
+      "category": "Packages",
+      "proposed_action_verb": "close",
+      "proposed_scope": "all_tenants",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/client/ClientPackagesTab.tsx",
+          "line": 106,
+          "args": [
+            "packages.close"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\client\\ClientPackagesTab.tsx",
+          "line": 106,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": []
+    },
+    {
+      "feature_key": "resource_hub.view",
+      "label": "View / browse resources",
+      "module": "Resource Hub",
+      "category": "Resource Hub",
+      "proposed_action_verb": "view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "resource_hub.upload",
+      "label": "Upload / create resource",
+      "module": "Resource Hub",
+      "category": "Resource Hub",
+      "proposed_action_verb": "upload",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "resource_hub.approve",
+      "label": "Approve & publish resource",
+      "module": "Resource Hub",
+      "category": "Resource Hub",
+      "proposed_action_verb": "approve",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 125,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 126,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 149,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 150,
+          "kind": "test_reference"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "resource_hub.archive",
+      "label": "Archive / remove resource",
+      "module": "Resource Hub",
+      "category": "Resource Hub",
+      "proposed_action_verb": "archive",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.internal",
+      "label": "Vivacity staff (generic)",
+      "module": "Staff",
+      "category": "Staff",
+      "proposed_action_verb": "internal",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 10,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 170,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 176,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 186,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 250,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\tenant-lifecycle\\index.ts",
+          "line": 125,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\tenant-lifecycle\\suspend-close-superadmin.test.mjs",
+          "line": 8,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 58,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 45,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "This gates 'is Vivacity staff' generically, not a specific operation -- plan section 5.1 says not to reuse an identity/visibility check as an authorization predicate. Likely belongs to principal-state/role-seat modeling rather than the capability catalogue; flagging for product decision on whether to retire this as a 'capability' at all.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.addin.use",
+      "label": "Outlook add-in",
+      "module": "Staff",
+      "category": "Staff — Add-in",
+      "proposed_action_verb": "use",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\addin-auth.ts",
+          "line": 97,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 67,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 54,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.ai.use",
+      "label": "Staff AI assistants",
+      "module": "Staff",
+      "category": "Staff — AI",
+      "proposed_action_verb": "use",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 62,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 49,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.billing.xero_view",
+      "label": "View Xero invoice status",
+      "module": "Staff",
+      "category": "Staff — Billing",
+      "proposed_action_verb": "xero_view",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 65,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 52,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.documents.generate",
+      "label": "Generate / deliver documents",
+      "module": "Staff",
+      "category": "Staff — Documents",
+      "proposed_action_verb": "generate",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 61,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 48,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.email.send",
+      "label": "Send composed / Graph email",
+      "module": "Staff",
+      "category": "Staff — Email",
+      "proposed_action_verb": "send",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\send-composed-email\\index.ts",
+          "line": 54,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-email-graph\\auth-gate.test.mjs",
+          "line": 28,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\send-email-graph\\index.ts",
+          "line": 121,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 60,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 47,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.integrations.tga",
+      "label": "TGA integration",
+      "module": "Staff",
+      "category": "Staff — Integrations",
+      "proposed_action_verb": "tga",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_enforcement_inventory",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 66,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 53,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.meetings.use",
+      "label": "Meeting artefacts",
+      "module": "Staff",
+      "category": "Staff — Meetings",
+      "proposed_action_verb": "use",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 64,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 51,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.research.use",
+      "label": "Research / knowledge tools",
+      "module": "Staff",
+      "category": "Staff — Research",
+      "proposed_action_verb": "use",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 63,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    },
+    {
+      "feature_key": "staff.sharepoint.use",
+      "label": "SharePoint browse / provision",
+      "module": "Staff",
+      "category": "Staff — SharePoint",
+      "proposed_action_verb": "use",
+      "proposed_scope": "global",
+      "risk_class": "standard",
+      "delegable": "needs_review",
+      "readiness": "needs_product_input",
+      "frontend_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\check-tenant-sharepoint-liveness\\index.ts",
+          "line": 13,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 59,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 46,
+          "kind": "frontend_source"
+        }
+      ],
+      "relationship_proof": "unreconciled in this static pass",
+      "first_server_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "notes": [
+        "Verb 'use' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
+        "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
+        "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
+        "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
+      ]
+    }
+  ]
+}
