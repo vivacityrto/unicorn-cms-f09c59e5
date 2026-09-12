@@ -351,6 +351,9 @@ in this packet.
 
 ## Cross-initiative ownership and membership reconciliation
 
+The remaining unresolved findings are tracked for explicit owner disposition
+in the [TOM P0.1 owner-disposition checklist](../reference/tenant-operating-model/p0/p0-1-owner-disposition-checklist.md).
+
 The four previously held view/RPC objects are handled in the post-#1185 live
 verification above. This section does not re-open that security remediation;
 it records only the independent TOM/RBAC/Client Health intersection for
