@@ -77,6 +77,7 @@ export function TenantContactsSection({
   legacyContacts = [],
 }: TenantContactsSectionProps) {
   const [contacts, setContacts] = useState<TenantContact[]>([]);
+  const [pendingInviteEmails, setPendingInviteEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const invalidateCapacity = useInvalidateUserCapacity();
 
@@ -100,16 +101,34 @@ export function TenantContactsSection({
 
   const fetchContacts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('tenant_contacts')
-      .select('id, first_name, last_name, email, position_type, status, promoted_to_user_id, promoted_at, created_at')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('tenant_contacts fetch error:', error);
+    const [contactsResult, invitationsResult] = await Promise.all([
+      supabase
+        .from('tenant_contacts')
+        .select('id, first_name, last_name, email, position_type, status, promoted_to_user_id, promoted_at, created_at')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('user_invitations')
+        .select('email')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false }),
+    ]);
+
+    if (contactsResult.error) {
+      console.error('tenant_contacts fetch error:', contactsResult.error);
       toast.error('Failed to load contacts');
     } else {
-      setContacts((data || []) as TenantContact[]);
+      setContacts((contactsResult.data || []) as TenantContact[]);
+    }
+    if (invitationsResult.error) {
+      console.error('user_invitations fetch error:', invitationsResult.error);
+      setPendingInviteEmails(new Set());
+    } else {
+      setPendingInviteEmails(new Set(
+        (invitationsResult.data || []).map((invitation) => invitation.email.toLowerCase()),
+      ));
     }
     setLoading(false);
   };
@@ -296,6 +315,7 @@ export function TenantContactsSection({
           <div className="divide-y">
             {activeContacts.map((contact) => {
               const legacy = isLegacyContact(contact);
+              const pending = pendingInviteEmails.has(contact.email.toLowerCase());
               return (
               <div key={contact.id} className="flex items-center justify-between py-3">
                 <div className="min-w-0">
@@ -303,8 +323,8 @@ export function TenantContactsSection({
                     <span className="font-medium truncate">
                       {contact.first_name} {contact.last_name || ''}
                     </span>
-                    <Badge variant={legacy ? 'outline' : 'secondary'}>
-                      {legacy ? 'Legacy contact' : contact.status}
+                    <Badge variant={pending || legacy ? 'outline' : 'secondary'}>
+                      {pending ? 'Pending invitation' : legacy ? 'Legacy contact' : contact.status}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{contact.email}</p>
@@ -337,7 +357,9 @@ export function TenantContactsSection({
                       {positionTypeLabel(contact.position_type, positionTypeOptions)}
                     </span>
                   ) : (
-                    <span className="text-sm text-muted-foreground hidden sm:inline">No login yet</span>
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                      {pending ? 'Invitation pending' : 'No login yet'}
+                    </span>
                   )}
                   {canManage && (
                     <DropdownMenu>
@@ -353,9 +375,9 @@ export function TenantContactsSection({
                             Edit
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => openPromote(contact)}>
+                        <DropdownMenuItem disabled={pending} onClick={() => openPromote(contact)}>
                           <ArrowUpRight className="mr-2 h-4 w-4" />
-                          Promote to User
+                          {pending ? 'Invitation pending' : 'Promote to User'}
                         </DropdownMenuItem>
                         {!legacy && (
                           <>
