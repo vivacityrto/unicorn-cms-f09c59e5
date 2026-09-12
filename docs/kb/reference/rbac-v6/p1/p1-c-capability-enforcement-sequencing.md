@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md)
 > **Inputs:** [P0.1-a static inventory](../p0/p0-1-a-static-inventory.md), [P0.1-b live inventory](../p0/p0-1-b-live-inventory.md), [P1-a review worksheet](p1-a-review-worksheet.md), [P1-b draft classification](p1-b-draft-classification.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Follow-up packets:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md)
+> **Follow-up packets:** [P1-d static enforcement evidence ledger](p1-d-static-enforcement-ledger.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-f client-details semantics](p1-f-client-details-capability-semantics.md)
 > **Status:** preparation worksheet; not a golden access matrix and not an authorization decision
 > **Owner:** RBAC v6, with product/security approval required for target rows
 > **Audit entry:** none needed — analysis/documentation only; no permission, role, RLS, grant, or production change
@@ -100,8 +100,9 @@ missing frontend gate by granting a new one.
 
 ### Queue C — isolate special and high-risk rows
 
-- `clients.details.edit` needs a product answer on whether current
-  `limited`/`full` equivalence is intentional or an unwired distinction.
+- `clients.details.edit` design is approved as one ordinary profile-edit action
+  with no inferred `limited`/`full` distinction; its field ownership,
+  relationship, and server-boundary contract remain to be evidenced.
 - `staff.internal` needs a product answer on whether it remains an identity/
   principal-state predicate or is retired from the capability catalogue.
 - The 11 high-risk candidates need security review, explicit approval/control
@@ -134,7 +135,7 @@ missing frontend gate by granting a new one.
 | Decision | Why it matters | Owner | Minimum evidence before approval |
 | --- | --- | --- | --- |
 | Exact sub-actions for the 18 bundled features | Prevents a single `manage` row from granting unrelated powers | Product + security | Source/caller decomposition and action-specific risk notes |
-| `clients.details.edit` target semantics | Current `limited` and `full` are equivalent at the only observed gate | Product | Call-site review and intended role behavior |
+| `clients.details.edit` target semantics | One ordinary profile-edit action; no page-wide alias or inferred level distinction | Product | [P1-f contract](p1-f-client-details-capability-semantics.md), field/source review, and server-boundary evidence |
 | `staff.internal` catalogue fate | Identity visibility is not an action permission | Product + security | Principal-state model and replacement consumers |
 | High-risk non-delegability and approval model | Prevents role/grant expansion through defaults | Security | Action branches, target resolution, audit/expiry/revocation contract |
 | Job-role default bundles | Converts rows into actual seats without privilege creep | Product/operations | Named seat representatives and affected-feature review |
