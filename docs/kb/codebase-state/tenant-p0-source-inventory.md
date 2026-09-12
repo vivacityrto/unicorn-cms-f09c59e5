@@ -1,8 +1,8 @@
 # Tenant P0.1 Source-of-Truth Inventory
 
-Generated: 2026-09-12 10:55 +08:00
-Source baseline: `origin/main@f34cb49e22f517d34fe5f9f95101156acf37ac7c`
-Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-11
+Generated: 2026-09-12 11:15 +08:00
+Source baseline: `origin/main@5fbf425c3efec6b4aaddf80ff8daf6a0babb4bce`
+Live catalog baseline: Unicorn 2.0 production Supabase project `yxkgdalkbrriasiyyrwk`, read-only MCP queries on 2026-09-12; the historical 2026-09-11 snapshot is labeled where retained
 
 > This artifact is evidence, not authority. It records current frontend source and read-only live metadata. It does not create a directory contract, change authorization, repair unmatched rows, or authorize a schema/RLS/function/trigger/grant change.
 
@@ -118,18 +118,18 @@ The `supabase_realtime` publication exists but no scoped table in this packet ap
 
 | View | Current caller in this slice | Live security evidence | Disposition |
 |---|---|---|---|
-| `v_client_package_dashboard` | No direct caller; the page assembles its own package data | Owner `postgres`; `reloptions` is null (no `security_invoker` option observed); `anon` and `authenticated` have SELECT | Required effective-security review before reuse; do not substitute it into the directory |
-| `v_package_burndown` | No direct caller; `useTenantPackages` reimplements a related calculation | Owner `postgres`; `reloptions` null; `anon` SELECT false, `authenticated` SELECT true | Required parity/security review before reuse; browser math is not proven equivalent |
+| `v_client_package_dashboard` | No direct caller; the page assembles its own package data | Owner `postgres`; `reloptions` is null (no `security_invoker` option observed); fresh check: `anon` and `authenticated` SELECT false | Raw view remains inaccessible to API roles; do not substitute it into the directory |
+| `v_package_burndown` | No direct caller; package consumers use `get_package_burndown` | Owner `postgres`; `reloptions` null; fresh check: `anon` and `authenticated` SELECT false | Raw view remains inaccessible; use the tenant-gated RPC and do not restore direct view access |
 
-The follow-up definition review makes that disposition stronger: the live
-`v_client_package_dashboard` definition applies `app.user_can_access_tenant`
-inside several aggregate CTEs but has no tenant predicate on its final
-`package_instances` SELECT, while `v_package_burndown` has no tenant-access
-predicate at all. Both are ordinary views owned by `postgres` with no observed
-`security_invoker` reloption, so underlying table RLS should not be treated as
-an effective substitute for a view-level boundary. Neither view is a safe
-directory source without an explicit security fix and parity review; this
-packet does not make that fix.
+The fresh definition review confirms the raw-view boundary remains unsafe for
+direct API exposure: `v_client_package_dashboard` applies
+`app.user_can_access_tenant` inside aggregate CTEs but has no tenant predicate
+on its final `package_instances` SELECT, while `v_package_burndown` is filtered
+only by `pi.is_complete = false` and has no caller-access predicate. Both are
+ordinary views owned by `postgres` with no observed `security_invoker`
+reloption. Direct `anon` and `authenticated` SELECT is now revoked on both;
+the safe replacement is the separately gated `get_package_burndown` RPC (and
+the existing guarded dashboard RPC), not reopening either raw view.
 
 ### RPCs and Edge boundaries
 
@@ -164,7 +164,7 @@ This graph covers direct writers and known server side effects reachable from th
 
 ## P0.1 follow-up — repository writers, boundary review, and orphan classification
 
-This follow-up was run from `origin/main@05a09815d9b450410d1021d2a6fde0a7d78c3495`.
+This follow-up was run from `origin/main@5fbf425c3efec6b4aaddf80ff8daf6a0babb4bce`.
 The writer census used an independent repository scan of `.from('<table>')`
 chains across `src/` and `supabase/functions/`, followed by manual inspection
 of the direct writers and the live definitions below. It is a current-code
@@ -207,12 +207,48 @@ The live RPC review on 2026-09-11 found the following boundaries. All listed
 functions are `SECURITY DEFINER` owned by `postgres`; ordinary authenticated
 execution is granted unless noted.
 
-The five security findings in this snapshot were remediated in merged PR
+The five security findings in the 2026-09-11 snapshot were remediated in merged PR
 [#1185](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1185), with
-the corresponding audit entry linked from the program index. This document
-does not claim a fresh live deployed-definition or grant recheck after that
-remediation; such a recheck is operational follow-up, not a reason to rewrite
-the historical evidence below.
+the corresponding audit entry linked from the program index. The fresh
+post-remediation live check below supersedes the snapshot's open grant/body
+questions for those four objects; the historical findings remain below as
+evidence of why the remediation was required.
+
+### Post-#1185 live verification (2026-09-12)
+
+The read-only production check confirmed both remediation migrations are
+present in `supabase_migrations.schema_migrations`:
+
+- `20260911094010` — `fix_tenant_isolation_gaps_package_dashboard_burndown_start_transition_capacity`
+- `20260911094544` — `lock_down_get_package_burndown_execute_grants`
+
+The deployed routine and grant state is now:
+
+- `get_package_burndown(p_tenant_id bigint, p_package_instance_ids bigint[])`
+  is `SECURITY DEFINER`, executable by `authenticated` only among the API
+  roles checked, and its body includes both `p_tenant_id` filtering and
+  `app.user_can_access_tenant(p_tenant_id)`.
+- `start_client_package(p_tenant_id bigint, p_package_id bigint,
+  p_assigned_csc_user_id uuid)` and
+  `transition_membership_state(p_instance_id bigint, p_new_state text,
+  p_reason text)` are `SECURITY DEFINER`, authenticated-only among the API
+  roles checked, use `auth.uid()`, and include the tenant-access gate before
+  their writes.
+- `get_tenant_user_capacity(p_tenant_id bigint)` is `SECURITY DEFINER`,
+  authenticated-only among the API roles checked, uses `auth.uid()` through
+  `has_tenant_access_safe`, and no longer exposes a caller-identity override
+  parameter.
+- Both raw views still exist, but `anon` and `authenticated` have no SELECT
+  privilege on either. Their definitions remain non-tenant-filtered at the
+  final/raw-view boundary, so they must not be treated as safe sources merely
+  because direct grants are revoked.
+
+This is a grant/definition verification, not a behavioral mutation test: no
+write RPC was invoked and no production data or authorization state was
+changed. The broad Supabase security-advisor output contains unrelated
+findings and is not treated as evidence that these four targeted checks failed.
+
+### Historical 2026-09-11 snapshot (superseded for the remediated objects)
 
 - `admin_set_tenant_csc_assignment`, `admin_remove_tenant_csc_assignment`,
   `rpc_auto_assign_consultant`, the consultant-capacity routines, and
@@ -455,13 +491,13 @@ P0.1 is materially advanced but remains **in progress**, not complete:
    legacy consultant column differs from the open primary assignment table.
    These findings are now owned as TOM/RBAC/Client Health crosswalk inputs.
    The four reported view/RPC objects, plus the caller-identity RPC finding,
-   were remediated in merged PR #1185; this packet records the repository
-   merge and audit trail but does not substitute for a fresh live grant/body
-   verification.
-8. P0.1 can close its evidence-gathering portion after the TOM/RBAC/Client
-   Health owners review these findings, the post-#1185 live verification is
-   recorded, and the remaining unmatched rows and membership crosswalk have
-   explicit owners and dispositions. No P1 directory contract should
+   were remediated in merged PR #1185 and the 2026-09-12 live check above
+   confirms the deployed grants and relevant guards. The remaining cross-
+   initiative findings are unchanged.
+8. The post-#1185 live-verification gate is complete. P0.1 can close its
+   evidence-gathering portion after the TOM/RBAC/Client Health owners review
+   these findings and the remaining unmatched rows and membership crosswalk
+   have explicit owners and dispositions. No P1 directory contract should
    proceed until those findings have those dispositions. No directory
    migration, RLS change, grant change, cleanup, or production-data
    correction is implied by this document.
