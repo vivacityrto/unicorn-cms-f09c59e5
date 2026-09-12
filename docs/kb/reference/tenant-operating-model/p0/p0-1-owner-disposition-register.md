@@ -1,6 +1,6 @@
 # TOM P0.1 — owner-disposition register
 
-> **Last updated:** 2026-09-12 · **Status:** ready for TOM/RBAC/Client Health owner review; no disposition is assumed
+> **Last updated:** 2026-09-12 · **Status:** owner directions approved 2026-09-12; implementation remains separately gated
 > **Parent plan:** [Tenant Operating Model Data Architecture Plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Program index:** [Program Index](../../program-index.md)
 > **Evidence source:** [Tenant P0.1 Source Inventory](../../../codebase-state/tenant-p0-source-inventory.md)
@@ -16,6 +16,34 @@ evidence-gathering work. This register does not choose a canonical ledger,
 delete or remap data, change policies, or authorize P0.2/P1 implementation. It
 only makes the remaining decisions concrete enough for Carl and the relevant
 initiative owners to resolve without repeating discovery.
+
+## Approved directions — 2026-09-12
+
+Carl approved the following target directions in the decision review. These
+approvals settle the P0.1 policy direction; they do not authorize production
+cleanup, backfill, RLS/grant/trigger changes, Realtime changes, or a directory
+implementation.
+
+- **D-01 package orphans:** retain all 27; classify the 24 completed/inactive
+  rows as historical/unresolved, hold the one active orphan for named owner
+  review, and retain the two missing-package rows until identity is proven.
+- **D-02 connected-tenant orphans:** retain all 57 as historical/unresolved;
+  exclude them from canonical active-tenant counts and defer cleanup/remapping
+  to a separately approved retention policy.
+- **D-03 TGA summary orphans:** retain all 3 as unresolved; do not use the two
+  `current` rows as authoritative until tenant identity is reconciled.
+- **D-04 membership authority:** consolidate future membership/access
+  authority around `tenant_members`, while keeping contact-specific semantics
+  separate or compatibility-backed during migration.
+- **D-05 compatibility contract:** require writer-by-writer parity, preserved
+  relationship/contact/audit/profile-sync behavior, staged shadow checks,
+  failure handling, and rollback before any read swap or backfill.
+- **D-06 CSC ownership:** make `tenant_csc_assignments` canonical for current
+  ownership; treat `tenants.assigned_consultant_user_id` as legacy/history and
+  never as an authorization grant.
+- **D-07 Realtime:** retain event-driven invalidation as the target behavior;
+  separately characterize the minimum safe publication membership before any
+  production publication or listener change.
 
 ## Decision register
 
@@ -39,10 +67,11 @@ and the two write RPCs plus `get_tenant_user_capacity` are authenticated-only
 with the relevant tenant/identity checks. This register does not reopen that
 remediation or propose additional live security changes.
 
-## Sequencing after owner review
+## Sequencing after approval
 
-1. Record named owners and dispositions for D-01 through D-07.
-2. If the decisions require data, RLS, grant, Realtime, or trigger changes,
+1. Assign named implementation owners to D-01 through D-07 and preserve the
+   evidence boundaries recorded above.
+2. If a direction requires data, RLS, grant, Realtime, or trigger changes,
    create a separate packet with its own authorization, verification, and
    audit entry; this register is not that authorization.
 3. Only after the crosswalk decisions are accepted should the program choose
