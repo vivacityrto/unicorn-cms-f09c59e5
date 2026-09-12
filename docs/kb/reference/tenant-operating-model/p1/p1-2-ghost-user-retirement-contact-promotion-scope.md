@@ -1,6 +1,6 @@
 # TOM P1.2 — ghost-user retirement and contact promotion scope
 
-> **Last updated:** 2026-09-12 · **Status:** planning/scoping draft; no implementation or production mutation authorized
+> **Last updated:** 2026-09-12 · **Status:** planning/scoping draft; lifecycle decisions closed, no implementation or production mutation authorized
 > **Owner:** TOM, with RBAC and Client Health review
 > **Dependencies:** TOM P0.1 owner dispositions; P1.1 membership compatibility scope; invitation/auth contract review
 
@@ -164,18 +164,26 @@ Before implementation is presented as ready:
 - production migration, Edge deployment/deletion, and any data backfill have
   separate authorization and audit records.
 
-## Open decisions for implementation approval
+## Resolved lifecycle decisions (2026-09-12)
 
-1. Should a pending promotion remain visible in Contacts with a `pending`
-   state, or move exclusively to the pending Users projection?
-2. Should sending a promotion invitation reserve a seat immediately, or only
-   after acceptance?
-3. Should the legacy `public.users` ghost profile be retained for email-based
-   relinking, or replaced by an explicit migration link with a new acceptance
-   path?
-4. What historical relationship-role information must remain reportable after
-   a ghost becomes a contact?
-5. What is the approved manual disposition for the 55 membershipless ghosts?
+The five product/lifecycle questions previously listed here are closed for
+the next packet boundary:
+
+1. A pending promotion remains visible in Contacts with an explicit
+   `Pending invitation` state and duplicate promotion disabled.
+2. A pending promotion reserves a seat immediately; a plain contact does not.
+3. The legacy `public.users` ghost profile is retained until acceptance/relink
+   and audit reconciliation are complete.
+4. Source UUID, role, relationship, status, and other relevant historical
+   metadata remain reportable in a migration/audit record; a pre-login contact
+   receives no relationship role or access scope.
+5. The 55 membershipless ghosts are quarantined for manual review and are not
+   automatically converted.
+
+The read-only execution contract for these decisions is defined in [TOM
+P1.2-a — ghost-to-contact dry-run evidence packet](p1-2-a-ghost-contact-dry-run-evidence-packet.md).
+Implementation, production backfill, and legacy activation retirement remain
+separately gated.
 
 ## Evidence references
 
