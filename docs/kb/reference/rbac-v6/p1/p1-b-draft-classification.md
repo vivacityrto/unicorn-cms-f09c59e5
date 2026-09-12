@@ -4,6 +4,7 @@
 > **Sibling packet:** [P1-a review worksheet](p1-a-review-worksheet.md)
 > **Program index:** [Program Index](../../program-index.md)
 > **Status:** draft delivered 2026-09-11 — **this is a straw-man for Carl/product to react to and correct, not an approved classification.** Carl chose this path explicitly (over "you/product take the first pass" or "hold P1 for now") when asked how to proceed.
+> **Next preparation worksheet:** [P1-c capability enforcement and sequencing](p1-c-capability-enforcement-sequencing.md)
 > **Owner:** Claude Code (draft only — approval owner is product/security per plan §7 P1 exit gate)
 > **Evidence:** generated 2026-09-11 from [P1-a's worksheet](data/p1-a-worksheet.json) + P0.1-a's static inventory, at `origin/main@dac48b268`
 > **Audit entry:** none — analysis/documentation only, no schema/RLS/grant/data change
