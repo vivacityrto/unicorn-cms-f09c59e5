@@ -20,6 +20,11 @@ const TARGETS = [
   "src/hooks/useTenantContacts.ts",
   "src/hooks/useCscAssignments.ts",
   "src/hooks/useTenantNotes.ts",
+  "src/hooks/useTenantCSCAssignment.tsx",
+  "src/components/AddTenantDialog.tsx",
+  "src/components/Unicorn1ImportDialog.tsx",
+  "src/components/client/CSCQuickAssignDialog.tsx",
+  "src/components/client/BulkReassignCscDialog.tsx",
 ];
 
 const fields = [
