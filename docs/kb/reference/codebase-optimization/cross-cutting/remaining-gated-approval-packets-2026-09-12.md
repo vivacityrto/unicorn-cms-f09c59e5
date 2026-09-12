@@ -27,12 +27,13 @@ general “continue” must not be converted into a product/security decision.
 
 | ID | Decision / gate | Recommendation | Owner | Current status | Safe unattended work |
 | --- | --- | --- | --- | --- | --- |
-| R2-a | Decompose 18 bundled `manage`/`use` rows | Split list/read, create, edit, role/relationship, disable, invite, export, and external side effects into separate actions | Product + security | Blocked on row decisions | Source/caller decomposition and question drafting |
+| R2-a | Decompose 18 bundled `manage`/`use` rows | Split list/read, create, edit, role/relationship, disable, invite, export, and external side effects into separate actions | Product + security | Atomic decomposition approved; P1-e delivered; exact golden rows and enforcement evidence remain gated | Source/boundary reconciliation; no grant or cutover |
 | R2-b | `clients.details.edit` semantics | **Approved design direction:** one ordinary profile-edit action; no inferred `limited`/`full` distinction and no page-wide alias | Product | Design approved; implementation blocked on field/source and server-boundary evidence | [P1-f contract](../../rbac-v6/p1/p1-f-client-details-capability-semantics.md); no gate change |
 | R2-c | `staff.internal` catalogue fate | **Approved design direction:** treat it as principal-state/identity context, not action authority; retire the action row after endpoint replacements are approved and migrated | Product + security | Design approved; implementation blocked on replacement gates and endpoint contracts | [P1-g consumer inventory](../../rbac-v6/p1/p1-g-staff-internal-consumer-inventory.md); no catalogue or gate change |
-| R2-d | High-risk delegability | Keep the 11 high-risk rows non-delegable and approval-controlled by default | Security | Control worksheet delivered; implementation/exception remains blocked on security sign-off | [P1-h control worksheet](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md); no grant or gate change |
-| R2-e | Job-role defaults and AJ/CSC pilot | Use reviewed seat boundaries; pilot only the smallest exact Academy/package/stage action set with named scope, personas, 14-day shadow, and rollback owner | Product/operations + Carl/Vivacity | Preparation worksheet delivered; role defaults and pilot enrollment remain blocked on golden rows, owners, and gates | [P1-i worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md); no role/grant/pilot change |
-| T1-x | Hosted TOM P0.2/P0.3 execution | Approve one synthetic, read-only `unicorn-qa` run only after preflight fields are filled | Carl + security/environment owner | Blocked on credentials/operator/artifact | Offline manifest validation and runbook prep |
+| R2-d | High-risk delegability | Keep the 11 high-risk rows non-delegable and approval-controlled by default | Security | Interim default approved; implementation/exception remains blocked on security control sign-off | [P1-h control worksheet](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md); no grant or gate change |
+| R2-e | Job-role defaults and AJ/CSC pilot | Use reviewed seat boundaries; pilot only the smallest exact Academy/package/stage action set with named scope, personas, 14-day shadow, and rollback owner | Product/operations + Carl/Vivacity | QA-first cohort and minimum capability boundary accepted; role defaults and pilot enrollment remain blocked on named owners/gates | [P1-i worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md); no role/grant/pilot change |
+| R2-f | AJ/CSC shadow and pilot evidence | Compare current and v6 decisions non-authoritatively for 14 days before any cutover | RBAC/security + product/operations | Evidence contract approved for preparation; telemetry implementation and pilot enrollment remain blocked on storage/retention/reviewer/cohort inputs | [P1-j shadow evidence](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md); no logger, grant, or pilot change |
+| T1-x | Hosted TOM P0.2/P0.3 execution | Approve one synthetic, read-only `unicorn-qa` run only after preflight fields are filled | Carl + security/environment owner | Preparation approved; execution remains blocked on QA credentials, operator, fixture approval, and artifact owner | Offline manifest validation and runbook prep |
 | T2 | TOM implementation | Keep directory/writer/membership/normalization/Realtime/RLS work deferred | Carl + product/data/security | Blocked by design | Contract comparison and evidence gap list |
 | H2 | Forecast job disposition | Do not restart jobs; keep outputs unavailable until source/consumer/shadow evidence exists | Client Health/data owner + Carl | Blocked on evidence/owner | Consumer and source contract inventory |
 | H3 | Consultant operational input | Obtain AJ/Ezel/consultant reports before thresholds, confidence, or pilot acceptance | Consultants + Carl | External blocker | Report template and evidence schema |
@@ -56,6 +57,27 @@ counts alone establishes the intended policy or proves the live RLS boundary.
 | R2-d: high-risk rows | Keep permission administration, system config, migration/testing, external credentials, tenant lifecycle, export, and bulk generation non-delegable by default | [P1-h](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md) defines the required target, approval, expiry/revocation, audit, and negative-case contract before any exception | No grant changes, new approvers, or break-glass path |
 | R2-e: job-role defaults | Use the reviewed seat boundaries in [P1-i](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md); hold activation until atomic rows, representative seat owners, golden matrix, and negative fixtures are reviewed | Defaults turn catalogue rows into real privilege at scale; Team Leader/CET/Team Member migration must not widen access | No seat assignment or role bundle activation |
 | R2-f: AJ/CSC pilot | Pilot only the smallest demonstrated Academy/package/stage action set, with named scope, personas, 14-day shadow, zero-tolerance mismatch gates, and rollback owner | [P1-j](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md) defines the dual-decision event, privacy, retention, mismatch, and review contract; pilot scope is still a product decision | No pilot enrollment, grant, route cutover, or production observation |
+
+### Current preparation disposition — 2026-09-13
+
+The current task discussion accepted the recommended preparation boundaries:
+
+- R2-a's atomic decomposition rule is accepted for continued source and
+  enforcement reconciliation; it is not a grant or cutover approval.
+- R2-d's non-delegable default is accepted; security still owns any exception
+  or protected workflow.
+- R2-e/f's QA-first, one-to-two-tenant pilot shape and minimum initial read
+  boundary are accepted for packet preparation; exact tenant/resource IDs,
+  owners, retention, and security sign-off are still required before
+  enrollment.
+- P1-j's shadow-recording design is accepted for documentation and fixture
+  preparation; its logger/storage/telemetry implementation remains separately
+  gated.
+
+These dispositions clear preparation work only. They do not authorize role
+assignments, capability grants, hosted QA, pilot enrollment, telemetry
+deployment, route cutover, schema/RLS/RPC/trigger changes, Edge deployment,
+scheduled-job changes, or production/live-data action.
 
 ### Acceptance and rollback
 
