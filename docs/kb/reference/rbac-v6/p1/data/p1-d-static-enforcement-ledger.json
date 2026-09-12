@@ -4,7 +4,7 @@
   "sourceCommit": "49fa5e71c401e046c82071a7ba3b05e6d78c373f",
   "inputClassification": "docs/kb/reference/rbac-v6/p1/data/p1-b-draft-classification.json",
   "inputStaticInventory": "docs/kb/reference/rbac-v6/p0/data/p0-1-a-static-inventory.json",
-  "method": "Static source scan of src/** and supabase/functions/** for each of the 85 feature keys, joined to the generated P0.1-a usePermission/PermissionGate inventory. Exact key references in shared auth registries and tests are retained but not treated as live caller evidence.",
+  "method": "Static source scan of src/** and supabase/functions/** for each of the 85 feature keys, joined to the generated P0.1-a usePermission/PermissionGate inventory. Exact key references in shared auth registries and tests are retained but not treated as live caller evidence. A second pass extracts literal feature keys and FeatureKeys constants from non-test supabase/functions/**/index.ts to identify concrete requireCaller/check_permission call sites; shared helper definitions remain excluded from live caller evidence. A third read-only pass scans supabase/migrations/** for exact feature-key references; migration text is historical/schema evidence only and is not treated as proof of live application.",
   "counts": {
     "features": 85,
     "featuresWithFrontendGate": 34,
@@ -20,7 +20,13 @@
     "highRiskRows": 11,
     "needsProductInputRows": 16,
     "needsEnforcementInventoryRows": 58,
-    "needsSecurityReviewRows": 11
+    "needsSecurityReviewRows": 11,
+    "edgeFeatureKeysWithRecognizedGate": 25,
+    "edgeGateRefs": 122,
+    "featureRowsWithAnyRecognizedGate": 56,
+    "featureRowsWithNoRecognizedFrontendOrEdgeGate": 29,
+    "migrationFeatureKeys": 85,
+    "migrationFeatureKeyRefs": 319
   },
   "rows": [
     {
@@ -42,7 +48,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 307,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 378,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.builder.edit",
@@ -128,7 +149,33 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 19,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 80,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 308,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 379,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.builder.publish",
@@ -187,7 +234,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 309,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 380,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.certificates.view",
@@ -208,7 +270,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 305,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 376,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.certificates.issue",
@@ -241,7 +318,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 306,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 377,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.enrolments.view",
@@ -262,7 +354,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 302,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 373,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.enrolments.create",
@@ -295,7 +402,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 303,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 374,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.enrolments.revoke",
@@ -342,7 +464,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 304,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 375,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.mapping.view",
@@ -391,7 +528,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 310,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 381,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.mapping.edit",
@@ -424,7 +576,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 311,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 382,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "academy.tenant_access.manage",
@@ -460,7 +627,22 @@
       "notes": [
         "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 301,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 372,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.team_users.manage",
@@ -709,7 +891,263 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\activate-ghost-user\\index.ts",
+          "line": 58,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\bulk-account-actions\\index.ts",
+          "line": 69,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\bulk-user-action\\index.ts",
+          "line": 75,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\delete-user\\index.ts",
+          "line": 53,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\generate-recovery-link\\index.ts",
+          "line": 50,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\generate-staff-checklist\\index.ts",
+          "line": 33,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 6,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 115,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\invite-or-reset-user\\index.ts",
+          "line": 76,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\invite-user\\index.ts",
+          "line": 130,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 14,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 273,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 6,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 34,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 9,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 76,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 5,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 44,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-password-reset\\index.ts",
+          "line": 75,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 8,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 117,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\index.ts",
+          "line": 33,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 5,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 280,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\toggle-user-status\\index.ts",
+          "line": 50,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\update-user-profile\\index.ts",
+          "line": 41,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\update-user-role\\index.ts",
+          "line": 50,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 255,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 326,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260709232733_2fd4408d-00d1-4870-ac0d-db9ea27b7380.sql",
+          "line": 98,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715024653_get_user_private_contact_owner_hr_gate.sql",
+          "line": 19,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715035656_revoke_users_personal_contact_columns_c2.sql",
+          "line": 2,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715051333_users_contact_fields_protected.sql",
+          "line": 13,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715051333_users_contact_fields_protected.sql",
+          "line": 42,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715061352_widen_rpc_set_client_account_status_client_parent_m3.sql",
+          "line": 39,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718065713_internal_onboarding_workbook_upload_policy.sql",
+          "line": 3,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718065713_internal_onboarding_workbook_upload_policy.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718073052_tighten_internal_onboarding_workbook_upload_policy.sql",
+          "line": 2,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718073052_tighten_internal_onboarding_workbook_upload_policy.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260722030030_54de0555-98a1-4fed-9f96-9be104cba979.sql",
+          "line": 10,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260722061545_fc9742f9-55d1-47ba-857c-11861da786b0.sql",
+          "line": 5,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260722061545_fc9742f9-55d1-47ba-857c-11861da786b0.sql",
+          "line": 10,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260722061545_fc9742f9-55d1-47ba-857c-11861da786b0.sql",
+          "line": 11,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260722061545_fc9742f9-55d1-47ba-857c-11861da786b0.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723005645_26d69e5c-9fc6-40ae-b481-ccff4f438a75.sql",
+          "line": 32,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260805051514_restrict_academy_thumbnails_list_policy.sql",
+          "line": 13,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260805051514_restrict_academy_thumbnails_list_policy.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260818040717_fix_invitation_role_ceiling_service_role_bypass.sql",
+          "line": 11,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260818040717_fix_invitation_role_ceiling_service_role_bypass.sql",
+          "line": 28,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260818040717_fix_invitation_role_ceiling_service_role_bypass.sql",
+          "line": 31,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.tenant_users.manage",
@@ -732,7 +1170,22 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 256,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 327,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.invites.manage",
@@ -796,7 +1249,53 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\bulk-send-invitations\\index.ts",
+          "line": 68,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\cancel-invite\\index.ts",
+          "line": 51,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\resend-invite\\index.ts",
+          "line": 117,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 10,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 152,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 257,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 328,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 22,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.cohort.send",
@@ -828,7 +1327,78 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\cohort-access-sender-worker\\index.ts",
+          "line": 62,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 258,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 329,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 22,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260722061705_0044ce0e-b59c-4194-ae50-0bc6dc12e38c.sql",
+          "line": 3,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723000403_bfc6b5b6-e290-4c43-8753-044eb221acef.sql",
+          "line": 9,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723000403_bfc6b5b6-e290-4c43-8753-044eb221acef.sql",
+          "line": 10,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723000403_bfc6b5b6-e290-4c43-8753-044eb221acef.sql",
+          "line": 18,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723000403_bfc6b5b6-e290-4c43-8753-044eb221acef.sql",
+          "line": 19,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723001440_50c295fe-4ca2-42be-ac78-ee138e626da6.sql",
+          "line": 15,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723001440_50c295fe-4ca2-42be-ac78-ee138e626da6.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723001440_50c295fe-4ca2-42be-ac78-ee138e626da6.sql",
+          "line": 25,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723001440_50c295fe-4ca2-42be-ac78-ee138e626da6.sql",
+          "line": 26,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.broadcast.send",
@@ -860,7 +1430,108 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\send-broadcast-campaign\\index.ts",
+          "line": 46,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 2,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 6,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 7,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 12,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 24,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 25,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 26,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 28,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260718070000_admin_broadcast_send_permission.sql",
+          "line": 29,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 2,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 7,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 8,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 9,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 10,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 11,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 12,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260719034741_ab3fd366-9a7f-4451-8612-c5f942a29341.sql",
+          "line": 13,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.audit_log.view",
@@ -881,7 +1552,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 259,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 330,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.email_templates.manage",
@@ -911,7 +1597,28 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\send-stage-email\\index.ts",
+          "line": 76,
+          "evidence": "FeatureKeys.adminEmailTemplates"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 260,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 331,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.system_config.manage",
@@ -976,7 +1683,88 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\addin-diagnostics-usage\\index.ts",
+          "line": 36,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\create-tasks-from-minutes\\index.ts",
+          "line": 42,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\export-client-timeline-pdf\\index.ts",
+          "line": 34,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\extract-copilot-minutes\\index.ts",
+          "line": 154,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\generate-excel-document\\index.ts",
+          "line": 171,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\generate-minutes-draft\\index.ts",
+          "line": 365,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\pdp-auto-evidence\\index.ts",
+          "line": 192,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\provision-m365-user\\index.ts",
+          "line": 78,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\regulator-watch-check\\index.ts",
+          "line": 42,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\repair-staff-uuids\\index.ts",
+          "line": 50,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\research-enrich-tenant\\index.ts",
+          "line": 31,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\tga-sync\\index.ts",
+          "line": 1730,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\upload-sharepoint-file\\index.ts",
+          "line": 177,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 261,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 332,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.permissions.manage",
@@ -1011,7 +1799,38 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\update-role-permission\\index.ts",
+          "line": 39,
+          "evidence": "FeatureKeys.adminPermissions"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 19,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 28,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 66,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 128,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.migration.unicorn1",
@@ -1044,7 +1863,53 @@
         "High-risk per plan section 5.7: migration tooling.",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\import-unicorn1-client\\index.ts",
+          "line": 257,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        },
+        {
+          "file": "supabase\\functions\\lookup-unicorn1-client\\index.ts",
+          "line": 78,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        },
+        {
+          "file": "supabase\\functions\\mark-unicorn1-user-mapped\\index.ts",
+          "line": 19,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        },
+        {
+          "file": "supabase\\functions\\search-unicorn1-users\\index.ts",
+          "line": 19,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 19,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 28,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 69,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 129,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.testing.seed",
@@ -1077,7 +1942,38 @@
         "High-risk per plan section 5.7: destructive seeding/test-data control.",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\dashboard-test-seed\\index.ts",
+          "line": 36,
+          "evidence": "FeatureKeys.adminTestingSeed"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 20,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 29,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 72,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 130,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.vector.manage",
@@ -1117,7 +2013,68 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\embed-ask-viv-corpus\\index.ts",
+          "line": 467,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\embed-ask-viv-documents\\index.ts",
+          "line": 458,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\embed-srto-corpus\\index.ts",
+          "line": 308,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\generate-ask-viv-faqs\\index.ts",
+          "line": 74,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\vector-index-rebuild\\index.ts",
+          "line": 80,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\vector-index-remove\\index.ts",
+          "line": 56,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\vector-index-update\\index.ts",
+          "line": 67,
+          "evidence": "FeatureKeys.adminVector"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 20,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 29,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 75,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 131,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.integrations.xero_connect",
@@ -1150,7 +2107,73 @@
         "High-risk per plan section 5.7: external shared credential connect/disconnect.",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\xero-auth\\index.ts",
+          "line": 58,
+          "evidence": "FeatureKeys.adminXeroConnect"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 6,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 20,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 29,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 78,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 148,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 149,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 150,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 151,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 152,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 153,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 154,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.academy_mgmt.manage",
@@ -1173,7 +2196,22 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 262,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 333,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "audits.setup",
@@ -1211,7 +2249,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 312,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 383,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "audits.operate",
@@ -1232,7 +2285,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 313,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 384,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "audits.view",
@@ -1253,7 +2321,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 314,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 385,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "audits.report",
@@ -1321,7 +2404,73 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 10,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 229,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 16,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 17,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 81,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 315,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 386,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715080600_release_audit_report_caller_gate.sql",
+          "line": 8,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715080600_release_audit_report_caller_gate.sql",
+          "line": 9,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715080600_release_audit_report_caller_gate.sql",
+          "line": 45,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715233351_l3_harden_release_audit_report_rpc.sql",
+          "line": 5,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260715233351_l3_harden_release_audit_report_rpc.sql",
+          "line": 38,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "audits.export_pack",
@@ -1354,7 +2503,43 @@
         "High-risk per plan section 5.7: cross-tenant/unredacted export.",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\export-compliance-pack\\index.ts",
+          "line": 34,
+          "evidence": "FeatureKeys.auditsExportPack"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 7,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 21,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 30,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 81,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 132,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.profile.view",
@@ -1375,7 +2560,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 263,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 334,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.login_history.view",
@@ -1396,7 +2596,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 264,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 335,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.details.edit",
@@ -1432,7 +2647,22 @@
       "owner": "RBAC v6 with product/security review",
       "notes": [
         "Evidence check (src/pages/ClientDetail.tsx:263): the only call site is usePermission('clients.details.edit','limited') -- a single boolean gate. 'full' and 'limited' are behaviorally IDENTICAL today at this call site (both satisfy the >= limited ordinal check); there is no second call site distinguishing them. Proposing this collapses to one action (edit) with no separate 'limited' scope in the target model, but flagging for product confirmation since a distinction may have been intended and just never wired."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 265,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 336,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.activate",
@@ -1467,7 +2697,22 @@
       "owner": "RBAC v6 with product/security review",
       "notes": [
         "High-risk per plan section 5.7: destructive tenant lifecycle (reactivation)."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 266,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 337,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.create",
@@ -1510,7 +2755,28 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\create-tenant\\index.ts",
+          "line": 47,
+          "evidence": "FeatureKeys.clientsCreate"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 267,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 338,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.deactivate",
@@ -1545,7 +2811,22 @@
       "owner": "RBAC v6 with product/security review",
       "notes": [
         "High-risk per plan section 5.7: destructive tenant lifecycle."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 268,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 339,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "clients.emails.manage",
@@ -1579,7 +2860,67 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 7,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 26,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 49,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 60,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 61,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 62,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 63,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 64,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 65,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_unlink_email_soft_delete_and_permission.sql",
+          "line": 66,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "admin.documents.bulk_generate",
@@ -1612,7 +2953,43 @@
         "High-risk per plan section 5.7: bulk cross-tenant document generation (already machine-only via Bulk Generate Automation role).",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\provision-tenant-sharepoint-folder\\index.ts",
+          "line": 388,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260707045713_8368b020-c53f-410d-a065-f80c5faef9f8.sql",
+          "line": 12,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260707045713_8368b020-c53f-410d-a065-f80c5faef9f8.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260824003000_bulk_generate_automation_permission.sql",
+          "line": 22,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260824003000_bulk_generate_automation_permission.sql",
+          "line": 24,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260824003000_bulk_generate_automation_permission.sql",
+          "line": 51,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.gwc_trends.view",
@@ -1651,7 +3028,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 295,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 366,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.rock_analysis.view",
@@ -1690,7 +3082,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 296,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 367,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.client_impact.view",
@@ -1747,7 +3154,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 297,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 368,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.leadership_dashboard.view",
@@ -1786,7 +3208,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 275,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 346,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.flight_plan.view",
@@ -1807,7 +3244,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 281,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 352,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.flight_plan.edit",
@@ -1840,7 +3292,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 282,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 353,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.meetings.l10.participate",
@@ -1861,7 +3328,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 288,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 359,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.meetings.l10.create",
@@ -1912,7 +3394,117 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 289,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 360,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723061939_eos_overhaul_m1_configurations_schema.sql",
+          "line": 100,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 29,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724000924_eos_overhaul_m10_scheduling_rpc_permission_check.sql",
+          "line": 11,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724000924_eos_overhaul_m10_scheduling_rpc_permission_check.sql",
+          "line": 19,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724000924_eos_overhaul_m10_scheduling_rpc_permission_check.sql",
+          "line": 47,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724000924_eos_overhaul_m10_scheduling_rpc_permission_check.sql",
+          "line": 132,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724000924_eos_overhaul_m10_scheduling_rpc_permission_check.sql",
+          "line": 222,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724001831_eos_overhaul_m11_cadence_timezone_sync_fixes.sql",
+          "line": 217,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724001831_eos_overhaul_m11_cadence_timezone_sync_fixes.sql",
+          "line": 302,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724002847_eos_overhaul_m12_sync_leader_ratings_legacy_segment_type.sql",
+          "line": 67,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724004014_eos_overhaul_m14_facilitator_attendee_ordering.sql",
+          "line": 52,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724005723_eos_overhaul_m15_required_seats_fallback.sql",
+          "line": 107,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260724012956_eos_overhaul_m16_required_seats_zero_resolved_fallback.sql",
+          "line": 116,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260724001831_eos_overhaul_m11_cadence_timezone_sync_fixes.down.sql",
+          "line": 167,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260724001831_eos_overhaul_m11_cadence_timezone_sync_fixes.down.sql",
+          "line": 252,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260724002847_eos_overhaul_m12_sync_leader_ratings_legacy_segment_type.down.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260724004014_eos_overhaul_m14_facilitator_attendee_ordering.down.sql",
+          "line": 29,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260724005723_eos_overhaul_m15_required_seats_fallback.down.sql",
+          "line": 77,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260724012956_eos_overhaul_m16_required_seats_zero_resolved_fallback.down.sql",
+          "line": 77,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.meetings.samepage",
@@ -1945,7 +3537,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 290,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 361,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.meetings.quarterly",
@@ -1978,7 +3585,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 291,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 362,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.configurations.manage",
@@ -2028,7 +3650,87 @@
       "notes": [
         "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260723061939_eos_overhaul_m1_configurations_schema.sql",
+          "line": 108,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 25,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 74,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 79,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 80,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 81,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 82,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 83,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 84,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 99,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 100,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 110,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260723070351_eos_overhaul_m7_rls_permissions.sql",
+          "line": 111,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260723061939_eos_overhaul_m1_configurations_schema.down.sql",
+          "line": 15,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\rollback\\20260723070351_eos_overhaul_m7_rls_permissions.down.sql",
+          "line": 12,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.mission_control.view",
@@ -2049,7 +3751,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 279,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 350,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.mission_control.edit",
@@ -2082,7 +3799,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 280,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 351,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.overview.view",
@@ -2103,7 +3835,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 274,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 345,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.processes.view",
@@ -2124,7 +3871,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 298,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 369,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.processes.create",
@@ -2157,7 +3919,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 299,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 370,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.processes.publish",
@@ -2190,7 +3967,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 300,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 371,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.qc.create",
@@ -2223,7 +4015,47 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 292,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 363,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260728074500_grant_integrator_qc_create_permission.sql",
+          "line": 1,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260728074500_grant_integrator_qc_create_permission.sql",
+          "line": 3,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260728074500_grant_integrator_qc_create_permission.sql",
+          "line": 5,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260728074500_grant_integrator_qc_create_permission.sql",
+          "line": 21,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260728074500_grant_integrator_qc_create_permission.sql",
+          "line": 24,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.qc.own",
@@ -2245,7 +4077,22 @@
         "owner_only maps to action=own + scope=own_resource per plan section 5.4's explicit example; full grant scope follows the module default.",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 293,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 364,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.qc.all",
@@ -2278,7 +4125,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 294,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 365,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.rocks.company.create",
@@ -2311,7 +4173,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 283,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 354,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.rocks.view",
@@ -2332,7 +4209,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 284,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 355,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.rocks.own.manage",
@@ -2368,7 +4260,22 @@
       "notes": [
         "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 285,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 356,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.scorecard.view",
@@ -2389,7 +4296,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 276,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 347,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.scorecard.update_own",
@@ -2411,7 +4333,22 @@
         "owner_only maps to action=update_own + scope=own_resource per plan section 5.4's explicit example; full grant scope follows the module default.",
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 277,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 348,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.scorecard.manage",
@@ -2447,7 +4384,22 @@
       "notes": [
         "Verb 'manage' may bundle several sub-actions of different risk/scope (plan section 5.3 rule 3) -- needs decomposition review before treating as one atomic capability.",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 278,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 349,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.todos.own",
@@ -2468,7 +4420,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 286,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 357,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "eos.todos.others",
@@ -2501,7 +4468,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 287,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 358,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "packages.view",
@@ -2522,7 +4504,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 269,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 340,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "packages.items.tick",
@@ -2543,7 +4540,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 270,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 341,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "packages.notes.add",
@@ -2564,7 +4576,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 271,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 342,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "packages.create",
@@ -2607,7 +4634,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 272,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 343,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "packages.close",
@@ -2640,7 +4682,22 @@
       "first_server_boundary": "unreconciled in this static pass",
       "denial_case": "not characterized; requires named negative persona/probe",
       "owner": "RBAC v6 with product/security review",
-      "notes": []
+      "notes": [],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 273,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 344,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "resource_hub.view",
@@ -2661,7 +4718,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 316,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 387,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "resource_hub.upload",
@@ -2682,7 +4754,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 317,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 388,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "resource_hub.approve",
@@ -2724,7 +4811,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 318,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 389,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "resource_hub.archive",
@@ -2745,7 +4847,22 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 319,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260609052540_ad9cceb3-676f-4b79-8f27-4d5680179843.sql",
+          "line": 390,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.internal",
@@ -2813,7 +4930,63 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "This gates 'is Vivacity staff' generically, not a specific operation -- plan section 5.1 says not to reuse an identity/visibility check as an authorization predicate. Likely belongs to principal-state/role-seat modeling rather than the capability catalogue; flagging for product decision on whether to retire this as a 'capability' at all.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\create-client-audit\\index.ts",
+          "line": 65,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\generate-certificate-pdf\\index.ts",
+          "line": 54,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\notify-chat\\index.ts",
+          "line": 21,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\notify-suggestion-submitted\\index.ts",
+          "line": 66,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\record-completed-audit\\index.ts",
+          "line": 20,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\tenant-lifecycle\\index.ts",
+          "line": 43,
+          "evidence": "FeatureKeys.staffInternal"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 25,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 36,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 90,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.addin.use",
@@ -2852,7 +5025,67 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 4,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 19,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 28,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 63,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 114,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 115,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 116,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 117,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 118,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 119,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 120,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.ai.use",
@@ -2886,7 +5119,53 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\assistant-answer\\index.ts",
+          "line": 94,
+          "evidence": "FeatureKeys.staffAi"
+        },
+        {
+          "file": "supabase\\functions\\clickup-ai-search\\index.ts",
+          "line": 33,
+          "evidence": "FeatureKeys.staffAi"
+        },
+        {
+          "file": "supabase\\functions\\client-ai-companion\\index.ts",
+          "line": 107,
+          "evidence": "FeatureKeys.staffAi"
+        },
+        {
+          "file": "supabase\\functions\\copilot-chat\\index.ts",
+          "line": 62,
+          "evidence": "FeatureKeys.staffAi"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 17,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 26,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 48,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 94,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.billing.xero_view",
@@ -2918,7 +5197,48 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\xero-auth\\index.ts",
+          "line": 65,
+          "evidence": "FeatureKeys.staffXeroView"
+        },
+        {
+          "file": "supabase\\functions\\xero-invoice-list\\index.ts",
+          "line": 114,
+          "evidence": "FeatureKeys.staffXeroView"
+        },
+        {
+          "file": "supabase\\functions\\xero-invoice-status\\index.ts",
+          "line": 46,
+          "evidence": "FeatureKeys.staffXeroView"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 18,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 57,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 97,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.documents.generate",
@@ -2950,7 +5270,83 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\analyze-document\\index.ts",
+          "line": 701,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\bulk-generate-phase-documents\\index.ts",
+          "line": 79,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\deliver-governance-document\\index.ts",
+          "line": 637,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\generate-document\\index.ts",
+          "line": 63,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\generate-membership-certificate\\index.ts",
+          "line": 75,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\generate-pack\\index.ts",
+          "line": 30,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\get-message-attachment-url\\index.ts",
+          "line": 49,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\scan-document\\index.ts",
+          "line": 392,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\upload-message-attachment\\index.ts",
+          "line": 78,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\upload-portal-document\\index.ts",
+          "line": 121,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 17,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 26,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 45,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 93,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.email.send",
@@ -2997,7 +5393,43 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\send-composed-email\\index.ts",
+          "line": 57,
+          "evidence": "FeatureKeys.staffEmailSend"
+        },
+        {
+          "file": "supabase\\functions\\send-email-graph\\index.ts",
+          "line": 125,
+          "evidence": "FeatureKeys.staffEmailSend"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 25,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 42,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 92,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.integrations.tga",
@@ -3029,7 +5461,58 @@
       "notes": [
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\get-organisation-details\\index.ts",
+          "line": 59,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\search-organisations\\index.ts",
+          "line": 20,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\tga-integration\\index.ts",
+          "line": 227,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\tga-integration\\index.ts",
+          "line": 281,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\tga-rto-sync\\index.ts",
+          "line": 544,
+          "evidence": "FeatureKeys.staffTga"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 18,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 60,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 98,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.meetings.use",
@@ -3063,7 +5546,53 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\generate-meeting-recurrence\\index.ts",
+          "line": 128,
+          "evidence": "FeatureKeys.staffMeetings"
+        },
+        {
+          "file": "supabase\\functions\\generate-minutes-from-transcript\\index.ts",
+          "line": 270,
+          "evidence": "FeatureKeys.staffMeetings"
+        },
+        {
+          "file": "supabase\\functions\\publish-meeting-minutes\\index.ts",
+          "line": 227,
+          "evidence": "FeatureKeys.staffMeetings"
+        },
+        {
+          "file": "supabase\\functions\\sync-meeting-artifacts\\index.ts",
+          "line": 329,
+          "evidence": "FeatureKeys.staffMeetings"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 18,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 27,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 54,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 96,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.research.use",
@@ -3097,7 +5626,68 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\query-knowledge-graph\\index.ts",
+          "line": 17,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-answer\\index.ts",
+          "line": 23,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-audit-intelligence\\index.ts",
+          "line": 54,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-evidence-gap-check\\index.ts",
+          "line": 79,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-public-snapshot\\index.ts",
+          "line": 64,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-scrape\\index.ts",
+          "line": 23,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-tas-context\\index.ts",
+          "line": 103,
+          "evidence": "FeatureKeys.staffResearch"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 17,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 26,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 51,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 95,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     },
     {
       "feature_key": "staff.sharepoint.use",
@@ -3136,7 +5726,78 @@
         "No usePermission()/<PermissionGate> call site found in P0.1-a's static scan -- may be enforced via RLS/Edge/route-role-guard only, via a pattern this scan doesn't recognize, or not currently enforced client-side at all. Not independently verified against RLS/route guards in this pass (that cross-check is P0.6's job).",
         "Bundled verb: static pass must decompose the live sub-operations before policy classification.",
         "No exact usePermission()/PermissionGate reference in the P0.1-a inventory; this is not proof of missing enforcement. Reconcile route guards, direct role predicates, RPC/Edge boundaries, and RLS."
-      ]
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\browse-sharepoint-folder\\index.ts",
+          "line": 122,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\check-tenant-sharepoint-liveness\\index.ts",
+          "line": 111,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\import-sharepoint-template\\index.ts",
+          "line": 33,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\resolve-sharepoint-folder-url\\index.ts",
+          "line": 22,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\resolve-tenant-folder\\index.ts",
+          "line": 32,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\upload-sharepoint-file\\index.ts",
+          "line": 130,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\validate-sharepoint-root-folder\\index.ts",
+          "line": 179,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\validate-sharepoint-root-folder\\index.ts",
+          "line": 236,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\verify-compliance-folder\\index.ts",
+          "line": 23,
+          "evidence": "FeatureKeys.staffSharepoint"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome.",
+      "migration_refs": [
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 16,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 25,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 39,
+          "evidence": "migration-feature-key"
+        },
+        {
+          "file": "supabase\\migrations\\20260815080000_permission_features_edge_function_taxonomy.sql",
+          "line": 91,
+          "evidence": "migration-feature-key"
+        }
+      ],
+      "migration_current_state_note": "Historical/current-schema migration reference only; reconcile against live catalog before treating as applied enforcement."
     }
   ]
 }
