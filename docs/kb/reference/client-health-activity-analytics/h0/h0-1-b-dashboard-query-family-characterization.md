@@ -1,5 +1,7 @@
 # Client Health H0.1-b — dashboard query family, formula, and freshness characterization
 
+> **Last updated:** 2026-09-12 · **Reconsider by:** 2026-10-12 · **Confidence:** high — live characterization and linked synthetic fixture oracle are current
+
 > **Parent plan:** [Client Health Activity Analytics Plan](../../client-health-activity-analytics-plan-2026-09-03.md) — §10 H0.1
 > **Sibling packet:** [H0.1-a — notes & tasks characterization](h0-1-a-notes-and-tasks-characterization.md)
 > **Program index:** [Program Index](../../program-index.md)
@@ -151,9 +153,11 @@ regulator-change rows.
 - **"Scheduled functions, cron/log outcomes"** — done: full 18-job
   inventory above, cross-referenced against every risk/forecast table.
 - **Synthetic characterization fixtures** (high activity/healthy, distressed,
-  stalled, missing-sources, future-timestamps) — not implemented in this
-  packet; the bounded scope is recorded in
-  [`H0.1-c — dashboard query synthetic fixture scope`](h0-1-c-dashboard-query-synthetic-fixture-scope.md).
+  stalled, missing-sources, future-timestamps) — delivered under
+  [`H0.1-c — dashboard query synthetic fixture scope`](h0-1-c-dashboard-query-synthetic-fixture-scope.md),
+  which contains the versioned test-only manifest and deterministic local
+  assertion runner. This remains a characterization oracle, not a production
+  view replacement.
 - **Mark July dashboard-health KB conclusions historical/superseded** — done
   for [`dashboard-overhaul-mockup.md`](../../dashboard-overhaul-mockup.md),
   which is retained as history with an explicit superseded banner.
