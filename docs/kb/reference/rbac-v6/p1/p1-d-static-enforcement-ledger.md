@@ -1,7 +1,7 @@
 # RBAC v6 — Packet P1-d: static enforcement evidence ledger
 
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §7 P1
-> **Inputs:** [P1-a review worksheet](p1-a-review-worksheet.md), [P1-b draft classification](p1-b-draft-classification.md), [P1-c sequencing worksheet](p1-c-capability-enforcement-sequencing.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-f client-details semantics](p1-f-client-details-capability-semantics.md), [P1-g staff-internal consumer inventory](p1-g-staff-internal-consumer-inventory.md), [P0.1-a static inventory](../p0/p0-1-a-static-inventory.md)
+> **Inputs:** [P1-a review worksheet](p1-a-review-worksheet.md), [P1-b draft classification](p1-b-draft-classification.md), [P1-c sequencing worksheet](p1-c-capability-enforcement-sequencing.md), [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-f client-details semantics](p1-f-client-details-capability-semantics.md), [P1-g staff-internal consumer inventory](p1-g-staff-internal-consumer-inventory.md), [P1-h high-risk delegability controls](p1-h-high-risk-delegability-control-worksheet.md), [P0.1-a static inventory](../p0/p0-1-a-static-inventory.md)
 > **Machine-readable ledger:** [P1-d static enforcement ledger JSON](data/p1-d-static-enforcement-ledger.json)
 > **Program index:** [Program Index](../../program-index.md)
 > **Status:** static enforcement ledger delivered; bundled-verb decomposition is in [P1-e](p1-e-bundled-verb-decomposition.md) and the `clients.details.edit` design is in [P1-f](p1-f-client-details-capability-semantics.md); remaining rows are not a golden access matrix or authorization decision
@@ -129,10 +129,9 @@ silently repaired by granting a new capability.
   [P1-g](p1-g-staff-internal-consumer-inventory.md): preserve it as
   principal-state context, but replace each direct action gate with an
   endpoint-specific capability before retiring the catalogue row.
-- The 11 high-risk rows remain non-delegable candidates pending security
-  review: permission administration, system configuration, migration/testing,
-  external credential connection, tenant lifecycle, export, bulk generation,
-  and other destructive/system actions listed in P1-b/P1-c.
+- The 11 high-risk rows remain non-delegable candidates. [P1-h](p1-h-high-risk-delegability-control-worksheet.md)
+  records the default, required approval/expiry/revocation/audit controls, and
+  direct negative probes still pending security review.
 - ADR-030 establishes broad internal-staff tenant read access. It does not
   establish broad sensitive writes, exports, destructive actions, or scope
   bypasses.
