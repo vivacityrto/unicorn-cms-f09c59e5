@@ -22,7 +22,7 @@ The source slice is `/manage-tenants` and its direct data and action dependencie
 - `src/components/client/CSCQuickAssignDialog.tsx`
 - `src/components/client/BulkReassignCscDialog.tsx`
 
-Observed evidence was collected by inspecting those files from `origin/main` and querying the production catalog with read-only `list_tables`, `execute_sql`, and advisor calls. No row payloads or credentials are included here. Counts are current observations, not a promise that the live database is static.
+Observed evidence was collected by inspecting those files from `origin/main` and querying the production catalog with read-only `list_tables`, `execute_sql`, and advisor calls. The source-only extraction is reproducible with [`scripts/tenant-p0-inventory.mjs`](../../../scripts/tenant-p0-inventory.mjs), which covers this complete target list; the live catalog query is [`scripts/tenant-p0-catalog.sql`](../../../scripts/tenant-p0-catalog.sql). No row payloads or credentials are included here. Counts are current observations, not a promise that the live database is static.
 
 ### Statistics and Advisor window caveat
 
