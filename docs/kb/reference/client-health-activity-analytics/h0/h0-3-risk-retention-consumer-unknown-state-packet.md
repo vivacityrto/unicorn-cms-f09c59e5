@@ -1,6 +1,6 @@
 # Client Health H0.3 — risk/retention consumers and unknown-state disposition
 
-> **Last updated:** 2026-09-12 · **Status:** planning packet; no consumer, forecast, cron, schema, or production change authorized
+> **Last updated:** 2026-09-13 · **Status:** planning packet; H1 unknown-state semantics approved 2026-09-12; no consumer, forecast, cron, schema, or production change authorized
 > **Parent plan:** [Client Health Activity Analytics Plan](../../client-health-activity-analytics-plan-2026-09-03.md)
 > **Inputs:** [H0.1-b dashboard query characterization](h0-1-b-dashboard-query-family-characterization.md); [H0.1-c synthetic fixture scope](h0-1-c-dashboard-query-synthetic-fixture-scope.md); [P3-A consumer characterization](../../codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md); [consultant research project pack](../../../handoffs/client-health-consultant-research-project-pack.md)
 > **Owner:** Client Health, with TOM, RBAC, security, and consultant review
@@ -15,12 +15,14 @@ no active cron job populates them. This packet turns that finding into a
 bounded consumer inventory and an implementation-ready unknown-state
 characterization plan.
 
-It does not decide whether Carl should suppress the labels, add an unavailable
-badge, repair or retire the forecast jobs, or accept the current behavior as a
-documented gap. It does not restart cron, run a forecast, alter a view/RPC,
-change a type, deploy an Edge Function, or modify production data. A future
-code packet must be separately authorized after the owner decisions and
-consultant input below.
+The H1 semantic direction is now approved: empty, failed, stale, invalid, or
+otherwise unassessed forecast inputs must be presented as `unavailable`/unknown,
+not as `normal`/`stable` or an equivalent reassuring default. Exact consumer
+presentation, source-quality fields, and implementation sequencing remain
+separate packet decisions. This packet does not restart cron, run a forecast,
+alter a view/RPC, change a type, deploy an Edge Function, or modify production
+data. A future code packet must be separately authorized after the owner
+decisions and consultant input below.
 
 ## Current evidence baseline
 
@@ -64,8 +66,9 @@ Edge consumers and the relevant route or function tests.
 
 ## Unknown-state contract for review
 
-The following is a proposed **characterization vocabulary**, not an approved
-product decision. It gives tests and reviewers a stable way to distinguish an
+The following is the approved **characterization direction** for the core
+unknown state, with caller-safe reason codes retained as an implementation
+contract to review. It gives tests and reviewers a stable way to distinguish an
 assessment from absent evidence without choosing the final UI.
 
 ### Source states
@@ -181,11 +184,14 @@ The H0.3 preparation packet is complete for implementation review when:
 - RBAC/TOM review the staff/client scope and tenant identity path;
 - Client Health records the consultant-data dependency and expected handoff;
   and
-- Carl chooses a disposition for the live 54-tenant finding.
+- the H1 unavailable/unknown direction is reflected in a separately approved
+  consumer implementation packet; and
+- Carl/data owners choose the disposition and owner for the live 54-tenant
+  finding without restarting a forecast job by assumption.
 
 | Open item | Owner | Evidence/decision needed |
 | --- | --- | --- |
-| Current 54-tenant normal/stable presentation | Carl / Client Health | Suppress/mark unavailable, or explicitly accept a documented known gap |
+| Current 54-tenant normal/stable presentation | Carl / Client Health | H1 semantics now require unavailable/unknown for missing assessment; a separately approved consumer packet must name the exact presentation, owner, tests, and rollback |
 | `run-tenant-risk-forecast` | Client Health + data owner | Consumer proof, source/live-schema comparison, repair-shadow vs retire decision |
 | `run-retention-forecast` | Client Health + data owner | Consumer proof, source/live-schema comparison, repair-shadow vs retire decision |
 | Caller-safe unknown presentation | Product + security | Approved generic reason/freshness contract with no hidden-source leakage |
@@ -194,7 +200,10 @@ The H0.3 preparation packet is complete for implementation review when:
 | Any code/view/RPC/cron/schema/data change | Named implementation owner | Separate authorization, focused tests, verification, rollback, and audit entry |
 
 **Conclusion:** H0.3 is technically characterized enough to prepare a safe
-unknown-state and consumer work queue, but it is not a license to repair the
-forecast jobs or change user-visible labels. The current live values remain
-unassessed until Carl decides the containment/acceptance path and the required
-operational input arrives.
+unknown-state and consumer work queue. The approved H1 direction says the
+current live values are unassessed and must not be treated as normal/stable;
+implementing that treatment still requires its own bounded consumer packet,
+tests, rollback, and approval. This packet remains no license to repair the
+forecast jobs, restart cron, or change production data, and consultant input is
+still required before thresholds, confidence, cohorts, or pilot usefulness
+are finalized.
