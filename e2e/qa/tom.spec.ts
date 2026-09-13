@@ -86,3 +86,39 @@ test("client persona reads packages and preserves the relationship-role user-man
   console.log(`[tom-p0-timing] ${testInfo.project.name} /client/users-redirect ${Math.round(performance.now() - startedAt)}ms`);
   await finishWaterfall();
 });
+
+test("staff persona opens the first tenant detail read model", async ({ page }, testInfo) => {
+  test.skip(CLIENT_PROJECTS.has(testInfo.project.name) || DISABLED_PROJECTS.has(testInfo.project.name), "staff-only read characterization");
+
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const finishWaterfall = startSupabaseWaterfall(page, `${testInfo.project.name} /tenant/:id`);
+
+  await page.goto("/manage-tenants");
+  const firstTenant = page.locator('a[aria-label^="Open "]').first();
+  await expect(firstTenant).toBeVisible({ timeout: 25_000 });
+  await firstTenant.click();
+  await expect(page).toHaveURL(/\/tenant\/\d+$/, { timeout: 25_000 });
+  await expect(page.locator("h1").first()).toBeVisible({ timeout: 25_000 });
+  expect(pageErrors).toEqual([]);
+  await finishWaterfall();
+});
+
+test("staff persona opens integration and Ask Viv read shells", async ({ page }, testInfo) => {
+  test.skip(CLIENT_PROJECTS.has(testInfo.project.name) || DISABLED_PROJECTS.has(testInfo.project.name), "staff-only read characterization");
+
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  const integrationWaterfall = startSupabaseWaterfall(page, `${testInfo.project.name} /settings/integrations`);
+  await page.goto("/settings/integrations");
+  await expect(page.getByRole("heading", { name: "Chat Integrations" })).toBeVisible({ timeout: 25_000 });
+  await integrationWaterfall();
+
+  const askVivWaterfall = startSupabaseWaterfall(page, `${testInfo.project.name} /ask-viv`);
+  await page.goto("/ask-viv");
+  await expect(page.getByText("Ask Viv", { exact: true }).first()).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByPlaceholder("Ask Viv anything...")).toBeVisible({ timeout: 25_000 });
+  expect(pageErrors).toEqual([]);
+  await askVivWaterfall();
+});

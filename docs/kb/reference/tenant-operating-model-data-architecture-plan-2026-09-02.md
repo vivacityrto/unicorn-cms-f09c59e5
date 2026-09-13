@@ -1,6 +1,6 @@
 # Tenant Operating Model, Directory Performance, ERP, and Ask Viv Data Architecture Plan
 
-> **Status:** council-reviewed implementation plan; P0.2/P0.3 expanded bounded read-only characterization completed 2026-09-13; no implementation or production mutation authorized
+> **Status:** council-reviewed implementation plan; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; broader query-family/cardinality and owner-review gates remain open; no implementation or production mutation authorized
 > **Prepared:** 2026-09-02
 > **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`

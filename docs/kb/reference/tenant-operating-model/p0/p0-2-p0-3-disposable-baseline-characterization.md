@@ -44,7 +44,7 @@ that current behavior rather than quietly define a replacement contract.
 | Gate | Required evidence | Owner | Current state |
 | --- | --- | --- | --- |
 | Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Complete — `qfpxvumcrnzrjyvqkicq`, production target false |
-| Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Open |
+| Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Complete — [2026-09-13 production catalog capture](data/p0-2-p0-3-production-metadata-capture-2026-09-13.json), cutoff `20260911094544` at `origin/main@29224ccb` |
 | Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for bounded runs — run tag `tom_qa_20260913_seed_01`; canonical QA `app_settings` row with side-effect flags disabled verified in final run `34751973789`; cleanup remains separately gated |
 | Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Complete for this bounded run — anonymous plus nine browser-authenticated personas exercised; service principal passed its separate non-browser read contract |
 | Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 06:07–06:14 UTC within the approved 60-minute window |
@@ -137,8 +137,7 @@ Observed current behavior:
 This is an expanded bounded characterization, not the complete P0.2/P0.3
 baseline. The route timing lines are retained in the private Actions log for
 the three measured repetitions. A follow-up instrumentation run is recorded
-below; migration baseline cutoff and RBAC/Client Health/TOM review remain
-open.
+below; RBAC/Client Health/TOM review remains open.
 
 Aggregate measured route timings from the redacted Actions log were stable
 enough to characterize the current QA fixture without setting a product
@@ -239,6 +238,19 @@ call returned rows; the same claim received zero rows for the cross-tenant
 dashboard call. The SQL-console role bypasses browser RLS when explaining a
 view directly, so the stage plan is evidence of query shape and cost only;
 browser authorization outcomes remain the authoritative negative-case oracle.
+
+### Versioned production metadata cutoff
+
+The read-only production catalog capture for this packet is recorded in
+[`p0-2-p0-3-production-metadata-capture-2026-09-13.json`](data/p0-2-p0-3-production-metadata-capture-2026-09-13.json).
+It was taken against production project `yxkgdalkbrriasiyyrwk` on
+2026-09-13, with repository context `origin/main@29224ccb`, and establishes
+`20260911094544` as the migration cutoff for this evidence round. The
+application-scope capture observed 651 tables, 136 views, 672 functions, 486
+triggers, 1,956 policies, 2 publications, and 20 cron schedules; it read
+catalog metadata only and no application rows. The cron count is source-state
+evidence, not a QA value to copy. QA remains on its controlled 76-migration,
+zero-cron ledger pending a separately reviewed forward-sync packet.
 
 ## P0.2 read-only characterization run
 
@@ -369,10 +381,11 @@ The following remain explicitly outside this packet:
 **Conclusion:** the packet now contains an expanded bounded P0.2/P0.3
 characterization for nine browser-authenticated personas, with four
 intentional client-only skips, plus a separate non-browser service-principal
-read contract. The follow-up runs add a private redacted request-waterfall
-baseline for the exercised routes, and the post-seed run confirms the
-remaining `406` responses are an expected client authorization-negative case
-while the prior `401` did not recur. It is not the complete baseline:
-migration cutoff, full-cardinality/query-family coverage, and RBAC/Client
-Health/TOM owner review remain open. No implementation or production change
-is implied.
+read contract. The versioned production metadata capture establishes the
+`20260911094544` migration cutoff. The follow-up runs add a private redacted
+request-waterfall baseline for the exercised routes, and the post-seed run
+confirms the remaining `406` responses are an expected client
+authorization-negative case while the prior `401` did not recur. It is not
+the complete baseline: full-cardinality/query-family coverage and
+RBAC/Client Health/TOM owner review remain open. No implementation or
+production change is implied.

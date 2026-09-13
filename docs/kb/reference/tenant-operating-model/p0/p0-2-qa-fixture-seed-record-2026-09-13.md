@@ -163,10 +163,9 @@ The fixture and nine browser-capable QA identities now exist, and the expanded
 bounded browser run is recorded above. Before calling the broader P0.2/P0.3
 packet complete, it still needs:
 
-1. a versioned production metadata baseline and migration cutoff;
-2. representative full-cardinality and unexercised detail/export/Realtime/
+1. representative full-cardinality and unexercised detail/export/Realtime/
    RPC/Edge/Ask Viv query-family coverage; and
-3. RBAC, Client Health, and TOM owner review of authorization, provenance,
+2. RBAC, Client Health, and TOM owner review of authorization, provenance,
    freshness, and fixture representativeness.
 
 The first run should stay narrow: representative and cross-tenant package /

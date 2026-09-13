@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "tom-p0-2-p0-3-production-metadata-capture",
+  "capturedAt": "2026-09-13T11:19:00Z",
+  "source": {
+    "projectRef": "yxkgdalkbrriasiyyrwk",
+    "commitSha": "29224ccb08fc93567bebb2e2cf5d9353b17d5256",
+    "migrationCutoff": "20260911094544",
+    "captureQuery": "scripts/qa-baseline-capture.sql",
+    "captureMode": "read-only-catalog"
+  },
+  "scope": {
+    "mode": "application-scope",
+    "schemas": ["public", "private"],
+    "excludedSchemas": ["auth", "storage", "realtime"],
+    "excludedExtensions": ["pg_cron", "pg_net"],
+    "excludedPublications": true,
+    "sanitizedFunctionOverrides": true,
+    "applicationRowsRead": false
+  },
+  "schemaSummary": {
+    "extensions": { "count": 3, "fingerprint": "688485db3defb996612ba737cb62eae9" },
+    "tables": { "count": 651, "fingerprint": "49ce1862c24cb3be30596d2fc8030c42" },
+    "views": { "count": 136, "fingerprint": "6934eb8cb50b6608f1b20fef8d951ce5" },
+    "functions": { "count": 672, "fingerprint": "ab85cd263650ba92eadf2cc5a1ed90d3" },
+    "triggers": { "count": 486, "fingerprint": "99eac9eab14564a1c480ee43d9ac7f77" },
+    "policies": { "count": 1956, "fingerprint": "0fa6b4510b0c9030dfbdfb25e33d2b83" },
+    "publications": { "count": 2, "fingerprint": "1898ba002577646846a9780745391c73" }
+  },
+  "criticalSurface": {
+    "policyCount": 23,
+    "policyFingerprint": "584793741ee6fbd015d82d85db33f6fd",
+    "columnCount": 174,
+    "columnFingerprint": "482c9abe7ed0da087525caefc93f41f8",
+    "foreignKeyCount": 19,
+    "foreignKeyFingerprint": "6f99d643446163734611c72f45b6648a"
+  },
+  "operations": {
+    "migrationCount": 351,
+    "latestMigration": "20260911094544",
+    "cronRelationPresent": true,
+    "cronScheduleCount": 20,
+    "productionUrlReferences": 0,
+    "migrationFailures": 0
+  },
+  "interpretation": {
+    "baselineCutoff": "20260911094544",
+    "qaIsNotClaimedParity": true,
+    "notes": [
+      "This is a production metadata source capture only; it contains no application rows or secret values.",
+      "The production cron count is an observed source fact and must not be copied into QA.",
+      "QA remains on its separately controlled 76-migration ledger with zero cron schedules until an explicitly reviewed sync packet exists."
+    ]
+  }
+}
