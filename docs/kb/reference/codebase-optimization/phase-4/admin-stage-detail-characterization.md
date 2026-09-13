@@ -1,8 +1,8 @@
 # `AdminStageDetail.tsx` — shared characterization packet
 
-> **Last updated:** 2026-09-12 · **Status:** characterization in progress; no extraction or policy change authorized
+> **Last updated:** 2026-09-14 · **Status:** characterization complete for the current static pass; no extraction or policy change authorized
 > **Parent:** [joint ownership matrix](admin-stage-detail-joint-ownership-matrix.md)
-> **Source:** `origin/main@49fa5e71c401e046c82071a7ba3b05e6d78c373f`
+> **Source:** `origin/main@05bfb110f498632b3e1aec03e4ae2966a3fab050`
 > **File:** `src/pages/AdminStageDetail.tsx` (2,702 lines at this source commit)
 > **Owners:** Codebase Optimization coordinates; TOM and RBAC are required reviewers; Client Health is conditional on a proven consumer link
 > **Audit entry:** none needed — repository characterization only; no code, schema, permission, credential, or production change
@@ -61,6 +61,34 @@ boundaries: `usePackageBuilder`, `useStageActiveUsage`,
 at `AdminStageDetail.tsx:79-136`; their readers and writers must be included
 in the same contract ledger before any hook or handler is moved.
 
+## Pure display boundary characterization
+
+The static pass re-checked the page's child boundaries and local rendering
+helpers. A component being rendered from this page is not automatically pure:
+the boundary is pure only when it owns no Supabase call, hook-driven query,
+tenant/authorization resolution, mutation, or state whose movement would alter
+the parent workflow.
+
+| Candidate boundary | Reachable evidence | Static classification | Safe next step |
+| --- | --- | --- | --- |
+| `renderReuseInfoBadge` | `AdminStageDetail.tsx:1015-1029`; called from messages, documents, and usage-related tab content | Pure markup over parent values `usageCount`/`overrideCount`; no query or callback | Candidate for a compiler-proven props-only display extraction; pass values explicitly if ever moved |
+| `StageQualityBadge` | `src/components/stage/StageQualityPanel.tsx:199`; exported display helper | Pure status-to-badge mapping; no hooks or I/O | Existing component can remain; any relocation is compiler-provable |
+| `StageFrameworkBadges` | `src/components/stage/StageFrameworkSelector.tsx:99`; rendered at `AdminStageDetail.tsx:2664-2669` | Pure framework-to-badge rendering, but its module also contains stateful selector and Supabase writer `updateStageFrameworks` | Treat only the named export as pure; do not move the module or writer with it |
+| `VersionSnapshotViewer` | `AdminStageDetail.tsx:2694-2699` → `src/components/stage/VersionSnapshotViewer.tsx:29` | Props-only snapshot rendering in the child; parent still owns version selection state | Already at a suitable display boundary; no page extraction needed |
+| `StageQualityPanel` | `AdminStageDetail.tsx:1879-1884` → `src/components/stage/StageQualityPanel.tsx:62` | Props-driven rendering with refresh callback; no direct I/O in the child, but callback retains the parent query boundary | Already separated; do not move `refetchQuality` or quality state |
+| `StageVersionHeader` | `AdminStageDetail.tsx:1127-1140` → `src/components/stage/StageVersionHeader.tsx:42` | Not pure: owns dialog state and publish/view callbacks around version workflow | Keep with TOM/RBAC version contract; no Codebase-only extraction |
+| `StageImpactPanel` | `AdminStageDetail.tsx:1885-1889` → `src/components/package-builder/StageImpactPanel.tsx:34` | Not pure: owns hooks, query state, confirmation state, and a package-sync mutation | Keep with TOM package-impact writer/rollback review |
+| `StageDocumentsPanel`, `DocumentSyncAuditPanel`, `StageMessagesPanelWithProvider`, `StageSimulationDialog` | `AdminStageDetail.tsx:1659-1667`, `2684-2692` | Not pure: delegated queries, mutations, dialogs, or provider state | Keep delegated boundaries in their owning packets; no page-only extraction |
+
+This identifies a small, policy-neutral display surface but does not claim a
+behavior-bearing extraction is ready. `renderReuseInfoBadge` is the only
+page-local candidate whose inputs and output can be made explicit without
+moving state or a callback contract. The already-extracted child displays do
+not justify another page refactor by themselves. Any later display PR must
+preserve exact props, text, conditional rendering, and disabled/hidden states;
+it must not move the route guard, `stageIdNum`, query state, mutation handlers,
+audit writes, or tenant/package resolution.
+
 ## State and workflow inventory
 
 | Workflow | Reachable state / handler evidence | Current oracle status | Next owner review |
@@ -109,8 +137,9 @@ seam:
    denial/error outcomes. No production fixture is permitted.
 
 The current page has no page-level focused suite, so query/mutation seams are
-not yet characterized. The next safe step is the shared field/action/call
-graph ledger plus owner review—not extraction. Stop or route the work when a
+not yet characterized. The static ownership and pure-display pass is now
+complete; the next safe step for any behavior-bearing work is the shared
+field/action/call graph ledger plus owner review—not extraction. Stop or route the work when a
 seam depends on disputed TOM source-of-truth, RBAC semantics, external email or
 export side effects, or a Client Health definition; do not force a Codebase
 refactor through those gates.
