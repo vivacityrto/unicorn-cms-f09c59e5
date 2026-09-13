@@ -1,13 +1,13 @@
 # TOM P0.2/P0.3 — representative query-family fixture contract
 
 > **Last updated:** 2026-09-13
-> **Status:** approval-ready planning artifact; no hosted fixture write or browser run authorized by this document
+> **Status:** approved QA-only fixture contract executed and read-only verified 2026-09-13; address and separate Ask Viv conversation-history browser paths remain unexercised; owner review and broader P0.2/P0.3 gates remain open
 > **Owner:** Tenant Operating Model, with RBAC v6 and Client Health Activity Analytics review
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Evidence follow-up:** [cardinality and query-family follow-up](p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md)
 > **Cross-initiative review:** [owner-review matrix](p0-2-p0-3-cross-initiative-review-2026-09-13.md)
 > **Repository context:** `origin/main@0fb9c697d883e06a8ac6e08e9d1fbdbc2bb62c9d`
-> **Audit entry:** none needed — this is preparation only and makes no hosted or production change
+> **Audit entry:** [2026-09-13 TOM representative QA query-family fixture expansion](../../../../audit-log/entries/2026-09-13-tom-representative-qa-fixture-expansion.md)
 
 ## Purpose and boundary
 
@@ -110,8 +110,15 @@ the run. No retry may broaden identity, scope, or data selection.
 
 ## Approval decision requested
 
-The next owner decision is narrow: approve or reject this QA-only fixture
-shape and its negative-case matrix. Approval would authorize preparation of a
-separate execution packet, not the hosted write itself. Until that decision is
-recorded, TOM P0.2/P0.3 remains expanded bounded evidence with representative
-query-family coverage open.
+The next owner decision is narrow: review the executed QA-only fixture shape
+and its negative-case matrix. The contract was subsequently approved for
+execution. The QA-only expansion added the minimum rows in the table above and
+the corrected protected run
+[`34757778368`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34757778368)
+completed with `84 passed, 48 skipped`. The run observed relationship,
+assignment, connected-tenant, participant, and Ask Viv turn reads without
+failures. The current browser spec did not reach `tenant_addresses` and did
+not issue a separate `ask_viv_conversations` request; export/download,
+Realtime delivery, generation, full-cardinality performance, and owner review
+remain open. The contract authorizes no production or live schema/RLS/grant/
+publication/Edge/cron/credential change.

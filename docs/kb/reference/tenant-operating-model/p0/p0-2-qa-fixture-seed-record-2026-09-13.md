@@ -1,9 +1,9 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; post-seed browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; corrected protected run `34757778368` passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
-> **Audit entry:** none needed — this was synthetic non-production fixture/persona provisioning; no production, schema, RLS, grant, cron, deployment, or production credential state changed
+> **Audit entry:** [2026-09-13 TOM representative QA query-family fixture expansion](../../../../audit-log/entries/2026-09-13-tom-representative-qa-fixture-expansion.md)
 
 ## Purpose and boundary
 
@@ -69,6 +69,16 @@ The credential provisioning run also added the missing QA-only
 derives that value for an Admin profile. This was an idempotent reference-data
 repair in `unicorn-qa`; it did not alter production schema or reference data.
 
+## Representative query-family expansion
+
+After the initial seed, the approved contract was executed against the same
+allowlisted QA project. The expansion added 3 `tenant_addresses`, 1
+`tenant_relationships`, 2 `tenant_csc_assignments`, 2 `connected_tenants`, 3
+`conversation_participants`, 1 `ask_viv_conversations`, and 2
+`ask_viv_turns` rows. The rows are synthetic and captured by deterministic
+run-scoped identifiers or the `TOM_P0_20260913_QUERY_FIXTURE` marker; no
+production data or identity was copied.
+
 ## Provisioned QA personas
 
 The four additional identities are intentionally run-scoped labels rather than
@@ -105,6 +115,12 @@ contract.
 - The additional `app_settings` insertion was limited to `unicorn-qa`, started
   from the table's defaults, then explicitly disabled email and generation
   side effects; it was not copied to production.
+- The representative expansion used one QA-only transaction. The two Ask Viv
+  turns were corrected from `compliance` to the current history hook's
+  `assistant` mode after the first read-only run exposed the fixture mismatch.
+- Exact expansion cleanup, if later approved, must use captured keys in
+  dependency order and must not remove persistent QA personas or shared lookup
+  rows. Cleanup was not run here.
 - Cleanup has **not** been run. If the fixture is retired, use a separately
   reviewed run-scoped cleanup in dependency order: messages, conversations,
   package instances, package-stage mappings, stages, packages, contacts,
@@ -167,22 +183,35 @@ reachable, but these personas currently receive its rollout-unavailable card;
 the check accepts that current state or an enabled composer and performs no
 assistant generation or write.
 
+The representative query-family run
+[`34757778368`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34757778368)
+completed with `84 passed, 48 skipped` and no failures. Its successful
+waterfalls observed `tenant_relationships`, `tenant_csc_assignments`,
+`connected_tenants`, `conversation_participants`, and `ask_viv_turns` reads.
+The current browser spec did not reach `tenant_addresses`, and did not produce
+a separate `ask_viv_conversations` request; these remain explicitly
+unexercised rather than being treated as empty or unavailable. Production
+aggregate counts for all seven expanded families were unchanged after the
+QA-only operation.
+
 ## Remaining P0.2/P0.3 gates
 
 The fixture and nine browser-capable QA identities now exist, and the expanded
 bounded browser run is recorded above. Before calling the broader P0.2/P0.3
 packet complete, it still needs:
 
-1. representative full-cardinality and unexercised detail/export/Realtime/
+1. address UI and Ask Viv conversation-history browser coverage, plus
+   representative full-cardinality and unexercised detail/export/Realtime/
    RPC/Edge/Ask Viv query-family coverage; and
 2. RBAC, Client Health, and TOM owner review of authorization, provenance,
    freshness, and fixture representativeness.
 
 The read-only [cardinality/query-family follow-up](p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md)
 now records the production comparison and confirms exactly which current QA
-relations are empty. It narrows, but does not remove, these two gates: a
-representative QA-only fixture expansion and the cross-initiative owner review
-must still be separately approved.
+relations were empty before this expansion. The [representative fixture
+contract](p0-2-p0-3-representative-query-fixture-contract-2026-09-13.md) and
+linked audit record now document the approved expansion and run; the remaining
+browser coverage and cross-initiative owner review gates are still separate.
 
 The first run should stay narrow: representative and cross-tenant package /
 client-stage reads plus disabled/inactive negative cases. No v6 capability,

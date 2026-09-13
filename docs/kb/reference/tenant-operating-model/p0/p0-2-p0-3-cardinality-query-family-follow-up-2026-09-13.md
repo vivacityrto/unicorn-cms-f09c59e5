@@ -1,7 +1,7 @@
 # TOM P0.2/P0.3 — cardinality and query-family follow-up
 
 > **Last updated:** 2026-09-13
-> **Status:** read-only production/QA cardinality comparison and query-family gap register complete; representative fixture expansion and cross-initiative owner review remain open
+> **Status:** read-only production/QA cardinality comparison complete; approved representative fixture expansion seeded and protected run completed; address/Ask Viv conversation-history browser gaps and cross-initiative owner review remain open
 > **Owner:** Tenant Operating Model, with RBAC and Client Health review
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Cross-initiative review:** [owner-review matrix](p0-2-p0-3-cross-initiative-review-2026-09-13.md)
@@ -31,17 +31,17 @@ relations:
 | `tenant_members` | 19 | 936 | relationship cardinality exists but is not production-shaped |
 | `tenant_users` | 19 | 576 | same QA members/users count is intentional fixture simplification |
 | `tenant_contacts` | 10 | 114 | contacts are present, but not at production breadth |
-| `tenant_addresses` | 0 | 722 | address read/write surface cannot be exercised from current QA data |
-| `tenant_relationships` | 0 | 2 | relationship edge cases cannot be exercised from current QA data |
-| `tenant_csc_assignments` | 0 | 149 | assignment/read-model path cannot be exercised from current QA data |
-| `connected_tenants` | 0 | 109 | connected-tenant path is absent from current QA fixture |
+| `tenant_addresses` | 3 synthetic | 722 | rows now exist, but the current browser spec does not reach the address surface |
+| `tenant_relationships` | 1 synthetic | 2 | relationship read path observed in protected staff waterfall |
+| `tenant_csc_assignments` | 2 synthetic | 149 | assignment read path observed in protected staff waterfall |
+| `connected_tenants` | 2 synthetic | 109 | connected-tenant read path observed in protected staff waterfall |
 | `packages` | 3 | 45 | package variety is narrower than production |
 | `package_instances` | 9 | 1,052 | package-instance query is present but under-sized |
 | `tenant_messages` | 18 | 701 | message reads are present but conversation breadth is smaller |
 | `tenant_conversations` | 9 | 506 | conversation reads are present but under-sized |
-| `conversation_participants` | 0 | 2,216 | participant authorization paths cannot be exercised from current QA data |
-| `ask_viv_conversations` | 0 | 77 | assistant history has no QA rows |
-| `ask_viv_turns` | 0 | 294 | assistant turn/history query family has no QA rows |
+| `conversation_participants` | 3 synthetic | 2,216 | participant read path observed; negative authorization cases remain owner-gated |
+| `ask_viv_conversations` | 1 synthetic | 77 | row exists, but current run did not issue a separate conversation-history request |
+| `ask_viv_turns` | 2 synthetic | 294 | turn read path observed; generation remains disabled/unexercised |
 
 The QA fixture therefore supports safe empty/populated checks for several core
 directory and package paths, but it does not satisfy the plan's
@@ -92,24 +92,23 @@ implementation defect to repair inside this evidence packet.
 | --- | --- | --- |
 | Portfolio directory list, search, filters, package lookup | Protected staff/CSC navigation and waterfall evidence in the parent packet | Bounded current behavior characterized; full-cardinality strata still open |
 | Tenant detail read model | Staff-only navigation passed in protected run `34755463485` | Read shell characterized; child relations and largest-tenant detail breadth remain open |
-| Address and relationship reads | Source inspected; QA has zero address/relationship rows | Needs approved QA fixture expansion before browser evidence |
-| CSC assignment and connected-tenant reads | Source inspected; QA has zero rows in both relations | Needs approved QA fixture expansion; production Realtime publication gap noted above |
+| Address and relationship reads | Synthetic rows now exist; relationship waterfall observed, address UI not reached | Address browser evidence remains open; production Realtime publication gap remains noted above |
+| CSC assignment and connected-tenant reads | Synthetic rows now exist; both read families observed in protected staff waterfall | Negative/authorization and production-scale evidence remain owner-gated |
 | Export/download paths | No safe export invocation in the current protected run | Requires a specifically scoped read-only export oracle and approved safe fixture |
 | Realtime event delivery | Static listener source and publication membership inspected | Delivery/refresh behavior remains unexercised; do not mutate data in this packet |
 | RPC/Edge directory/detail paths | Waterfalls captured only for routes actually visited; source inventory identifies additional calls | Requires an approved query-family matrix before broadening browser coverage |
-| Ask Viv route and read history | Route reachable; current staff personas receive rollout-unavailable card; QA history/turn rows are zero | No generation or write was attempted; enabled-ring and history evidence remain open |
+| Ask Viv route and read history | Route reachable; current staff personas receive rollout-unavailable card; synthetic turns were read in the protected waterfall | Conversation-list request, generation, enabled-ring behavior, and owner review remain open |
 
 ## Disposition and next gate
 
-The unattended read-only work is complete and narrows the remaining work to
-two gates:
+The unattended read-only work and approved representative fixture expansion are
+complete and narrow the remaining work to two gates:
 
-1. TOM/RBAC/Client Health owners approve the representative QA query-family
-   matrix and the synthetic cardinality strata to add (including whether
-   address, assignment, relationship, participant, export, Realtime, and
-   Ask Viv history fixtures are required); and
-2. a separately authorized QA-only fixture packet provisions those rows and
-   runs the corresponding read-only/browser checks. Any publication, schema,
+1. TOM/RBAC/Client Health owners review the observed authorization,
+   provenance, freshness, and fixture representativeness, including the
+   unexercised address and conversation-list paths; and
+2. separately scoped QA-only browser checks cover the remaining safe read
+   surfaces. Any publication, schema,
    RLS, grant, Edge, cron, or production data change remains a separate packet
    with its own authorization and audit evidence.
 
