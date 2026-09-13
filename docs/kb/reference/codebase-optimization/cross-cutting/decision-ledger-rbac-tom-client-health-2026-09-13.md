@@ -39,7 +39,7 @@ Status meanings:
 | **A4** | Define internal-staff visibility for these resources | **settled — approved by Carl 2026-09-13** | Internal Vivacity CSCs have full portfolio-wide tenant-operational access, with actions recorded in timeline activity; platform security administration remains separate | A5 security-boundary investigation |
 | **A5** | Authorize the security-boundary investigation | **settled — approved by Carl 2026-09-13** | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement; remediation remains separately gated | A6 client-stage state classification |
 | **A6** | Classify client stage state | **settled — approved by Carl 2026-09-13** | TOM/domain owns the canonical lifecycle; Client Health may consume status/date/derived `node_state` as operational evidence; client workflows may display the approved subset | A7 TOM hosted-QA preflight |
-| **A7** | Authorize TOM hosted-QA preflight | **current discussion** | Only after QA URL/ref, short-lived identities, fixture/reset plan, operator/window, and private artifact retention are specified | One read-only `unicorn-qa` run |
+| **A7** | Authorize TOM hosted-QA preflight | **preflight details populated — execution approval pending** | Use the existing allowlisted non-production `unicorn-qa` target and offline fixture manifest; remaining gates are short-lived identities/storage states, operator/window, and private artifact owner/retention | One read-only `unicorn-qa` run |
 | **A8** | Resolve Client Health semantic gates | awaiting external data/Carl | Keep thresholds, cohorts, confidence semantics, and pilot acceptance gated on consultant operational input | H1 metric/corpus decisions and later implementation |
 
 The order is intentional: A1 fixes the target shape before A2–A4 can be
@@ -174,11 +174,32 @@ tables are not present in Realtime publication metadata.
 
 ### A7 — TOM hosted-QA preflight
 
-The read-only `unicorn-qa` run is gated on a concrete URL/ref, short-lived
-identities, fixture/reset approval, operator and time window, private artifact
-owner, and retention policy. This is execution authorization, not a blanket
-authorization for migrations, ghost-contact promotion, permission changes, or
-production observation.
+The preflight details now available from the checked-in [offline QA fixture
+manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md)
+are:
+
+| Field | Populated value | State |
+| --- | --- | --- |
+| Target | Existing allowlisted `unicorn-qa`; `productionTarget: false` | ready |
+| Fixture strata | `small-empty`, `representative`, `skewed`, `disabled`, and a two-tenant `cross-tenant-a-b` pair | ready |
+| Fixture domains | Tenants, identities/membership, contacts, packages, stages, audit, conversations, and messages | ready |
+| Run identity | Generated run ID `tom-p0-2-p0-3-${timestamp}-${randomSuffix}` plus run-scoped fixture tag | ready |
+| Reset/safety | Run-scoped cleanup, reverse-order cleanup, no production identifiers, no committed credentials, no writes in the ghost classifier | ready for approval |
+| Observation | One warm-up and three measured repetitions per persona/stratum; redacted timings, request metadata, waterfalls, query plans, and visible empty/error/denied states | ready |
+| Personas | Client Admin A/B, Client User A, CSC, Super Admin, and non-browser service principal; missing storage state is `Inconclusive` | ready for approval |
+| Short-lived identities/storage states | QA-only credentials and browser storage states for the approved personas | **missing** |
+| Operator/window | Named operator and execution window | **missing** |
+| Private evidence | Private artifact location, owner, retention, and reviewer access | **missing** |
+
+The run should use the existing manifest as its baseline but narrow the first
+RBAC pass to representative and cross-tenant package/client-stage cases plus
+disabled/inactive negative cases. This avoids paying for the full TOM query
+family matrix before the specific A2 resources are characterized.
+
+This is execution authorization, not blanket authorization for migrations,
+ghost-contact promotion, permission changes, or production observation. No
+hosted run should begin until the three missing fields are named and Carl
+approves execution.
 
 ### A8 — Client Health semantic gates
 
@@ -208,7 +229,7 @@ These are not part of the current approval sequence:
 
 ## Continuous implementation plan after approval
 
-Once A1–A4 are resolved and A5 is either authorized or explicitly parked:
+Once A1–A6 are resolved and A5 is either authorized or explicitly parked:
 
 1. finalize the bounded package-instance/client-stage characterization packet;
 2. run one safe read-only QA pass with the current path authoritative;
