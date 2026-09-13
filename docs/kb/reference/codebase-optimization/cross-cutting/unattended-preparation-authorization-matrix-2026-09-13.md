@@ -3,7 +3,7 @@
 > **Status:** decision-ready coordination packet; preparation boundaries are explicit, but no production or credential authority is implied
 > **Inputs:** [Program Index](../../program-index.md), [remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md), [RBAC P1-i job-role/AJ pilot worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md), [RBAC P1-j shadow evidence contract](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md), [TOM P0.2/P0.3 offline QA manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md), [Client Health plan](../../client-health-activity-analytics-plan-2026-09-03.md)
 > **Owner:** Carl, with named product/security/operations/environment owners per gate
-> **Evidence cutoff:** `origin/main@2b6e2fbff67772d0a6d73b66ccc8ee76a75c6b7d`
+> **Evidence cutoff:** `origin/main@95950c1309b0008238df3b82a82cda83bf1133b5`
 > **Audit entry:** none needed — documentation-only planning; no credential, hosted, schema, authorization, deployment, scheduled-job, or live-data action
 
 ## How to read this matrix

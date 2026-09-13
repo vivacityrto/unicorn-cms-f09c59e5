@@ -1,6 +1,6 @@
 # Unicorn 2.0 — Program Index
 
-> **Last updated:** 2026-09-12 · **Reconsider by:** 2026-10-09 · **Confidence:** high (status lines below are read from each initiative's own master doc header, not inferred).
+> **Last updated:** 2026-09-13 · **Reconsider by:** 2026-10-10 · **Confidence:** high (status lines below are read from each initiative's own master doc header, not inferred).
 
 Canonical glue across the four active initiatives. This file records
 **status, current phase/packet, dependencies/gates, authoritative document
