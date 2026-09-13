@@ -228,6 +228,21 @@ This slice is also frontend-only: no forecast, cron, schema, RLS, Edge, or
 production-data behavior changed. Freshness/quality validation and the
 portfolio/Ask Viv consumers remain separate gates.
 
+## H1 dashboard-triage source containment — third bounded consumer slice
+
+The portfolio triage query now checks the underlying burn and retention source
+tables for the tenant IDs already returned by the existing ranked view. A
+source error, an empty source, a missing tenant row, or a null source status
+maps to `unavailable`; a readable source row preserves the current status.
+When multiple burn rows exist for a tenant, a critical row takes precedence so
+the source cannot under-report a critical package. The ranking table and
+tenant drawer render the unavailable state explicitly.
+
+This is a read-only frontend containment change and does not alter the ranked
+view, attention-score formula, source freshness rules, Ask Viv contract,
+forecast jobs, cron, schema, RLS, Edge, or production data. Stale/invalid
+quality validation remains a separate gate.
+
 **Conclusion:** H0.3 is technically characterized enough to prepare a safe
 unknown-state and consumer work queue. The approved H1 direction says the
 current live values are unassessed and must not be treated as normal/stable;

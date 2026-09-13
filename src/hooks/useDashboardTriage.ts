@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInDays, parseISO, isValid, addMonths } from 'date-fns';
 import { getReRegistrationDueDate, getReRegistrationUrgency, formatReRegistrationLabel } from '@/lib/reRegistrationDate';
-import type { Json } from '@/integrations/supabase/types';
+import type { Json, Tables } from '@/integrations/supabase/types';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -50,6 +50,67 @@ export interface AttentionTenant {
   compliance_open_tasks: number;
   attention_score: number;
   attention_drivers_json: AttentionDriver[];
+}
+
+export type TriageBurnForecastRow = Pick<
+  Tables<'tenant_package_burn_forecast'>,
+  'tenant_id' | 'burn_risk_status'
+>;
+
+export type TriageRetentionForecastRow = Pick<
+  Tables<'tenant_retention_forecasts'>,
+  'tenant_id' | 'retention_status' | 'forecast_date'
+>;
+
+export interface TriageForecastSource<T> {
+  rows: T[];
+  status: 'reported' | 'unavailable';
+}
+
+export interface TriageForecastSources {
+  burn: TriageForecastSource<TriageBurnForecastRow>;
+  retention: TriageForecastSource<TriageRetentionForecastRow>;
+}
+
+const BURN_STATUS_PRIORITY: Record<string, number> = {
+  normal: 0,
+  accelerated: 1,
+  critical: 2,
+};
+
+export function applyForecastAvailability(
+  tenants: AttentionTenant[],
+  sources: TriageForecastSources,
+): AttentionTenant[] {
+  const latestBurn = new Map<number, TriageBurnForecastRow>();
+  sources.burn.rows.forEach((row) => {
+    const existing = latestBurn.get(row.tenant_id);
+    if (
+      row.burn_risk_status !== null
+      && (!existing
+        || (BURN_STATUS_PRIORITY[row.burn_risk_status] ?? -1)
+          > (BURN_STATUS_PRIORITY[existing.burn_risk_status ?? ''] ?? -1))
+    ) {
+      latestBurn.set(row.tenant_id, row);
+    }
+  });
+
+  const latestRetention = new Map<number, TriageRetentionForecastRow>();
+  sources.retention.rows.forEach((row) => {
+    if (row.retention_status !== null && !latestRetention.has(row.tenant_id)) {
+      latestRetention.set(row.tenant_id, row);
+    }
+  });
+
+  return tenants.map((tenant) => ({
+    ...tenant,
+    burn_risk_status: sources.burn.status === 'reported'
+      ? latestBurn.get(tenant.tenant_id)?.burn_risk_status ?? 'unavailable'
+      : 'unavailable',
+    retention_status: sources.retention.status === 'reported'
+      ? latestRetention.get(tenant.tenant_id)?.retention_status ?? 'unavailable'
+      : 'unavailable',
+  }));
 }
 
 export interface AttentionDriver {
@@ -249,7 +310,29 @@ export function useDashboardTriage() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as AttentionTenant[];
+
+      const tenants = (data || []) as unknown as AttentionTenant[];
+      const tenantIds = tenants.map((tenant) => tenant.tenant_id);
+      const [burnResult, retentionResult] = await Promise.all([
+        tenantIds.length === 0
+          ? Promise.resolve({ data: [] as TriageBurnForecastRow[], error: null })
+          : supabase
+            .from('tenant_package_burn_forecast')
+            .select('tenant_id, burn_risk_status')
+            .in('tenant_id', tenantIds),
+        tenantIds.length === 0
+          ? Promise.resolve({ data: [] as TriageRetentionForecastRow[], error: null })
+          : supabase
+            .from('tenant_retention_forecasts')
+            .select('tenant_id, retention_status, forecast_date')
+            .in('tenant_id', tenantIds)
+            .order('forecast_date', { ascending: false }),
+      ]);
+
+      return applyForecastAvailability(tenants, {
+        burn: { rows: burnResult.data ?? [], status: burnResult.error ? 'unavailable' : 'reported' },
+        retention: { rows: retentionResult.data ?? [], status: retentionResult.error ? 'unavailable' : 'reported' },
+      });
     },
     enabled: isVivacityStaff,
     staleTime: 60_000,
