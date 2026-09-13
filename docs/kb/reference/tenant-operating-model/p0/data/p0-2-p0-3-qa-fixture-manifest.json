@@ -87,6 +87,21 @@
       "coverage": ["broad-internal-read-baseline", "tenant-relationship-behavior", "no-write-inference"]
     },
     {
+      "key": "integrator",
+      "tenantContext": "approved-internal-staff-context",
+      "coverage": ["current-role-specific-visibility", "staff-shell-navigation", "no-future-rbac-inference"]
+    },
+    {
+      "key": "team-leader",
+      "tenantContext": "approved-internal-staff-context",
+      "coverage": ["current-role-specific-visibility", "staff-shell-navigation", "no-future-rbac-inference"]
+    },
+    {
+      "key": "disabled-staff",
+      "tenantContext": "disabled-internal-staff-context",
+      "coverage": ["authentication-denial", "route-denial", "no-accidental-data-access"]
+    },
+    {
       "key": "super-admin",
       "tenantContext": "internal-staff-context",
       "coverage": ["approved-admin-read-only-paths", "negative-client-boundaries"]

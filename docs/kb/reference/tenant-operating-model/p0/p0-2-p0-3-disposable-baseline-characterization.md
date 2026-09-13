@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — disposable verification and browser/query baseline packet
 
-> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for six provisioned personas; QA single-row fixture verified; missing-persona, baseline-cutoff, and cross-initiative review gates remain open
+> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for nine browser personas plus a separate service-principal read contract; QA single-row fixture verified; baseline-cutoff and cross-initiative review gates remain open
 > **Owner:** Tenant Operating Model, with RBAC, Client Health, and security review
 > **Parent plan:** [Tenant Operating Model data architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related evidence:** [P0.1 owner-disposition register](p0-1-owner-disposition-register.md); [ghost-to-contact evidence packet](../p1/p1-2-a-ghost-contact-dry-run-evidence-packet.md); [guarded ghost dry-run execution packet](../p1/p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -46,7 +46,7 @@ that current behavior rather than quietly define a replacement contract.
 | Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Complete — `qfpxvumcrnzrjyvqkicq`, production target false |
 | Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Open |
 | Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for bounded runs — run tag `tom_qa_20260913_seed_01`; canonical QA `app_settings` row with side-effect flags disabled verified in final run `34751973789`; cleanup remains separately gated |
-| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — anonymous plus six authenticated personas exercised; integrator/team-leader, disabled staff, and service principal remain `Inconclusive` |
+| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Complete for this bounded run — anonymous plus nine browser-authenticated personas exercised; service principal passed its separate non-browser read contract |
 | Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 06:07–06:14 UTC within the approved 60-minute window |
 | Artifact | Name private artifact location, access list, and retention | Operations | Complete — private GitHub Actions artifact `tom-p0-characterization-34742103123`, Carl/repository maintainers, 30 days |
 | Query safety | Confirm `EXPLAIN (ANALYZE, BUFFERS)` runs only on QA and that no production `ANALYZE` workload is included | TOM / DBA | Complete for this pass — plans executed only against allowlisted `unicorn-qa`; no production SQL or benchmark workload |
@@ -129,14 +129,16 @@ Observed current behavior:
 - CSC reached `/manage-tenants` and completed the safe search round-trip on all
   three measured repetitions; its client-only check remained intentionally
   skipped.
-- Integrator/team-leader, disabled-staff, and service-principal
-  cases were not exercised and remain `Inconclusive`.
+- Integrator and Team Leader reached the current staff shell; disabled staff
+  reached the expected `Account Disabled` state; and the service principal
+  passed its explicit non-browser `tenants` read contract. These are current
+  behavior observations only, not future RBAC recommendations.
 
 This is an expanded bounded characterization, not the complete P0.2/P0.3
 baseline. The route timing lines are retained in the private Actions log for
 the three measured repetitions. A follow-up instrumentation run is recorded
-below; migration baseline cutoff, missing personas, and RBAC/Client
-Health/TOM review remain open.
+below; migration baseline cutoff and RBAC/Client Health/TOM review remain
+open.
 
 Aggregate measured route timings from the redacted Actions log were stable
 enough to characterize the current QA fixture without setting a product
@@ -358,18 +360,19 @@ The following remain explicitly outside this packet:
 | Item | Owner | Unblock condition |
 | --- | --- | --- |
 | Approve QA target and credentials | Carl / security | Named QA project, short-lived read-only identity, private artifact location |
-| Resolve missing persona fixtures | Carl / TOM | Synthetic fixture and storage-state manifest approved |
+| Extend persona query-family coverage | TOM + RBAC + Client Health | Baseline and approved read-only query-family matrix |
 | Interpret broad staff visibility | RBAC + TOM | Compare observed behavior with ADR-030 and the capability worksheet; no silent policy change |
 | Decide directory contract and numeric budgets | TOM/product | Baseline reviewed across representative strata |
 | Decide ghost promotion/retirement implementation | TOM/RBAC/operations | Separate QA evidence, caller/job/log closure, and explicit implementation packet |
 | Any schema/RLS/grant/Realtime/Edge/data change | Named implementation owner | Separate authorization, verification, and audit entry |
 
 **Conclusion:** the packet now contains an expanded bounded P0.2/P0.3
-characterization for the six provisioned personas, with four intentional
-client-only skips and explicit `Inconclusive` treatment for missing personas.
-The follow-up runs add a private redacted request-waterfall baseline for the
-exercised routes, and the post-seed run confirms the remaining `406` responses
-are an expected client authorization-negative case while the prior `401` did
-not recur. It is not the complete baseline: migration cutoff, full
-cardinality coverage, remaining persona fixtures, and RBAC/Client Health/TOM
-owner review remain open. No implementation or production change is implied.
+characterization for nine browser-authenticated personas, with four
+intentional client-only skips, plus a separate non-browser service-principal
+read contract. The follow-up runs add a private redacted request-waterfall
+baseline for the exercised routes, and the post-seed run confirms the
+remaining `406` responses are an expected client authorization-negative case
+while the prior `401` did not recur. It is not the complete baseline:
+migration cutoff, full-cardinality/query-family coverage, and RBAC/Client
+Health/TOM owner review remain open. No implementation or production change
+is implied.
