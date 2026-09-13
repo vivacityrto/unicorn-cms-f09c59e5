@@ -1,6 +1,6 @@
 # Cross-initiative decision ledger — RBAC, TOM, and Client Health
 
-> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A6 settled, A7 synthetic QA fixture seeded and verified, A7 characterization run still gated
+> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A7 settled/prepared, A8 external-data gated, A9 legacy client-role retirement planning approved
 > **Purpose:** one canonical ledger for the remaining decisions Carl must approve, review, or analyze before continuous implementation
 > **Inputs:** [RBAC P1-s resource dispositions](../../rbac-v6/p1/p1-s-aj-csc-resource-disposition-recommendation.md), [RBAC P1-r read-resource QA gate](../../rbac-v6/p1/p1-r-aj-csc-read-resource-decomposition-and-qa-gate.md), [RBAC P1-q live read-boundary reconciliation](../../rbac-v6/p1/p1-q-aj-csc-live-read-boundary-reconciliation.md), [approval-unblock matrix](approval-unblock-matrix-2026-09-12.md), [unattended-preparation authorization matrix](unattended-preparation-authorization-matrix-2026-09-13.md), [Program Index](../../program-index.md)
 > **Owners:** Carl for product/policy approvals; RBAC for capability and server-boundary design; TOM for relationship semantics; Client Health for metric/data semantics; security for privileged-boundary review
@@ -41,6 +41,7 @@ Status meanings:
 | **A6** | Classify client stage state | **settled — approved by Carl 2026-09-13** | TOM/domain owns the canonical lifecycle; Client Health may consume status/date/derived `node_state` as operational evidence; client workflows may display the approved subset | A7 TOM hosted-QA preflight |
 | **A7** | Authorize TOM hosted-QA preflight | **synthetic fixture seeded and read-only verified 2026-09-13; characterization run pending** | Use the existing allowlisted non-production `unicorn-qa` target and the [seed record](../../tenant-operating-model/p0/p0-2-qa-fixture-seed-record-2026-09-13.md); remaining gates are short-lived identities/storage states, operator/window, and private artifact owner/retention | One read-only `unicorn-qa` run |
 | **A8** | Resolve Client Health semantic gates | awaiting external data/Carl | Keep thresholds, cohorts, confidence semantics, and pilot acceptance gated on consultant operational input | H1 metric/corpus decisions and later implementation |
+| **A9** | Retire legacy Client Parent/Child account labels | **planning direction approved by Carl 2026-09-13; implementation separately gated** | Treat Parent/Child as compatibility projections only; migrate to explicit account class, RBAC capability/scope, tenant membership, relationship role, and access scope before any removal | P1.3 retirement plan, focused parity evidence, holdout disposition, and separate migration approval |
 
 The order is intentional: A1 fixes the target shape before A2–A4 can be
 meaningful; A5 runs as an independent security track; A6 prevents Client
