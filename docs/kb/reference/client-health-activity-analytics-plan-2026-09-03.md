@@ -1,6 +1,6 @@
 # Client Health, Client Activity, Consultant Triage, and Intervention Analytics Plan
 
-> **Status:** council-reviewed implementation plan; H1 unknown-state consumer containment delivered 2026-09-13; forecast-job/source disposition and metric policy remain gated
+> **Status:** council-reviewed implementation plan; H1 unknown-state consumer containment delivered 2026-09-13; H0.3b/c forecast-job disposition recorded 2026-09-13; replacement/metric policy and consultant-data gates remain open
 > **Prepared:** 2026-09-03
 > **Repository baseline:** `origin/main@31083c49` plus the planning commits on `chore/tenant-data-model-optimization-plan`
 > **Planning worktree:** `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -635,12 +635,12 @@ Every PR starts from fresh `origin/main` in its own worktree. Regenerate source/
 
 #### H0.3b — Risk-job consumer inventory and disposition
 
-- Characterize the `run-tenant-risk-forecast` 500 with logs and source/live-schema comparison. **Evidence delivered 2026-09-13:** [H0.3b/c forecast-job disposition evidence](client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md) recommends retire/mark unavailable for the current composite contract; owner disposition remains open.
+- Characterize the `run-tenant-risk-forecast` 500 with logs and source/live-schema comparison. **Evidence and disposition delivered 2026-09-13:** [H0.3b/c forecast-job disposition evidence](client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md) records the approved retain-but-not-restart/repair posture and unavailable current composite contract; replacement-shadow work remains separately gated.
 - Prove whether it has a live consumer. Repair into a validated versioned shadow job or retire/mark unavailable; do not rebuild an obsolete job by assumption.
 
 #### H0.3c — Retention-job consumer inventory and disposition
 
-- Characterize the `run-retention-forecast` 500 and known source-schema mismatches. **Evidence delivered 2026-09-13:** [H0.3b/c forecast-job disposition evidence](client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md) documents three material input mismatches and recommends retire/mark unavailable for the current composite contract; owner disposition remains open.
+- Characterize the `run-retention-forecast` 500 and known source-schema mismatches. **Evidence and disposition delivered 2026-09-13:** [H0.3b/c forecast-job disposition evidence](client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md) documents three material input mismatches and records the approved retain-but-not-restart/repair posture and unavailable current composite contract; replacement-shadow work remains separately gated.
 - Prove live consumers and business ownership. Repair into a validated versioned shadow job or retire/mark unavailable.
 
 #### H0.3d — Unknown-state consumer adoption
@@ -655,7 +655,7 @@ requirements, consultant-data dependency, and implementation gates. Its H0.3d
 consumer-containment direction is delivered in the five slices recorded
 there; it does not authorize a forecast repair or source/metric policy change.
 
-**Exit:** jobs either produce validated versioned shadow outputs or expose explicit unavailable state; no silent zero-risk fallback. The consumer half of this exit is delivered; the job/source half remains open.
+**Exit:** jobs either produce validated versioned shadow outputs or expose explicit unavailable state; no silent zero-risk fallback. The consumer half and current job disposition are delivered; any replacement shadow, source repair, or metric policy remains separately gated.
 
 #### H0.4 — Verification environment, measured baselines and proposed budgets
 

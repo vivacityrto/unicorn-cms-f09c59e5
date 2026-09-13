@@ -35,7 +35,7 @@ general “continue” must not be converted into a product/security decision.
 | R2-f | AJ/CSC shadow and pilot evidence | Compare current and v6 decisions non-authoritatively for 14 days before any cutover | RBAC/security + product/operations | Evidence contract approved for preparation; telemetry implementation and pilot enrollment remain blocked on storage/retention/reviewer/cohort inputs | [P1-j shadow evidence](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md); no logger, grant, or pilot change |
 | T1-x | Hosted TOM P0.2/P0.3 execution | Approve one synthetic, read-only `unicorn-qa` run only after preflight fields are filled | Carl + security/environment owner | Preparation approved; execution remains blocked on QA credentials, operator, fixture approval, and artifact owner | Offline manifest validation and runbook prep |
 | T2 | TOM implementation | Keep directory/writer/membership/normalization/Realtime/RLS work deferred | Carl + product/data/security | Blocked by design | Contract comparison and evidence gap list |
-| H2 | Forecast job disposition | Keep jobs stopped and outputs unavailable; current evidence recommends retain-but-not-restart/repair pending owner disposition | Client Health/data owner + Carl | H0.3b/c evidence delivered 2026-09-13; owner disposition or replacement-shadow authorization remains open | Record the owner decision; if replacement is chosen, prepare its data owner, synthetic fixture, run-ledger, and shadow/rollback contract |
+| H2 | Forecast job disposition | Keep jobs stopped and outputs unavailable; retain legacy artifacts as evidence without repair or restart | Client Health/data owner + Carl | Owner disposition approved 2026-09-13; replacement-shadow authorization remains separately gated | If replacement is chosen later, prepare its data owner, synthetic fixture, run-ledger, and shadow/rollback contract |
 | H3 | Consultant operational input | Obtain AJ/Ezel/consultant reports before thresholds, confidence, or pilot acceptance | Consultants + Carl | External blocker | Report template and evidence schema |
 | A2 | AdminStageDetail extraction | Permit only pure display seams after owner review; behavior-bearing seams remain with TOM/RBAC/Client Health | Codebase + TOM/RBAC | Blocked on contract/oracle clearance | Finalize call graph and seam decision table |
 
@@ -130,10 +130,11 @@ than `normal`/`stable`. The remaining gates are different:
   deployed-source reconciliation are complete. They found no cron/history/
   output activity and material source-schema mismatches, so the current
   recommendation is to retain the legacy jobs and keep them stopped without
-  repair. The remaining gate is the Client Health/data owner and Carl's
-  disposition: keep them as evidence/mark unavailable, or separately authorize
-  a replacement-shadow packet. A replacement still needs a named data owner,
-  synthetic fixtures, a versioned run ledger, and a shadow/rollback contract.
+  repair. Carl and the Client Health/data owner approved retaining them as
+  evidence, keeping them stopped, and marking the consumer result unavailable.
+  A replacement-shadow packet remains a separate future authorization and
+  still needs a named data owner, synthetic fixtures, a versioned run ledger,
+  and a shadow/rollback contract.
 - **H3:** obtain consultant operational reports covering cadence, blocker
   ownership, intervention patterns, quiet/data-insufficient examples, and
   pilot usefulness. Thresholds, confidence semantics, cohort selection, and
