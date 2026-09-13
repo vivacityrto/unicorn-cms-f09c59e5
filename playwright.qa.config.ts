@@ -63,6 +63,11 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "qa-anonymous",
+      testMatch: /anonymous\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       name: "qa-superadmin",
       testMatch: /superadmin\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/qa-superadmin.json" },
