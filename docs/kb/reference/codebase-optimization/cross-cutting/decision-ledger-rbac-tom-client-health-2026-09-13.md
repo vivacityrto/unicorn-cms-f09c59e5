@@ -1,11 +1,11 @@
 # Cross-initiative decision ledger — RBAC, TOM, and Client Health
 
-> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A6 settled, A7 is the current discussion; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
+> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A6 settled, A7 synthetic QA fixture seeded and verified, A7 characterization run still gated
 > **Purpose:** one canonical ledger for the remaining decisions Carl must approve, review, or analyze before continuous implementation
 > **Inputs:** [RBAC P1-s resource dispositions](../../rbac-v6/p1/p1-s-aj-csc-resource-disposition-recommendation.md), [RBAC P1-r read-resource QA gate](../../rbac-v6/p1/p1-r-aj-csc-read-resource-decomposition-and-qa-gate.md), [RBAC P1-q live read-boundary reconciliation](../../rbac-v6/p1/p1-q-aj-csc-live-read-boundary-reconciliation.md), [approval-unblock matrix](approval-unblock-matrix-2026-09-12.md), [unattended-preparation authorization matrix](unattended-preparation-authorization-matrix-2026-09-13.md), [Program Index](../../program-index.md)
 > **Owners:** Carl for product/policy approvals; RBAC for capability and server-boundary design; TOM for relationship semantics; Client Health for metric/data semantics; security for privileged-boundary review
 > **Evidence baseline:** `origin/main` at the time of this packet; live read-only Supabase metadata reconciled 2026-09-13
-> **Audit entry:** none needed — planning and decision tracking only; no operational or production state changed
+> **Audit entry:** none needed — synthetic non-production QA fixture only; no production, schema, authorization, or credential state changed
 
 ## How to use this ledger
 
@@ -39,7 +39,7 @@ Status meanings:
 | **A4** | Define internal-staff visibility for these resources | **settled — approved by Carl 2026-09-13** | Internal Vivacity CSCs have full portfolio-wide tenant-operational access, with actions recorded in timeline activity; platform security administration remains separate | A5 security-boundary investigation |
 | **A5** | Authorize the security-boundary investigation | **settled — approved by Carl 2026-09-13** | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement; remediation remains separately gated | A6 client-stage state classification |
 | **A6** | Classify client stage state | **settled — approved by Carl 2026-09-13** | TOM/domain owns the canonical lifecycle; Client Health may consume status/date/derived `node_state` as operational evidence; client workflows may display the approved subset | A7 TOM hosted-QA preflight |
-| **A7** | Authorize TOM hosted-QA preflight | **preflight details populated — execution approval pending** | Use the existing allowlisted non-production `unicorn-qa` target and offline fixture manifest; remaining gates are short-lived identities/storage states, operator/window, and private artifact owner/retention | One read-only `unicorn-qa` run |
+| **A7** | Authorize TOM hosted-QA preflight | **synthetic fixture seeded and read-only verified 2026-09-13; characterization run pending** | Use the existing allowlisted non-production `unicorn-qa` target and the [seed record](../../tenant-operating-model/p0/p0-2-qa-fixture-seed-record-2026-09-13.md); remaining gates are short-lived identities/storage states, operator/window, and private artifact owner/retention | One read-only `unicorn-qa` run |
 | **A8** | Resolve Client Health semantic gates | awaiting external data/Carl | Keep thresholds, cohorts, confidence semantics, and pilot acceptance gated on consultant operational input | H1 metric/corpus decisions and later implementation |
 
 The order is intentional: A1 fixes the target shape before A2–A4 can be
@@ -196,6 +196,11 @@ RBAC pass to representative and cross-tenant package/client-stage cases plus
 disabled/inactive negative cases. This avoids paying for the full TOM query
 family matrix before the specific A2 resources are characterized.
 
+The synthetic fixture was seeded on 2026-09-13 in the allowlisted QA project;
+the seed record documents its run tag, aggregate production-shape comparison,
+counts, and read-only verification. The seed is not an observation result and
+does not provide browser credentials for the approved personas.
+
 This is execution authorization, not blanket authorization for migrations,
 ghost-contact promotion, permission changes, or production observation. No
 hosted run should begin until the three missing fields are named and Carl
@@ -232,7 +237,8 @@ These are not part of the current approval sequence:
 Once A1–A6 are resolved and A5 is either authorized or explicitly parked:
 
 1. finalize the bounded package-instance/client-stage characterization packet;
-2. run one safe read-only QA pass with the current path authoritative;
+2. complete the missing QA identity/operator/artifact gates and run one safe
+   read-only QA pass with the current path authoritative;
 3. write a separate implementation packet for only the verified smallest row;
 4. implement with direct server allow/deny evidence, rollback, audit owner,
    and full verification; and
@@ -253,6 +259,7 @@ node scripts/check-kb-doc-size.mjs
 git diff --check
 ```
 
-Frontend, Edge, database, authorization, credential, hosted-QA, and live
-mutation verification are not applicable because no runtime or environment
-changed.
+Frontend, Edge, database, authorization, credential, and live-mutation
+verification are not applicable. Hosted QA data was seeded only in the
+allowlisted non-production project; the browser/query characterization run
+remains pending its separate preflight gates.
