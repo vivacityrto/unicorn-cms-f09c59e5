@@ -1,10 +1,10 @@
 # Codebase Optimization and KB Renewal Plan
 
-> **Last updated:** 2026-09-09 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements and the May–August change history; medium on effort and net-LOC forecasts until each slice completes its characterization pass.
+> **Last updated:** 2026-09-14 · **Reconsider by:** 2026-11-28 · **Confidence:** high on repository measurements, merged Phase 4 evidence, and the May–August change history; medium on effort and net-LOC forecasts for future work.
 >
 > **Opening baseline:** `unicorn-cms-f09c59e5@e91d013d` (`origin/main`, measured 2026-08-28 after PRs #457–#458). This historical baseline is retained below for comparison.
 >
-> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; the Phase 3 pilot is complete (P7-A/B/C/D all implemented and merged, 2026-09-10). This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
+> **Status:** Phase 2.5 is closed as a prerequisite gate; Phase 2.6 stabilization/retirement is active and partly shipped; the Phase 3 pilot is complete (P7-A/B/C/D all implemented and merged, 2026-09-10); and Phase 4 P6 hotspot slices 1-8 are complete (joint exit re-audit 2026-09-11), with no Phase 4 slice 9 recommended. Phase 5 is not started. This plan remains an authorization boundary: it authorizes no production deployment, migration, branch deletion, or feature retirement by itself.
 >
 > **Program index:** [Program Index](program-index.md)
 >
@@ -19,6 +19,16 @@
 > **Evidence:** [Progress log](codebase-optimization-plan-progress-log.md); phase-level evidence lives in each `codebase-optimization/<phase>/` folder
 >
 > **Audit entry:** none at the program level — individual packets record their own per `docs/audit-log/entries/`
+
+## Current truth-sync (2026-09-14)
+
+The [Phase 4 joint exit re-audit](codebase-optimization/phase-4/p6-exit-reaudit-joint-recommendation.md)
+closed the P6 hotspot program at slices 1-8. The re-audit's remaining large-file
+candidates are routed to the owning Tenant Operating Model, RBAC v6, or Client
+Health discovery gates, or to a joint ownership matrix; they are not an
+unassigned Phase 4 backlog. The earlier instruction below to finish slices 5-8
+and then re-audit is retained as historical sequencing evidence. Any future
+Phase 5 or Phase 2.6 work needs its own bounded packet and authorization.
 
 ## 1. Executive decision
 
@@ -373,7 +383,7 @@ P4 target states are design hypotheses, not implementation instructions. Before 
 
 Migrate one response shape family at a time. Some callers may depend on raw JSON rather than `{ ok, data }`; shared code must preserve each public contract or version it deliberately.
 
-### P6 — active hotspot slices
+### P6 — hotspot slices (Phase 4 closed)
 
 Do not create one “large-files cleanup” PR. Use one workflow slice per PR:
 
@@ -397,19 +407,17 @@ document responsibilities") but was never added to the ranked list above —
 a pre-existing omission, not new drift. Current measured progress (`npm
 run metrics`, 2026-09-11): 115 files over 600 lines and 32 over 1000,
 against this plan's own §10 targets of under 80 and under 20 — slices 1-4
-closed and slices 5-8 alone will not reach those targets. **Do not run a
-fresh hotspot audit mid-backlog** (respects the workflow-efficiency
-practice of pausing at phase boundaries, not mid-phase). Instead: finish
-slices 5-8 as ranked above, then run one bounded Phase 4 exit re-audit
-(fresh `npm run metrics` + a top-N largest/most-complex-file review,
-explicitly including `AdminStageDetail.tsx`) before declaring Phase 4
-complete or moving to Phase 5. That re-audit must be **cross-initiative**,
-not Codebase-Optimization-only: any candidate touching tenant identity,
-authorization, messaging, or health analytics (e.g. `ManageTenants.tsx`,
-`TenantUsersTab.tsx`) gets reconciled against RBAC v6's/Tenant Operating
-Model's/Client Health's own discovery scope first, per this plan's own
-routing crosswalk above — one shared characterization and one clear owner,
-never separate per-initiative characterization of the same file.
+closed and slices 5-8 alone were not expected to reach those targets. The
+historical instruction to defer a fresh hotspot audit until the Phase 4
+backlog was complete has now been satisfied: the bounded, cross-initiative
+[Phase 4 exit re-audit](codebase-optimization/phase-4/p6-exit-reaudit-joint-recommendation.md)
+reviewed the new candidates, explicitly including `AdminStageDetail.tsx`,
+and recommended no Phase 4 slice 9. Any candidate touching tenant identity,
+authorization, messaging, or health analytics (for example,
+`ManageTenants.tsx` or `TenantUsersTab.tsx`) remains routed to the owning
+initiative's discovery scope or a joint ownership matrix — one shared
+characterization and one clear owner, never separate per-initiative
+characterization of the same file.
 
 Per-slice targets:
 
@@ -589,9 +597,12 @@ The entire optimization program does not need to finish before RBAC v6. Converse
 
 **Exit gate:** the convention is demonstrably smaller/easier than the original and can be copied without creating boilerplate.
 
-### Phase 4 — active hotspot program (one workflow per PR)
+### Phase 4 — hotspot program (closed; one workflow per PR)
 
-Follow the P6 order, re-ranking when live incidents or roadmap needs change. Stop after each slice to measure whether change lead time, file size, testability, and LOC are improving.
+The ranked P6 order was executed as one workflow per PR. Slices 1-8 are now
+closed; follow-on candidates are recorded in the exit re-audit and must route
+through the owning initiative or a new approved packet rather than reopening P6
+by assumption.
 
 **Exit gate per slice:** named workflow tests and browser checks pass; no permission/data-contract regression; before/after metrics recorded.
 

@@ -1,6 +1,6 @@
 # RBAC v6 — Authorization Implementation and Gate-Streamlining Plan
 
-> **Last updated:** 2026-09-10 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code, live-database, and agreed policy-baseline findings; medium on the target capability catalogue and implementation sequencing; low on delivery estimates until the remaining characterization and route-manifest prerequisites are complete.
+> **Last updated:** 2026-09-14 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code, live-database, and agreed policy-baseline findings; medium on the target capability catalogue and implementation sequencing; low on delivery estimates until the remaining packet-level review gates are complete.
 >
 > **Reflects:** the original `origin/main@853c9e18` and read-only production metadata snapshot from 2026-09-01; a fresh operational-regression council review against `origin/main@73a61b2f9` on 2026-09-03; the historical [RBAC v6 gate-closure handoff](../handoffs/rbac-v6-gate-closure-plan.md); the [tenant operating-model architecture plan](tenant-operating-model-data-architecture-plan-2026-09-02.md); and the assumed completed target state of the [codebase optimization plan](codebase-optimization-plan-2026-08-28.md).
 >
@@ -19,6 +19,22 @@
 > **Evidence:** §3 "Evidence snapshot" and §15 "Council amendment ledger" within this doc
 >
 > **Audit entry:** none at the program level — implementation PRs record their own per `docs/audit-log/entries/`, required for every schema/RLS/RPC/trigger/data-backfill change
+
+## Current truth-sync (2026-09-14)
+
+All 15 §13 decision items have a recorded disposition, and Packet P0.1 is
+complete: both the static and live-database inventories confirmed the plan's
+85 active features and 523 role-permission rows. P1 preparation is also
+delivered through the row-by-row golden-preparation ledger, including source
+boundaries, relationship proof, denial cases, owners, readiness, and explicit
+policy-state fields for all rows.
+
+This remains preparation, not authorization. No golden row has become approved
+policy, and no role default, shadow telemetry, pilot enrollment, permission
+grant, migration, or enforcement cutover is authorized by these documents.
+The next work is packet-level reconciliation of the remaining rows and
+implementation sequence, with product/security review where the linked gate
+packets require it.
 
 ## 1. Executive decision
 
