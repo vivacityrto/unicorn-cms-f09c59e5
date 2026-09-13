@@ -4,7 +4,7 @@
 > **Status:** evidence crosswalk prepared for owner review; it approves no policy, capability row, fixture mutation, or production action
 > **Owner:** Tenant Operating Model with RBAC v6 and Client Health Activity Analytics
 > **Inputs:** [TOM P0.2/P0.3 baseline packet](p0-2-p0-3-disposable-baseline-characterization.md), [cardinality/query-family follow-up](p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md), [RBAC P1-l review draft](../../rbac-v6/p1/p1-l-aj-csc-golden-matrix-review-draft.md), [RBAC staff consumer inventory](../../rbac-v6/p1/p1-g-staff-internal-consumer-inventory.md), [Client Health plan](../../client-health-activity-analytics-plan-2026-09-03.md)
-> **Evidence context:** current repository `origin/main@346e75d9`; live aggregate/publication reads in the linked follow-up were captured against `origin/main@2de9e154`
+> **Evidence context:** current repository `origin/main@346e75d9`; live aggregate/publication reads in the linked follow-up were captured against `origin/main@2de9e154`; protected address follow-up is recorded in the [address audit entry](../../../../audit-log/entries/2026-09-13-tom-address-browser-characterization.md)
 
 ## Purpose and boundary
 
@@ -29,11 +29,11 @@ credential change is authorized.
 | --- | --- | --- | --- | --- |
 | Portfolio directory and first tenant detail read model | Staff personas reached `/manage-tenants` and a tenant detail route in protected run `34755463485`; production has 416 tenants | ADR-030 preserves broad all-tenant read for active internal staff; this does not grant sensitive writes | Tenant identity/lifecycle/package context is a parent TOM dependency for health consumers | Read characterization is consistent; keep broad-read observation separate from future action rows |
 | Tenant members/users/contacts | QA has 19 members/users and 10 contacts; production has 936 members, 576 users, 114 contacts | Relationship and target proof remain distinct from broad internal read; ghost/contact actions need specific gates | Contact/member provenance must remain explicit before an activity or health fact is attributed | QA fixture is useful for bounded rows but not representative cardinality |
-| Addresses, relationships, CSC assignments, connected tenants | QA has zero rows; production has 722 addresses, 2 relationships, 149 assignments, 109 connected tenants | Assignment/relationship semantics remain TOM-owned inputs to any capability scope | Health/triage must use resolved tenant identity and not infer ownership from missing rows | Requires approved synthetic QA expansion before browser characterization |
+| Addresses, relationships, CSC assignments, connected tenants | QA has 3 synthetic addresses, 1 relationship, 2 assignments, and 2 connected tenants; production has 722 addresses, 2 relationships, 149 assignments, and 109 connected tenants; the protected address route/card reached but its populated query returned HTTP 400 | Assignment/relationship semantics remain TOM-owned inputs to any capability scope | Health/triage must use resolved tenant identity and not infer ownership from missing rows | Relationship/assignment/connection reads are observed; address query/lookup contract remains open |
 | Messages, conversations, participants | QA has 18 messages and 9 conversations but zero participants; production has 701 messages, 506 conversations, 2,216 participants | Cross-tenant retrieval requires target scope and relationship proof; staff identity alone is not a universal retrieval grant | Ask Viv may cite only authorized, attributable facts and must preserve tenant boundaries | Query family is partially present but authorization-negative participant cases are unexercised |
 | Export/download and SharePoint actions | No export invocation was made in the protected read-only run; source contains SharePoint Edge calls | Export-like, credential, and external-side-effect actions need action-specific security review | Health data cannot be exported or sent to an external system by inference from read access | Keep outside current QA run until an explicit safe export oracle and owner are named |
 | Realtime directory refresh | `ManageTenants.tsx` subscribes to `packages` and `tenant_csc_assignments`; production publication check included only `tenant_conversations` and `tenant_messages` | A listener is not an authorization decision; any future change needs explicit server/publication review | Realtime refresh must not manufacture freshness or health certainty | Current source/runtime mismatch is characterized; no repair in this packet |
-| Ask Viv route, history, and generation | Staff route reached the current rollout-unavailable card; QA has zero Ask Viv conversations/turns; no generation was attempted | Retrieval scope, exact capability, target tenant, and privacy/security review remain required | Missing/stale sources stay unavailable/unknown; LLM does not own totals, dates, risk, or permissions | Route reachability is characterized; enabled-ring history/generation remains open |
+| Ask Viv route, history, and generation | Staff route reached the current rollout-unavailable card; QA has 1 synthetic conversation and 2 turns; the observed route read turns but did not issue a separate conversation-history request; no generation was attempted | Retrieval scope, exact capability, target tenant, and privacy/security review remain required | Missing/stale sources stay unavailable/unknown; LLM does not own totals, dates, risk, or permissions | Route/turn reachability is characterized; conversation-list, enabled-ring history, and generation remain open |
 | Forecast/risk/retention inputs | This packet does not read or repair forecast outputs; the Client Health plan records empty/failed source behavior | No new analytics permission or broad definer path may be inferred from current UI | Existing consumers must preserve unavailable/unknown semantics until source/freshness gates close | Keep in Client Health owner gate, not TOM QA fixture scope |
 
 ## Review conclusions
@@ -58,9 +58,9 @@ implementation-ready policy row.
 
 ## Owner decisions still needed
 
-1. **TOM/RBAC/Client Health:** approve the QA-only fixture expansion needed to
-   populate addresses, relationships, CSC assignments, connected tenants,
-   conversation participants, and representative Ask Viv history.
+1. **TOM/RBAC/Client Health:** review the executed QA-only fixture expansion,
+   including the address query/lookup 400 and the observed Ask Viv owner-scoped
+   history behavior.
 2. **TOM/RBAC/security:** decide whether the current package/CSC listener
    publication gap is an accepted legacy behavior to document or a separately
    authorized Realtime repair candidate.

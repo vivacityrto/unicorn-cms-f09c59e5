@@ -1,11 +1,12 @@
 # TOM P0.2/P0.3 — cardinality and query-family follow-up
 
 > **Last updated:** 2026-09-13
-> **Status:** read-only production/QA cardinality comparison complete; approved representative fixture expansion seeded and protected run completed; address/Ask Viv conversation-history browser gaps and cross-initiative owner review remain open
+> **Status:** read-only production/QA cardinality comparison complete; approved representative fixture expansion seeded and protected run completed; address route/card reached but its populated query returned HTTP 400; separate Ask Viv conversation-history browser gap and cross-initiative owner review remain open
 > **Owner:** Tenant Operating Model, with RBAC and Client Health review
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Cross-initiative review:** [owner-review matrix](p0-2-p0-3-cross-initiative-review-2026-09-13.md)
 > **Next approval packet:** [representative query-family fixture contract](p0-2-p0-3-representative-query-fixture-contract-2026-09-13.md)
+> **Address evidence:** [protected tenant-address characterization](../../../../audit-log/entries/2026-09-13-tom-address-browser-characterization.md)
 > **Production rule:** this document records aggregate reads and source inspection only; it authorizes no schema, RLS, grant, Realtime, Edge, cron, data, or credential change
 
 ## Scope and method
@@ -31,7 +32,7 @@ relations:
 | `tenant_members` | 19 | 936 | relationship cardinality exists but is not production-shaped |
 | `tenant_users` | 19 | 576 | same QA members/users count is intentional fixture simplification |
 | `tenant_contacts` | 10 | 114 | contacts are present, but not at production breadth |
-| `tenant_addresses` | 3 synthetic | 722 | rows now exist, but the current browser spec does not reach the address surface |
+| `tenant_addresses` | 3 synthetic | 722 | protected route/card reached, but the populated nested query returned HTTP 400; row rendering is not claimed |
 | `tenant_relationships` | 1 synthetic | 2 | relationship read path observed in protected staff waterfall |
 | `tenant_csc_assignments` | 2 synthetic | 149 | assignment read path observed in protected staff waterfall |
 | `connected_tenants` | 2 synthetic | 109 | connected-tenant read path observed in protected staff waterfall |
@@ -61,7 +62,7 @@ budgets:
 | `tenant_members` | 5 / 1 / 4 / 7 / 9 / 19 | 754 / 1 / 1 / 2 / 29 / 936 |
 | `tenant_users` | 5 / 1 / 4 / 7 / 9 / 19 | 411 / 1 / 1 / 2 / 29 / 576 |
 | `tenant_contacts` | 4 / 1 / 2 / 4.1 / 5 / 10 | 28 / 1 / 2.5 / 9.2 / 15 / 114 |
-| `tenant_addresses` | 0 / — / — / — / — / 0 | 373 / 1 / 2 / 3 / 22 / 722 |
+| `tenant_addresses` | 3 synthetic; browser query 400 | 373 / 1 / 2 / 3 / 22 / 722 |
 | `package_instances` | 4 / 1 / 2 / 3.4 / 4 / 9 | 354 / 1 / 2 / 6 / 19 / 1,052 |
 | `tenant_messages` | 4 / 4 / 4 / 5.4 / 6 / 18 | 58 / 1 / 10 / 16 / 88 / 701 |
 | `tenant_conversations` | 4 / 2 / 2 / 2.7 / 3 / 9 | 59 / 1 / 10 / 12 / 18 / 506 |
@@ -92,7 +93,7 @@ implementation defect to repair inside this evidence packet.
 | --- | --- | --- |
 | Portfolio directory list, search, filters, package lookup | Protected staff/CSC navigation and waterfall evidence in the parent packet | Bounded current behavior characterized; full-cardinality strata still open |
 | Tenant detail read model | Staff-only navigation passed in protected run `34755463485` | Read shell characterized; child relations and largest-tenant detail breadth remain open |
-| Address and relationship reads | Synthetic rows now exist; relationship waterfall observed, address UI not reached | Address browser evidence remains open; production Realtime publication gap remains noted above |
+| Address and relationship reads | Synthetic rows exist; relationship waterfall observed; protected address route/card reached with no page errors | Address query returned HTTP 400 and did not render the seeded row; query/lookup contract review remains open; production Realtime publication gap remains noted above |
 | CSC assignment and connected-tenant reads | Synthetic rows now exist; both read families observed in protected staff waterfall | Negative/authorization and production-scale evidence remain owner-gated |
 | Export/download paths | No safe export invocation in the current protected run | Requires a specifically scoped read-only export oracle and approved safe fixture |
 | Realtime event delivery | Static listener source and publication membership inspected | Delivery/refresh behavior remains unexercised; do not mutate data in this packet |
