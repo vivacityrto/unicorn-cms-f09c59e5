@@ -112,6 +112,14 @@ complete assessment. A missing or failed run remains unknown.
 
 ## H0.3b/H0.3c job disposition packet
 
+The read-only source/live-schema/caller/cron/log reconciliation is complete in
+[H0.3b/c forecast-job disposition evidence](h0-3b-3c-forecast-job-disposition-evidence.md).
+It recommends retire/mark-unavailable for both current composite jobs while
+retaining their deployed functions, tables, views, and history as evidence.
+Formal owner disposition or a new shadow-replacement packet is still required;
+this evidence does not authorize deletion, repair, redeploy, cron restart, or
+backfill.
+
 The two named forecast functions require separate source-to-consumer evidence
 before anyone repairs or retires them:
 

@@ -635,12 +635,12 @@ Every PR starts from fresh `origin/main` in its own worktree. Regenerate source/
 
 #### H0.3b — Risk-job consumer inventory and disposition
 
-- Characterize the `run-tenant-risk-forecast` 500 with logs and source/live-schema comparison.
+- Characterize the `run-tenant-risk-forecast` 500 with logs and source/live-schema comparison. **Evidence delivered 2026-09-13:** [H0.3b/c forecast-job disposition evidence](client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md) recommends retire/mark unavailable for the current composite contract; owner disposition remains open.
 - Prove whether it has a live consumer. Repair into a validated versioned shadow job or retire/mark unavailable; do not rebuild an obsolete job by assumption.
 
 #### H0.3c — Retention-job consumer inventory and disposition
 
-- Characterize the `run-retention-forecast` 500 and known source-schema mismatches.
+- Characterize the `run-retention-forecast` 500 and known source-schema mismatches. **Evidence delivered 2026-09-13:** [H0.3b/c forecast-job disposition evidence](client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md) documents three material input mismatches and recommends retire/mark unavailable for the current composite contract; owner disposition remains open.
 - Prove live consumers and business ownership. Repair into a validated versioned shadow job or retire/mark unavailable.
 
 #### H0.3d — Unknown-state consumer adoption
