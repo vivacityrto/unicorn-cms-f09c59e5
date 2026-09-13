@@ -7,7 +7,7 @@ import { Loader2, DollarSign } from 'lucide-react';
 import { useRetentionOverview } from '@/hooks/useRetentionForecast';
 
 export function CommercialRiskWidget() {
-  const { data, isLoading } = useRetentionOverview();
+  const { data, isLoading, isError } = useRetentionOverview();
 
   if (isLoading) {
     return (
@@ -19,7 +19,7 @@ export function CommercialRiskWidget() {
     );
   }
 
-  if (!data || data.total === 0) {
+  if (isError || !data || data.sourceStatus === 'unavailable') {
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -28,7 +28,9 @@ export function CommercialRiskWidget() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-muted-foreground">No retention data available.</p>
+          <p role="status" className="text-xs text-muted-foreground">
+            Retention assessment unavailable. No accepted forecast is available.
+          </p>
         </CardContent>
       </Card>
     );

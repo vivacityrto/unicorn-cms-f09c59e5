@@ -6,11 +6,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
-type RetentionForecastSummary = Pick<
+export type RetentionForecastSummary = Pick<
   Tables<'tenant_retention_forecasts'>,
   'tenant_id' | 'retention_status' | 'composite_retention_risk_index' | 'forecast_date'
 >;
-type CommercialProfileSummary = Pick<
+export type CommercialProfileSummary = Pick<
   Tables<'tenant_commercial_profiles'>,
   'tenant_id' | 'contract_end_date' | 'average_monthly_revenue'
 >;
@@ -65,6 +65,7 @@ export function useRetentionTrend(tenantId?: number) {
 }
 
 export interface RetentionOverview {
+  sourceStatus: 'reported' | 'unavailable';
   stable: number;
   watch: number;
   vulnerable: number;
@@ -73,6 +74,57 @@ export interface RetentionOverview {
   within_renewal_90: number;
   high_risk_in_renewal: number;
   revenue_at_risk: number;
+}
+
+export function summarizeRetentionOverview(
+  forecasts: RetentionForecastSummary[],
+  profiles: CommercialProfileSummary[],
+  now = new Date(),
+): RetentionOverview {
+  // Deduplicate: keep latest per tenant. The query orders by forecast_date
+  // descending before calling this function.
+  const latest = new Map<number, RetentionForecastSummary>();
+  forecasts.forEach((f) => {
+    if (!latest.has(f.tenant_id)) latest.set(f.tenant_id, f);
+  });
+
+  const all = Array.from(latest.values());
+  const profileMap = new Map<number, CommercialProfileSummary>();
+  profiles.forEach((p) => profileMap.set(p.tenant_id, p));
+
+  const in90 = new Date(now.getTime() + 90 * 86400000);
+
+  let stable = 0, watch = 0, vulnerable = 0, high_risk = 0;
+  let within_renewal_90 = 0, high_risk_in_renewal = 0;
+  let revenue_at_risk = 0;
+
+  all.forEach((f) => {
+    if (f.retention_status === 'stable') stable++;
+    else if (f.retention_status === 'watch') watch++;
+    else if (f.retention_status === 'vulnerable') vulnerable++;
+    else if (f.retention_status === 'high_risk') high_risk++;
+
+    const prof = profileMap.get(f.tenant_id);
+    if (prof?.contract_end_date) {
+      const end = new Date(prof.contract_end_date);
+      if (end <= in90 && end >= now) {
+        within_renewal_90++;
+        if (f.retention_status === 'high_risk') high_risk_in_renewal++;
+      }
+    }
+    if (f.retention_status === 'high_risk' && prof?.average_monthly_revenue) {
+      revenue_at_risk += Number(prof.average_monthly_revenue) * 6;
+    }
+  });
+
+  return {
+    sourceStatus: all.length > 0 ? 'reported' : 'unavailable',
+    stable, watch, vulnerable, high_risk,
+    total: all.length,
+    within_renewal_90,
+    high_risk_in_renewal,
+    revenue_at_risk,
+  };
 }
 
 export function useRetentionOverview() {
@@ -86,55 +138,12 @@ export function useRetentionOverview() {
         .order('forecast_date', { ascending: false });
       if (error) throw error;
 
-      // Deduplicate: keep latest per tenant
-      const latest = new Map<number, RetentionForecastSummary>();
-      (forecasts ?? []).forEach((f) => {
-        if (!latest.has(f.tenant_id)) latest.set(f.tenant_id, f);
-      });
-
-      const all = Array.from(latest.values());
-
       // Get commercial profiles for renewal/revenue data
       const { data: profiles } = await supabase
         .from('tenant_commercial_profiles')
         .select('tenant_id, contract_end_date, average_monthly_revenue');
 
-      const profileMap = new Map<number, CommercialProfileSummary>();
-      (profiles ?? []).forEach((p) => profileMap.set(p.tenant_id, p));
-
-      const now = new Date();
-      const in90 = new Date(Date.now() + 90 * 86400000);
-
-      let stable = 0, watch = 0, vulnerable = 0, high_risk = 0;
-      let within_renewal_90 = 0, high_risk_in_renewal = 0;
-      let revenue_at_risk = 0;
-
-      all.forEach((f) => {
-        if (f.retention_status === 'stable') stable++;
-        else if (f.retention_status === 'watch') watch++;
-        else if (f.retention_status === 'vulnerable') vulnerable++;
-        else if (f.retention_status === 'high_risk') high_risk++;
-
-        const prof = profileMap.get(f.tenant_id);
-        if (prof?.contract_end_date) {
-          const end = new Date(prof.contract_end_date);
-          if (end <= in90 && end >= now) {
-            within_renewal_90++;
-            if (f.retention_status === 'high_risk') high_risk_in_renewal++;
-          }
-        }
-        if (f.retention_status === 'high_risk' && prof?.average_monthly_revenue) {
-          revenue_at_risk += Number(prof.average_monthly_revenue) * 6;
-        }
-      });
-
-      return {
-        stable, watch, vulnerable, high_risk,
-        total: all.length,
-        within_renewal_90,
-        high_risk_in_renewal,
-        revenue_at_risk,
-      } as RetentionOverview;
+      return summarizeRetentionOverview(forecasts ?? [], profiles ?? []);
     },
   });
 }
