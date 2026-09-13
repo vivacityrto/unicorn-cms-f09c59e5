@@ -1,6 +1,6 @@
 # Client Health, Client Activity, Consultant Triage, and Intervention Analytics Plan
 
-> **Status:** council-reviewed implementation plan; no implementation or production mutation in this planning session
+> **Status:** council-reviewed implementation plan; H1 unknown-state consumer containment delivered 2026-09-13; forecast-job/source disposition and metric policy remain gated
 > **Prepared:** 2026-09-03
 > **Repository baseline:** `origin/main@31083c49` plus the planning commits on `chore/tenant-data-model-optimization-plan`
 > **Planning worktree:** `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -36,6 +36,16 @@ The Phase 2.6 M4 decision now retires the legacy forecast/health cron lane
 (jobs 14, 15, 20 and 21); its tables, historical rows and Edge Functions are
 retained as evidence, and any replacement schedule requires a new Client
 Health contract, tests and audit entry.
+
+The approved H1 unknown-state direction has since been implemented in five
+bounded, read-only consumer slices: the executive retention overview and team
+capacity widgets, dashboard triage, Ask Viv portfolio facts, and Ask Viv
+`compare_clients`. Those consumers now represent missing or failed burn and
+retention sources as unavailable without changing the underlying views,
+forecast jobs, cron, schema, RLS, or production data. The remaining H0.3 work
+is source freshness/quality and forecast-job disposition; it remains gated on
+the source/live-schema/ownership evidence and the consultant-data dependency
+described below.
 
 ### Current research dependency — consultant operational input outstanding
 
@@ -641,10 +651,11 @@ Every PR starts from fresh `origin/main` in its own worktree. Regenerate source/
 
 **Preparation packet:** [H0.3 risk/retention consumers and unknown-state disposition](client-health-activity-analytics/h0/h0-3-risk-retention-consumer-unknown-state-packet.md)
 defines the current consumer inventory, source-state vocabulary, job evidence
-requirements, consultant-data dependency, and implementation gates. It does
-not authorize a forecast repair or consumer change.
+requirements, consultant-data dependency, and implementation gates. Its H0.3d
+consumer-containment direction is delivered in the five slices recorded
+there; it does not authorize a forecast repair or source/metric policy change.
 
-**Exit:** jobs either produce validated versioned shadow outputs or expose explicit unavailable state; no silent zero-risk fallback.
+**Exit:** jobs either produce validated versioned shadow outputs or expose explicit unavailable state; no silent zero-risk fallback. The consumer half of this exit is delivered; the job/source half remains open.
 
 #### H0.4 — Verification environment, measured baselines and proposed budgets
 
