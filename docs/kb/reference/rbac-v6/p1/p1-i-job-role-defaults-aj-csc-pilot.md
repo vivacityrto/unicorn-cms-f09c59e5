@@ -151,7 +151,12 @@ revertible; no pilot enrollment is authorized by this worksheet.
 
 ## Decisions and prerequisites
 
-The packet is ready for product/security review when owners confirm:
+The packet is ready for product/security review when owners confirm. The
+source-boundary preparation in [P1-k](p1-k-aj-csc-source-boundary-preparation.md)
+must be read alongside this worksheet; it identifies why the initial read rows
+are not yet implementation-ready.
+
+Owners must confirm:
 
 - the seat boundaries above, including Team Leader/CET/Team Member migration
   treatment;
