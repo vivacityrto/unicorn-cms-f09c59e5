@@ -1,9 +1,10 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; corrected protected run `34757778368` passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; address route/card follow-up run `34759865158` passed with the populated address query returning HTTP 400 (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** [2026-09-13 TOM representative QA query-family fixture expansion](../../../../audit-log/entries/2026-09-13-tom-representative-qa-fixture-expansion.md)
+> **Address audit entry:** [2026-09-13 TOM tenant-address browser characterization](../../../../audit-log/entries/2026-09-13-tom-address-browser-characterization.md)
 
 ## Purpose and boundary
 
@@ -194,13 +195,22 @@ unexercised rather than being treated as empty or unavailable. Production
 aggregate counts for all seven expanded families were unchanged after the
 QA-only operation.
 
+The separately scoped address follow-up
+[`34759865158`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34759865158)
+completed with `88 passed, 48 skipped` and no failures. The protected
+SuperAdmin route rendered the `Addresses` heading without page errors, but the
+underlying `tenant_addresses` request returned HTTP `400`, so the seeded
+address row is not claimed as browser-rendered. The test records this as a
+current QA query/read-shape gap; it did not change the empty QA
+`dd_address_type` lookup or any schema, RLS, grant, or production behavior.
+
 ## Remaining P0.2/P0.3 gates
 
 The fixture and nine browser-capable QA identities now exist, and the expanded
 bounded browser run is recorded above. Before calling the broader P0.2/P0.3
 packet complete, it still needs:
 
-1. address UI and Ask Viv conversation-history browser coverage, plus
+1. address query/lookup-contract review and Ask Viv conversation-history browser coverage, plus
    representative full-cardinality and unexercised detail/export/Realtime/
    RPC/Edge/Ask Viv query-family coverage; and
 2. RBAC, Client Health, and TOM owner review of authorization, provenance,
