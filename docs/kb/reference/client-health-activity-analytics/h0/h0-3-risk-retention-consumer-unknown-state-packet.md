@@ -1,6 +1,6 @@
 # Client Health H0.3 — risk/retention consumers and unknown-state disposition
 
-> **Last updated:** 2026-09-13 · **Status:** planning packet; H1 unknown-state semantics approved 2026-09-12; no consumer, forecast, cron, schema, or production change authorized
+> **Last updated:** 2026-09-13 · **Status:** planning packet; H1 unknown-state semantics approved 2026-09-12; bounded retention-overview consumer containment is authorized/in progress; no forecast, cron, schema, or production change authorized
 > **Parent plan:** [Client Health Activity Analytics Plan](../../client-health-activity-analytics-plan-2026-09-03.md)
 > **Inputs:** [H0.1-b dashboard query characterization](h0-1-b-dashboard-query-family-characterization.md); [H0.1-c synthetic fixture scope](h0-1-c-dashboard-query-synthetic-fixture-scope.md); [P3-A consumer characterization](../../codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md); [consultant research project pack](../../../handoffs/client-health-consultant-research-project-pack.md)
 > **Owner:** Client Health, with TOM, RBAC, security, and consultant review
@@ -198,6 +198,22 @@ The H0.3 preparation packet is complete for implementation review when:
 | Portfolio/Ask Viv authorization | RBAC + TOM | Confirm ADR-030 staff scope and current tenant/resource proof |
 | Operational semantics and pilot usefulness | AJ/Ezel/consultants + Carl | Consolidated reports before H1 thresholds, confidence, or pilot acceptance |
 | Any code/view/RPC/cron/schema/data change | Named implementation owner | Separate authorization, focused tests, verification, rollback, and audit entry |
+
+## H1 retention-overview containment — authorized bounded implementation
+
+The first H1 consumer slice is the executive `CommercialRiskWidget` and its
+`useRetentionOverview` hook. The frontend now carries an explicit
+`sourceStatus` for the retention overview: an empty forecast result is
+`unavailable`, while a non-empty result remains `reported` and preserves the
+existing latest-per-tenant aggregation and revenue/renewal calculations. The
+widget also renders the same caller-safe unavailable state when the source
+query fails, rather than presenting an empty distribution as assessed health.
+
+This slice is deliberately limited to empty/error containment and does not
+claim that a non-empty row is fresh, valid, or policy-approved. Stale/invalid
+source validation, the portfolio/Ask Viv view contract, forecast repair, cron,
+schema, and production-data changes remain separate gates. Focused tests cover
+empty, error, and reported states plus the existing aggregation invariants.
 
 **Conclusion:** H0.3 is technically characterized enough to prepare a safe
 unknown-state and consumer work queue. The approved H1 direction says the
