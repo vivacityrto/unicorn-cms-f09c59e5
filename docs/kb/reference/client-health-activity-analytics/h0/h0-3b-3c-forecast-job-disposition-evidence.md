@@ -1,6 +1,6 @@
 # Client Health H0.3b/c — forecast-job disposition evidence
 
-> **Last updated:** 2026-09-13 · **Status:** read-only evidence complete; disposition recommendation pending Client Health/data-owner confirmation
+> **Last updated:** 2026-09-13 · **Status:** read-only evidence complete; owner disposition approved 2026-09-13 — retain functions/tables as evidence, keep jobs stopped, and keep consumers unavailable; replacement-shadow work remains separately gated
 > **Parent packet:** [H0.3 risk/retention consumers and unknown-state disposition](h0-3-risk-retention-consumer-unknown-state-packet.md)
 > **Parent plan:** [Client Health Activity Analytics Plan](../../client-health-activity-analytics-plan-2026-09-03.md)
 > **Scope:** source, schema, caller, downstream-consumer, cron, and recent-log reconciliation only
@@ -111,9 +111,11 @@ those policies.
 | `run-tenant-risk-forecast` | retire/mark unavailable for the current composite contract | no cron, no recent invocation, zero output/history, no direct caller, and two source-column mismatches; downstream readers are either contained or separate dormant consumers | no function deletion, table/view deletion, redeploy, repair, cron restart, or backfill |
 | `run-retention-forecast` | retire/mark unavailable for the current composite contract | no cron, no recent invocation, zero output/history, no direct caller, and three material source-column mismatches; ADR-025 defers this composite infrastructure | no function deletion, table/view deletion, redeploy, repair, cron restart, or backfill |
 
-The next owner decision is whether to record that recommendation as the formal
-long-lived disposition, or to authorize a new shadow-replacement packet. If a
-shadow path is chosen, it must first define the health subject grain, source
-contracts, freshness/coverage floors, unknown behavior, authorization boundary,
-run ledger, rollback owner, and synthetic/live-safe verification plan. It must
-not be implemented by editing or reactivating these legacy workers.
+The owner disposition is recorded as: retain the functions, tables, views, and
+history as evidence; keep both jobs stopped; and keep the current composite
+consumer result unavailable. A replacement-shadow path remains a separate
+future authorization. If chosen, it must first define the health subject grain,
+source contracts, freshness/coverage floors, unknown behavior, authorization
+boundary, run ledger, rollback owner, and synthetic/live-safe verification
+plan. It must not be implemented by editing or reactivating these legacy
+workers.

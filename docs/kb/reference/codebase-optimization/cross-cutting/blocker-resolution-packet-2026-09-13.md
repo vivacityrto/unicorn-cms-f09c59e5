@@ -23,15 +23,14 @@ authorization, scheduled-job, hosted-QA, pilot, or production changes.
 | RBAC — R2-e/f AJ/CSC pilot | Candidate seat bundles, minimum read boundary, 14-day shadow contract, mismatch thresholds, and rollback shape are prepared | Product/operations + Carl/Vivacity must name the cohort/resources, personas, pilot owner, rollback owner, telemetry storage/retention/reviewer, and security approver | Approved golden rows, QA personas, named resources, shadow artifact contract, zero-tolerance gates | No pilot enrollment, grant, telemetry/logger deployment, or production observation |
 | TOM — T1-x hosted QA | Offline fixture/persona manifest and ghost classifier are prepared; local ghost oracle is 7/7 and offline tests are 10/10 | Carl/environment/security/TOM/operations must confirm QA target, short-lived QA-only identities or explicit unavailable personas, fixture/reset approval, operator/window, and private artifact owner/retention | Completed preflight form, approved synthetic fixture, storage states, cleanup and residue-verification plan | No credential creation/use by this task, Supabase connection, fixture write/reset, migration sync, or hosted query |
 | TOM — T2 implementation | P0.1 source-of-truth, identity, view/RPC/write graph, and owner-disposition directions are complete | Carl/product/data/security must name one exact object or writer, canonical source, canary fixture, negative case, rollback, and audit owner | Contract-specific implementation packet and audit entry | No schema, RLS, RPC, trigger, Realtime, normalization, membership, or production change |
-| Client Health — H2 forecast jobs | H0.3b/c source/live-schema, caller/consumer, and deployed-state evidence is complete; jobs have no cron/history/output activity and have material source mismatches | Client Health/data owner + Carl must choose retain-as-evidence/mark-unavailable (current recommendation) or authorize a replacement-shadow packet | Owner decision; replacement path needs data owner, synthetic inputs, versioned run ledger, shadow/rollback contract | No restart, repair, deletion, backfill, cron change, or replacement deployment |
+| Client Health — H2 forecast jobs | H0.3b/c source/live-schema, caller/consumer, and deployed-state evidence is complete; jobs have no cron/history/output activity and have material source mismatches | **Approved 2026-09-13:** retain as evidence, keep stopped, and keep consumers unavailable. A replacement-shadow packet would require separate authorization. | Recorded owner disposition; any replacement path needs data owner, synthetic inputs, versioned run ledger, shadow/rollback contract | No restart, repair, deletion, backfill, cron change, or replacement deployment |
 | Client Health — H3 consultant input | Research pack defines the safe input format and explicitly excludes identifiable client material | AJ/Ezel/consultants + Carl must provide consolidated operational reports | Reports on cadence, blocker ownership, intervention patterns, quiet/data-insufficient cases, and pilot usefulness | No health thresholds, confidence semantics, cohort selection, score, or pilot acceptance inferred from repository/live data |
 
 ## Suggested resolution order
 
-1. Record the H2 disposition so the legacy forecast posture is no longer an
-   unresolved evidence question. The evidence-backed default is retain the
-   functions/tables as evidence, keep jobs stopped, and keep consumers
-   unavailable; a replacement requires a new packet.
+1. H2 disposition is recorded: retain the functions/tables as evidence, keep
+   jobs stopped, and keep consumers unavailable. A replacement requires a new
+   separately authorized packet.
 2. Supply the consultant reports for H3. They are the missing operating input
    for Client Health metric definitions and cannot be replaced by technical
    proxies.
