@@ -263,6 +263,25 @@ quality rules, forecast jobs, cron, schema, RLS, or production data. Retention
 is not part of this builder's current fact contract and remains a separate
 consumer gate.
 
+## H1 Ask Viv compare-clients containment — fifth bounded consumer slice
+
+The `compare_clients` tool in `ask-viv-assistant` now applies the same shared
+burn-availability adapter used by the portfolio-facts builder. It checks
+`tenant_package_burn_forecast` only for tenants already returned by the ranked
+attention view, preserving that view as the caller's visibility gate. A source
+query error, missing row, null status, or invalid status is represented as
+`burn_risk_status = "unavailable"` with the generic
+`burn_risk_status_reason = "source_unavailable"`; readable source statuses are
+preserved and the existing audit-schedule and comparison fields are unchanged.
+The source-query error is logged server-side but does not discard the otherwise
+useful comparison result.
+
+This is a read-only Ask Viv consumer containment change. It does not alter the
+ranked view, attention-score formula, retention status, source freshness or
+quality rules, forecast jobs, cron, schema, RLS, or production data. The
+portfolio-facts consumer is already covered by the fourth slice; retention and
+other source/job gates remain separate.
+
 **Conclusion:** H0.3 is technically characterized enough to prepare a safe
 unknown-state and consumer work queue. The approved H1 direction says the
 current live values are unassessed and must not be treated as normal/stable;

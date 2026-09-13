@@ -78,6 +78,10 @@ import {
   type AskVivFactBuilderInput,
 } from "../_shared/ask-viv-fact-builder/index.ts";
 import { buildPortfolioFacts } from "../_shared/ask-viv-fact-builder/portfolio-facts.ts";
+import {
+  applyPortfolioBurnAvailability,
+  type PortfolioBurnForecastRow,
+} from "../_shared/ask-viv-fact-builder/portfolio-forecast-status.ts";
 import { generateEmbedding } from "../_shared/openai-embeddings.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import {
@@ -1344,6 +1348,21 @@ async function executeTool(
         .in("tenant_id", tenantIds);
       if (attErr) throw new Error(attErr.message);
 
+      const attention = (attentionRows ?? []) as AttentionRankedRow[];
+      let attentionWithBurn = attention;
+      if (attention.length > 0) {
+        const { data: burnRows, error: burnErr } = await supabase
+          .from("tenant_package_burn_forecast")
+          .select("tenant_id, burn_risk_status")
+          .in("tenant_id", attention.map((row) => row.tenant_id));
+        if (burnErr) console.error("compare_clients burn forecast query failed:", burnErr);
+        attentionWithBurn = applyPortfolioBurnAvailability(
+          attention,
+          (burnRows ?? []) as PortfolioBurnForecastRow[],
+          burnErr ? "unavailable" : "reported",
+        );
+      }
+
       const { data: auditRows, error: auditErr } = await supabase
         .from("v_audit_schedule")
         .select("tenant_id, schedule_status, next_due_date, days_until_due")
@@ -1353,7 +1372,7 @@ async function executeTool(
         ((auditRows ?? []) as AuditScheduleCompareRow[]).map((r) => [r.tenant_id, r])
       );
 
-      const comparison = ((attentionRows ?? []) as AttentionRankedRow[]).map((r) => ({
+      const comparison = attentionWithBurn.map((r) => ({
         tenant_id: r.tenant_id,
         name: r.tenant_name,
         attention_score: r.attention_score,
@@ -1361,6 +1380,7 @@ async function executeTool(
         overdue_tasks_count: r.overdue_tasks_count,
         days_since_activity: r.days_since_activity,
         burn_risk_status: r.burn_risk_status,
+        burn_risk_status_reason: r.burn_risk_status === "unavailable" ? "source_unavailable" : null,
         days_to_renewal: r.days_to_renewal,
         risk_status: r.risk_status,
         audit_schedule_status: auditByTenant.get(r.tenant_id)?.schedule_status ?? null,
