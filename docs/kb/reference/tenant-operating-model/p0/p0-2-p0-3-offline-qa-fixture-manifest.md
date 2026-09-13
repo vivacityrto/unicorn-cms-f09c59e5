@@ -3,9 +3,9 @@
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Manifest:** [machine-readable fixture manifest](data/p0-2-p0-3-qa-fixture-manifest.json)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** preparation-only; no hosted run executed
+> **Status:** preparation-only; no hosted characterization run executed (see separate seed record)
 > **Source:** `origin/main@49fa5e71c401e046c82071a7ba3b05e6d78c373f`
-> **Audit entry:** none needed — documentation and synthetic planning only; no hosted query, credential, fixture write, schema, permission, migration, or production change
+> **Audit entry:** none needed — this remains the planning/manifest record; the separate [QA seed record](p0-2-qa-fixture-seed-record-2026-09-13.md) documents the later synthetic non-production fixture write
 
 ## Purpose and boundary
 
@@ -14,10 +14,11 @@ safety contract for the approved TOM P0.2/P0.3 plan. It is an offline
 preparation artifact, not a live run manifest. The manifest contains no
 production identifiers, user names, emails, browser storage state, or secrets.
 
-The target is the existing allowlisted `unicorn-qa` project, but no connection,
-seed, reset, migration sync, or browser login was performed. Hosted execution
-remains blocked on the credential, operator, fixture-approval, and private
-artifact-owner gates in the parent packet.
+The target is the existing allowlisted `unicorn-qa` project. This record did
+not seed or reset data, perform migration sync, or log into a browser. A
+separate, run-scoped synthetic fixture was seeded there on 2026-09-13;
+hosted characterization remains blocked on the credential/storage-state,
+operator/window, and private artifact-owner gates in the parent packet.
 
 ## Fixture contract
 
@@ -92,4 +93,5 @@ the existing P1.2 allowlist and is not implied by this packet.
 | Directory contract and numeric budgets | TOM/product | Baseline reviewed across representative strata |
 | Any write, schema, RLS, grant, cron, Edge, or production change | Named implementation owner | Separate authorization, verification, and audit record |
 
-No hosted execution is claimed by this preparation record.
+No hosted characterization execution is claimed by this preparation record;
+see the separate seed record for the limited QA data-provisioning result.

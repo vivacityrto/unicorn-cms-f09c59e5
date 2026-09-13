@@ -4,7 +4,7 @@
 > **Owner:** Tenant Operating Model, with RBAC, Client Health, and security review
 > **Parent plan:** [Tenant Operating Model data architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related evidence:** [P0.1 owner-disposition register](p0-1-owner-disposition-register.md); [ghost-to-contact evidence packet](../p1/p1-2-a-ghost-contact-dry-run-evidence-packet.md); [guarded ghost dry-run execution packet](../p1/p1-2-b-ghost-contact-dry-run-execution-packet.md)
-> **Audit entry:** none needed — planning only; no hosted query, fixture write, schema, permission, migration, or production change
+> **Audit entry:** none needed — this remains the characterization plan; the separate [QA seed record](p0-2-qa-fixture-seed-record-2026-09-13.md) documents synthetic non-production provisioning
 
 ## Purpose and boundary
 
@@ -14,10 +14,11 @@ the fixtures, personas, read-only checks, measurements, artifacts, and exit
 gates needed before any new directory view, RPC, contract, migration, RLS
 change, or contact-promotion implementation is considered.
 
-It does **not** create or reset a Supabase project, seed a fixture, issue a
-credential, run a live query, change production or QA state, or select a
-numeric performance budget. Missing credentials, missing fixture state, or an
-unexercised persona is `Inconclusive`, never `Pass`.
+This packet did **not** create or reset a Supabase project, issue a credential,
+run a live observation query, change production state, or select a numeric
+performance budget. A separate QA-only seed record documents limited synthetic
+fixture provisioning. Missing credentials, missing browser storage state, or
+an unexercised persona is `Inconclusive`, never `Pass`.
 
 ## Current evidence and reusable components
 
