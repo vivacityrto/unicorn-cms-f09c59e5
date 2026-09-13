@@ -46,7 +46,7 @@ that current behavior rather than quietly define a replacement contract.
 | Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Complete — `qfpxvumcrnzrjyvqkicq`, production target false |
 | Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Open |
 | Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for initial bounded run — run tag `tom_qa_20260913_seed_01`; cleanup remains separately gated |
-| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — six personas exercised; anonymous, integrator/team-leader, disabled staff, and service principal remain `Inconclusive` |
+| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — anonymous plus six authenticated personas exercised; integrator/team-leader, disabled staff, and service principal remain `Inconclusive` |
 | Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 06:07–06:14 UTC within the approved 60-minute window |
 | Artifact | Name private artifact location, access list, and retention | Operations | Complete — private GitHub Actions artifact `tom-p0-characterization-34742103123`, Carl/repository maintainers, 30 days |
 | Query safety | Confirm `EXPLAIN (ANALYZE, BUFFERS)` runs only on QA and that no production `ANALYZE` workload is included | TOM / DBA | Complete for this pass — plans executed only against allowlisted `unicorn-qa`; no production SQL or benchmark workload |
@@ -102,9 +102,9 @@ inside this packet.
 ## Expanded P0.2 read-only characterization run
 
 GitHub Actions run [`34742103123`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34742103123)
-completed successfully on 2026-09-13. It ran 48 executions across six
-authenticated projects, using one warm-up repetition followed by three
-measured repetitions: `44 passed, 4 skipped` (the CSC client-only check was
+completed successfully on 2026-09-13. It ran 52 executions across seven
+projects, using one warm-up repetition followed by three measured repetitions:
+`48 passed, 4 skipped` (the CSC client-only check was
 intentionally skipped on each repetition), one worker, with no application
 writes. Storage states were generated inside the runner and were not uploaded.
 The only retained artifact is the redacted Vite runner log under the approved
@@ -117,6 +117,8 @@ Observed current behavior:
 - The persistent QA client reached `/client/home` on all three measured
   repetitions and was denied the Super Admin-only route without being
   redirected to login.
+- An anonymous browser context was redirected from `/client/home` to `/login`
+  on all four repetitions without exposing protected content or page errors.
 - Client Admin A, Client User A, and Client Admin B reached `/client/home` and
   `/client/packages` successfully on all three measured repetitions.
 - All three client fixture rows carry `relationship_role=user`, so the
@@ -126,7 +128,7 @@ Observed current behavior:
 - CSC reached `/manage-tenants` and completed the safe search round-trip on all
   three measured repetitions; its client-only check remained intentionally
   skipped.
-- Anonymous, integrator/team-leader, disabled-staff, and service-principal
+- Integrator/team-leader, disabled-staff, and service-principal
   cases were not exercised and remain `Inconclusive`.
 
 This is an expanded bounded characterization, not the complete P0.2/P0.3
@@ -137,9 +139,9 @@ open.
 
 Aggregate measured route timings from the redacted Actions log were stable
 enough to characterize the current QA fixture without setting a product
-budget: client-home medians were 1.69–1.72 s, client-package medians were
-1.68–1.73 s, the relationship-role `/client/users` redirect medians were
-0.97 s, and CSC `/manage-tenants` medians were 2.18–2.30 s. These are
+budget: client-home medians were 1.11–1.60 s, client-package medians were
+1.09–1.62 s, the relationship-role `/client/users` redirect medians were
+0.93–0.94 s, and CSC `/manage-tenants` medians were 1.60 s. These are
 environment-specific observations, not acceptance thresholds.
 
 ## QA-only query-plan evidence

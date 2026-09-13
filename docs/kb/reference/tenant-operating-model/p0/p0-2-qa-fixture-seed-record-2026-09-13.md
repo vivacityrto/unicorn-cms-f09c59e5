@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; six authenticated QA personas provisioned and verified; expanded browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; anonymous plus six authenticated QA personas characterized; expanded browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** none needed — this was synthetic non-production fixture/persona provisioning; no production, schema, RLS, grant, cron, deployment, or production credential state changed
@@ -116,7 +116,7 @@ run [`34741345064`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/
 passed 7 checks and intentionally skipped 1 CSC-inapplicable client check.
 The expanded read-only run
 [`34742103123`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34742103123)
-passed 44 checks and intentionally skipped 4 CSC-inapplicable client checks
+passed 48 checks and intentionally skipped 4 CSC-inapplicable client checks
 across one warm-up plus three measured repetitions. It covered the persistent
 Super Admin and client personas as well as the three TOM client personas and
 CSC. No application writes were performed; browser storage states were
@@ -129,8 +129,8 @@ The fixture and six browser-capable QA identities now exist, and the expanded
 bounded browser run is recorded above. Before calling the broader P0.2/P0.3
 packet complete, it still needs:
 
-1. explicit `Inconclusive` owners/unblock conditions for anonymous,
-   integrator/team-leader, disabled-staff, and service-principal personas;
+1. explicit `Inconclusive` owners/unblock conditions for integrator/team-leader,
+   disabled-staff, and service-principal personas;
 2. a versioned production metadata baseline and migration cutoff;
 3. full redacted request metadata/waterfall evidence for the required query
    families; and
