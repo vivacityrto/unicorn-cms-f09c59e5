@@ -1,7 +1,7 @@
 # Unattended preparation authorization matrix — 2026-09-13
 
 > **Status:** decision-ready coordination packet; preparation boundaries are explicit, but no production or credential authority is implied
-> **Inputs:** [Program Index](../../program-index.md), [remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md), [RBAC P1-i job-role/AJ pilot worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md), [RBAC P1-j shadow evidence contract](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md), [TOM P0.2/P0.3 offline QA manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md), [Client Health plan](../../client-health-activity-analytics-plan-2026-09-03.md)
+> **Inputs:** [Program Index](../../program-index.md), [current blocker-resolution packet](blocker-resolution-packet-2026-09-13.md), [remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md), [RBAC P1-i job-role/AJ pilot worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md), [RBAC P1-j shadow evidence contract](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md), [TOM P0.2/P0.3 offline QA manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md), [Client Health plan](../../client-health-activity-analytics-plan-2026-09-03.md)
 > **Owner:** Carl, with named product/security/operations/environment owners per gate
 > **Evidence cutoff:** `origin/main@95950c1309b0008238df3b82a82cda83bf1133b5`
 > **Audit entry:** none needed — documentation-only planning; no credential, hosted, schema, authorization, deployment, scheduled-job, or live-data action
@@ -57,8 +57,9 @@ The following work is within the current preparation boundary:
   rules, and artifact schema locally.
 - Continue TOM P0.1 source-of-truth, identity, view/RPC/write, and owner-
   disposition documentation.
-- Prepare Client Health H1 implementation and H2/H3 evidence packets while
-  preserving the `unavailable` behavior and stopped-job posture.
+- Preserve the merged Client Health H0.3b/c evidence and prepare replacement
+  prerequisites only if the owner authorizes a shadow path; keep the
+  `unavailable` behavior and stopped-job posture.
 - Reconcile cross-initiative ownership for any shared file or capability row.
 - Open reviewable documentation PRs from fresh `origin/main` branches and run
   the relevant KB checks.
@@ -74,7 +75,7 @@ The following work is within the current preparation boundary:
 | T1-x hosted QA | Approve one synthetic, read-only `unicorn-qa` run after preflight is complete | QA-only persona credentials/storage states, target confirmation, fixture/reset approval, operator/window, artifact owner/retention, baseline cutoff | No Supabase connection, credential creation, fixture write, reset, or hosted query |
 | T2 TOM implementation | Do not approve a blanket implementation | One exact object/writer, source of truth, canary fixture, negative case, rollback, and audit entry | No schema, RLS, RPC, trigger, Realtime, normalization, or production change |
 | H1 Client Health implementation | Prepare a bounded implementation packet preserving unknown semantics | Exact consumer/field, owner, synthetic proof, rollback, and audit requirement if data objects change | No runtime metric change, forecast restart, or production data change |
-| H2 forecast jobs | Keep jobs stopped/retired and outputs unavailable | Source/live-schema comparison, consumer inventory, data owner, shadow/rollback contract | No cron/job restart, repair, deletion, or backfill |
+| H2 forecast jobs | Keep jobs stopped/retired and outputs unavailable; current evidence recommends no repair/restart | Formal owner disposition or replacement-shadow authorization; replacement path additionally needs a data owner, synthetic fixture, run ledger, and rollback contract | No cron/job restart, repair, deletion, or backfill |
 | H3 consultant input | Treat operational reports as an external blocker | AJ/Ezel/consultant reports covering cadence, blockers, interventions, quiet/data-insufficient cases, and pilot usefulness | No threshold, confidence, cohort, or pilot acceptance decision inferred from missing reports |
 | A2 AdminStageDetail | Keep behavior-bearing extraction deferred; only pure display work may be reconsidered | Joint TOM/RBAC/Client Health ownership and oracle clearance | No query/mutation/auth/tenant-state extraction |
 | Parked RBAC items 14/15 | Leave system/person classification and tenantless-user assignment parked | Separate council/product decision and owner | No blanket classification, assignment, or cleanup |

@@ -3,7 +3,7 @@
 > **Status:** decision-ready planning packet; preparation boundaries for R1, A1, T1, H1, and the RBAC/TOM evidence packets are recorded, with execution prerequisites and remaining gates preserved below
 > **Parent context:** [Program Index](../../program-index.md) and the four initiative plans
 > **Inputs:** RBAC P1-c, TOM P0.2/P0.3, Client Health H0.3, and the `AdminStageDetail.tsx` joint ownership matrix
-> **Follow-up gate packet:** [Remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md)
+> **Follow-up gate packet:** [Remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md); [current blocker-resolution packet](blocker-resolution-packet-2026-09-13.md)
 > **Owner:** Carl, with product/security/data owners named per row
 > **Scope:** resolve gates needed to start the next unattended, non-production work goal
 > **Audit entry:** none needed — documentation only; no live query, credential, permission, schema, deployment, or production change
@@ -54,7 +54,7 @@ H2, H3, and A2 remain blocked under their named owners and unblock conditions.
 | T1 | TOM P0.2/P0.3 QA run | Approve one synthetic, read-only run in `unicorn-qa` | Carl + security/environment owner | Plan and preflight packet prepared; execution blocked on credential/operator/artifact gates |
 | T2 | TOM P1 implementation | Keep schema/writer/directory/RLS work deferred until evidence and RBAC contracts are approved | Carl/product/data/security | Blocked by design |
 | H1 | Client Health 54-tenant defaults | Prefer `unavailable`/unknown for empty, failed, or stale burn/retention sources | Carl + Client Health/product | Decision approved; implementation separately gated |
-| H2 | Forecast job disposition | Keep jobs retired/marked unavailable; do not restart until source/consumer evidence and a shadow contract exist | Client Health/data owner + Carl | Blocked on owner/evidence |
+| H2 | Forecast job disposition | Keep jobs stopped/marked unavailable; current evidence recommends retain without restart or repair pending owner disposition | Client Health/data owner + Carl | H0.3b/c source, caller, consumer, and deployed-state evidence delivered 2026-09-13; owner disposition/replacement authorization remains open |
 | H3 | Consultant operational input | Obtain AJ/Ezel reports before H1 thresholds, confidence semantics, or pilot acceptance | AJ/Ezel/consultants + Carl | Blocked externally |
 | A1 | `AdminStageDetail.tsx` characterization | Approve shared static/call-graph and test planning pass; no extraction yet | Codebase coordinator + RBAC/TOM | Approved in session; characterization only |
 | A2 | `AdminStageDetail.tsx` extraction | Allow only pure policy-neutral display seams after A1; route behavior-bearing seams to owners | RBAC/TOM, Client Health if linked | Characterization packet prepared; extraction blocked on contract/oracle clearance |
@@ -160,14 +160,18 @@ packet.
 
 ### H2 — Forecast job disposition
 
-**Recommendation:** do not restart either forecast function. Keep the legacy
-tables/functions as evidence and mark their consumer result unavailable until
-source/live-schema comparison, caller inventory, business ownership, synthetic
-fixtures, a versioned run ledger, and a shadow/rollback plan exist.
+**Recommendation:** do not restart either forecast function. H0.3b/c evidence
+now covers the source/live-schema comparison, caller/consumer inventory, and
+deployed-state reconciliation. It found no cron/history/output activity and
+material source-schema mismatches. Keep the legacy tables/functions as
+evidence and mark their consumer result unavailable while the Client
+Health/data owner and Carl choose between retaining this posture or separately
+authorizing a replacement-shadow packet.
 
-**Owner:** Client Health/data owner, with Carl deciding any operational restart
-or retirement action. A source mismatch or empty table is not enough evidence
-to repair or delete a job.
+**Owner:** Client Health/data owner, with Carl deciding any operational restart,
+retirement, or replacement authorization. A source mismatch or empty table is
+not enough authority to repair, restart, or delete a job. Any replacement still
+needs synthetic fixtures, a versioned run ledger, and a shadow/rollback plan.
 
 ### H3 — Consultant operational input
 
