@@ -1,6 +1,6 @@
 # Tenant Operating Model, Directory Performance, ERP, and Ask Viv Data Architecture Plan
 
-> **Status:** council-reviewed implementation plan; no implementation or production mutation in this planning session
+> **Status:** council-reviewed implementation plan; P0.2/P0.3 expanded bounded read-only characterization completed 2026-09-13; no implementation or production mutation authorized
 > **Prepared:** 2026-09-02
 > **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -1282,6 +1282,6 @@ This program is complete when:
 |---|---|---|---|
 | Planning and live read-only investigation | Complete 2026-09-02 | — | this council-reviewed plan; no production changes |
 | P0.1 operating-model inventory | Evidence and owner-disposition directions complete 2026-09-12; implementation separately gated | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Source-of-truth matrix, identity ledger, membership crosswalk, policy/grant and view/RPC security evidence, writer census, and write-path graph are attached in [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). The 2026-09-12 read-only check confirms the #1185 deployed grants/guards; the [owner-disposition register](tenant-operating-model/p0/p0-1-owner-disposition-register.md) records the seven approved interim directions and preserves separate implementation gates for unmatched rows, membership migration, CSC ownership, Realtime, and ghost retirement. |
-| P0.2 disposable verification environment | Planning packet ready; execution not authorized | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) defines synthetic fixtures, personas, read-only evidence, and gates |
-| P0.3 browser/query baseline | Planning packet ready; execution not authorized | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) defines QA-only network/timing/query measurements and inconclusive handling |
+| P0.2 disposable verification environment | Expanded bounded characterization complete 2026-09-13; residual personas and review gates open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) records the allowlisted `unicorn-qa` run 34742523972 and explicit inconclusive cases |
+| P0.3 browser/query baseline | Expanded bounded characterization complete 2026-09-13; baseline cutoff, full request-waterfall evidence, and cross-initiative review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) records route timings and selected QA-only query plans without setting product budgets |
 | P1+ implementation | Not started | — | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) drafted for planning only; implementation still requires packet and phase approval |

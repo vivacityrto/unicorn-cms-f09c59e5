@@ -52,8 +52,9 @@ that current behavior rather than quietly define a replacement contract.
 | Query safety | Confirm `EXPLAIN (ANALYZE, BUFFERS)` runs only on QA and that no production `ANALYZE` workload is included | TOM / DBA | Complete for this pass — plans executed only against allowlisted `unicorn-qa`; no production SQL or benchmark workload |
 | Cross-initiative review | RBAC reviews authorization outcomes; Client Health reviews provenance/freshness implications | RBAC + Client Health | Open |
 
-No hosted run may begin while any target, credential, fixture, or artifact
-gate is open. A local test or static review may proceed without those gates.
+No additional hosted run may begin while any target, credential, fixture, or
+artifact gate is open. A local test or static review may proceed without those
+gates.
 
 ## Synthetic fixture manifest
 
@@ -287,6 +288,9 @@ The following remain explicitly outside this packet:
 | Decide ghost promotion/retirement implementation | TOM/RBAC/operations | Separate QA evidence, caller/job/log closure, and explicit implementation packet |
 | Any schema/RLS/grant/Realtime/Edge/data change | Named implementation owner | Separate authorization, verification, and audit entry |
 
-**Conclusion:** the packet makes P0.2/P0.3 executable in a disposable,
-evidence-first way, but neither phase has executed. Until the open gates are
-filled, their status remains planning-ready and execution-inconclusive.
+**Conclusion:** the packet now contains an expanded bounded P0.2/P0.3
+characterization for the six provisioned personas, with four intentional
+client-only skips and explicit `Inconclusive` treatment for missing personas.
+It is not the complete baseline: migration cutoff, full request-waterfall
+evidence, remaining persona fixtures, and RBAC/Client Health/TOM owner review
+remain open. No implementation or production change is implied.
