@@ -18,7 +18,7 @@ test("Client home loads as an authenticated client, not staff shell", async ({ p
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: /good (morning|afternoon|evening)/i, level: 1 })).toBeVisible();
   expect(errors).toEqual([]);
-  finishWaterfall();
+  await finishWaterfall();
 });
 
 test("A SuperAdmin-only route denies the client persona", async ({ page }) => {
@@ -30,5 +30,5 @@ test("A SuperAdmin-only route denies the client persona", async ({ page }) => {
   await page.waitForLoadState("networkidle").catch(() => {});
   await expect(page).not.toHaveURL(/\/admin\/user-audit/);
   expect(errors).toEqual([]);
-  finishWaterfall();
+  await finishWaterfall();
 });

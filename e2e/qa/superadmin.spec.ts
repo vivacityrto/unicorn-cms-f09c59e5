@@ -17,7 +17,7 @@ test("Dashboard loads as an authenticated SuperAdmin", async ({ page }) => {
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
-  finishWaterfall();
+  await finishWaterfall();
 });
 
 test("A representative SuperAdmin-only route is reachable, not redirected to /dashboard", async ({ page }) => {
@@ -30,5 +30,5 @@ test("A representative SuperAdmin-only route is reachable, not redirected to /da
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page).not.toHaveURL("**/dashboard");
   expect(errors).toEqual([]);
-  finishWaterfall();
+  await finishWaterfall();
 });

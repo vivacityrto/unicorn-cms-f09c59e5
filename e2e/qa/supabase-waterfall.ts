@@ -77,7 +77,13 @@ export function startSupabaseWaterfall(page: Page, label: string) {
   page.on("response", onResponse);
   page.on("requestfailed", onRequestFailed);
 
-  return () => {
+  return async () => {
+    // The visible assertion can settle before the page's final read-only
+    // requests return. Capture a bounded post-assertion window so the private
+    // artifact describes the real waterfall rather than truncating it at the
+    // first visible heading.
+    await page.waitForTimeout(1_000);
+
     page.off("request", onRequest);
     page.off("response", onResponse);
     page.off("requestfailed", onRequestFailed);

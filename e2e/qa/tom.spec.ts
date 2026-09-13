@@ -25,7 +25,7 @@ async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label
   await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({ timeout: 25_000 });
   expect(pageErrors).toEqual([]);
   console.log(`[tom-p0-timing] ${label} ${path} ${Math.round(performance.now() - startedAt)}ms`);
-  finishWaterfall();
+  await finishWaterfall();
 }
 
 test("persona reaches its current tenant/staff read shell", async ({ page }, testInfo) => {
@@ -58,5 +58,5 @@ test("client persona reads packages and preserves the relationship-role user-man
   await page.goto("/client/users");
   await expect(page).toHaveURL(/\/client\/home(?:$|\?)/, { timeout: 45_000 });
   console.log(`[tom-p0-timing] ${testInfo.project.name} /client/users-redirect ${Math.round(performance.now() - startedAt)}ms`);
-  finishWaterfall();
+  await finishWaterfall();
 });

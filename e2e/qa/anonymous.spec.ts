@@ -13,5 +13,5 @@ test("anonymous client route redirects to login without exposing data", async ({
   expect(response?.status()).toBeLessThan(400);
   await expect(page).toHaveURL(/\/login(?:$|\?)/);
   expect(errors).toEqual([]);
-  finishWaterfall();
+  await finishWaterfall();
 });
