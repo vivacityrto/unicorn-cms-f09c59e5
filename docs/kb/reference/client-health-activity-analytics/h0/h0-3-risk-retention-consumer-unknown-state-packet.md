@@ -1,6 +1,6 @@
 # Client Health H0.3 — risk/retention consumers and unknown-state disposition
 
-> **Last updated:** 2026-09-13 · **Status:** planning packet; H1 unknown-state semantics approved 2026-09-12; bounded retention-overview consumer containment is authorized/in progress; no forecast, cron, schema, or production change authorized
+> **Last updated:** 2026-09-13 · **Status:** consumer-containment implementation delivered (five bounded H1 slices); H0.3b/c forecast-job/source disposition and freshness/quality remain gated; no forecast, cron, schema, or production change authorized
 > **Parent plan:** [Client Health Activity Analytics Plan](../../client-health-activity-analytics-plan-2026-09-03.md)
 > **Inputs:** [H0.1-b dashboard query characterization](h0-1-b-dashboard-query-family-characterization.md); [H0.1-c synthetic fixture scope](h0-1-c-dashboard-query-synthetic-fixture-scope.md); [P3-A consumer characterization](../../codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md); [consultant research project pack](../../../handoffs/client-health-consultant-research-project-pack.md)
 > **Owner:** Client Health, with TOM, RBAC, security, and consultant review
@@ -17,12 +17,13 @@ characterization plan.
 
 The H1 semantic direction is now approved: empty, failed, stale, invalid, or
 otherwise unassessed forecast inputs must be presented as `unavailable`/unknown,
-not as `normal`/`stable` or an equivalent reassuring default. Exact consumer
-presentation, source-quality fields, and implementation sequencing remain
-separate packet decisions. This packet does not restart cron, run a forecast,
-alter a view/RPC, change a type, deploy an Edge Function, or modify production
-data. A future code packet must be separately authorized after the owner
-decisions and consultant input below.
+not as `normal`/`stable` or an equivalent reassuring default. The five bounded
+consumer slices recorded below implement the empty/failed containment for the
+named dashboard, executive, portfolio, and Ask Viv consumers. Freshness and
+quality validation, source replacement, and forecast-job disposition remain
+separate packet decisions. This packet still does not restart cron, run a
+forecast, alter a view/RPC, change a type, deploy an Edge Function, or modify
+production data.
 
 ## Current evidence baseline
 
@@ -282,11 +283,12 @@ quality rules, forecast jobs, cron, schema, RLS, or production data. The
 portfolio-facts consumer is already covered by the fourth slice; retention and
 other source/job gates remain separate.
 
-**Conclusion:** H0.3 is technically characterized enough to prepare a safe
-unknown-state and consumer work queue. The approved H1 direction says the
-current live values are unassessed and must not be treated as normal/stable;
-implementing that treatment still requires its own bounded consumer packet,
-tests, rollback, and approval. This packet remains no license to repair the
-forecast jobs, restart cron, or change production data, and consultant input is
-still required before thresholds, confidence, cohorts, or pilot usefulness
-are finalized.
+**Conclusion:** H0.3d consumer containment is delivered and independently
+verified across the five bounded slices above. The current live values remain
+unassessed and are no longer presented as normal/stable by those consumers.
+H0.3b/c remain open for forecast-job/source disposition, including source/live
+schema comparison, caller and ownership proof, freshness/coverage validation,
+and a repair-shadow versus retire decision. This packet remains no license to
+repair forecast jobs, restart cron, or change production data, and consultant
+input is still required before thresholds, confidence, cohorts, or pilot
+usefulness are finalized.
