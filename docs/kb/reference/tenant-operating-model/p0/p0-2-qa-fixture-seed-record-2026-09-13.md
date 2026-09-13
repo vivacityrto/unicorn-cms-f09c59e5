@@ -1,9 +1,9 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** seeded and read-only verified; the browser characterization run has not started
+> **Status:** synthetic fixture seeded and read-only verified; four TOM auth personas provisioned and verified; the browser characterization run has not started
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
-> **Audit entry:** none needed — this was a synthetic non-production fixture write; no production, schema, RLS, grant, cron, deployment, or credential state changed
+> **Audit entry:** none needed — this was synthetic non-production fixture/persona provisioning; no production, schema, RLS, grant, cron, deployment, or production credential state changed
 
 ## Purpose and boundary
 
@@ -20,9 +20,12 @@ active tenant members, 114 contacts, 45 packages, 1,052 package instances,
 104 stages, 278 package-stage mappings, 506 conversations, and 701 messages.
 
 The existing persistent `qa-e2e` tenant and its two approved E2E personas were
-not modified by this run. The synthetic profile rows below are fixture
-records, not sign-in identities; short-lived browser credentials and storage
-states remain a separate preflight gate.
+not modified by this run. The synthetic profile rows below remain fixture
+records, not sign-in identities. Four separate QA auth identities were later
+provisioned for the TOM persona matrix by the protected
+`qa-seed-e2e-personas.yml` workflow (run `34739310678`), using four new
+environment-scoped password secrets. Password values and browser storage
+states are not stored in the repository.
 
 ## Seeded fixture
 
@@ -54,6 +57,29 @@ rows. They contain only the non-sensitive state labels used by the application
 (`active`, `at_risk`, `warning`, `paused`, `exiting`, `complete`, and
 `cancelled`) and were not copied from any production row.
 
+The credential provisioning run also added the missing QA-only
+`Client Parent` value to `dd_user_type`, because the existing role trigger
+derives that value for an Admin profile. This was an idempotent reference-data
+repair in `unicorn-qa`; it did not alter production schema or reference data.
+
+## Provisioned QA personas
+
+The four additional identities are intentionally run-scoped labels rather than
+real client identities:
+
+| Persona | Role/profile | Tenant context | Verification |
+| --- | --- | --- | --- |
+| Client Admin A | `Admin` / `Client Parent` | Representative Tenant A (fixture tenant 2) | Auth row, active `tenant_members`, and full-scope `tenant_users` link present |
+| Client User A | `User` / `Client Child` | Representative Tenant A (fixture tenant 2) | Auth row, active `tenant_members`, and full-scope `tenant_users` link present |
+| Client Admin B | `Admin` / `Client Parent` | Representative Tenant B (fixture tenant 3) | Auth row, active `tenant_members`, and full-scope `tenant_users` link present |
+| CSC | `Team Member` / `Vivacity Team` | Internal staff context; no tenant assignment | Auth row and profile present; no tenant portal link intentionally created |
+
+The pre-existing QA Super Admin and basic client identities remain available
+through their protected environment secrets. The service-principal row in the
+offline manifest is non-browser and has not been provisioned as a password
+identity; it remains an explicit separate gate rather than reusing a service
+role key as a browser credential.
+
 ## Safety and rollback
 
 - The write targeted only the allowlisted QA project and used a transaction.
@@ -61,7 +87,8 @@ rows. They contain only the non-sensitive state labels used by the application
   conversation, and message is identifiable by the run tag or a deterministic
   run-scoped UUID derived from it.
 - No production URL, production UUID, production row, production browser state,
-  service key, or password was written to the repository or fixture.
+  service key, or password was written to the repository or fixture. Passwords
+  exist only in the protected `unicorn-qa` GitHub environment.
 - No migration, schema, RLS, grant, Realtime, cron, Edge deployment, outbound
   email, or production operation was performed.
 - Cleanup has **not** been run. If the fixture is retired, use a separately
@@ -89,11 +116,12 @@ read-only observation assertion was made by this seed transaction.
 
 ## Remaining P0.2/P0.3 gates
 
-The fixture now exists, but this is not a characterization result. Before the
-first read-only browser or query-observation run, the packet still needs:
+The fixture and the four browser-capable TOM identities now exist, but this is
+not a characterization result. Before the first read-only browser or
+query-observation run, the packet still needs:
 
-1. short-lived QA-only credentials and browser storage states for the approved
-   personas (or an explicit `Inconclusive` disposition for unavailable ones);
+1. browser storage states generated from the protected QA credentials, plus an
+   explicit `Inconclusive` disposition for any persona not exercised;
 2. a named operator and observation window; and
 3. a private artifact location, retention period, artifact owner, and reviewer
    access.
