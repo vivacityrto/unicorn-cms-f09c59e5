@@ -38,10 +38,16 @@ test("persona reaches its current tenant/staff read shell", async ({ page }, tes
   await expect(search).toHaveValue("");
 });
 
-test("client persona reads packages and users without leaving its portal", async ({ page }, testInfo) => {
+test("client persona reads packages and preserves the relationship-role user-management gate", async ({ page }, testInfo) => {
   test.skip(!CLIENT_PROJECTS.has(testInfo.project.name), "client-only read characterization");
 
   await openReadOnlyPage(page, "/client/packages", /Packages/);
-  await openReadOnlyPage(page, "/client/users", /Users/);
-  await expect(page).not.toHaveURL(/\/login/);
+
+  // The current fixture deliberately uses relationship_role=user for all
+  // three client personas. ClientRouteGuard therefore redirects this route
+  // to /client/home; the legacy Admin/Client Parent labels do not grant the
+  // management surface. This assertion records current behavior rather than
+  // treating the redirect as a harness failure.
+  await page.goto("/client/users");
+  await expect(page).toHaveURL(/\/client\/home(?:$|\?)/, { timeout: 45_000 });
 });
