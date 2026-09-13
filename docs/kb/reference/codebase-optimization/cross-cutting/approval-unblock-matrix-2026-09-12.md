@@ -1,6 +1,6 @@
-# Cross-initiative approval-unblock matrix — 2026-09-12
+# Cross-initiative approval-unblock matrix — 2026-09-13
 
-> **Status:** decision-ready planning packet; R1, A1, T1, and H1 were explicitly approved in-session on 2026-09-12, with the execution prerequisites and remaining gates preserved below
+> **Status:** decision-ready planning packet; preparation boundaries for R1, A1, T1, H1, and the RBAC/TOM evidence packets are recorded, with execution prerequisites and remaining gates preserved below
 > **Parent context:** [Program Index](../../program-index.md) and the four initiative plans
 > **Inputs:** RBAC P1-c, TOM P0.2/P0.3, Client Health H0.3, and the `AdminStageDetail.tsx` joint ownership matrix
 > **Follow-up gate packet:** [Remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md)
@@ -39,15 +39,18 @@ Carl explicitly approved the following rows in-session:
   invalid Client Health sources; implementation remains separately gated and
   does not authorize a forecast-job restart or production change.
 
-These approvals authorize preparation and packet work only. R2, T2, H2, H3,
-and A2 remain blocked under their named owners and unblock conditions.
+These approvals authorize preparation and packet work only. R2's atomic
+decomposition, high-risk non-delegable default, QA-first pilot shape, and
+shadow-evidence design are accepted for preparation; golden rows, role
+defaults, telemetry implementation, and pilot enrollment remain gated. T2,
+H2, H3, and A2 remain blocked under their named owners and unblock conditions.
 
 ## Gate summary
 
 | ID | Gate | Recommended disposition | Decision owner | Current state |
 | --- | --- | --- | --- | --- |
 | R1 | RBAC P1 evidence-ledger pass | Approve packet-level static/source reconciliation; keep grants, role defaults, and cutover out of scope | Carl + product/security | Approved in session; preparation only |
-| R2 | RBAC capability semantics | Decompose bundled verbs; default high-risk actions to non-delegable pending explicit review; use [P1-i](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md) for seat/pilot boundaries; do not turn P1-b into policy | Product + security | P1-h/P1-i preparation worksheets delivered; golden rows, role defaults, and pilot remain gated |
+| R2 | RBAC capability semantics | Decompose bundled verbs; default high-risk actions to non-delegable pending explicit review; use [P1-i](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md) for seat/pilot boundaries; do not turn P1-b into policy | Product + security | Atomic decomposition, high-risk default, QA-first pilot shape, and shadow-evidence preparation accepted; golden rows, role defaults, telemetry implementation, and pilot remain gated |
 | T1 | TOM P0.2/P0.3 QA run | Approve one synthetic, read-only run in `unicorn-qa` | Carl + security/environment owner | Plan and preflight packet prepared; execution blocked on credential/operator/artifact gates |
 | T2 | TOM P1 implementation | Keep schema/writer/directory/RLS work deferred until evidence and RBAC contracts are approved | Carl/product/data/security | Blocked by design |
 | H1 | Client Health 54-tenant defaults | Prefer `unavailable`/unknown for empty, failed, or stale burn/retention sources | Carl + Client Health/product | Decision approved; implementation separately gated |
@@ -60,8 +63,8 @@ and A2 remain blocked under their named owners and unblock conditions.
 
 ### R1 — RBAC P1 evidence-ledger pass
 
-**Recommendation:** approve the next static/source-only pass over all 85
-features. It should decompose the 14 bundled `manage`/`use` features, reconcile
+**Recommendation:** continue the approved static/source-only pass over all 85
+features. It should decompose the 18 bundled `manage`/`use` features, reconcile
 the 51 features without recognized frontend gates against routes, RPCs, Edge
 Functions, and RLS, and attach a readiness state and owner to every row.
 
@@ -150,9 +153,10 @@ consumers cannot classify missing inputs as healthy/stable; synthetic tests
 cover empty/failed/stale/invalid cases; no replacement score is introduced.
 
 **Rollback:** a feature switch can restore the prior presentation only if the
-known-gap warning remains visible and the rollback owner is named. This is a
-user-visible product decision and requires Carl/Client Health approval before
-implementation.
+known-gap warning remains visible and the rollback owner is named. The H1
+unknown-state direction is approved; the switch, exact presentation, and
+rollback owner still belong in a separately approved bounded implementation
+packet.
 
 ### H2 — Forecast job disposition
 
