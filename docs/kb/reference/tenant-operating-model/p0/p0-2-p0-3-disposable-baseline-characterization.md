@@ -222,6 +222,21 @@ remaining non-200 evidence is now bounded to this expected client denial and
 requires no application change; the production baseline and owner-review
 gates remain independent.
 
+#### Expanded staff read-surface verification
+
+The corrected protected run
+[`34755463485`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34755463485)
+ran from `origin/main@d907e4c2` with the staff-only tenant-detail,
+integrations, and Ask Viv navigation checks repeated four times. It completed
+with `84 passed, 16 skipped`, with no failures or flakes. Staff personas
+reached the first tenant detail read model and the integrations page. The
+`/ask-viv` route was also reachable, while its current rollout gate rendered
+the deliberate unavailable state for these personas rather than the assistant
+composer; the test records either current read-surface outcome and performs
+no assistant generation or write. The run remains bounded navigation and
+waterfall evidence, not complete export, Realtime, RPC, Edge, or AI query
+family coverage.
+
 ## QA-only query-plan evidence
 
 The exact current client query families were inspected before planning. On the
@@ -383,7 +398,9 @@ characterization for nine browser-authenticated personas, with four
 intentional client-only skips, plus a separate non-browser service-principal
 read contract. The versioned production metadata capture establishes the
 `20260911094544` migration cutoff. The follow-up runs add a private redacted
-request-waterfall baseline for the exercised routes, and the post-seed run
+request-waterfall baseline for the exercised routes, and the latest staff
+read-surface run records `84 passed, 16 skipped` with no failures or flakes.
+The post-seed run
 confirms the remaining `406` responses are an expected client
 authorization-negative case while the prior `401` did not recur. It is not
 the complete baseline: full-cardinality/query-family coverage and

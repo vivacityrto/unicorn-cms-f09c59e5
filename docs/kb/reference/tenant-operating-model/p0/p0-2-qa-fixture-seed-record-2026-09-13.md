@@ -157,6 +157,16 @@ and Team Leader reached `/manage-tenants`; disabled staff reached the expected
 `Account Disabled` state. The service principal was intentionally excluded from
 browser storage and was verified only by its explicit read contract.
 
+The corrected expanded staff read-surface run
+[`34755463485`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34755463485)
+ran the tenant-detail, integrations, and Ask Viv navigation checks four times
+for the staff personas and completed with `84 passed, 16 skipped`, with no
+failures or flakes. It confirms the first tenant detail read model and
+integrations page are reachable to the staff fixture. Ask Viv is route-
+reachable, but these personas currently receive its rollout-unavailable card;
+the check accepts that current state or an enabled composer and performs no
+assistant generation or write.
+
 ## Remaining P0.2/P0.3 gates
 
 The fixture and nine browser-capable QA identities now exist, and the expanded
