@@ -167,6 +167,40 @@ attempt a repair from them. The observer records method, redacted pathname,
 status, duration, and request/response byte metadata only; it does not retain
 query strings, payloads, identifiers, credentials, or browser storage state.
 
+### Evidence-based narrowing of the non-200 responses
+
+The follow-up artifact deliberately omits request headers, query strings, and
+response bodies, so it cannot identify an individual React caller from a
+pathname alone. A read-only query against the same allowlisted `unicorn-qa`
+project on 2026-09-13 nevertheless confirmed that `public.app_settings` had
+zero rows at the time of review (`count(*) = 0`). This narrows, but does not
+close, the sixteen `406` observations: the repository has several
+`.single()` readers of this single-row table, while its `.maybeSingle()` and
+collection readers return an empty result successfully. PostgREST's singular
+representation rejects a zero-row result with `406`, which is consistent with
+the observed empty QA fixture and the later `200` empty-array responses. The
+exact four callers per route remain unassigned because the redacted artifact
+does not contain query parameters or component timing identifiers.
+
+The one `401` on `/rest/v1/tenant_users` occurred during the first
+`qa-superadmin /dashboard` snapshot; subsequent requests to the same resource
+on that route completed with `200`, and the route's authenticated assertions
+passed. The source-side guards make an auth-bootstrap race plausible: the
+client tenant context waits for the loaded profile and resolved tenant before
+its tenant-user lookup, while global route boot also performs asynchronous
+session/profile work. However, the metadata-only artifact cannot prove whether
+the first request lacked a settled bearer session or was rejected for another
+authorization reason. It must therefore remain an owner-reviewed
+`Inconclusive`, not be silently relabeled expected.
+
+The remaining owner actions are bounded: TOM/security should decide whether
+the disposable fixture must contain its canonical single `app_settings` row
+or whether empty settings are an intentional negative case, and should either
+accept the transient `tenant_users` observation as harness noise or authorize
+a QA-only diagnostic run that records a sanitized auth-readiness marker. No
+production policy, fixture, or application behavior is changed by this
+interpretation.
+
 ## QA-only query-plan evidence
 
 The exact current client query families were inspected before planning. On the
