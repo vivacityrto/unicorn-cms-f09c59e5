@@ -1,0 +1,86 @@
+name: TOM P0 QA characterization
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unicorn-qa-tom-p0-characterization
+  cancel-in-progress: false
+
+jobs:
+  characterize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: unicorn-qa
+    env:
+      VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+      QA_TOM_CLIENT_ADMIN_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
+      QA_TOM_CLIENT_USER_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_USER_A_PASSWORD }}
+      QA_TOM_CLIENT_ADMIN_B_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_B_PASSWORD }}
+      QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
+      QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies and browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Validate allowlisted QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url "$VITE_SUPABASE_URL"
+
+      - name: Start QA-pointed dev server
+        shell: bash
+        run: |
+          nohup npm run dev > "$RUNNER_TEMP/unicorn-qa-vite.log" 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:8080 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "QA dev server did not become ready" >&2
+          cat "$RUNNER_TEMP/unicorn-qa-vite.log" >&2
+          exit 1
+
+      - name: Generate ephemeral TOM storage states
+        shell: bash
+        run: |
+          declare -A EMAILS=(
+            [tom-client-admin-a]="${QA_TOM_FIXTURE_TAG}_client_admin_a@example.qa"
+            [tom-client-user-a]="${QA_TOM_FIXTURE_TAG}_client_user_a@example.qa"
+            [tom-client-admin-b]="${QA_TOM_FIXTURE_TAG}_client_admin_b@example.qa"
+            [tom-csc]="${QA_TOM_FIXTURE_TAG}_csc@example.qa"
+          )
+          declare -A PASSWORDS=(
+            [tom-client-admin-a]="$QA_TOM_CLIENT_ADMIN_A_PASSWORD"
+            [tom-client-user-a]="$QA_TOM_CLIENT_USER_A_PASSWORD"
+            [tom-client-admin-b]="$QA_TOM_CLIENT_ADMIN_B_PASSWORD"
+            [tom-csc]="$QA_TOM_CSC_PASSWORD"
+          )
+          for persona in "${!EMAILS[@]}"; do
+            E2E_EMAIL="${EMAILS[$persona]}" E2E_PASSWORD="${PASSWORDS[$persona]}" node e2e/auth-setup.mjs "$persona"
+          done
+
+      - name: Run read-only TOM characterization
+        run: npm run e2e:qa -- --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --trace=off --screenshot=off --video=off
+
+      - name: Upload redacted run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-p0-characterization-${{ github.run_id }}
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/unicorn-qa-vite.log
+          if-no-files-found: ignore

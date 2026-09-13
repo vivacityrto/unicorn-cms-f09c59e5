@@ -1,0 +1,47 @@
+import { test, expect, type Page } from "@playwright/test";
+
+// TOM P0.2/P0.3 read-only characterization against the allowlisted
+// unicorn-qa project. The fixture and persona provisioning are documented in
+// docs/kb/reference/tenant-operating-model/p0/p0-2-qa-fixture-seed-record-2026-09-13.md.
+// This spec intentionally performs no writes, invitations, exports, or
+// promotion actions.
+
+const CLIENT_PROJECTS = new Set([
+  "qa-tom-client-admin-a",
+  "qa-tom-client-user-a",
+  "qa-tom-client-admin-b",
+]);
+
+async function openReadOnlyPage(page: Page, path: string, heading: RegExp) {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  const response = await page.goto(path);
+  expect(response?.status(), `${path} should return a successful response`).toBeLessThan(400);
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({ timeout: 25_000 });
+  expect(pageErrors).toEqual([]);
+}
+
+test("persona reaches its current tenant/staff read shell", async ({ page }, testInfo) => {
+  if (CLIENT_PROJECTS.has(testInfo.project.name)) {
+    await openReadOnlyPage(page, "/client/home", /Good (morning|afternoon|evening)/i);
+    return;
+  }
+
+  await openReadOnlyPage(page, "/manage-tenants", /Manage Clients/);
+  const search = page.getByPlaceholder("Search clients by name or slug...");
+  await expect(search).toBeVisible();
+  await search.fill("__tom_p0_no_match__");
+  await expect(search).toHaveValue("__tom_p0_no_match__");
+  await search.fill("");
+  await expect(search).toHaveValue("");
+});
+
+test("client persona reads packages and users without leaving its portal", async ({ page }, testInfo) => {
+  test.skip(!CLIENT_PROJECTS.has(testInfo.project.name), "client-only read characterization");
+
+  await openReadOnlyPage(page, "/client/packages", /Packages/);
+  await openReadOnlyPage(page, "/client/users", /Users/);
+  await expect(page).not.toHaveURL(/\/login/);
+});

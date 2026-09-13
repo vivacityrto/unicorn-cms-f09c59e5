@@ -72,5 +72,25 @@ export default defineConfig({
       testMatch: /client\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/qa-client.json" },
     },
+    {
+      name: "qa-tom-client-admin-a",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-client-admin-a.json" },
+    },
+    {
+      name: "qa-tom-client-user-a",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-client-user-a.json" },
+    },
+    {
+      name: "qa-tom-client-admin-b",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-client-admin-b.json" },
+    },
+    {
+      name: "qa-tom-csc",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-csc.json" },
+    },
   ],
 });
