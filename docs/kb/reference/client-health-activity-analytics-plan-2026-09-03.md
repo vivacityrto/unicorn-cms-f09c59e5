@@ -1,6 +1,7 @@
 # Client Health, Client Activity, Consultant Triage, and Intervention Analytics Plan
 
-> **Status:** council-reviewed implementation plan; H1 unknown-state consumer containment delivered 2026-09-13; H0.3b/c forecast-job disposition recorded 2026-09-13; replacement/metric policy and consultant-data gates remain open
+> **Last updated:** 2026-09-14
+> **Status:** council-reviewed implementation plan; H1 unknown-state consumer containment and H0.3b/c forecast-job disposition delivered 2026-09-13; H0.4 consultant-report template/evidence preparation delivered 2026-09-14; replacement-shadow, metric policy, and consultant-data gates remain open
 > **Prepared:** 2026-09-03
 > **Repository baseline:** `origin/main@31083c49` plus the planning commits on `chore/tenant-data-model-optimization-plan`
 > **Planning worktree:** `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -79,6 +80,17 @@ identifiable client material. Any examples carried into the repository must be
 synthetic, deidentified, or irreversibly redacted. The next H1 packet should
 link the consolidated reports and record which proposed dimensions, unknown
 states, and pilot acceptance criteria they support or leave unresolved.
+
+### Current truth-sync (2026-09-14)
+
+H0 characterization and behavior-restricting containment are the active
+technical boundary. The consultant-report template and claim-level evidence
+schema are now prepared, but no consultant operational dataset has been
+received or interpreted as policy. H1 metric definitions, thresholds,
+confidence semantics, pilot cohorts, and usefulness criteria therefore remain
+provisional. Replacement-shadow computation, source repair, cron restart, and
+health-score cutover remain separately gated and are not authorized by this
+plan update.
 
 ---
 

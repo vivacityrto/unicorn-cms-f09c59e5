@@ -1,6 +1,7 @@
 # Tenant Operating Model, Directory Performance, ERP, and Ask Viv Data Architecture Plan
 
-> **Status:** council-reviewed implementation plan; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; broader query-family/cardinality and owner-review gates remain open; no implementation or production mutation authorized
+> **Last updated:** 2026-09-14
+> **Status:** council-reviewed implementation plan; P0.1 evidence and owner-disposition work is complete; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; QA negative-case/runbook preparation and the first P1.1 contact-promotion packet are delivered; broader query-family/cardinality, owner-review, and runtime implementation gates remain open; no implementation or production mutation authorized
 > **Prepared:** 2026-09-02
 > **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -16,7 +17,7 @@
 
 ---
 
-## Current truth-sync (2026-09-10)
+## Current truth-sync (2026-09-14)
 
 All 13 §18 decisions are now closed (ADR-017 through ADR-028 in
 [decision-trail.md](decision-trail.md), items 2-13; item 1 is the same
@@ -25,6 +26,16 @@ decision as RBAC v6 §13 item 1, tracked on that separate track). Item
 No implementation has been authorized by these ADRs alone — Phase P0/P1
 scoping and Carl's per-packet approval remain required before any code,
 schema, or production change per the Production rule above.
+
+The P0.1 source inventory and owner-disposition register are complete. The
+expanded P0.2/P0.3 characterization and representative QA query-family
+preparation are recorded, alongside the negative-case/cleanup runbook and
+cross-initiative review matrix. The [first contact-promotion implementation
+packet](tenant-operating-model/p1/p1-1-first-contact-promotion-implementation-packet.md)
+is a planning draft only: it narrows the first runtime boundary to contact →
+invitation → acceptance with an explicit relationship role and preserves
+separate gates for canary evidence, migration, ledger changes, Realtime,
+unmatched rows, and ghost retirement.
 
 ---
 
