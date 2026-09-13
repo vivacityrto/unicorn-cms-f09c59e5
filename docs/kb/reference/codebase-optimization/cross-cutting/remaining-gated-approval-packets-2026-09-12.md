@@ -33,7 +33,7 @@ general “continue” must not be converted into a product/security decision.
 | R2-d | High-risk delegability | Keep the 11 high-risk rows non-delegable and approval-controlled by default | Security | Interim default approved; implementation/exception remains blocked on security control sign-off | [P1-h control worksheet](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md); no grant or gate change |
 | R2-e | Job-role defaults and AJ/CSC pilot | Use reviewed seat boundaries; pilot only the smallest exact Academy/package/stage action set with named scope, personas, 14-day shadow, and rollback owner | Product/operations + Carl/Vivacity | QA-first cohort and minimum capability boundary accepted; role defaults and pilot enrollment remain blocked on named owners/gates | [P1-i worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md); no role/grant/pilot change |
 | R2-f | AJ/CSC shadow and pilot evidence | Compare current and v6 decisions non-authoritatively for 14 days before any cutover | RBAC/security + product/operations | Evidence contract approved for preparation; telemetry implementation and pilot enrollment remain blocked on storage/retention/reviewer/cohort inputs | [P1-j shadow evidence](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md); no logger, grant, or pilot change |
-| T1-x | Hosted TOM P0.2/P0.3 execution | Approve one synthetic, read-only `unicorn-qa` run only after preflight fields are filled | Carl + security/environment owner | Preparation approved; execution remains blocked on QA credentials, operator, fixture approval, and artifact owner | Offline manifest validation and runbook prep |
+| T1-x | Hosted TOM P0.2/P0.3 execution | Use the approved synthetic, read-only `unicorn-qa` run as the current-behavior baseline; repeat only if a named residual gate requires it | Carl + security/environment owner | Expanded bounded run completed 2026-09-13 in Actions run `34742523972`: anonymous plus six authenticated personas, 48 passed and 4 intentional client-only skips; baseline cutoff, full request-waterfall evidence, missing personas, and cross-initiative review remain open | Reconcile residual evidence and owner dispositions; no production or implementation change |
 | T2 | TOM implementation | Keep directory/writer/membership/normalization/Realtime/RLS work deferred | Carl + product/data/security | Blocked by design | Contract comparison and evidence gap list |
 | H2 | Forecast job disposition | Keep jobs stopped and outputs unavailable; retain legacy artifacts as evidence without repair or restart | Client Health/data owner + Carl | Owner disposition approved 2026-09-13; replacement-shadow authorization remains separately gated | If replacement is chosen later, prepare its data owner, synthetic fixture, run-ledger, and shadow/rollback contract |
 | H3 | Consultant operational input | Obtain AJ/Ezel/consultant reports before thresholds, confidence, or pilot acceptance | Consultants + Carl | External blocker acknowledged 2026-09-13; reports remain outstanding | Report template and evidence schema |
@@ -93,7 +93,15 @@ negative probes, audit entry, and explicit implementation approval.
 
 The [offline fixture manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md)
 is complete and safe to carry forward, but it intentionally contains no
-credentials or browser storage state. Before hosted execution, fill every row:
+credentials or browser storage state. The approved bounded execution filled
+the required target, fixture, operator, artifact, and query-safety fields for
+the allowlisted `unicorn-qa` target. It completed in GitHub Actions run
+`34742523972` on 2026-09-13 with anonymous plus six authenticated personas;
+the result was 48 passed and 4 intentional client-only skips. Integrator,
+Team Leader, disabled-staff, and service-principal cases remain explicitly
+`Inconclusive`, not silently passed.
+
+The residual fields for any follow-up run are:
 
 | Preflight field | Required value | Owner | Stop if missing |
 | --- | --- | --- | --- |
@@ -105,11 +113,12 @@ credentials or browser storage state. Before hosted execution, fill every row:
 | Test scope | Read-only directory/detail/search/filter/export-read/Realtime/RPC/Edge/Ask Viv checks | TOM + RBAC | Yes |
 | Cleanup | Run-scoped reverse-order cleanup and residue verification | Operator | Yes |
 
-An explicit T1-x approval authorizes scheduling/executing that one isolated,
-read-only run after all fields are filled. It does not authorize production
-URLs, credential creation by this agent, mutations, migrations, outbound
-email, hosted ghost promotion, or schema/RLS/grant changes. A failed login,
-missing storage state, or missing persona is `Inconclusive`, never `Pass`.
+The T1-x approval was used only for that one isolated, read-only run. Any
+follow-up run needs its own named scope and must preserve the same boundary.
+T1-x does not authorize production URLs, credential creation by this agent,
+mutations, migrations, outbound email, hosted ghost promotion, or
+schema/RLS/grant changes. A failed login, missing storage state, or missing
+persona is `Inconclusive`, never `Pass`.
 
 ## T2 — TOM implementation gate
 
