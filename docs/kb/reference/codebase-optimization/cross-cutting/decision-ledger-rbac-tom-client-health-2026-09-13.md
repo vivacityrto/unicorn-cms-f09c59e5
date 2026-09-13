@@ -39,7 +39,7 @@ Status meanings:
 | **A4** | Define internal-staff visibility for these resources | **settled — approved by Carl 2026-09-13** | Internal Vivacity CSCs have full portfolio-wide tenant-operational access, with actions recorded in timeline activity; platform security administration remains separate | A5 security-boundary investigation |
 | **A5** | Authorize the security-boundary investigation | **settled — approved by Carl 2026-09-13** | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement; remediation remains separately gated | A6 client-stage state classification |
 | **A6** | Classify client stage state | **settled — approved by Carl 2026-09-13** | TOM/domain owns the canonical lifecycle; Client Health may consume status/date/derived `node_state` as operational evidence; client workflows may display the approved subset | A7 TOM hosted-QA preflight |
-| **A7** | Authorize TOM hosted-QA preflight | **synthetic fixture and four TOM auth personas provisioned/read-only verified 2026-09-13; characterization run pending** | Use the existing allowlisted non-production `unicorn-qa` target and the [seed record](../../tenant-operating-model/p0/p0-2-qa-fixture-seed-record-2026-09-13.md); remaining gates are browser storage states, operator/window, and private artifact owner/retention | One read-only `unicorn-qa` run |
+| **A7** | Authorize TOM hosted-QA preflight | **initial run passed 2026-09-13: 7 passed, 1 intentional skip across four provisioned TOM personas** | Keep the current behavior evidence: client home/packages reads pass; `/client/users` redirects to `/client/home` for `relationship_role=user`; CSC `/manage-tenants` read/search passes. Remaining coverage, query-plan, baseline, and cross-initiative review gates stay open | Complete the broader packet or record explicit `Inconclusive` dispositions |
 | **A8** | Resolve Client Health semantic gates | awaiting external data/Carl | Keep thresholds, cohorts, confidence semantics, and pilot acceptance gated on consultant operational input | H1 metric/corpus decisions and later implementation |
 | **A9** | Retire legacy Client Parent/Child account labels | **planning direction approved by Carl 2026-09-13; ten sequencing/semantic decisions recorded; implementation separately gated** | Treat Parent/Child as compatibility projections only; migrate to explicit account class, RBAC capability/scope, tenant membership, relationship role, and access scope before any removal | [P1.3 retirement plan](../../tenant-operating-model/p1/p1-3-legacy-client-role-retirement-plan.md), focused parity evidence, holdout disposition, and separate migration approval |
 
@@ -188,9 +188,9 @@ are:
 | Reset/safety | Run-scoped cleanup, reverse-order cleanup, no production identifiers, no committed credentials, no writes in the ghost classifier | ready for approval |
 | Observation | One warm-up and three measured repetitions per persona/stratum; redacted timings, request metadata, waterfalls, query plans, and visible empty/error/denied states | ready |
 | Personas | Client Admin A/B, Client User A, CSC, Super Admin, and non-browser service principal; missing storage state is `Inconclusive` | ready for approval |
-| Short-lived identities/storage states | QA-only credentials and browser storage states for the approved personas | **missing** |
-| Operator/window | Named operator and execution window | **missing** |
-| Private evidence | Private artifact location, owner, retention, and reviewer access | **missing** |
+| Short-lived identities/storage states | QA-only credentials and browser storage states for the approved personas | **complete for four TOM personas; generated ephemerally in run 34741345064** |
+| Operator/window | Named operator and execution window | **complete — Codex automated run, 2026-09-13 05:51–05:53 UTC within the approved 60-minute window** |
+| Private evidence | Private artifact location, owner, retention, and reviewer access | **complete — private GitHub Actions artifact, Carl/repository maintainers, 30 days** |
 
 The run should use the existing manifest as its baseline but narrow the first
 RBAC pass to representative and cross-tenant package/client-stage cases plus
@@ -199,13 +199,25 @@ family matrix before the specific A2 resources are characterized.
 
 The synthetic fixture was seeded on 2026-09-13 in the allowlisted QA project;
 the seed record documents its run tag, aggregate production-shape comparison,
-counts, and read-only verification. The seed is not an observation result and
-does not provide browser credentials for the approved personas.
+counts, and read-only verification. The first bounded browser run completed in
+GitHub Actions run [`34741345064`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34741345064)
+with `7 passed, 1 skipped` across the four provisioned TOM personas. Client
+home/package reads passed for Client Admin A, Client User A, and Client Admin
+B. Their fixture rows use `relationship_role=user`, so `/client/users`
+redirected to `/client/home`, preserving the current management gate despite
+the legacy Admin/Client Parent labels. CSC reached `/manage-tenants` and
+completed the safe search round-trip; the client-only test was intentionally
+skipped for CSC. Storage states were not retained.
+
+The run is initial characterization, not completion of the full packet.
+Anonymous, integrator/team-leader, Super Admin, disabled-staff, and
+service-principal cases remain `Inconclusive`; baseline cutoff, repeated
+timings, query plans, and RBAC/Client Health/TOM review remain open.
 
 This is execution authorization, not blanket authorization for migrations,
-ghost-contact promotion, permission changes, or production observation. No
-hosted run should begin until the three missing fields are named and Carl
-approves execution.
+ghost-contact promotion, permission changes, or production observation. The
+next run, if needed, must remain within the same QA-only boundary and address
+the residual matrix explicitly.
 
 ### A8 — Client Health semantic gates
 

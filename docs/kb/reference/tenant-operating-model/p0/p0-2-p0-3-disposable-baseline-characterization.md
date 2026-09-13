@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — disposable verification and browser/query baseline packet
 
-> **Last updated:** 2026-09-12 · **Status:** planning packet; no QA execution approval granted
+> **Last updated:** 2026-09-13 · **Status:** initial bounded read-only characterization completed for four provisioned TOM personas; broader P0.2/P0.3 coverage remains open
 > **Owner:** Tenant Operating Model, with RBAC, Client Health, and security review
 > **Parent plan:** [Tenant Operating Model data architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related evidence:** [P0.1 owner-disposition register](p0-1-owner-disposition-register.md); [ghost-to-contact evidence packet](../p1/p1-2-a-ghost-contact-dry-run-evidence-packet.md); [guarded ghost dry-run execution packet](../p1/p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -43,12 +43,12 @@ that current behavior rather than quietly define a replacement contract.
 
 | Gate | Required evidence | Owner | Current state |
 | --- | --- | --- | --- |
-| Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Open |
+| Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Complete — `qfpxvumcrnzrjyvqkicq`, production target false |
 | Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Open |
-| Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Open |
-| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Open |
-| Operator | Name the operator and observation window | Carl | Open |
-| Artifact | Name private artifact location, access list, and retention | Operations | Open |
+| Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for initial bounded run — run tag `tom_qa_20260913_seed_01`; cleanup remains separately gated |
+| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — four TOM personas exercised; anonymous, integrator/team-leader, Super Admin, disabled staff, and service principal remain `Inconclusive` |
+| Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 05:51–05:53 UTC within the approved 60-minute window |
+| Artifact | Name private artifact location, access list, and retention | Operations | Complete — private GitHub Actions artifact `tom-p0-characterization-34741345064`, Carl/repository maintainers, 30 days |
 | Query safety | Confirm `EXPLAIN (ANALYZE, BUFFERS)` runs only on QA and that no production `ANALYZE` workload is included | TOM / DBA | Open |
 | Cross-initiative review | RBAC reviews authorization outcomes; Client Health reviews provenance/freshness implications | RBAC + Client Health | Open |
 
@@ -98,6 +98,32 @@ The matrix is a characterization of current behavior. It is not a role-default
 or authorization recommendation. Any unexpected broad or narrow result gets a
 reproducible evidence row and an owner; it is not “fixed” by changing a policy
 inside this packet.
+
+## Initial P0.2 read-only characterization run
+
+GitHub Actions run [`34741345064`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34741345064)
+completed successfully on 2026-09-13. It ran seven checks and intentionally
+skipped one client-only check for CSC: `7 passed, 1 skipped`, one worker, with
+no application writes. Storage states were generated inside the runner and
+were not uploaded. The only retained artifact is the redacted Vite runner log
+under the approved private 30-day retention policy.
+
+Observed current behavior:
+
+- Client Admin A, Client User A, and Client Admin B reached `/client/home` and
+  `/client/packages` successfully.
+- All three client fixture rows carry `relationship_role=user`, so the
+  current `/client/users` route gate redirected to `/client/home`. This is an
+  observed compatibility boundary: the legacy `Admin`/`Client Parent` labels
+  do not independently grant user-management access.
+- CSC reached `/manage-tenants` and completed the safe search round-trip.
+- Anonymous, integrator/team-leader, Super Admin, disabled-staff, and
+  service-principal cases were not exercised and remain `Inconclusive`.
+
+This is an initial bounded characterization, not the complete P0.2/P0.3
+baseline. Repeated timing runs, request-waterfall capture, query-plan
+evidence, broader persona coverage, and RBAC/Client Health/TOM review remain
+open.
 
 ## P0.2 read-only characterization run
 
