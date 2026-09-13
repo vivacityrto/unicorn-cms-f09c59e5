@@ -150,6 +150,25 @@ async function findFixtureTenant(suffix) {
   return data.id;
 }
 
+async function ensureClientParentUserType() {
+  const { data: existing, error: findErr } = await svc
+    .from("dd_user_type")
+    .select("value")
+    .eq("value", "Client Parent")
+    .maybeSingle();
+  if (findErr) throw new Error(`dd_user_type lookup: ${findErr.message}`);
+  if (existing) return;
+
+  const { error: insertErr } = await svc.from("dd_user_type").insert({
+    value: "Client Parent",
+    label: "Client Parent",
+    sort_order: 40,
+    is_active: true,
+  });
+  if (insertErr) throw new Error(`dd_user_type insert: ${insertErr.message}`);
+  console.log("dd_user_type: added QA-required Client Parent reference row");
+}
+
 async function ensureTenantUser(tenantId, userId) {
   // tenant_users.relationship_role/access_scope (not tenant_members) is what
   // ClientTenantContext.tsx actually gates client-portal access on -- a
@@ -208,6 +227,7 @@ async function ensureTenantMember(tenantId, userId) {
 
 async function main() {
   const tenantId = await upsertTenant();
+  await ensureClientParentUserType();
 
   await upsertPersona({
     email: "qa-e2e-superadmin@example.qa",
