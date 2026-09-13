@@ -1,12 +1,12 @@
 # TOM P0.2/P0.3 — cardinality and query-family follow-up
 
 > **Last updated:** 2026-09-13
-> **Status:** read-only production/QA cardinality comparison complete; approved representative fixture expansion seeded and protected run completed; address route/card reached but its populated query returned HTTP 400; separate Ask Viv conversation-history browser gap and cross-initiative owner review remain open
+> **Status:** read-only production/QA cardinality comparison complete; approved representative fixture expansion seeded and protected run completed; QA address query contract repaired and verified; client Ask Viv history read characterized; broader coverage and cross-initiative owner review remain open
 > **Owner:** Tenant Operating Model, with RBAC and Client Health review
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Cross-initiative review:** [owner-review matrix](p0-2-p0-3-cross-initiative-review-2026-09-13.md)
 > **Next approval packet:** [representative query-family fixture contract](p0-2-p0-3-representative-query-fixture-contract-2026-09-13.md)
-> **Address evidence:** [protected tenant-address characterization](../../../../audit-log/entries/2026-09-13-tom-address-browser-characterization.md)
+> **Address/history evidence:** [QA address repair and client Ask Viv history characterization](../../../../audit-log/entries/2026-09-13-tom-address-repair-and-client-ask-viv-history.md)
 > **Production rule:** this document records aggregate reads and source inspection only; it authorizes no schema, RLS, grant, Realtime, Edge, cron, data, or credential change
 
 ## Scope and method
@@ -32,7 +32,7 @@ relations:
 | `tenant_members` | 19 | 936 | relationship cardinality exists but is not production-shaped |
 | `tenant_users` | 19 | 576 | same QA members/users count is intentional fixture simplification |
 | `tenant_contacts` | 10 | 114 | contacts are present, but not at production breadth |
-| `tenant_addresses` | 3 synthetic | 722 | protected route/card reached, but the populated nested query returned HTTP 400; row rendering is not claimed |
+| `tenant_addresses` | 3 synthetic, production-shaped lookup/FK repaired | 722 | protected route/card query now has the production-shaped QA lookup contract; this remains QA evidence, not a production repair |
 | `tenant_relationships` | 1 synthetic | 2 | relationship read path observed in protected staff waterfall |
 | `tenant_csc_assignments` | 2 synthetic | 149 | assignment read path observed in protected staff waterfall |
 | `connected_tenants` | 2 synthetic | 109 | connected-tenant read path observed in protected staff waterfall |
@@ -93,21 +93,23 @@ implementation defect to repair inside this evidence packet.
 | --- | --- | --- |
 | Portfolio directory list, search, filters, package lookup | Protected staff/CSC navigation and waterfall evidence in the parent packet | Bounded current behavior characterized; full-cardinality strata still open |
 | Tenant detail read model | Staff-only navigation passed in protected run `34755463485` | Read shell characterized; child relations and largest-tenant detail breadth remain open |
-| Address and relationship reads | Synthetic rows exist; relationship waterfall observed; protected address route/card reached with no page errors | Address query returned HTTP 400 and did not render the seeded row; query/lookup contract review remains open; production Realtime publication gap remains noted above |
+| Address and relationship reads | Synthetic rows exist; relationship waterfall observed; after QA-only lookup/FK repair, the protected address query contract was re-verified; production Realtime publication gap remains noted above | QA read shape is characterized; production parity and any publication repair remain separate owner gates |
 | CSC assignment and connected-tenant reads | Synthetic rows now exist; both read families observed in protected staff waterfall | Negative/authorization and production-scale evidence remain owner-gated |
 | Export/download paths | No safe export invocation in the current protected run | Requires a specifically scoped read-only export oracle and approved safe fixture |
 | Realtime event delivery | Static listener source and publication membership inspected | Delivery/refresh behavior remains unexercised; do not mutate data in this packet |
 | RPC/Edge directory/detail paths | Waterfalls captured only for routes actually visited; source inventory identifies additional calls | Requires an approved query-family matrix before broadening browser coverage |
-| Ask Viv route and read history | Route reachable; current staff personas receive rollout-unavailable card; synthetic turns were read in the protected waterfall | Conversation-list request, generation, enabled-ring behavior, and owner review remain open |
+| Ask Viv route and read history | Staff route remains rollout-unavailable; dedicated Client User A run `34761219013` rendered synthetic history and observed owner-scoped conversation/turn GETs at HTTP 200 | Client history read is characterized for the current client contract; staff history, generation, enabled-ring behavior, provenance/freshness, and owner review remain open |
 
 ## Disposition and next gate
 
-The unattended read-only work and approved representative fixture expansion are
-complete and narrow the remaining work to two gates:
+The unattended read-only work, approved representative fixture expansion, QA
+address contract repair, and client-history characterization are complete and
+narrow the remaining work to two gates:
 
 1. TOM/RBAC/Client Health owners review the observed authorization,
    provenance, freshness, and fixture representativeness, including the
-   unexercised address and conversation-list paths; and
+   remaining unexercised address detail/export/Realtime/RPC/Edge paths and the
+   separate staff/enabled-rollout Ask Viv paths; and
 2. separately scoped QA-only browser checks cover the remaining safe read
    surfaces. Any publication, schema,
    RLS, grant, Edge, cron, or production data change remains a separate packet
