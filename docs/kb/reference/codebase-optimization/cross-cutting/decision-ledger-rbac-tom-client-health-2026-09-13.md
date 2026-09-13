@@ -1,6 +1,6 @@
 # Cross-initiative decision ledger — RBAC, TOM, and Client Health
 
-> **Last updated:** 2026-09-13 · **Status:** active decision register; A1 and A2 settled, A3 is the current discussion; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
+> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A3 settled, A4 is the current discussion; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
 > **Purpose:** one canonical ledger for the remaining decisions Carl must approve, review, or analyze before continuous implementation
 > **Inputs:** [RBAC P1-s resource dispositions](../../rbac-v6/p1/p1-s-aj-csc-resource-disposition-recommendation.md), [RBAC P1-r read-resource QA gate](../../rbac-v6/p1/p1-r-aj-csc-read-resource-decomposition-and-qa-gate.md), [RBAC P1-q live read-boundary reconciliation](../../rbac-v6/p1/p1-q-aj-csc-live-read-boundary-reconciliation.md), [approval-unblock matrix](approval-unblock-matrix-2026-09-12.md), [unattended-preparation authorization matrix](unattended-preparation-authorization-matrix-2026-09-13.md), [Program Index](../../program-index.md)
 > **Owners:** Carl for product/policy approvals; RBAC for capability and server-boundary design; TOM for relationship semantics; Client Health for metric/data semantics; security for privileged-boundary review
@@ -35,8 +35,8 @@ Status meanings:
 | --- | --- | --- | --- | --- |
 | **A1** | Accept the seven-resource RBAC read split | **settled — approved by Carl 2026-09-13** | Keep catalogue, mapping, package-instance, client-stage, enrolment/progress, analytics, and stage-version resources distinct; do not revive broad `packages.view`/`stages.view` rows | A2 bounded QA authorization |
 | **A2** | Authorize bounded read-only QA | **settled — approved by Carl 2026-09-13** | Characterization only for package instances and client stages; no grants, routes, RLS/RPC changes, or implementation | A3 fixture/persona/owner definition |
-| **A3** | Select QA fixture/personas/owners | **current discussion** | Name QA tenant/resources, active AJ/CSC, ordinary CSC, client, disabled/expired, wrong-tenant, inactive-membership, anonymous, and Super Admin cases; name operator, security reviewer, artifact owner, and rollback owner | Safe execution preflight |
-| **A4** | Define internal-staff visibility for these resources | awaiting Carl/TOM | Decide whether internal staff may read all package instances/client stages across tenants; do not infer write/export/publish/assignment authority | Relationship and negative-case assertions |
+| **A3** | Select QA fixture/personas/owners | **settled — approved by Carl 2026-09-13** | Use isolated `unicorn-qa` data with the named persona and negative-case matrix; name operator, security reviewer, artifact owner, and rollback owner before execution | A4 internal-staff visibility decision |
+| **A4** | Define internal-staff visibility for these resources | **current discussion** | Decide whether internal staff may read all package instances/client stages across tenants; do not infer write/export/publish/assignment authority | Relationship and negative-case assertions |
 | **A5** | Authorize the security-boundary investigation | awaiting Carl/security | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement | Separate security findings/remediation decision |
 | **A6** | Classify client stage state | awaiting Carl/Client Health | Decide whether stage status/date/node state is Client Health operational evidence, client-facing data, or both | Cross-initiative ownership and metric handling |
 | **A7** | Authorize TOM hosted-QA preflight | awaiting Carl/TOM | Only after QA URL/ref, short-lived identities, fixture/reset plan, operator/window, and private artifact retention are specified | One read-only `unicorn-qa` run |
@@ -101,7 +101,10 @@ cases. A3 must define the safe fixture and named owners before execution.
 
 ### A3 — QA fixture and ownership
 
-The fixture must be safe, isolated, resettable, and privately reviewable. The
+### Decision record
+
+Carl approved A3 on 2026-09-13. The fixture must be safe, isolated, resettable,
+and privately reviewable. The
 minimum matrix is active AJ/CSC, ordinary CSC, client, disabled/archived/
 expired/revoked, wrong tenant, wrong package/instance, inactive membership,
 anonymous, and Super Admin. The packet must name the operator, security
