@@ -26,6 +26,28 @@ const STATUS_BADGE: Record<string, string> = {
 
 type WorkloadSnapshot = Tables<'workload_snapshots'>;
 type EnrichedConsultant = WorkloadSnapshot & { consultant_name: string };
+export type BurnRiskForecastRow = Pick<Tables<'tenant_package_burn_forecast'>, 'tenant_id' | 'burn_risk_status'>;
+
+export interface BurnRiskSummary {
+  burnSourceStatus: 'reported' | 'unavailable';
+  criticalBurnCount: number | null;
+}
+
+export function summarizeBurnRisk(
+  forecasts: BurnRiskForecastRow[] | null,
+  error: unknown = null,
+): BurnRiskSummary {
+  if (error || !forecasts || forecasts.length === 0) {
+    return { burnSourceStatus: 'unavailable', criticalBurnCount: null };
+  }
+
+  return {
+    burnSourceStatus: 'reported',
+    criticalBurnCount: new Set(
+      forecasts.filter((row) => row.burn_risk_status === 'critical').map((row) => row.tenant_id),
+    ).size,
+  };
+}
 
 export function TeamCapacityWidget() {
   const { data, isLoading } = useQuery({
@@ -69,14 +91,14 @@ export function TeamCapacityWidget() {
       );
 
       // Get burn risk client count per consultant (approximate via tenant assignments)
-      const { data: burnData } = await supabase
+      const { data: burnData, error: burnError } = await supabase
         .from('tenant_package_burn_forecast')
         .select('tenant_id, burn_risk_status')
         .eq('burn_risk_status', 'critical');
 
-      const criticalBurnCount = new Set((burnData || []).map((b) => b.tenant_id)).size;
+      const burnSummary = summarizeBurnRisk(burnData, burnError);
 
-      return { consultants: enriched, criticalBurnCount };
+      return { consultants: enriched, ...burnSummary };
     },
     staleTime: 120_000,
   });
@@ -84,7 +106,8 @@ export function TeamCapacityWidget() {
   const consultants = data?.consultants || [];
   const critOver100 = consultants.filter((c) => c.capacity_utilisation_percentage > 100).length;
   const critOver120 = consultants.filter((c) => c.capacity_utilisation_percentage > 120).length;
-  const showAlert = critOver100 >= 2 || critOver120 >= 1 || (data?.criticalBurnCount || 0) >= 3;
+  const burnAssessmentReported = data?.burnSourceStatus === 'reported';
+  const showAlert = critOver100 >= 2 || critOver120 >= 1 || (burnAssessmentReported && (data?.criticalBurnCount || 0) >= 3);
 
   return (
     <Card>
@@ -103,6 +126,11 @@ export function TeamCapacityWidget() {
           <p className="text-xs text-muted-foreground">No workload data available.</p>
         ) : (
           <div className="space-y-3">
+            {!burnAssessmentReported && (
+              <p role="status" className="text-xs text-muted-foreground">
+                Burn assessment unavailable. No accepted forecast is available.
+              </p>
+            )}
             {showAlert && (
               <Alert variant="destructive" className="py-2">
                 <AlertTriangle className="h-4 w-4" />
