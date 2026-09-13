@@ -49,6 +49,10 @@ described below.
 
 ### Current research dependency — consultant operational input outstanding
 
+Carl acknowledged this external blocker on 2026-09-13; the required consultant
+reports remain outstanding and must be consolidated before metric policy is
+finalized.
+
 The technical reconciliation is not a substitute for operating knowledge from
 the consultants who use the triage and client-health workflows. The [research
 project pack](../handoffs/client-health-consultant-research-project-pack.md)

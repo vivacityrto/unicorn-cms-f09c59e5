@@ -36,7 +36,7 @@ general “continue” must not be converted into a product/security decision.
 | T1-x | Hosted TOM P0.2/P0.3 execution | Approve one synthetic, read-only `unicorn-qa` run only after preflight fields are filled | Carl + security/environment owner | Preparation approved; execution remains blocked on QA credentials, operator, fixture approval, and artifact owner | Offline manifest validation and runbook prep |
 | T2 | TOM implementation | Keep directory/writer/membership/normalization/Realtime/RLS work deferred | Carl + product/data/security | Blocked by design | Contract comparison and evidence gap list |
 | H2 | Forecast job disposition | Keep jobs stopped and outputs unavailable; retain legacy artifacts as evidence without repair or restart | Client Health/data owner + Carl | Owner disposition approved 2026-09-13; replacement-shadow authorization remains separately gated | If replacement is chosen later, prepare its data owner, synthetic fixture, run-ledger, and shadow/rollback contract |
-| H3 | Consultant operational input | Obtain AJ/Ezel/consultant reports before thresholds, confidence, or pilot acceptance | Consultants + Carl | External blocker | Report template and evidence schema |
+| H3 | Consultant operational input | Obtain AJ/Ezel/consultant reports before thresholds, confidence, or pilot acceptance | Consultants + Carl | External blocker acknowledged 2026-09-13; reports remain outstanding | Report template and evidence schema |
 | A2 | AdminStageDetail extraction | Permit only pure display seams after owner review; behavior-bearing seams remain with TOM/RBAC/Client Health | Codebase + TOM/RBAC | Blocked on contract/oracle clearance | Finalize call graph and seam decision table |
 
 ## R2 — RBAC policy decision packet
