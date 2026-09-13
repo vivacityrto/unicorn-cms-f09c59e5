@@ -3,6 +3,7 @@
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Manifest:** [machine-readable fixture manifest](data/p0-2-p0-3-qa-fixture-manifest.json)
 > **Representative query contract:** [synthetic query-family fixture contract](p0-2-p0-3-representative-query-fixture-contract-2026-09-13.md)
+> **Negative cases and cleanup:** [QA negative cases and cleanup/runbook contract](p0-4-qa-negative-cases-and-cleanup-runbook.md)
 > **Program index:** [Program Index](../../program-index.md)
 > **Status:** preparation-only; no hosted characterization run executed (see separate seed record)
 > **Source:** `origin/main@49fa5e71c401e046c82071a7ba3b05e6d78c373f`
