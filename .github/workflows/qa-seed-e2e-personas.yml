@@ -2,6 +2,12 @@ name: QA seed e2e personas (provisioning, not a test)
 
 on:
   workflow_dispatch:
+    inputs:
+      characterize:
+        description: "Run the read-only TOM characterization after validating existing personas"
+        required: false
+        default: false
+        type: boolean
 
 # Provisioning is idempotent but still shouldn't race itself.
 concurrency:
@@ -10,6 +16,7 @@ concurrency:
 
 jobs:
   seed:
+    if: ${{ !inputs.characterize }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: unicorn-qa
@@ -36,3 +43,77 @@ jobs:
           QA_TOM_CLIENT_ADMIN_B_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_B_PASSWORD }}
           QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
           QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
+
+  characterize:
+    if: ${{ inputs.characterize }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies and browser
+        shell: bash
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Start QA-pointed dev server
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          nohup npm run dev > "$RUNNER_TEMP/unicorn-qa-vite.log" 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:8080 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "QA dev server did not become ready" >&2
+          cat "$RUNNER_TEMP/unicorn-qa-vite.log" >&2
+          exit 1
+      - name: Generate ephemeral TOM storage states
+        shell: bash
+        env:
+          QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
+          QA_TOM_CLIENT_ADMIN_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
+          QA_TOM_CLIENT_USER_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_USER_A_PASSWORD }}
+          QA_TOM_CLIENT_ADMIN_B_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_B_PASSWORD }}
+          QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
+        run: |
+          declare -A emails=(
+            [tom-client-admin-a]="${QA_TOM_FIXTURE_TAG}_client_admin_a@example.qa"
+            [tom-client-user-a]="${QA_TOM_FIXTURE_TAG}_client_user_a@example.qa"
+            [tom-client-admin-b]="${QA_TOM_FIXTURE_TAG}_client_admin_b@example.qa"
+            [tom-csc]="${QA_TOM_FIXTURE_TAG}_csc@example.qa"
+          )
+          declare -A passwords=(
+            [tom-client-admin-a]="$QA_TOM_CLIENT_ADMIN_A_PASSWORD"
+            [tom-client-user-a]="$QA_TOM_CLIENT_USER_A_PASSWORD"
+            [tom-client-admin-b]="$QA_TOM_CLIENT_ADMIN_B_PASSWORD"
+            [tom-csc]="$QA_TOM_CSC_PASSWORD"
+          )
+          for persona in "${!emails[@]}"; do
+            E2E_EMAIL="${emails[$persona]}" E2E_PASSWORD="${passwords[$persona]}" node e2e/auth-setup.mjs "$persona"
+          done
+      - name: Run read-only TOM characterization
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+        run: npm run e2e:qa -- --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --trace=off --screenshot=off --video=off
+      - name: Upload redacted run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-p0-characterization-${{ github.run_id }}
+          retention-days: 30
+          path: ${{ runner.temp }}/unicorn-qa-vite.log
+          if-no-files-found: ignore
