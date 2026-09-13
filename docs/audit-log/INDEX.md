@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-13 — TOM QA address contract repair and client Ask Viv history characterization](entries/2026-09-13-tom-address-repair-and-client-ask-viv-history.md) — QA-only `tenant_addresses`/`dd_address_type` shape repaired to match the independently read production contract; protected Client User A history read then returned both owner-scoped relations with HTTP 200 and rendered the synthetic turns in run `34761219013`; no production or policy change
+
 - [2026-09-13 — TOM tenant-address browser characterization — protected SuperAdmin route/card reached with no page errors, but the populated `tenant_addresses` query returned HTTP 400 in `unicorn-qa`; the synthetic row was not claimed as rendered, and no schema, lookup, RLS, grant, Realtime, Edge, cron, export, credential, or production-data change was made](entries/2026-09-13-tom-address-browser-characterization.md) · tag: `audit-2026-09-13-tom-address-browser-characterization` · author: Codex
 
 - [2026-09-13 — TOM representative QA query-family fixture expansion — added 3 `tenant_addresses`, 1 `tenant_relationships`, 2 `tenant_csc_assignments`, 2 `connected_tenants`, 3 `conversation_participants`, 1 `ask_viv_conversations`, and 2 `ask_viv_turns` synthetic rows to the allowlisted `unicorn-qa` project; corrected the two Ask Viv fixture turns to the current `assistant` mode after the first read exposed the mismatch; protected read-only run `34757778368` completed with 84 passed and 48 skipped; production aggregate counts unchanged; no schema, RLS, grant, Realtime, Edge, cron, export, credential, or production-data change](entries/2026-09-13-tom-representative-qa-fixture-expansion.md) · tag: `audit-2026-09-13-tom-representative-qa-fixture-expansion` · author: Codex

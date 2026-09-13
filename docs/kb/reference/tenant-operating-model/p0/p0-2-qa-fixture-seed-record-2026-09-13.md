@@ -1,10 +1,11 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; address route/card follow-up run `34759865158` passed with the populated address query returning HTTP 400 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; QA address lookup/FK contract repaired and verified; Client User A Ask Viv history characterized in run `34761219013` (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** [2026-09-13 TOM representative QA query-family fixture expansion](../../../../audit-log/entries/2026-09-13-tom-representative-qa-fixture-expansion.md)
 > **Address audit entry:** [2026-09-13 TOM tenant-address browser characterization](../../../../audit-log/entries/2026-09-13-tom-address-browser-characterization.md)
+> **Follow-up audit entry:** [2026-09-13 TOM QA address repair and client Ask Viv history characterization](../../../../audit-log/entries/2026-09-13-tom-address-repair-and-client-ask-viv-history.md)
 
 ## Purpose and boundary
 
@@ -199,10 +200,18 @@ The separately scoped address follow-up
 [`34759865158`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34759865158)
 completed with `88 passed, 48 skipped` and no failures. The protected
 SuperAdmin route rendered the `Addresses` heading without page errors, but the
-underlying `tenant_addresses` request returned HTTP `400`, so the seeded
-address row is not claimed as browser-rendered. The test records this as a
-current QA query/read-shape gap; it did not change the empty QA
-`dd_address_type` lookup or any schema, RLS, grant, or production behavior.
+underlying `tenant_addresses` request returned HTTP `400`. The independently
+compared QA-only follow-up inserted the four production-shaped
+`dd_address_type` rows, normalized only the tagged fixture address codes, and
+added the matching foreign key; separate reads confirmed the join and FK.
+No production or policy change was made.
+
+The client-persona history follow-up
+[`34761219013`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34761219013)
+completed with `92 passed, 72 skipped` and no failures. The dedicated
+Client User A test opened the current client Ask Viv panel, rendered the
+synthetic user and assistant turns, observed both owner-scoped history GETs at
+HTTP `200` on all four repeats, and made no generation/write request.
 
 ## Remaining P0.2/P0.3 gates
 
@@ -210,9 +219,8 @@ The fixture and nine browser-capable QA identities now exist, and the expanded
 bounded browser run is recorded above. Before calling the broader P0.2/P0.3
 packet complete, it still needs:
 
-1. address query/lookup-contract review and Ask Viv conversation-history browser coverage, plus
-   representative full-cardinality and unexercised detail/export/Realtime/
-   RPC/Edge/Ask Viv query-family coverage; and
+1. representative full-cardinality and unexercised detail/export/Realtime/
+   RPC/Edge/staff/enabled-rollout Ask Viv query-family coverage; and
 2. RBAC, Client Health, and TOM owner review of authorization, provenance,
    freshness, and fixture representativeness.
 

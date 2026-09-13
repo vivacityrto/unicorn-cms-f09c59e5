@@ -1,7 +1,7 @@
 # TOM P0.2/P0.3 — representative query-family fixture contract
 
 > **Last updated:** 2026-09-13
-> **Status:** approved QA-only fixture contract executed and read-only verified 2026-09-13; address route/card reached but its populated query returned HTTP 400, and the separate Ask Viv conversation-history browser path remains unexercised; owner review and broader P0.2/P0.3 gates remain open
+> **Status:** approved QA-only fixture contract executed and read-only verified 2026-09-13; QA address query contract repaired and re-verified; client Ask Viv history browser path characterized; owner review and broader P0.2/P0.3 gates remain open
 > **Owner:** Tenant Operating Model, with RBAC v6 and Client Health Activity Analytics review
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
 > **Evidence follow-up:** [cardinality and query-family follow-up](p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md)
@@ -9,6 +9,7 @@
 > **Repository context:** `origin/main@0fb9c697d883e06a8ac6e08e9d1fbdbc2bb62c9d`
 > **Audit entry:** [2026-09-13 TOM representative QA query-family fixture expansion](../../../../audit-log/entries/2026-09-13-tom-representative-qa-fixture-expansion.md)
 > **Address evidence:** [2026-09-13 TOM tenant-address browser characterization](../../../../audit-log/entries/2026-09-13-tom-address-browser-characterization.md)
+> **Follow-up evidence:** [2026-09-13 TOM QA address repair and client Ask Viv history characterization](../../../../audit-log/entries/2026-09-13-tom-address-repair-and-client-ask-viv-history.md)
 
 ## Purpose and boundary
 
@@ -111,17 +112,23 @@ the run. No retry may broaden identity, scope, or data selection.
 
 ## Approval decision requested
 
-The next owner decision is narrow: review the executed QA-only fixture shape
-and its negative-case matrix. The contract was subsequently approved for
-execution. The QA-only expansion added the minimum rows in the table above and
+The next owner decision is narrow: review the executed QA-only fixture shape,
+its negative-case matrix, and the bounded repair/history evidence. The contract
+was subsequently approved for execution. The QA-only expansion added the
+minimum rows in the table above and
 the corrected protected run
 [`34757778368`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34757778368)
 completed with `84 passed, 48 skipped`. The run observed relationship,
 assignment, connected-tenant, participant, and Ask Viv turn reads without
-failures. The protected address follow-up reached the route/card without page
-errors, but the populated `tenant_addresses` request returned HTTP `400`; the
-seeded row is therefore not claimed as browser-rendered. The current route
-also did not issue a separate `ask_viv_conversations` request;
-export/download, Realtime delivery, generation, full-cardinality performance,
-and owner review remain open. The contract authorizes no production or live
-schema/RLS/grant/publication/Edge/cron/credential change.
+failures. The address follow-up initially reached the route/card without page
+errors but returned HTTP `400`; an independently compared QA-only repair then
+restored the production-shaped lookup rows, address codes, and foreign key.
+Separate protected run
+[`34761219013`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34761219013)
+completed with `92 passed, 72 skipped` and no failures. Its dedicated Client
+User A check rendered the synthetic conversation turns and observed
+`ask_viv_client_conversations` and `ask_viv_client_turns` GETs at HTTP `200` on
+all four repeats, with no generation/write request. Export/download, Realtime
+delivery, staff/enabled-rollout history, generation, full-cardinality
+performance, and owner review remain open. The contract authorizes no
+production or live schema/RLS/grant/publication/Edge/cron/credential change.

@@ -87,6 +87,28 @@ test("client persona reads packages and preserves the relationship-role user-man
   await finishWaterfall();
 });
 
+test("Client User A resumes its owner-scoped Ask Viv history", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "qa-tom-client-user-a", "client-user-A-only history characterization");
+
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const finishWaterfall = startSupabaseWaterfall(page, `${testInfo.project.name} /client/home-ask-viv-history`);
+
+  const response = await page.goto("/client/home");
+  expect(response?.status()).toBeLessThan(400);
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByRole("button", { name: "Open Ask Viv" })).toBeVisible({ timeout: 45_000 });
+  await page.getByRole("button", { name: "Open Ask Viv" }).click();
+
+  await expect(page.getByText("Your account assistant", { exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText("TOM QA client synthetic question", { exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(
+    page.getByText("TOM QA client synthetic answer; do not treat as operational evidence.", { exact: true }),
+  ).toBeVisible({ timeout: 45_000 });
+  expect(pageErrors).toEqual([]);
+  await finishWaterfall();
+});
+
 test("staff persona opens the first tenant detail read model", async ({ page }, testInfo) => {
   test.skip(CLIENT_PROJECTS.has(testInfo.project.name) || DISABLED_PROJECTS.has(testInfo.project.name), "staff-only read characterization");
 
