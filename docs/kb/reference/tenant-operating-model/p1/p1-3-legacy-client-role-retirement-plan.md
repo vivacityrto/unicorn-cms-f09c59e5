@@ -1,6 +1,6 @@
 # TOM/RBAC P1.3 — legacy Client Parent/Child retirement plan
 
-> **Last updated:** 2026-09-13 · **Status:** planning approved; no implementation or production mutation authorized
+> **Last updated:** 2026-09-13 · **Status:** planning approved; decisions 1–10 recorded; no implementation or production mutation authorized
 > **Parent plan:** [Tenant Operating Model Data Architecture Plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related packet:** [P1.1 membership and ownership compatibility scope](p1-1-membership-ownership-compatibility-scope.md)
 > **Related code contract:** [`relationshipRole.ts`](../../../../../src/lib/roles/relationshipRole.ts)
@@ -23,6 +23,27 @@ legacy client-admin/client-user split. The durable model is:
 
 The legacy labels may be derived during a bounded transition. They must not be
 used to infer contact ownership, tenant scope, or a product hierarchy.
+
+## Decision record
+
+Carl approved the following planning decisions in sequence on 2026-09-13:
+
+| # | Decision | Recorded direction |
+| ---: | --- | --- |
+| 1 | Parent/Child is not the account model | Treat the labels as legacy display/compatibility values only |
+| 2 | Relationship role is the client access selector | Use primary, secondary, user, or Academy relationship plus scope; derive legacy `unicorn_role` temporarily |
+| 3 | Retire duplicate tenant Parent/Child mirrors | Retire `tenant_users.role` parent/child and legacy booleans after relationship parity, not in this packet |
+| 4 | Relationship role is per tenant | A person may have a different relationship and scope in each tenant membership |
+| 5 | Compatibility values remain temporarily | New writes use explicit relationship data; no direct Parent/Child editing; derive only for unmigrated readers |
+| 6 | Mismatches are holdouts | Tenant-less and inconsistent rows require individual classification; no bulk backfill |
+| 7 | Do not remove all `user_type` yet | Preserve the broader staff/client compatibility boundary until RBAC defines its replacement |
+| 8 | Preserve current contact-management behavior | Primary and secondary contacts retain full portal management during transition; RBAC may later refine capabilities |
+| 9 | Migrate behavior before storage | Characterize, migrate readers/writers, shadow, observe, then remove storage representations |
+| 10 | Stop adding new Parent/Child dependencies | New UI/API flows accept relationship roles; legacy inputs normalize immediately and are not expanded |
+
+These decisions authorize planning and characterization only. They do not
+authorize a role change, backfill, schema/RLS/grant/trigger migration, or
+production cutover.
 
 ## Why the labels still exist
 
