@@ -111,15 +111,20 @@ jobs:
             E2E_EMAIL="${emails[$persona]}" E2E_PASSWORD="${passwords[$persona]}" node e2e/auth-setup.mjs "$persona"
           done
       - name: Run read-only TOM characterization
+        shell: bash
         env:
           VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
-        run: npm run e2e:qa -- --project=qa-anonymous --project=qa-superadmin --project=qa-client --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --repeat-each=4 --trace=off
+        run: |
+          set -o pipefail
+          npm run e2e:qa -- --project=qa-anonymous --project=qa-superadmin --project=qa-client --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --repeat-each=4 --trace=off 2>&1 | tee "$RUNNER_TEMP/tom-p0-playwright.log"
       - name: Upload redacted run evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tom-p0-characterization-${{ github.run_id }}
           retention-days: 30
-          path: ${{ runner.temp }}/unicorn-qa-vite.log
+          path: |
+            ${{ runner.temp }}/unicorn-qa-vite.log
+            ${{ runner.temp }}/tom-p0-playwright.log
           if-no-files-found: ignore

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { startSupabaseWaterfall } from "./supabase-waterfall";
 
 // Packet P2-QA -- qa:e2e, Super Admin persona against unicorn-qa (not
 // production; see playwright.qa.config.ts). Storage state:
@@ -9,21 +10,25 @@ import { test, expect } from "@playwright/test";
 test("Dashboard loads as an authenticated SuperAdmin", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
+  const finishWaterfall = startSupabaseWaterfall(page, "qa-superadmin /dashboard");
 
   const response = await page.goto("/dashboard");
   expect(response?.status()).toBeLessThan(400);
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
+  await finishWaterfall();
 });
 
 test("A representative SuperAdmin-only route is reachable, not redirected to /dashboard", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
+  const finishWaterfall = startSupabaseWaterfall(page, "qa-superadmin /settings/roles");
 
   await page.goto("/settings/roles");
   await page.waitForLoadState("networkidle").catch(() => {});
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page).not.toHaveURL("**/dashboard");
   expect(errors).toEqual([]);
+  await finishWaterfall();
 });

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { startSupabaseWaterfall } from "./supabase-waterfall";
 
 // TOM P0.2/P0.3 read-only characterization against the allowlisted
 // unicorn-qa project. The fixture and persona provisioning are documented in
@@ -16,6 +17,7 @@ async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label
   const startedAt = performance.now();
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  const finishWaterfall = startSupabaseWaterfall(page, `${label} ${path}`);
 
   const response = await page.goto(path);
   expect(response?.status(), `${path} should return a successful response`).toBeLessThan(400);
@@ -23,6 +25,7 @@ async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label
   await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({ timeout: 25_000 });
   expect(pageErrors).toEqual([]);
   console.log(`[tom-p0-timing] ${label} ${path} ${Math.round(performance.now() - startedAt)}ms`);
+  await finishWaterfall();
 }
 
 test("persona reaches its current tenant/staff read shell", async ({ page }, testInfo) => {
@@ -51,7 +54,9 @@ test("client persona reads packages and preserves the relationship-role user-man
   // management surface. This assertion records current behavior rather than
   // treating the redirect as a harness failure.
   const startedAt = performance.now();
+  const finishWaterfall = startSupabaseWaterfall(page, `${testInfo.project.name} /client/users-redirect`);
   await page.goto("/client/users");
   await expect(page).toHaveURL(/\/client\/home(?:$|\?)/, { timeout: 45_000 });
   console.log(`[tom-p0-timing] ${testInfo.project.name} /client/users-redirect ${Math.round(performance.now() - startedAt)}ms`);
+  await finishWaterfall();
 });
