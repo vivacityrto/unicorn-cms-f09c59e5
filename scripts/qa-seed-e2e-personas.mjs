@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Idempotently provisions the persistent qa:e2e fixtures in unicorn-qa: one
-// tenant and two personas (Super Admin, client). Unlike every other
+// tenant and two personas (Super Admin, client), plus the short-lived TOM
+// P0.2/P0.3 read personas. Unlike every other
 // fixture-producing P2-QA suite, these are deliberately NOT cleaned up after
 // each run -- Playwright's authenticated read-only route checks need
 // something real to log into and render, and re-seeding a throwaway persona
@@ -16,15 +17,19 @@
 // "qa-e2e" (not "vitest").
 //
 // Safe to re-run: looks up each persona by email and the tenant by slug
-// first; creates only what's missing, and always resets the two personas'
-// passwords to the current QA_E2E_*_PASSWORD env values (so a storage-state
-// regeneration after a password rotation always succeeds).
+// first; creates only what's missing, and always resets the personas' passwords
+// to the current QA_*_PASSWORD env values (so a storage-state regeneration
+// after a password rotation always succeeds). TOM personas are tied to the
+// already-seeded, run-scoped tenant fixture and do not alter its profile rows.
 //
 // Usage (matches every other P2-QA script/suite's env-var contract):
 //   VITE_SUPABASE_URL=https://qfpxvumcrnzrjyvqkicq.supabase.co \
 //   SUPABASE_SERVICE_ROLE_KEY=... \
 //   QA_E2E_SUPERADMIN_PASSWORD=... QA_E2E_CLIENT_PASSWORD=... \
+//   QA_TOM_CLIENT_ADMIN_A_PASSWORD=... QA_TOM_CLIENT_USER_A_PASSWORD=... \
+//   QA_TOM_CLIENT_ADMIN_B_PASSWORD=... QA_TOM_CSC_PASSWORD=... \
 //   node scripts/qa-seed-e2e-personas.mjs
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const QA_PROJECT_REF = "qfpxvumcrnzrjyvqkicq";
@@ -34,13 +39,18 @@ const supabaseUrl = (process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const superAdminPassword = process.env.QA_E2E_SUPERADMIN_PASSWORD ?? "";
 const clientPassword = process.env.QA_E2E_CLIENT_PASSWORD ?? "";
+const tomClientAdminAPassword = process.env.QA_TOM_CLIENT_ADMIN_A_PASSWORD ?? "";
+const tomClientUserAPassword = process.env.QA_TOM_CLIENT_USER_A_PASSWORD ?? "";
+const tomClientAdminBPassword = process.env.QA_TOM_CLIENT_ADMIN_B_PASSWORD ?? "";
+const tomCscPassword = process.env.QA_TOM_CSC_PASSWORD ?? "";
+const TOM_FIXTURE_TAG = process.env.QA_TOM_FIXTURE_TAG ?? "tom_qa_20260913_seed_01";
 
 if (supabaseUrl !== QA_PROJECT_URL) {
   console.error(`qa-seed-e2e-personas: refusing to run -- target must be ${QA_PROJECT_URL}, got "${supabaseUrl || "(unset)"}"`);
   process.exit(1);
 }
-if (!serviceRole || !superAdminPassword || !clientPassword) {
-  console.error("qa-seed-e2e-personas: SUPABASE_SERVICE_ROLE_KEY, QA_E2E_SUPERADMIN_PASSWORD and QA_E2E_CLIENT_PASSWORD are all required");
+if (!serviceRole || !superAdminPassword || !clientPassword || !tomClientAdminAPassword || !tomClientUserAPassword || !tomClientAdminBPassword || !tomCscPassword) {
+  console.error("qa-seed-e2e-personas: service-role and all persistent/TOM persona passwords are required");
   process.exit(1);
 }
 
@@ -50,6 +60,15 @@ const svc = createClient(supabaseUrl, serviceRole, {
 
 const TENANT_SLUG = "qa-e2e-demo-tenant";
 const TENANT_NAME = "QA E2E Demo Tenant";
+
+function fixtureUuid(persona) {
+  const hex = createHash("md5").update(`${TOM_FIXTURE_TAG}:persona:${persona}`).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function fixtureEmail(persona) {
+  return `${TOM_FIXTURE_TAG}_${persona}@example.qa`;
+}
 
 async function findAuthUserByEmail(email) {
   let page = 1;
@@ -64,7 +83,7 @@ async function findAuthUserByEmail(email) {
   }
 }
 
-async function upsertPersona({ email, password, firstName, lastName, unicornRole, userType, tenantId }) {
+async function upsertPersona({ email, password, firstName, lastName, unicornRole, userType, tenantId, userId }) {
   let authUser = await findAuthUserByEmail(email);
   if (authUser) {
     const { error } = await svc.auth.admin.updateUserById(authUser.id, { password });
@@ -72,10 +91,11 @@ async function upsertPersona({ email, password, firstName, lastName, unicornRole
     console.log(`persona ${email}: existing auth user, password reset`);
   } else {
     const { data, error } = await svc.auth.admin.createUser({
+      ...(userId ? { id: userId } : {}),
       email,
       password,
       email_confirm: true,
-      user_metadata: { qa_e2e_persona: true },
+      user_metadata: { qa_e2e_persona: true, qa_tom_fixture: TOM_FIXTURE_TAG },
     });
     if (error || !data.user) throw new Error(`createUser(${email}): ${error?.message}`);
     authUser = data.user;
@@ -120,6 +140,14 @@ async function upsertTenant() {
   if (createErr || !created) throw new Error(`tenants insert: ${createErr?.message}`);
   console.log(`tenant ${TENANT_SLUG}: created (id=${created.id})`);
   return created.id;
+}
+
+async function findFixtureTenant(suffix) {
+  const slug = `${TOM_FIXTURE_TAG}_tenant_${suffix}`;
+  const { data, error } = await svc.from("tenants").select("id").eq("slug", slug).maybeSingle();
+  if (error) throw new Error(`fixture tenant lookup (${slug}): ${error.message}`);
+  if (!data) throw new Error(`fixture tenant lookup (${slug}): seeded tenant not found`);
+  return data.id;
 }
 
 async function ensureTenantUser(tenantId, userId) {
@@ -202,6 +230,59 @@ async function main() {
   });
   await ensureTenantMember(tenantId, clientUserId);
   await ensureTenantUser(tenantId, clientUserId);
+
+  const tenantAId = await findFixtureTenant(2);
+  const tenantBId = await findFixtureTenant(3);
+
+  const tomClientAdminAId = await upsertPersona({
+    email: fixtureEmail("client_admin_a"),
+    password: tomClientAdminAPassword,
+    firstName: "TOM QA",
+    lastName: "Client Admin A",
+    unicornRole: "Admin",
+    userType: "Client",
+    tenantId: tenantAId,
+    userId: fixtureUuid("client_admin_a"),
+  });
+  await ensureTenantMember(tenantAId, tomClientAdminAId);
+  await ensureTenantUser(tenantAId, tomClientAdminAId);
+
+  const tomClientUserAId = await upsertPersona({
+    email: fixtureEmail("client_user_a"),
+    password: tomClientUserAPassword,
+    firstName: "TOM QA",
+    lastName: "Client User A",
+    unicornRole: "User",
+    userType: "Client",
+    tenantId: tenantAId,
+    userId: fixtureUuid("client_user_a"),
+  });
+  await ensureTenantMember(tenantAId, tomClientUserAId);
+  await ensureTenantUser(tenantAId, tomClientUserAId);
+
+  const tomClientAdminBId = await upsertPersona({
+    email: fixtureEmail("client_admin_b"),
+    password: tomClientAdminBPassword,
+    firstName: "TOM QA",
+    lastName: "Client Admin B",
+    unicornRole: "Admin",
+    userType: "Client",
+    tenantId: tenantBId,
+    userId: fixtureUuid("client_admin_b"),
+  });
+  await ensureTenantMember(tenantBId, tomClientAdminBId);
+  await ensureTenantUser(tenantBId, tomClientAdminBId);
+
+  await upsertPersona({
+    email: fixtureEmail("csc"),
+    password: tomCscPassword,
+    firstName: "TOM QA",
+    lastName: "CSC",
+    unicornRole: "Team Member",
+    userType: "Vivacity Team",
+    tenantId: null,
+    userId: fixtureUuid("csc"),
+  });
 
   console.log("qa-seed-e2e-personas: done");
 }
