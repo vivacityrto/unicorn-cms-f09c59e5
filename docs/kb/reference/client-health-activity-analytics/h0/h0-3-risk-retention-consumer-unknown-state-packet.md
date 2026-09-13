@@ -243,6 +243,26 @@ view, attention-score formula, source freshness rules, Ask Viv contract,
 forecast jobs, cron, schema, RLS, Edge, or production data. Stale/invalid
 quality validation remains a separate gate.
 
+## H1 Ask Viv portfolio-facts containment — fourth bounded consumer slice
+
+The shared `portfolio-facts.ts` builder now checks
+`tenant_package_burn_forecast` for the same active tenant IDs already returned
+by `v_dashboard_attention_ranked`. This source check is used by both the Ask
+Viv portfolio tool and the compliance-assistant portfolio path. An empty or
+null source row, a source query error, or a source row with no readable status
+maps the fact to `burn_risk_status = "unavailable"` and carries the generic
+`burn_risk_status_reason = "source_unavailable"`; readable source statuses are
+preserved, with the most severe status winning when a tenant has multiple
+package rows. The builder also records the source table in its audit metadata
+and adds a caller-safe gap without exposing hidden-source or authorization
+details.
+
+This is a read-only Edge consumer containment change. It does not alter the
+ranked view, attention-score formula, retention status, source freshness or
+quality rules, forecast jobs, cron, schema, RLS, or production data. Retention
+is not part of this builder's current fact contract and remains a separate
+consumer gate.
+
 **Conclusion:** H0.3 is technically characterized enough to prepare a safe
 unknown-state and consumer work queue. The approved H1 direction says the
 current live values are unassessed and must not be treated as normal/stable;
