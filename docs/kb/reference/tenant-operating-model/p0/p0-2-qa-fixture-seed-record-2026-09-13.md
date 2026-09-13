@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; four TOM auth personas provisioned and verified; initial bounded browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; six authenticated QA personas provisioned and verified; expanded browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** none needed — this was synthetic non-production fixture/persona provisioning; no production, schema, RLS, grant, cron, deployment, or production credential state changed
@@ -111,26 +111,31 @@ The post-seed QA query returned:
 - zero tagged profiles outside the synthetic `@example.qa` domain.
 
 The per-tenant distribution was `0/0/0`, `2/2/2`, `3/2/2`, `9/5/4`, and
-`1/1/1` for members/contacts/package-instances. The separate bounded browser
+`1/1/1` for members/contacts/package-instances. The initial bounded browser
 run [`34741345064`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34741345064)
 passed 7 checks and intentionally skipped 1 CSC-inapplicable client check.
-It confirmed client home/package reads for the three client personas, the
-relationship-role user-management redirect, and CSC's staff directory
-read/search path. No application writes were performed; browser storage
-states were ephemeral and only the redacted runner log was retained for 30
-days in the private GitHub Actions artifact.
+The expanded read-only run
+[`34742103123`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34742103123)
+passed 44 checks and intentionally skipped 4 CSC-inapplicable client checks
+across one warm-up plus three measured repetitions. It covered the persistent
+Super Admin and client personas as well as the three TOM client personas and
+CSC. No application writes were performed; browser storage states were
+ephemeral and only the redacted runner log was retained for 30 days in the
+private GitHub Actions artifact.
 
 ## Remaining P0.2/P0.3 gates
 
-The fixture and the four browser-capable TOM identities now exist, and the
-initial bounded browser run is recorded above. Before calling the broader
-P0.2/P0.3 packet complete, it still needs:
+The fixture and six browser-capable QA identities now exist, and the expanded
+bounded browser run is recorded above. Before calling the broader P0.2/P0.3
+packet complete, it still needs:
 
-1. browser storage states generated from the protected QA credentials, plus an
-   explicit `Inconclusive` disposition for any persona not exercised;
-2. a named operator and observation window; and
-3. a private artifact location, retention period, artifact owner, and reviewer
-   access.
+1. explicit `Inconclusive` owners/unblock conditions for anonymous,
+   integrator/team-leader, disabled-staff, and service-principal personas;
+2. a versioned production metadata baseline and migration cutoff;
+3. full redacted request metadata/waterfall evidence for the required query
+   families; and
+4. RBAC, Client Health, and TOM owner review of authorization, provenance,
+   freshness, and fixture representativeness.
 
 The first run should stay narrow: representative and cross-tenant package /
 client-stage reads plus disabled/inactive negative cases. No v6 capability,

@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — disposable verification and browser/query baseline packet
 
-> **Last updated:** 2026-09-13 · **Status:** initial bounded read-only characterization completed for four provisioned TOM personas; broader P0.2/P0.3 coverage remains open
+> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for six provisioned personas; missing-persona, baseline-cutoff, and cross-initiative review gates remain open
 > **Owner:** Tenant Operating Model, with RBAC, Client Health, and security review
 > **Parent plan:** [Tenant Operating Model data architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related evidence:** [P0.1 owner-disposition register](p0-1-owner-disposition-register.md); [ghost-to-contact evidence packet](../p1/p1-2-a-ghost-contact-dry-run-evidence-packet.md); [guarded ghost dry-run execution packet](../p1/p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -46,10 +46,10 @@ that current behavior rather than quietly define a replacement contract.
 | Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Complete — `qfpxvumcrnzrjyvqkicq`, production target false |
 | Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Open |
 | Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for initial bounded run — run tag `tom_qa_20260913_seed_01`; cleanup remains separately gated |
-| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — four TOM personas exercised; anonymous, integrator/team-leader, Super Admin, disabled staff, and service principal remain `Inconclusive` |
-| Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 05:51–05:53 UTC within the approved 60-minute window |
-| Artifact | Name private artifact location, access list, and retention | Operations | Complete — private GitHub Actions artifact `tom-p0-characterization-34741345064`, Carl/repository maintainers, 30 days |
-| Query safety | Confirm `EXPLAIN (ANALYZE, BUFFERS)` runs only on QA and that no production `ANALYZE` workload is included | TOM / DBA | Open |
+| Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — six personas exercised; anonymous, integrator/team-leader, disabled staff, and service principal remain `Inconclusive` |
+| Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 06:07–06:14 UTC within the approved 60-minute window |
+| Artifact | Name private artifact location, access list, and retention | Operations | Complete — private GitHub Actions artifact `tom-p0-characterization-34742103123`, Carl/repository maintainers, 30 days |
+| Query safety | Confirm `EXPLAIN (ANALYZE, BUFFERS)` runs only on QA and that no production `ANALYZE` workload is included | TOM / DBA | Complete for this pass — plans executed only against allowlisted `unicorn-qa`; no production SQL or benchmark workload |
 | Cross-initiative review | RBAC reviews authorization outcomes; Client Health reviews provenance/freshness implications | RBAC + Client Health | Open |
 
 No hosted run may begin while any target, credential, fixture, or artifact
@@ -99,31 +99,65 @@ or authorization recommendation. Any unexpected broad or narrow result gets a
 reproducible evidence row and an owner; it is not “fixed” by changing a policy
 inside this packet.
 
-## Initial P0.2 read-only characterization run
+## Expanded P0.2 read-only characterization run
 
-GitHub Actions run [`34741345064`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34741345064)
-completed successfully on 2026-09-13. It ran seven checks and intentionally
-skipped one client-only check for CSC: `7 passed, 1 skipped`, one worker, with
-no application writes. Storage states were generated inside the runner and
-were not uploaded. The only retained artifact is the redacted Vite runner log
-under the approved private 30-day retention policy.
+GitHub Actions run [`34742103123`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34742103123)
+completed successfully on 2026-09-13. It ran 48 executions across six
+authenticated projects, using one warm-up repetition followed by three
+measured repetitions: `44 passed, 4 skipped` (the CSC client-only check was
+intentionally skipped on each repetition), one worker, with no application
+writes. Storage states were generated inside the runner and were not uploaded.
+The only retained artifact is the redacted Vite runner log under the approved
+private 30-day retention policy.
 
 Observed current behavior:
 
+- The persistent QA Super Admin reached `/dashboard` and a representative
+  Super Admin-only route on all three measured repetitions; no page errors occurred.
+- The persistent QA client reached `/client/home` on all three measured
+  repetitions and was denied the Super Admin-only route without being
+  redirected to login.
 - Client Admin A, Client User A, and Client Admin B reached `/client/home` and
-  `/client/packages` successfully.
+  `/client/packages` successfully on all three measured repetitions.
 - All three client fixture rows carry `relationship_role=user`, so the
   current `/client/users` route gate redirected to `/client/home`. This is an
   observed compatibility boundary: the legacy `Admin`/`Client Parent` labels
   do not independently grant user-management access.
-- CSC reached `/manage-tenants` and completed the safe search round-trip.
-- Anonymous, integrator/team-leader, Super Admin, disabled-staff, and
-  service-principal cases were not exercised and remain `Inconclusive`.
+- CSC reached `/manage-tenants` and completed the safe search round-trip on all
+  three measured repetitions; its client-only check remained intentionally
+  skipped.
+- Anonymous, integrator/team-leader, disabled-staff, and service-principal
+  cases were not exercised and remain `Inconclusive`.
 
-This is an initial bounded characterization, not the complete P0.2/P0.3
-baseline. Repeated timing runs, request-waterfall capture, query-plan
-evidence, broader persona coverage, and RBAC/Client Health/TOM review remain
+This is an expanded bounded characterization, not the complete P0.2/P0.3
+baseline. The route timing lines are retained in the private Actions log for
+the three measured repetitions; a full request-waterfall bundle, migration
+baseline cutoff, missing personas, and RBAC/Client Health/TOM review remain
 open.
+
+Aggregate measured route timings from the redacted Actions log were stable
+enough to characterize the current QA fixture without setting a product
+budget: client-home medians were 1.69–1.72 s, client-package medians were
+1.68–1.73 s, the relationship-role `/client/users` redirect medians were
+0.97 s, and CSC `/manage-tenants` medians were 2.18–2.30 s. These are
+environment-specific observations, not acceptance thresholds.
+
+## QA-only query-plan evidence
+
+The exact current client query families were inspected before planning. On the
+allowlisted QA project only, `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` recorded:
+
+| Query family | Fixture result | Planning | Execution | Shared blocks |
+| --- | --- | ---: | ---: | ---: |
+| `get_client_package_dashboard` list RPC for the representative tenant | 2 rows | 0.037 ms | 14.258 ms | 2,417 hit / 0 read |
+| `get_client_package_dashboard` single-package RPC | 1 row | 0.038 ms | 14.122 ms | 2,389 hit / 0 read |
+| `v_client_package_stages` ordered package-stage read | 6 rows | 1.217 ms | 0.394 ms | 39 hit / 0 read |
+
+The dashboard RPC was evaluated with the QA client claim and its own-tenant
+call returned rows; the same claim received zero rows for the cross-tenant
+dashboard call. The SQL-console role bypasses browser RLS when explaining a
+view directly, so the stage plan is evidence of query shape and cost only;
+browser authorization outcomes remain the authoritative negative-case oracle.
 
 ## P0.2 read-only characterization run
 
