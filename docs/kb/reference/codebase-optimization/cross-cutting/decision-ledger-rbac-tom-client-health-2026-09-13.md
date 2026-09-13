@@ -1,6 +1,6 @@
 # Cross-initiative decision ledger — RBAC, TOM, and Client Health
 
-> **Last updated:** 2026-09-13 · **Status:** active decision register; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
+> **Last updated:** 2026-09-13 · **Status:** active decision register; A1 settled, A2 is the current discussion; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
 > **Purpose:** one canonical ledger for the remaining decisions Carl must approve, review, or analyze before continuous implementation
 > **Inputs:** [RBAC P1-s resource dispositions](../../rbac-v6/p1/p1-s-aj-csc-resource-disposition-recommendation.md), [RBAC P1-r read-resource QA gate](../../rbac-v6/p1/p1-r-aj-csc-read-resource-decomposition-and-qa-gate.md), [RBAC P1-q live read-boundary reconciliation](../../rbac-v6/p1/p1-q-aj-csc-live-read-boundary-reconciliation.md), [approval-unblock matrix](approval-unblock-matrix-2026-09-12.md), [unattended-preparation authorization matrix](unattended-preparation-authorization-matrix-2026-09-13.md), [Program Index](../../program-index.md)
 > **Owners:** Carl for product/policy approvals; RBAC for capability and server-boundary design; TOM for relationship semantics; Client Health for metric/data semantics; security for privileged-boundary review
@@ -33,8 +33,8 @@ Status meanings:
 
 | ID | Decision | Current status | Recommended disposition | What unlocks next |
 | --- | --- | --- | --- | --- |
-| **A1** | Accept the seven-resource RBAC read split | **current discussion** | Keep catalogue, mapping, package-instance, client-stage, enrolment/progress, analytics, and stage-version resources distinct; do not revive broad `packages.view`/`stages.view` rows | A stable target list for the TOM/security/QA decisions below |
-| **A2** | Authorize bounded read-only QA | awaiting Carl | Approve characterization only for package instances and client stages; no grants, routes, RLS/RPC changes, or implementation | QA packet and fixture definition |
+| **A1** | Accept the seven-resource RBAC read split | **settled — approved by Carl 2026-09-13** | Keep catalogue, mapping, package-instance, client-stage, enrolment/progress, analytics, and stage-version resources distinct; do not revive broad `packages.view`/`stages.view` rows | A2 bounded QA authorization |
+| **A2** | Authorize bounded read-only QA | **current discussion** | Approve characterization only for package instances and client stages; no grants, routes, RLS/RPC changes, or implementation | QA packet and fixture definition |
 | **A3** | Select QA fixture/personas/owners | awaiting Carl | Name QA tenant/resources, active AJ/CSC, ordinary CSC, client, disabled/expired, wrong-tenant, inactive-membership, anonymous, and Super Admin cases; name operator, security reviewer, artifact owner, and rollback owner | Safe execution preflight |
 | **A4** | Define internal-staff visibility for these resources | awaiting Carl/TOM | Decide whether internal staff may read all package instances/client stages across tenants; do not infer write/export/publish/assignment authority | Relationship and negative-case assertions |
 | **A5** | Authorize the security-boundary investigation | awaiting Carl/security | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement | Separate security findings/remediation decision |
@@ -47,7 +47,7 @@ meaningful; A5 runs as an independent security track; A6 prevents Client
 Health from inheriting an RBAC meaning for stage state; A7 controls hosted
 execution; and A8 remains externally gated.
 
-## A1 — resource split (current discussion)
+## A1 — resource split (settled)
 
 ### Proposed decision
 
@@ -70,9 +70,9 @@ composite views are security-invoker; and stage release RPCs are privileged
 functions. Existing page roles and historical capability names combine these
 surfaces and therefore cannot safely be copied into one grant.
 
-### Recommended answer
+### Decision record
 
-**Approve A1 as proposed.** Keep the classes separate unless a later review
+Carl approved A1 on 2026-09-13. Keep the classes separate unless a later review
 proves that target, sensitivity, relationship, first server boundary, audit
 behavior, and negative cases are identical. This approval would authorize
 only the design target; it would not authorize any capability row, grant,
@@ -80,9 +80,10 @@ route, policy, RPC, Realtime, pilot, or production change.
 
 ### Evidence and stop condition
 
-Evidence is recorded in RBAC P1-q, P1-r, and P1-s. If Carl rejects or merges
-any class, the ledger must record the replacement target and why its server
-boundary and data sensitivity are genuinely shared before A2 begins.
+Evidence is recorded in RBAC P1-q, P1-r, and P1-s. Any later proposal to
+merge or split a class must record why its server boundary and data sensitivity
+are genuinely shared or materially different. A2 may now be discussed against
+this stable seven-class target.
 
 ## A2–A8 decision briefs
 
