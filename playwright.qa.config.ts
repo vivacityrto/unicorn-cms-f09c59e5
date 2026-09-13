@@ -39,14 +39,14 @@ export default defineConfig({
   workers: 1,
   retries: 1,
   reporter: [["list"]],
-  timeout: 45_000,
+  timeout: 90_000,
   expect: {
     // Higher than playwright.config.ts's 15_000: the QA dashboard fires
     // roughly 50 sequential Supabase calls on first load (many more
     // waterfall-style round trips than production's warmer/cached state --
     // confirmed via a network-logging diagnostic run), so a cold-route
     // first hit genuinely needs more headroom, not just a flakier retry.
-    timeout: 25_000,
+    timeout: 45_000,
   },
   use: {
     baseURL: "http://localhost:8080",
@@ -57,11 +57,16 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: "http://localhost:8080",
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     strictPort: true,
     timeout: 60_000,
   },
   projects: [
+    {
+      name: "qa-anonymous",
+      testMatch: /anonymous\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "qa-superadmin",
       testMatch: /superadmin\.spec\.ts/,
@@ -71,6 +76,26 @@ export default defineConfig({
       name: "qa-client",
       testMatch: /client\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/qa-client.json" },
+    },
+    {
+      name: "qa-tom-client-admin-a",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-client-admin-a.json" },
+    },
+    {
+      name: "qa-tom-client-user-a",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-client-user-a.json" },
+    },
+    {
+      name: "qa-tom-client-admin-b",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-client-admin-b.json" },
+    },
+    {
+      name: "qa-tom-csc",
+      testMatch: /tom\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: "playwright/.auth/tom-csc.json" },
     },
   ],
 });

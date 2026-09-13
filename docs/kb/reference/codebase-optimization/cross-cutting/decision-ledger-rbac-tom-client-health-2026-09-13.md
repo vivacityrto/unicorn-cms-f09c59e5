@@ -5,7 +5,7 @@
 > **Inputs:** [RBAC P1-s resource dispositions](../../rbac-v6/p1/p1-s-aj-csc-resource-disposition-recommendation.md), [RBAC P1-r read-resource QA gate](../../rbac-v6/p1/p1-r-aj-csc-read-resource-decomposition-and-qa-gate.md), [RBAC P1-q live read-boundary reconciliation](../../rbac-v6/p1/p1-q-aj-csc-live-read-boundary-reconciliation.md), [approval-unblock matrix](approval-unblock-matrix-2026-09-12.md), [unattended-preparation authorization matrix](unattended-preparation-authorization-matrix-2026-09-13.md), [Program Index](../../program-index.md)
 > **Owners:** Carl for product/policy approvals; RBAC for capability and server-boundary design; TOM for relationship semantics; Client Health for metric/data semantics; security for privileged-boundary review
 > **Evidence baseline:** `origin/main` at the time of this packet; live read-only Supabase metadata reconciled 2026-09-13
-> **Audit entry:** none needed — synthetic non-production QA fixture only; no production, schema, authorization, or credential state changed
+> **Audit entry:** none needed — synthetic non-production QA fixture/persona provisioning only; no production, schema, authorization, or production credential state changed
 
 ## How to use this ledger
 
@@ -39,7 +39,7 @@ Status meanings:
 | **A4** | Define internal-staff visibility for these resources | **settled — approved by Carl 2026-09-13** | Internal Vivacity CSCs have full portfolio-wide tenant-operational access, with actions recorded in timeline activity; platform security administration remains separate | A5 security-boundary investigation |
 | **A5** | Authorize the security-boundary investigation | **settled — approved by Carl 2026-09-13** | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement; remediation remains separately gated | A6 client-stage state classification |
 | **A6** | Classify client stage state | **settled — approved by Carl 2026-09-13** | TOM/domain owns the canonical lifecycle; Client Health may consume status/date/derived `node_state` as operational evidence; client workflows may display the approved subset | A7 TOM hosted-QA preflight |
-| **A7** | Authorize TOM hosted-QA preflight | **synthetic fixture seeded and read-only verified 2026-09-13; characterization run pending** | Use the existing allowlisted non-production `unicorn-qa` target and the [seed record](../../tenant-operating-model/p0/p0-2-qa-fixture-seed-record-2026-09-13.md); remaining gates are short-lived identities/storage states, operator/window, and private artifact owner/retention | One read-only `unicorn-qa` run |
+| **A7** | Authorize TOM hosted-QA preflight | **expanded run passed 2026-09-13: 48 passed, 4 intentional skips across anonymous plus six authenticated personas** | Keep the current behavior evidence: anonymous denial, Super Admin/client routes, client home/packages reads, `/client/users` redirect for `relationship_role=user`, and CSC `/manage-tenants` read/search all pass. Query plans are QA-only and recorded; baseline cutoff, missing personas, and cross-initiative review remain open | Complete the broader packet or record explicit `Inconclusive` dispositions |
 | **A8** | Resolve Client Health semantic gates | awaiting external data/Carl | Keep thresholds, cohorts, confidence semantics, and pilot acceptance gated on consultant operational input | H1 metric/corpus decisions and later implementation |
 | **A9** | Retire legacy Client Parent/Child account labels | **planning direction approved by Carl 2026-09-13; ten sequencing/semantic decisions recorded; implementation separately gated** | Treat Parent/Child as compatibility projections only; migrate to explicit account class, RBAC capability/scope, tenant membership, relationship role, and access scope before any removal | [P1.3 retirement plan](../../tenant-operating-model/p1/p1-3-legacy-client-role-retirement-plan.md), focused parity evidence, holdout disposition, and separate migration approval |
 
@@ -186,11 +186,11 @@ are:
 | Fixture domains | Tenants, identities/membership, contacts, packages, stages, audit, conversations, and messages | ready |
 | Run identity | Generated run ID `tom-p0-2-p0-3-${timestamp}-${randomSuffix}` plus run-scoped fixture tag | ready |
 | Reset/safety | Run-scoped cleanup, reverse-order cleanup, no production identifiers, no committed credentials, no writes in the ghost classifier | ready for approval |
-| Observation | One warm-up and three measured repetitions per persona/stratum; redacted timings, request metadata, waterfalls, query plans, and visible empty/error/denied states | ready |
-| Personas | Client Admin A/B, Client User A, CSC, Super Admin, and non-browser service principal; missing storage state is `Inconclusive` | ready for approval |
-| Short-lived identities/storage states | QA-only credentials and browser storage states for the approved personas | **missing** |
-| Operator/window | Named operator and execution window | **missing** |
-| Private evidence | Private artifact location, owner, retention, and reviewer access | **missing** |
+| Observation | One warm-up and three measured repetitions per persona/stratum; redacted timings, request metadata, waterfalls, query plans, and visible empty/error/denied states | partial — six personas completed the route pass and QA-only plans; full request metadata/waterfall capture remains open |
+| Personas | Client Admin A/B, Client User A, CSC, Super Admin, and non-browser service principal; missing storage state is `Inconclusive` | partial — anonymous plus six authenticated personas exercised; integrator/team-leader, disabled staff, and service principal remain `Inconclusive` |
+| Short-lived identities/storage states | QA-only credentials and browser storage states for the approved personas | **complete for six exercised personas; generated ephemerally in run 34742103123** |
+| Operator/window | Named operator and execution window | **complete — Codex automated run, 2026-09-13 06:07–06:14 UTC within the approved 60-minute window** |
+| Private evidence | Private artifact location, owner, retention, and reviewer access | **complete — private GitHub Actions artifact, Carl/repository maintainers, 30 days** |
 
 The run should use the existing manifest as its baseline but narrow the first
 RBAC pass to representative and cross-tenant package/client-stage cases plus
@@ -199,13 +199,32 @@ family matrix before the specific A2 resources are characterized.
 
 The synthetic fixture was seeded on 2026-09-13 in the allowlisted QA project;
 the seed record documents its run tag, aggregate production-shape comparison,
-counts, and read-only verification. The seed is not an observation result and
-does not provide browser credentials for the approved personas.
+counts, and read-only verification. The initial bounded browser run was
+[`34741345064`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34741345064)
+with `7 passed, 1 skipped` across the four provisioned TOM personas. The
+expanded run was
+[`34742103123`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34742103123)
+with `48 passed, 4 skipped` across anonymous plus six authenticated personas and four
+repetitions (one warm-up plus three measured). The persistent Super Admin and
+client specs passed their dashboard/protected-route checks. Client
+home/package reads passed for Client Admin A, Client User A, and Client Admin
+B. Their fixture rows use `relationship_role=user`, so `/client/users`
+redirected to `/client/home`, preserving the current management gate despite
+the legacy Admin/Client Parent labels. CSC reached `/manage-tenants` and
+completed the safe search round-trip on each measured repetition; its
+client-only test was intentionally skipped. Storage states were not retained.
+
+The run is expanded characterization, not completion of the full packet.
+Integrator/team-leader, disabled-staff, and service-principal cases
+remain `Inconclusive`; migration baseline cutoff, full request-waterfall
+capture, and RBAC/Client Health/TOM review remain open. QA-only query-plan
+evidence for the current package-dashboard and client-stage read families is
+recorded in the TOM P0.2/P0.3 packet.
 
 This is execution authorization, not blanket authorization for migrations,
-ghost-contact promotion, permission changes, or production observation. No
-hosted run should begin until the three missing fields are named and Carl
-approves execution.
+ghost-contact promotion, permission changes, or production observation. The
+next run, if needed, must remain within the same QA-only boundary and address
+the residual matrix explicitly.
 
 ### A8 — Client Health semantic gates
 
