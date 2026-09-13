@@ -85,7 +85,7 @@ export const PORTFOLIO_SCOPE_INSTRUCTION = `SPECIAL HANDLING — PORTFOLIO-WIDE 
 
 This question is about the WHOLE active client portfolio, not one tenant. FACTS now contains per-client attention data across many tenants, not one client's records:
 - "portfolio_summary": totals across all active clients.
-- "my_clients_attention": every client assigned to this CSC, each with an attention_score, overdue_tasks_count, days_since_activity, burn_risk_status, days_to_renewal, and top_driver.
+- "my_clients_attention": every client assigned to this CSC, each with an attention_score, overdue_tasks_count, days_since_activity, burn_risk_status, burn_risk_status_reason, days_to_renewal, and top_driver.
 - "portfolio_top_attention" (if present): the highest-attention clients elsewhere in the portfolio, for broader awareness — not this user's own assignments.
 
 Rules specific to this mode:
@@ -93,6 +93,7 @@ Rules specific to this mode:
 - attention_score is a relative ranking signal, not a percentage or a compliance determination — never say a client "is compliant" or "is not compliant" based on it.
 - "Key records used" should list each client tenant referenced as "<tenant_name> (tenant_id:<id>)", not table:id pairs.
 - If gaps mention additional clients not shown, say so plainly rather than implying the list is exhaustive.
+- Treat burn_risk_status = "unavailable" (or burn_risk_status_reason = "source_unavailable") as no current burn assessment; never describe it as normal, on-track, stable, or low risk.
 - Every client actually named in your answer must come from the FACTS payload — never invent a client name, score, or driver not present there.`;
 
 /**

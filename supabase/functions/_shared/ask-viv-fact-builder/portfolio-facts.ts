@@ -15,6 +15,10 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import type { DerivedFact } from "./types.ts";
+import {
+  applyPortfolioBurnAvailability,
+  type PortfolioBurnForecastRow,
+} from "./portfolio-forecast-status.ts";
 
 // Cap on how many non-own-client rows are surfaced, to keep the facts
 // payload within a sane token budget — 58 active clients today, but this
@@ -50,6 +54,7 @@ function summariseRow(r: AttentionRow) {
     overdue_tasks_count: r.overdue_tasks_count,
     days_since_activity: r.days_since_activity,
     burn_risk_status: r.burn_risk_status,
+    burn_risk_status_reason: r.burn_risk_status === "unavailable" ? "source_unavailable" : null,
     days_to_renewal: r.days_to_renewal,
     risk_status: r.risk_status,
     top_driver: r.attention_drivers_json?.[0]?.driver ?? null,
@@ -81,13 +86,35 @@ export async function buildPortfolioFacts(
     };
   }
 
-  const rows = data as AttentionRow[];
+  let rows = data as AttentionRow[];
+  if (rows.length > 0) {
+    tablesQueried.push("tenant_package_burn_forecast");
+    const tenantIds = [...new Set(rows.map((row) => row.tenant_id))];
+    const { data: burnData, error: burnError } = await supabase
+      .from("tenant_package_burn_forecast")
+      .select("tenant_id, burn_risk_status")
+      .in("tenant_id", tenantIds);
+
+    if (burnError) {
+      console.error("Portfolio burn forecast query failed:", burnError);
+    }
+
+    rows = applyPortfolioBurnAvailability(
+      rows,
+      (burnData ?? []) as PortfolioBurnForecastRow[],
+      burnError ? "unavailable" : "reported",
+    );
+  }
   const myClients = rows.filter(r => r.assigned_csc_user_id === userId);
   const otherClients = rows.filter(r => r.assigned_csc_user_id !== userId);
   const topOther = otherClients.slice(0, TOP_OTHER_CLIENTS_LIMIT);
 
   const facts: DerivedFact[] = [];
   const gaps: string[] = [];
+
+  if (rows.some((row) => row.burn_risk_status === "unavailable")) {
+    gaps.push("Burn forecast data is unavailable for one or more portfolio clients");
+  }
 
   facts.push({
     key: "portfolio_summary",
