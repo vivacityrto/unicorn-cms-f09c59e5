@@ -108,7 +108,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
-        run: npm run e2e:qa -- --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --trace=off --screenshot=off --video=off
+        run: npm run e2e:qa -- --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --trace=off
       - name: Upload redacted run evidence
         if: always()
         uses: actions/upload-artifact@v4
