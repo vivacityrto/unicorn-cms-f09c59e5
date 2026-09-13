@@ -20,6 +20,23 @@ test("Dashboard loads as an authenticated SuperAdmin", async ({ page }) => {
   await finishWaterfall();
 });
 
+test("SuperAdmin reads the representative tenant address surface", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  const finishWaterfall = startSupabaseWaterfall(page, "qa-superadmin /tenant/54 address-read");
+
+  // Tenant 54 is the deterministic representative tenant from the approved
+  // TOM QA fixture. This is a read-only assertion; no address form or action
+  // control is opened.
+  const response = await page.goto("/tenant/54?tab=overview");
+  expect(response?.status()).toBeLessThan(400);
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Addresses" })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText("TOM QA Run 20260913 HQ", { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+  await finishWaterfall();
+});
+
 test("A representative SuperAdmin-only route is reachable, not redirected to /dashboard", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
