@@ -28,6 +28,8 @@
 //   QA_E2E_SUPERADMIN_PASSWORD=... QA_E2E_CLIENT_PASSWORD=... \
 //   QA_TOM_CLIENT_ADMIN_A_PASSWORD=... QA_TOM_CLIENT_USER_A_PASSWORD=... \
 //   QA_TOM_CLIENT_ADMIN_B_PASSWORD=... QA_TOM_CSC_PASSWORD=... \
+//   QA_TOM_INTEGRATOR_PASSWORD=... QA_TOM_TEAM_LEADER_PASSWORD=... \
+//   QA_TOM_DISABLED_STAFF_PASSWORD=... QA_TOM_SERVICE_PRINCIPAL_PASSWORD=... \
 //   node scripts/qa-seed-e2e-personas.mjs
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -43,13 +45,17 @@ const tomClientAdminAPassword = process.env.QA_TOM_CLIENT_ADMIN_A_PASSWORD ?? ""
 const tomClientUserAPassword = process.env.QA_TOM_CLIENT_USER_A_PASSWORD ?? "";
 const tomClientAdminBPassword = process.env.QA_TOM_CLIENT_ADMIN_B_PASSWORD ?? "";
 const tomCscPassword = process.env.QA_TOM_CSC_PASSWORD ?? "";
+const tomIntegratorPassword = process.env.QA_TOM_INTEGRATOR_PASSWORD ?? "";
+const tomTeamLeaderPassword = process.env.QA_TOM_TEAM_LEADER_PASSWORD ?? "";
+const tomDisabledStaffPassword = process.env.QA_TOM_DISABLED_STAFF_PASSWORD ?? "";
+const tomServicePrincipalPassword = process.env.QA_TOM_SERVICE_PRINCIPAL_PASSWORD ?? "";
 const TOM_FIXTURE_TAG = process.env.QA_TOM_FIXTURE_TAG ?? "tom_qa_20260913_seed_01";
 
 if (supabaseUrl !== QA_PROJECT_URL) {
   console.error(`qa-seed-e2e-personas: refusing to run -- target must be ${QA_PROJECT_URL}, got "${supabaseUrl || "(unset)"}"`);
   process.exit(1);
 }
-if (!serviceRole || !superAdminPassword || !clientPassword || !tomClientAdminAPassword || !tomClientUserAPassword || !tomClientAdminBPassword || !tomCscPassword) {
+if (!serviceRole || !superAdminPassword || !clientPassword || !tomClientAdminAPassword || !tomClientUserAPassword || !tomClientAdminBPassword || !tomCscPassword || !tomIntegratorPassword || !tomTeamLeaderPassword || !tomDisabledStaffPassword || !tomServicePrincipalPassword) {
   console.error("qa-seed-e2e-personas: service-role and all persistent/TOM persona passwords are required");
   process.exit(1);
 }
@@ -83,7 +89,7 @@ async function findAuthUserByEmail(email) {
   }
 }
 
-async function upsertPersona({ email, password, firstName, lastName, unicornRole, userType, tenantId, userId }) {
+async function upsertPersona({ email, password, firstName, lastName, unicornRole, userType, tenantId, userId, disabled, isSystemAccount, isVivacityInternal }) {
   let authUser = await findAuthUserByEmail(email);
   if (authUser) {
     const { error } = await svc.auth.admin.updateUserById(authUser.id, { password });
@@ -102,19 +108,31 @@ async function upsertPersona({ email, password, firstName, lastName, unicornRole
     console.log(`persona ${email}: created auth user ${authUser.id}`);
   }
 
-  const { error: profileErr } = await svc.from("users").upsert(
-    {
-      user_uuid: authUser.id,
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      user_type: userType,
-      unicorn_role: unicornRole,
-      tenant_id: tenantId,
-    },
-    { onConflict: "user_uuid" },
-  );
+  const profile = {
+    user_uuid: authUser.id,
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    user_type: userType,
+    unicorn_role: unicornRole,
+    tenant_id: tenantId,
+    ...(disabled === undefined ? {} : { disabled }),
+    ...(isSystemAccount === undefined ? {} : { is_system_account: isSystemAccount }),
+  };
+  const { error: profileErr } = await svc.from("users").upsert(profile, { onConflict: "user_uuid" });
   if (profileErr) throw new Error(`users upsert (${email}): ${profileErr.message}`);
+
+  // The deployed legacy trigger only derives this flag for the original
+  // three staff roles. Set it explicitly for QA's Integrator/service-principal
+  // profiles so those identities exercise the intended staff RLS context;
+  // this is fixture data, not a production policy change.
+  if (isVivacityInternal !== undefined) {
+    const { error: internalErr } = await svc
+      .from("users")
+      .update({ is_vivacity_internal: isVivacityInternal })
+      .eq("user_uuid", authUser.id);
+    if (internalErr) throw new Error(`users internal flag update (${email}): ${internalErr.message}`);
+  }
   console.log(`persona ${email}: profile upserted (unicorn_role=${unicornRole}, tenant_id=${tenantId ?? "null"})`);
 
   return authUser.id;
@@ -167,6 +185,41 @@ async function ensureClientParentUserType() {
   });
   if (insertErr) throw new Error(`dd_user_type insert: ${insertErr.message}`);
   console.log("dd_user_type: added QA-required Client Parent reference row");
+}
+
+async function ensureInternalRoleReferences() {
+  const roles = [
+    {
+      value: "Team Leader",
+      label: "Team Leader",
+      description: "Vivacity team leadership role",
+      sort_order: 2,
+    },
+    {
+      value: "Integrator",
+      label: "Vivacity Integrator",
+      description: "Vivacity Integrator — internal staff role.",
+      sort_order: 3,
+    },
+  ];
+
+  for (const role of roles) {
+    const { data: existing, error: findErr } = await svc
+      .from("dd_unicorn_roles")
+      .select("value")
+      .eq("value", role.value)
+      .maybeSingle();
+    if (findErr) throw new Error(`dd_unicorn_roles lookup (${role.value}): ${findErr.message}`);
+    if (existing) continue;
+
+    const { error: insertErr } = await svc.from("dd_unicorn_roles").insert({
+      ...role,
+      is_active: true,
+      is_internal: true,
+    });
+    if (insertErr) throw new Error(`dd_unicorn_roles insert (${role.value}): ${insertErr.message}`);
+    console.log(`dd_unicorn_roles: added QA-required ${role.value} reference row`);
+  }
 }
 
 async function ensureTenantUser(tenantId, userId) {
@@ -228,6 +281,7 @@ async function ensureTenantMember(tenantId, userId) {
 async function main() {
   const tenantId = await upsertTenant();
   await ensureClientParentUserType();
+  await ensureInternalRoleReferences();
 
   await upsertPersona({
     email: "qa-e2e-superadmin@example.qa",
@@ -302,6 +356,60 @@ async function main() {
     userType: "Vivacity Team",
     tenantId: null,
     userId: fixtureUuid("csc"),
+    isVivacityInternal: true,
+  });
+
+  await upsertPersona({
+    email: fixtureEmail("integrator"),
+    password: tomIntegratorPassword,
+    firstName: "TOM QA",
+    lastName: "Integrator",
+    unicornRole: "Integrator",
+    userType: "Vivacity Team",
+    tenantId: null,
+    userId: fixtureUuid("integrator"),
+    isVivacityInternal: true,
+  });
+
+  await upsertPersona({
+    email: fixtureEmail("team_leader"),
+    password: tomTeamLeaderPassword,
+    firstName: "TOM QA",
+    lastName: "Team Leader",
+    unicornRole: "Team Leader",
+    userType: "Vivacity Team",
+    tenantId: null,
+    userId: fixtureUuid("team_leader"),
+    isVivacityInternal: true,
+  });
+
+  await upsertPersona({
+    email: fixtureEmail("disabled_staff"),
+    password: tomDisabledStaffPassword,
+    firstName: "TOM QA",
+    lastName: "Disabled Staff",
+    unicornRole: "Team Member",
+    userType: "Vivacity Team",
+    tenantId: null,
+    userId: fixtureUuid("disabled_staff"),
+    disabled: true,
+    isVivacityInternal: true,
+  });
+
+  // This identity is intentionally not added to Playwright storage states.
+  // It represents a machine principal for a later, explicitly allowlisted
+  // non-browser read-contract check.
+  await upsertPersona({
+    email: fixtureEmail("service_principal"),
+    password: tomServicePrincipalPassword,
+    firstName: "TOM QA",
+    lastName: "Service Principal",
+    unicornRole: "Integrator",
+    userType: "Vivacity Team",
+    tenantId: null,
+    userId: fixtureUuid("service_principal"),
+    isSystemAccount: true,
+    isVivacityInternal: true,
   });
 
   console.log("qa-seed-e2e-personas: done");
