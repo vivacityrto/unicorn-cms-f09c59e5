@@ -42,7 +42,18 @@ jobs:
           QA_TOM_CLIENT_USER_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_USER_A_PASSWORD }}
           QA_TOM_CLIENT_ADMIN_B_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_B_PASSWORD }}
           QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
+          QA_TOM_INTEGRATOR_PASSWORD: ${{ secrets.QA_TOM_INTEGRATOR_PASSWORD }}
+          QA_TOM_TEAM_LEADER_PASSWORD: ${{ secrets.QA_TOM_TEAM_LEADER_PASSWORD }}
+          QA_TOM_DISABLED_STAFF_PASSWORD: ${{ secrets.QA_TOM_DISABLED_STAFF_PASSWORD }}
+          QA_TOM_SERVICE_PRINCIPAL_PASSWORD: ${{ secrets.QA_TOM_SERVICE_PRINCIPAL_PASSWORD }}
           QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
+      - name: Verify service-principal read contract
+        run: node scripts/qa-service-principal-read.mjs
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          QA_TOM_SERVICE_PRINCIPAL_EMAIL: tom_qa_20260913_seed_01_service_principal@example.qa
+          QA_TOM_SERVICE_PRINCIPAL_PASSWORD: ${{ secrets.QA_TOM_SERVICE_PRINCIPAL_PASSWORD }}
 
   characterize:
     if: ${{ inputs.characterize }}
@@ -90,6 +101,9 @@ jobs:
           QA_TOM_CLIENT_USER_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_USER_A_PASSWORD }}
           QA_TOM_CLIENT_ADMIN_B_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_B_PASSWORD }}
           QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
+          QA_TOM_INTEGRATOR_PASSWORD: ${{ secrets.QA_TOM_INTEGRATOR_PASSWORD }}
+          QA_TOM_TEAM_LEADER_PASSWORD: ${{ secrets.QA_TOM_TEAM_LEADER_PASSWORD }}
+          QA_TOM_DISABLED_STAFF_PASSWORD: ${{ secrets.QA_TOM_DISABLED_STAFF_PASSWORD }}
         run: |
           declare -A emails=(
             [qa-superadmin]="qa-e2e-superadmin@example.qa"
@@ -98,6 +112,9 @@ jobs:
             [tom-client-user-a]="${QA_TOM_FIXTURE_TAG}_client_user_a@example.qa"
             [tom-client-admin-b]="${QA_TOM_FIXTURE_TAG}_client_admin_b@example.qa"
             [tom-csc]="${QA_TOM_FIXTURE_TAG}_csc@example.qa"
+            [tom-integrator]="${QA_TOM_FIXTURE_TAG}_integrator@example.qa"
+            [tom-team-leader]="${QA_TOM_FIXTURE_TAG}_team_leader@example.qa"
+            [tom-disabled-staff]="${QA_TOM_FIXTURE_TAG}_disabled_staff@example.qa"
           )
           declare -A passwords=(
             [qa-superadmin]="$QA_E2E_SUPERADMIN_PASSWORD"
@@ -106,6 +123,9 @@ jobs:
             [tom-client-user-a]="$QA_TOM_CLIENT_USER_A_PASSWORD"
             [tom-client-admin-b]="$QA_TOM_CLIENT_ADMIN_B_PASSWORD"
             [tom-csc]="$QA_TOM_CSC_PASSWORD"
+            [tom-integrator]="$QA_TOM_INTEGRATOR_PASSWORD"
+            [tom-team-leader]="$QA_TOM_TEAM_LEADER_PASSWORD"
+            [tom-disabled-staff]="$QA_TOM_DISABLED_STAFF_PASSWORD"
           )
           for persona in "${!emails[@]}"; do
             E2E_EMAIL="${emails[$persona]}" E2E_PASSWORD="${passwords[$persona]}" node e2e/auth-setup.mjs "$persona"
@@ -117,7 +137,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -o pipefail
-          npm run e2e:qa -- --project=qa-anonymous --project=qa-superadmin --project=qa-client --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --repeat-each=4 --trace=off 2>&1 | tee "$RUNNER_TEMP/tom-p0-playwright.log"
+          npm run e2e:qa -- --project=qa-anonymous --project=qa-superadmin --project=qa-client --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --project=qa-tom-integrator --project=qa-tom-team-leader --project=qa-tom-disabled-staff --repeat-each=4 --trace=off 2>&1 | tee "$RUNNER_TEMP/tom-p0-playwright.log"
       - name: Upload redacted run evidence
         if: always()
         uses: actions/upload-artifact@v4

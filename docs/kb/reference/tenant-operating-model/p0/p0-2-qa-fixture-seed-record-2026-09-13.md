@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; anonymous plus six authenticated QA personas characterized; post-seed browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; post-seed browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** none needed — this was synthetic non-production fixture/persona provisioning; no production, schema, RLS, grant, cron, deployment, or production credential state changed
@@ -27,11 +27,11 @@ active tenant members, 114 contacts, 45 packages, 1,052 package instances,
 
 The existing persistent `qa-e2e` tenant and its two approved E2E personas were
 not modified by this run. The synthetic profile rows below remain fixture
-records, not sign-in identities. Four separate QA auth identities were later
-provisioned for the TOM persona matrix by the protected
-`qa-seed-e2e-personas.yml` workflow (run `34739310678`), using four new
-environment-scoped password secrets. Password values and browser storage
-states are not stored in the repository.
+records. Nine QA auth identities are now available for the TOM persona matrix
+through the protected `qa-seed-e2e-personas.yml` workflow; the separate
+service-principal identity is exercised only by a non-browser read-contract
+check. Password values and browser storage states are not stored in the
+repository.
 
 ## Seeded fixture
 
@@ -80,12 +80,16 @@ real client identities:
 | Client User A | `User` / `Client Child` | Representative Tenant A (fixture tenant 2) | Auth row, active `tenant_members`, and full-scope `tenant_users` link present |
 | Client Admin B | `Admin` / `Client Parent` | Representative Tenant B (fixture tenant 3) | Auth row, active `tenant_members`, and full-scope `tenant_users` link present |
 | CSC | `Team Member` / `Vivacity Team` | Internal staff context; no tenant assignment | Auth row and profile present; no tenant portal link intentionally created |
+| Integrator | `Integrator` / `Vivacity Team` | Internal staff context; no tenant assignment | Auth row/profile present; protected browser characterization reached `/manage-tenants` |
+| Team Leader | `Team Leader` / `Vivacity Team` | Internal staff context; no tenant assignment | Auth row/profile present; protected browser characterization reached `/manage-tenants` |
+| Disabled staff | `Team Member` / `Vivacity Team`, `disabled=true` | Internal staff context; no tenant assignment | Protected browser characterization reached the expected `Account Disabled` state |
+| Service principal | `Integrator` / `Vivacity Team`, `is_system_account=true` | Non-browser QA identity; no tenant assignment | Protected non-browser sign-in and one approved `tenants` read passed; no browser storage state |
 
 The pre-existing QA Super Admin and basic client identities remain available
-through their protected environment secrets. The service-principal row in the
-offline manifest is non-browser and has not been provisioned as a password
-identity; it remains an explicit separate gate rather than reusing a service
-role key as a browser credential.
+through their protected environment secrets. The service principal is not a
+browser persona and is not included in Playwright storage-state generation; its
+password exists only in the protected QA environment for the narrow read
+contract.
 
 ## Safety and rollback
 
@@ -141,18 +145,28 @@ recorded 1,701 requests: 1,673 status-200 responses, no 401 responses, four
 expected 406 responses on the client persona's denied `/admin/user-audit`
 navigation, 24 bounded in-flight records, and zero request failures.
 
+The missing-persona provisioning run
+[`34753300796`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34753300796)
+re-seeded the deterministic QA identities and passed the separate
+non-browser service-principal read contract. The follow-up protected browser
+characterization
+[`34753357650`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34753357650)
+covered the anonymous, persistent, and nine browser-authenticated persona
+projects with `60 passed, 16 skipped` and no flaky or failed tests. Integrator
+and Team Leader reached `/manage-tenants`; disabled staff reached the expected
+`Account Disabled` state. The service principal was intentionally excluded from
+browser storage and was verified only by its explicit read contract.
+
 ## Remaining P0.2/P0.3 gates
 
-The fixture and six browser-capable QA identities now exist, and the expanded
+The fixture and nine browser-capable QA identities now exist, and the expanded
 bounded browser run is recorded above. Before calling the broader P0.2/P0.3
 packet complete, it still needs:
 
-1. explicit `Inconclusive` owners/unblock conditions for integrator/team-leader,
-   disabled-staff, and service-principal personas;
-2. a versioned production metadata baseline and migration cutoff;
-3. representative full-cardinality and unexercised detail/export/Realtime/
+1. a versioned production metadata baseline and migration cutoff;
+2. representative full-cardinality and unexercised detail/export/Realtime/
    RPC/Edge/Ask Viv query-family coverage; and
-4. RBAC, Client Health, and TOM owner review of authorization, provenance,
+3. RBAC, Client Health, and TOM owner review of authorization, provenance,
    freshness, and fixture representativeness.
 
 The first run should stay narrow: representative and cross-tenant package /

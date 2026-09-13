@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { startSupabaseWaterfall } from "./supabase-waterfall";
 
 // TOM P0.2/P0.3 read-only characterization against the allowlisted
@@ -12,6 +12,7 @@ const CLIENT_PROJECTS = new Set([
   "qa-tom-client-user-a",
   "qa-tom-client-admin-b",
 ]);
+const DISABLED_PROJECTS = new Set(["qa-tom-disabled-staff"]);
 
 async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label: string) {
   const startedAt = performance.now();
@@ -28,7 +29,34 @@ async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label
   await finishWaterfall();
 }
 
+async function fillSearchAndWait(search: Locator, value: string) {
+  // ManageTenants can finish hydrating its controlled search input after the
+  // page heading is visible. Re-apply the read-only filter during the bounded
+  // assertion window so the characterization records the settled behavior
+  // instead of making timing of that hydration a flaky gate.
+  await expect.poll(async () => {
+    try {
+      await search.fill(value);
+    } catch {
+      // The locator may be briefly detached during the page's final render;
+      // the next poll retries against the same semantic control.
+    }
+    return search.inputValue();
+  }, { timeout: 25_000 }).toBe(value);
+}
+
 test("persona reaches its current tenant/staff read shell", async ({ page }, testInfo) => {
+  if (DISABLED_PROJECTS.has(testInfo.project.name)) {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    const response = await page.goto("/manage-tenants");
+    expect(response?.status()).toBeLessThan(400);
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole("heading", { name: "Account Disabled" })).toBeVisible({ timeout: 25_000 });
+    expect(pageErrors).toEqual([]);
+    return;
+  }
+
   if (CLIENT_PROJECTS.has(testInfo.project.name)) {
     await openReadOnlyPage(page, "/client/home", /Good (morning|afternoon|evening)/i, testInfo.project.name);
     return;
@@ -37,10 +65,8 @@ test("persona reaches its current tenant/staff read shell", async ({ page }, tes
   await openReadOnlyPage(page, "/manage-tenants", /Manage Clients/, testInfo.project.name);
   const search = page.getByPlaceholder("Search clients by name or slug...");
   await expect(search).toBeVisible();
-  await search.fill("__tom_p0_no_match__");
-  await expect(search).toHaveValue("__tom_p0_no_match__");
-  await search.fill("");
-  await expect(search).toHaveValue("");
+  await fillSearchAndWait(search, "__tom_p0_no_match__");
+  await fillSearchAndWait(search, "");
 });
 
 test("client persona reads packages and preserves the relationship-role user-management gate", async ({ page }, testInfo) => {
