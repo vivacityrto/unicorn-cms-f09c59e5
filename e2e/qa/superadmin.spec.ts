@@ -38,9 +38,9 @@ test("SuperAdmin reads the representative tenant address surface", async ({ page
   expect(response?.status()).toBeLessThan(400);
   await expect(page).not.toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "Addresses" })).toBeVisible({ timeout: 45_000 });
-  console.log(`[tom-p0-address] qa-superadmin /tenant/54 address-status=${addressStatus ?? "not-observed"}`);
   expect(errors).toEqual([]);
   await finishWaterfall();
+  console.log(`[tom-p0-address] qa-superadmin /tenant/54 address-status=${addressStatus ?? "not-observed"}`);
 });
 
 test("A representative SuperAdmin-only route is reachable, not redirected to /dashboard", async ({ page }) => {
