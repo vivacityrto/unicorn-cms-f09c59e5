@@ -57,7 +57,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: "http://localhost:8080",
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     strictPort: true,
     timeout: 60_000,
   },
