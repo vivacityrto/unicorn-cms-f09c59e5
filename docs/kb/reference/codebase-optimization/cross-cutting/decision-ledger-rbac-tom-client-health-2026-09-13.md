@@ -1,6 +1,6 @@
 # Cross-initiative decision ledger — RBAC, TOM, and Client Health
 
-> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A5 settled, A6 is the current discussion; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
+> **Last updated:** 2026-09-13 · **Status:** active decision register; A1–A6 settled, A7 is the current discussion; no runtime, authorization, schema, credential, hosted-QA, pilot, or production state changed
 > **Purpose:** one canonical ledger for the remaining decisions Carl must approve, review, or analyze before continuous implementation
 > **Inputs:** [RBAC P1-s resource dispositions](../../rbac-v6/p1/p1-s-aj-csc-resource-disposition-recommendation.md), [RBAC P1-r read-resource QA gate](../../rbac-v6/p1/p1-r-aj-csc-read-resource-decomposition-and-qa-gate.md), [RBAC P1-q live read-boundary reconciliation](../../rbac-v6/p1/p1-q-aj-csc-live-read-boundary-reconciliation.md), [approval-unblock matrix](approval-unblock-matrix-2026-09-12.md), [unattended-preparation authorization matrix](unattended-preparation-authorization-matrix-2026-09-13.md), [Program Index](../../program-index.md)
 > **Owners:** Carl for product/policy approvals; RBAC for capability and server-boundary design; TOM for relationship semantics; Client Health for metric/data semantics; security for privileged-boundary review
@@ -38,8 +38,8 @@ Status meanings:
 | **A3** | Select QA fixture/personas/owners | **settled — approved by Carl 2026-09-13** | Use isolated `unicorn-qa` data with the named persona and negative-case matrix; name operator, security reviewer, artifact owner, and rollback owner before execution | A4 internal-staff visibility decision |
 | **A4** | Define internal-staff visibility for these resources | **settled — approved by Carl 2026-09-13** | Internal Vivacity CSCs have full portfolio-wide tenant-operational access, with actions recorded in timeline activity; platform security administration remains separate | A5 security-boundary investigation |
 | **A5** | Authorize the security-boundary investigation | **settled — approved by Carl 2026-09-13** | Read-only investigation of stage privileged RPCs, disabled-principal behavior, anonymous ACL/policy mismatch, view transitivity, and inactive-membership enforcement; remediation remains separately gated | A6 client-stage state classification |
-| **A6** | Classify client stage state | **current discussion** | Decide whether stage status/date/node state is Client Health operational evidence, client-facing data, or both | Cross-initiative ownership and metric handling |
-| **A7** | Authorize TOM hosted-QA preflight | awaiting Carl/TOM | Only after QA URL/ref, short-lived identities, fixture/reset plan, operator/window, and private artifact retention are specified | One read-only `unicorn-qa` run |
+| **A6** | Classify client stage state | **settled — approved by Carl 2026-09-13** | TOM/domain owns the canonical lifecycle; Client Health may consume status/date/derived `node_state` as operational evidence; client workflows may display the approved subset | A7 TOM hosted-QA preflight |
+| **A7** | Authorize TOM hosted-QA preflight | **current discussion** | Only after QA URL/ref, short-lived identities, fixture/reset plan, operator/window, and private artifact retention are specified | One read-only `unicorn-qa` run |
 | **A8** | Resolve Client Health semantic gates | awaiting external data/Carl | Keep thresholds, cohorts, confidence semantics, and pilot acceptance gated on consultant operational input | H1 metric/corpus decisions and later implementation |
 
 The order is intentional: A1 fixes the target shape before A2–A4 can be
@@ -152,10 +152,18 @@ covering:
 This packet must report findings only. Any policy, grant, RPC, Realtime, or
 production remediation requires a new explicit authorization.
 
-### A6 — client stage state ownership
+### A6 — client stage state ownership (settled)
 
-Client Health must classify stage status, dates, and node state before those
-fields are used in a capability or metric contract. The choices are:
+### Decision record
+
+Carl approved A6 on 2026-09-13. TOM/domain owns the canonical stage lifecycle
+state. Client Health may consume stage status, dates, and derived `node_state`
+as operational evidence, while client-facing workflows may display the
+approved subset. RBAC controls access separately for staff, clients, and other
+roles. `node_state` is a derived stepper signal (`complete`, `current`, or
+`future`), not an independent authoritative lifecycle field.
+
+The choices considered were:
 
 - operational Client Health evidence;
 - client-facing learning/workflow state; or
