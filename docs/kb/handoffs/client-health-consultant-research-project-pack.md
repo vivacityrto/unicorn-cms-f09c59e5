@@ -8,15 +8,18 @@
 >
 > **Last updated:** 2026-09-12
 >
-> **Status:** research and product-definition input only. This pack does not
-> authorize implementation, production changes, client communications, or use
-> of identifiable client data.
+> **Status:** research and product-definition input only; Carl acknowledged the
+> outstanding consultant operational-data blocker on 2026-09-13. This pack does
+> not authorize implementation, production changes, client communications, or
+> use of identifiable client data.
 
-## Current research dependency — consultant operational input outstanding
+## Current research dependency — consultant operational input outstanding (acknowledged 2026-09-13)
 
 The repository and live read-only investigation provide a technical baseline,
 but the Client Health metrics initiative is still waiting for operational data
-from the consultants. In this context, “operational data” means AJ's and
+from the consultants. Carl acknowledged this external blocker on 2026-09-13;
+the required reports have not yet been supplied or consolidated. In this
+context, “operational data” means AJ's and
 Ezel's documented experience of real delivery patterns: expected cadence by
 package and lifecycle, normal versus concerning client situations,
 client-owned versus Vivacity-owned commitments, meaningful warning signs,

@@ -55,7 +55,7 @@ H2, H3, and A2 remain blocked under their named owners and unblock conditions.
 | T2 | TOM P1 implementation | Keep schema/writer/directory/RLS work deferred until evidence and RBAC contracts are approved | Carl/product/data/security | Blocked by design |
 | H1 | Client Health 54-tenant defaults | Prefer `unavailable`/unknown for empty, failed, or stale burn/retention sources | Carl + Client Health/product | Decision approved; implementation separately gated |
 | H2 | Forecast job disposition | Keep jobs stopped/marked unavailable and retain legacy artifacts as evidence without repair or restart | Client Health/data owner + Carl | Owner disposition approved 2026-09-13; replacement-shadow authorization remains separately gated |
-| H3 | Consultant operational input | Obtain AJ/Ezel reports before H1 thresholds, confidence semantics, or pilot acceptance | AJ/Ezel/consultants + Carl | Blocked externally |
+| H3 | Consultant operational input | Obtain AJ/Ezel reports before H1 thresholds, confidence semantics, or pilot acceptance | AJ/Ezel/consultants + Carl | External blocker acknowledged 2026-09-13; reports remain outstanding |
 | A1 | `AdminStageDetail.tsx` characterization | Approve shared static/call-graph and test planning pass; no extraction yet | Codebase coordinator + RBAC/TOM | Approved in session; characterization only |
 | A2 | `AdminStageDetail.tsx` extraction | Allow only pure policy-neutral display seams after A1; route behavior-bearing seams to owners | RBAC/TOM, Client Health if linked | Characterization packet prepared; extraction blocked on contract/oracle clearance |
 
