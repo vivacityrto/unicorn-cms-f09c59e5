@@ -215,6 +215,19 @@ source validation, the portfolio/Ask Viv view contract, forecast repair, cron,
 schema, and production-data changes remain separate gates. Focused tests cover
 empty, error, and reported states plus the existing aggregation invariants.
 
+## H1 burn-capacity containment — second bounded consumer slice
+
+The executive `TeamCapacityWidget` now carries an explicit burn-source state.
+An empty or failed `tenant_package_burn_forecast` read is `unavailable` with a
+nullable critical-tenant count, and the widget says that the burn assessment
+is unavailable instead of allowing an empty result to behave like a measured
+zero. The existing critical-burn alert remains unchanged when forecast rows
+are reported, including distinct-tenant counting.
+
+This slice is also frontend-only: no forecast, cron, schema, RLS, Edge, or
+production-data behavior changed. Freshness/quality validation and the
+portfolio/Ask Viv consumers remain separate gates.
+
 **Conclusion:** H0.3 is technically characterized enough to prepare a safe
 unknown-state and consumer work queue. The approved H1 direction says the
 current live values are unassessed and must not be treated as normal/stable;
