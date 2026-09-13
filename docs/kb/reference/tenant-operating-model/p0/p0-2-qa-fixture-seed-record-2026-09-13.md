@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; anonymous plus six authenticated QA personas characterized; expanded browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; anonymous plus six authenticated QA personas characterized; post-seed browser characterization passed 2026-09-13 (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** none needed — this was synthetic non-production fixture/persona provisioning; no production, schema, RLS, grant, cron, deployment, or production credential state changed
@@ -11,6 +11,12 @@ This record documents the first hosted QA fixture seed after Carl approved the
 TOM P0.2/P0.3 preflight. The seed supplies a small production-shaped data
 surface for later read-only characterization of tenant, membership, contact,
 package/stage, and conversation relationships.
+
+After the initial waterfall identified the empty global-settings shape, Carl
+approved a QA-only follow-up insertion of one default-valued
+`public.app_settings` row. It contains no URLs, credentials, customer values,
+or copied production settings; it exists to exercise the table's intended
+single-row contract while the client-denied negative path remains covered.
 
 “Production-shaped” means that the fixture follows the observed production
 cardinality patterns and state categories. It does **not** mean copying
@@ -42,6 +48,7 @@ states are not stored in the repository.
 | Package instances | 9 | Active, complete, cancelled, and paused states |
 | Conversations | 9 | Open and closed synthetic threads across representative/skewed/disabled strata |
 | Messages | 18 | Client/staff pairs; all carry the run tag in `meta` |
+| `app_settings` | 1 | Canonical identity row; integration URLs null, email/generation side-effect flags explicitly disabled |
 
 The empty stratum has zero members, contacts, and package instances. The
 representative strata have two and three members respectively. The skewed
@@ -91,6 +98,9 @@ role key as a browser credential.
   exist only in the protected `unicorn-qa` GitHub environment.
 - No migration, schema, RLS, grant, Realtime, cron, Edge deployment, outbound
   email, or production operation was performed.
+- The additional `app_settings` insertion was limited to `unicorn-qa`, started
+  from the table's defaults, then explicitly disabled email and generation
+  side effects; it was not copied to production.
 - Cleanup has **not** been run. If the fixture is retired, use a separately
   reviewed run-scoped cleanup in dependency order: messages, conversations,
   package instances, package-stage mappings, stages, packages, contacts,
@@ -123,6 +133,14 @@ CSC. No application writes were performed; browser storage states were
 ephemeral and only the redacted runner log was retained for 30 days in the
 private GitHub Actions artifact.
 
+After the canonical `app_settings` row was added and its email/generation
+side-effect flags were explicitly disabled, the final post-seed run
+[`34751973789`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34751973789)
+again passed 48 checks with 4 intentional skips. Its redacted waterfall
+recorded 1,701 requests: 1,673 status-200 responses, no 401 responses, four
+expected 406 responses on the client persona's denied `/admin/user-audit`
+navigation, 24 bounded in-flight records, and zero request failures.
+
 ## Remaining P0.2/P0.3 gates
 
 The fixture and six browser-capable QA identities now exist, and the expanded
@@ -132,8 +150,8 @@ packet complete, it still needs:
 1. explicit `Inconclusive` owners/unblock conditions for integrator/team-leader,
    disabled-staff, and service-principal personas;
 2. a versioned production metadata baseline and migration cutoff;
-3. full redacted request metadata/waterfall evidence for the required query
-   families; and
+3. representative full-cardinality and unexercised detail/export/Realtime/
+   RPC/Edge/Ask Viv query-family coverage; and
 4. RBAC, Client Health, and TOM owner review of authorization, provenance,
    freshness, and fixture representativeness.
 

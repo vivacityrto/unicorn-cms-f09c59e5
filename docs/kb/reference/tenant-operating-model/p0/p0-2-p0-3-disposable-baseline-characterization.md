@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — disposable verification and browser/query baseline packet
 
-> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for six provisioned personas; missing-persona, baseline-cutoff, and cross-initiative review gates remain open
+> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for six provisioned personas; QA single-row fixture verified; missing-persona, baseline-cutoff, and cross-initiative review gates remain open
 > **Owner:** Tenant Operating Model, with RBAC, Client Health, and security review
 > **Parent plan:** [Tenant Operating Model data architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related evidence:** [P0.1 owner-disposition register](p0-1-owner-disposition-register.md); [ghost-to-contact evidence packet](../p1/p1-2-a-ghost-contact-dry-run-evidence-packet.md); [guarded ghost dry-run execution packet](../p1/p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -45,7 +45,7 @@ that current behavior rather than quietly define a replacement contract.
 | --- | --- | --- | --- |
 | Target | Confirm `unicorn-qa` project ref/URL and that it is not production | Carl / environment owner | Complete — `qfpxvumcrnzrjyvqkicq`, production target false |
 | Baseline | Version the production metadata capture and declare its migration cutoff | TOM / data owner | Open |
-| Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for initial bounded run — run tag `tom_qa_20260913_seed_01`; cleanup remains separately gated |
+| Fixtures | Approve synthetic fixture manifest, reset/retention method, and tenant IDs | TOM + security | Complete for bounded runs — run tag `tom_qa_20260913_seed_01`; canonical QA `app_settings` row with side-effect flags disabled verified in final run `34751973789`; cleanup remains separately gated |
 | Personas | Provide QA-only credentials/storage states for every required persona, or mark that persona `Inconclusive` | Carl / security | Partial — anonymous plus six authenticated personas exercised; integrator/team-leader, disabled staff, and service principal remain `Inconclusive` |
 | Operator | Name the operator and observation window | Carl | Complete — Codex automated run, 2026-09-13 06:07–06:14 UTC within the approved 60-minute window |
 | Artifact | Name private artifact location, access list, and retention | Operations | Complete — private GitHub Actions artifact `tom-p0-characterization-34742103123`, Carl/repository maintainers, 30 days |
@@ -194,12 +194,32 @@ authorization reason. It must therefore remain an owner-reviewed
 `Inconclusive`, not be silently relabeled expected.
 
 The remaining owner actions are bounded: TOM/security should decide whether
-the disposable fixture must contain its canonical single `app_settings` row
-or whether empty settings are an intentional negative case, and should either
-accept the transient `tenant_users` observation as harness noise or authorize
-a QA-only diagnostic run that records a sanitized auth-readiness marker. No
-production policy, fixture, or application behavior is changed by this
-interpretation.
+the four client-route `406` observations are the expected result of the
+approved `app_settings` RLS boundary, and should accept the absence of a
+repeatable `tenant_users` `401` in the follow-up run. No production policy or
+application behavior is changed by this interpretation.
+
+#### Post-seed verification
+
+After the single default-valued row was inserted and its side-effect flags
+were disabled in `unicorn-qa`, the protected characterization was rerun from
+`main` in
+[`34751973789`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34751973789).
+The run covered the same 60 route snapshots and recorded 1,701 Supabase
+requests: 1,673 responses with status `200`, no `401` responses, four `406`
+responses, 24 in-flight records at the bounded capture window, and zero
+request-failure events. All four `406` responses occurred only for the
+intentional client navigation to `/admin/user-audit`.
+
+The QA catalog confirms the `app_settings` SELECT policy is restricted to
+`is_super_admin_safe(...) OR is_vivacity_team_safe(...)`. Therefore a client
+persona receives no visible row on that denied route, and a singular
+`.single()` reader surfaces `406`; this is the expected authorization-negative
+oracle, not a fixture failure. The prior `tenant_users` `401` did not recur,
+so the earlier auth-bootstrap hypothesis is not promoted to a defect. The
+remaining non-200 evidence is now bounded to this expected client denial and
+requires no application change; the production baseline and owner-review
+gates remain independent.
 
 ## QA-only query-plan evidence
 
@@ -347,8 +367,9 @@ The following remain explicitly outside this packet:
 **Conclusion:** the packet now contains an expanded bounded P0.2/P0.3
 characterization for the six provisioned personas, with four intentional
 client-only skips and explicit `Inconclusive` treatment for missing personas.
-The follow-up run adds a private redacted request-waterfall baseline for the
-exercised routes. It is not the complete baseline: migration cutoff, full
-cardinality coverage, remaining persona fixtures, interpretation of observed
-non-200 responses, and RBAC/Client Health/TOM owner review remain open. No
-implementation or production change is implied.
+The follow-up runs add a private redacted request-waterfall baseline for the
+exercised routes, and the post-seed run confirms the remaining `406` responses
+are an expected client authorization-negative case while the prior `401` did
+not recur. It is not the complete baseline: migration cutoff, full
+cardinality coverage, remaining persona fixtures, and RBAC/Client Health/TOM
+owner review remain open. No implementation or production change is implied.
