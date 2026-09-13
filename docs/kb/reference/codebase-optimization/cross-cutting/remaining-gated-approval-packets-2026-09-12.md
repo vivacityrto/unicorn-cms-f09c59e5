@@ -33,7 +33,7 @@ general “continue” must not be converted into a product/security decision.
 | R2-d | High-risk delegability | Keep the 11 high-risk rows non-delegable and approval-controlled by default | Security | Interim default approved; implementation/exception remains blocked on security control sign-off | [P1-h control worksheet](../../rbac-v6/p1/p1-h-high-risk-delegability-control-worksheet.md); no grant or gate change |
 | R2-e | Job-role defaults and AJ/CSC pilot | Use reviewed seat boundaries; pilot only the smallest exact Academy/package/stage action set with named scope, personas, 14-day shadow, and rollback owner | Product/operations + Carl/Vivacity | QA-first cohort and minimum capability boundary accepted; role defaults and pilot enrollment remain blocked on named owners/gates | [P1-i worksheet](../../rbac-v6/p1/p1-i-job-role-defaults-aj-csc-pilot.md); no role/grant/pilot change |
 | R2-f | AJ/CSC shadow and pilot evidence | Compare current and v6 decisions non-authoritatively for 14 days before any cutover | RBAC/security + product/operations | Evidence contract approved for preparation; telemetry implementation and pilot enrollment remain blocked on storage/retention/reviewer/cohort inputs | [P1-j shadow evidence](../../rbac-v6/p1/p1-j-aj-csc-shadow-evidence.md); no logger, grant, or pilot change |
-| T1-x | Hosted TOM P0.2/P0.3 execution | Use the approved synthetic, read-only `unicorn-qa` run as the current-behavior baseline; repeat only if a named residual gate requires it | Carl + security/environment owner | Expanded bounded run completed 2026-09-13 in Actions run `34742523972`: anonymous plus six authenticated personas, 48 passed and 4 intentional client-only skips; baseline cutoff, full request-waterfall evidence, missing personas, and cross-initiative review remain open | Reconcile residual evidence and owner dispositions; no production or implementation change |
+| T1-x | Hosted TOM P0.2/P0.3 execution | Use the approved synthetic, read-only `unicorn-qa` run as the current-behavior baseline; repeat only if a named residual gate requires it | Carl + security/environment owner | Expanded bounded run completed 2026-09-13 in Actions runs `34742523972` and `34749153450`: anonymous plus six authenticated personas, 48 passed and 4 intentional client-only skips; the follow-up captured redacted request waterfalls with zero request failures. Baseline cutoff, missing personas, non-200 response interpretation, and cross-initiative review remain open | Reconcile residual evidence and owner dispositions; no production or implementation change |
 | T2 | TOM implementation | Keep directory/writer/membership/normalization/Realtime/RLS work deferred | Carl + product/data/security | Blocked by design | Contract comparison and evidence gap list |
 | H2 | Forecast job disposition | Keep jobs stopped and outputs unavailable; retain legacy artifacts as evidence without repair or restart | Client Health/data owner + Carl | Owner disposition approved 2026-09-13; replacement-shadow authorization remains separately gated | If replacement is chosen later, prepare its data owner, synthetic fixture, run-ledger, and shadow/rollback contract |
 | H3 | Consultant operational input | Obtain AJ/Ezel/consultant reports before thresholds, confidence, or pilot acceptance | Consultants + Carl | External blocker acknowledged 2026-09-13; reports remain outstanding | Report template and evidence schema |
@@ -95,9 +95,14 @@ The [offline fixture manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline
 is complete and safe to carry forward, but it intentionally contains no
 credentials or browser storage state. The approved bounded execution filled
 the required target, fixture, operator, artifact, and query-safety fields for
-the allowlisted `unicorn-qa` target. It completed in GitHub Actions run
-`34742523972` on 2026-09-13 with anonymous plus six authenticated personas;
-the result was 48 passed and 4 intentional client-only skips. Integrator,
+the allowlisted `unicorn-qa` target. The initial run completed in GitHub
+Actions run `34742523972`, and the follow-up instrumentation run completed in
+run `34749153450` on 2026-09-13 with anonymous plus six authenticated
+personas; each result was 48 passed and 4 intentional client-only skips.
+The follow-up captured 1,686 redacted Supabase request records across 60
+route snapshots, with 1,628 status-200 responses, one 401, sixteen 406s, and
+zero request failures; 41 records were in-flight at the bounded capture
+window because of background polling. Integrator,
 Team Leader, disabled-staff, and service-principal cases remain explicitly
 `Inconclusive`, not silently passed.
 
