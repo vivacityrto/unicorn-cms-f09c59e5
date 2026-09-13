@@ -4,6 +4,7 @@
 > **Status:** read-only production/QA cardinality comparison and query-family gap register complete; representative fixture expansion and cross-initiative owner review remain open
 > **Owner:** Tenant Operating Model, with RBAC and Client Health review
 > **Parent packet:** [P0.2/P0.3 disposable baseline characterization](p0-2-p0-3-disposable-baseline-characterization.md)
+> **Cross-initiative review:** [owner-review matrix](p0-2-p0-3-cross-initiative-review-2026-09-13.md)
 > **Production rule:** this document records aggregate reads and source inspection only; it authorizes no schema, RLS, grant, Realtime, Edge, cron, data, or credential change
 
 ## Scope and method
