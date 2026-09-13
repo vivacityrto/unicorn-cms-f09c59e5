@@ -104,7 +104,7 @@ test("staff persona opens the first tenant detail read model", async ({ page }, 
   await finishWaterfall();
 });
 
-test("staff persona opens integration and Ask Viv read shells", async ({ page }, testInfo) => {
+test("staff persona reaches integration and Ask Viv read surfaces", async ({ page }, testInfo) => {
   test.skip(CLIENT_PROJECTS.has(testInfo.project.name) || DISABLED_PROJECTS.has(testInfo.project.name), "staff-only read characterization");
 
   const pageErrors: string[] = [];
@@ -117,8 +117,12 @@ test("staff persona opens integration and Ask Viv read shells", async ({ page },
 
   const askVivWaterfall = startSupabaseWaterfall(page, `${testInfo.project.name} /ask-viv`);
   await page.goto("/ask-viv");
-  await expect(page.getByText("Ask Viv", { exact: true }).first()).toBeVisible({ timeout: 25_000 });
-  await expect(page.getByPlaceholder("Ask Viv anything...")).toBeVisible({ timeout: 25_000 });
+  // The route is staff-reachable, but the current rollout ring may expose
+  // either the assistant shell or its deliberate unavailable state. Record
+  // both outcomes without attempting a write or assistant generation.
+  await expect(
+    page.getByPlaceholder("Ask Viv anything...").or(page.getByText("Ask Viv Assistant isn't available yet")),
+  ).toBeVisible({ timeout: 25_000 });
   expect(pageErrors).toEqual([]);
   await askVivWaterfall();
 });
