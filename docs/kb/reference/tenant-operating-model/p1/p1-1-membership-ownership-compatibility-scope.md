@@ -9,6 +9,7 @@
 > **Scope:** define the compatibility contract needed to consolidate future membership/access authority around `tenant_members` while preserving current contact, audit, ownership, and analytical behavior
 > **Dependencies:** P0.1 owner directions; RBAC capability interpretation; Client Health provenance requirements; no production mutation is implied
 > **Exit criteria:** a separately authorized packet has an approved field mapping, writer inventory, persona/RLS parity plan, shadow comparison, rollback plan, and explicit cutover/retirement gates
+> **First implementation packet:** [contact-promotion implementation packet](p1-1-first-contact-promotion-implementation-packet.md)
 > **Audit entry:** none needed — this is a planning/scoping document only
 
 ## Boundary
