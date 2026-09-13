@@ -12,6 +12,7 @@ const CLIENT_PROJECTS = new Set([
   "qa-tom-client-user-a",
   "qa-tom-client-admin-b",
 ]);
+const DISABLED_PROJECTS = new Set(["qa-tom-disabled-staff"]);
 
 async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label: string) {
   const startedAt = performance.now();
@@ -29,6 +30,17 @@ async function openReadOnlyPage(page: Page, path: string, heading: RegExp, label
 }
 
 test("persona reaches its current tenant/staff read shell", async ({ page }, testInfo) => {
+  if (DISABLED_PROJECTS.has(testInfo.project.name)) {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    const response = await page.goto("/manage-tenants");
+    expect(response?.status()).toBeLessThan(400);
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole("heading", { name: "Account Disabled" })).toBeVisible({ timeout: 25_000 });
+    expect(pageErrors).toEqual([]);
+    return;
+  }
+
   if (CLIENT_PROJECTS.has(testInfo.project.name)) {
     await openReadOnlyPage(page, "/client/home", /Good (morning|afternoon|evening)/i, testInfo.project.name);
     return;
