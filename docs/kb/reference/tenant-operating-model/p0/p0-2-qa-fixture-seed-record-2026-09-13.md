@@ -178,6 +178,12 @@ packet complete, it still needs:
 2. RBAC, Client Health, and TOM owner review of authorization, provenance,
    freshness, and fixture representativeness.
 
+The read-only [cardinality/query-family follow-up](p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md)
+now records the production comparison and confirms exactly which current QA
+relations are empty. It narrows, but does not remove, these two gates: a
+representative QA-only fixture expansion and the cross-initiative owner review
+must still be separately approved.
+
 The first run should stay narrow: representative and cross-tenant package /
 client-stage reads plus disabled/inactive negative cases. No v6 capability,
 grant, route, RLS/RPC, Realtime, ghost-contact promotion, forecast, or
