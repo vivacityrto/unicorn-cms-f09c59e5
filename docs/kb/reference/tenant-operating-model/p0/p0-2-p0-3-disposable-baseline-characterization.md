@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — disposable verification and browser/query baseline packet
 
-> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for nine browser personas plus a separate service-principal read contract; QA single-row fixture verified; baseline-cutoff and cross-initiative review gates remain open
+> **Last updated:** 2026-09-13 · **Status:** expanded bounded read-only characterization completed for nine browser personas plus a separate service-principal read contract; QA single-row fixture and production metadata cutoff recorded; broader query/cardinality and cross-initiative review gates remain open
 > **Owner:** Tenant Operating Model, with RBAC, Client Health, and security review
 > **Parent plan:** [Tenant Operating Model data architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Related evidence:** [P0.1 owner-disposition register](p0-1-owner-disposition-register.md); [ghost-to-contact evidence packet](../p1/p1-2-a-ghost-contact-dry-run-evidence-packet.md); [guarded ghost dry-run execution packet](../p1/p1-2-b-ghost-contact-dry-run-execution-packet.md)
