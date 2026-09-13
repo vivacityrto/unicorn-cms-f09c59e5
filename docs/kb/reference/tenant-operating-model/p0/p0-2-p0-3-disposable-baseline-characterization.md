@@ -226,7 +226,7 @@ gates remain independent.
 
 The corrected protected run
 [`34755463485`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34755463485)
-ran from `origin/main@d907e4c2` with the staff-only tenant-detail,
+ran from `codex/tom-p0-evidence-closeout@d907e4c2` with the staff-only tenant-detail,
 integrations, and Ask Viv navigation checks repeated four times. It completed
 with `84 passed, 16 skipped`, with no failures or flakes. Staff personas
 reached the first tenant detail read model and the integrations page. The
