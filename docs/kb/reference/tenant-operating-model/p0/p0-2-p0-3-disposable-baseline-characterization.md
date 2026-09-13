@@ -134,9 +134,9 @@ Observed current behavior:
 
 This is an expanded bounded characterization, not the complete P0.2/P0.3
 baseline. The route timing lines are retained in the private Actions log for
-the three measured repetitions; a full request-waterfall bundle, migration
-baseline cutoff, missing personas, and RBAC/Client Health/TOM review remain
-open.
+the three measured repetitions. A follow-up instrumentation run is recorded
+below; migration baseline cutoff, missing personas, and RBAC/Client
+Health/TOM review remain open.
 
 Aggregate measured route timings from the redacted Actions log were stable
 enough to characterize the current QA fixture without setting a product
@@ -144,6 +144,28 @@ budget: client-home medians were 1.11–1.60 s, client-package medians were
 1.09–1.62 s, the relationship-role `/client/users` redirect medians were
 0.93–0.94 s, and CSC `/manage-tenants` medians were 1.60 s. These are
 environment-specific observations, not acceptance thresholds.
+
+### Follow-up request-waterfall evidence
+
+The protected follow-up run
+[`34749153450`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34749153450)
+used the same allowlisted QA fixture and seven-project scope after adding the
+QA-only redacted waterfall observer. Its private artifact
+`tom-p0-characterization-34749153450` is retained for 30 days, through
+2026-10-13. Across 60 exercised route snapshots it recorded 1,686 Supabase
+requests: 1,628 responses with status 200, one 401 response on
+`/rest/v1/tenant_users`, and sixteen 406 responses on `/rest/v1/app_settings`.
+There were zero request-failure events. The remaining 41 records were
+explicitly marked in-flight at the one-second bounded post-assertion capture
+window, predominantly from background auth/read polling; they are not
+claimed as completed responses.
+
+The run still completed with 48 passed and four intentional client-only
+skips. The non-200 responses are retained as current-behavior evidence for
+RBAC/TOM/owner interpretation; this packet does not infer a policy change or
+attempt a repair from them. The observer records method, redacted pathname,
+status, duration, and request/response byte metadata only; it does not retain
+query strings, payloads, identifiers, credentials, or browser storage state.
 
 ## QA-only query-plan evidence
 
@@ -291,6 +313,8 @@ The following remain explicitly outside this packet:
 **Conclusion:** the packet now contains an expanded bounded P0.2/P0.3
 characterization for the six provisioned personas, with four intentional
 client-only skips and explicit `Inconclusive` treatment for missing personas.
-It is not the complete baseline: migration cutoff, full request-waterfall
-evidence, remaining persona fixtures, and RBAC/Client Health/TOM owner review
-remain open. No implementation or production change is implied.
+The follow-up run adds a private redacted request-waterfall baseline for the
+exercised routes. It is not the complete baseline: migration cutoff, full
+cardinality coverage, remaining persona fixtures, interpretation of observed
+non-200 responses, and RBAC/Client Health/TOM owner review remain open. No
+implementation or production change is implied.
