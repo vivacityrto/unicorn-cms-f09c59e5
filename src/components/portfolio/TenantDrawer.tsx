@@ -167,7 +167,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Burn Risk</span>
                 <span className={tenant.burn_risk_status === 'critical' ? 'text-orange-500 font-medium' : ''}>
-                  {tenant.burn_risk_status}
+                  {tenant.burn_risk_status === 'unavailable' ? 'Unavailable' : tenant.burn_risk_status}
                 </span>
               </div>
               <div className="flex justify-between">

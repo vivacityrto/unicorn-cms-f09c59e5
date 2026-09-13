@@ -83,7 +83,9 @@ export function AttentionRankingSection({ tenants, cscNameMap, onRowClick, onVie
                         ) : <span className="text-muted-foreground">0</span>}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {t.retention_status === 'high_risk' ? (
+                        {t.retention_status === 'unavailable' ? (
+                          <Badge variant="outline" className="text-[10px]">Unavailable</Badge>
+                        ) : t.retention_status === 'high_risk' ? (
                           <Badge variant="destructive" className="text-[10px]">High Risk</Badge>
                         ) : t.retention_status === 'vulnerable' ? (
                           <Badge className="bg-amber-500 text-white text-[10px]">Vulnerable</Badge>
