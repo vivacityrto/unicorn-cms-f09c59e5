@@ -1,0 +1,3553 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "docs/kb/reference/rbac-v6/p1/data/p1-d-static-enforcement-ledger.json",
+  "sourceCommit": "49fa5e71c401e046c82071a7ba3b05e6d78c373f",
+  "generatedAt": "2026-09-14",
+  "purpose": "Normalized row-by-row preparation ledger for golden-matrix review; not policy.",
+  "readinessCounts": {
+    "needs_enforcement_inventory": 58,
+    "needs_product_input": 16,
+    "needs_security_review": 11
+  },
+  "rows": [
+    {
+      "feature_key": "academy.builder.view",
+      "label": "View course library",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.builder.edit",
+      "label": "Create / edit courses",
+      "action": "edit",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyBuilderCourse.tsx",
+          "line": 320,
+          "args": [
+            "academy.builder.edit"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyBuilderLibrary.tsx",
+          "line": 172,
+          "args": [
+            "academy.builder.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 19,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 80,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\lib\\academy\\courseResources.test.ts",
+          "line": 61,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\lib\\academy\\courseResources.ts",
+          "line": 17,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderCourse.tsx",
+          "line": 320,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderCourse.tsx",
+          "line": 323,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderLibrary.tsx",
+          "line": 172,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\auth-gate.test.mjs",
+          "line": 4,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\auth-gate.test.mjs",
+          "line": 22,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 19,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\academy-import-vimeo-showcase\\index.ts",
+          "line": 80,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 69,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "academy.builder.publish",
+      "label": "Publish / unpublish course",
+      "action": "publish",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyAddCoursePage.tsx",
+          "line": 397,
+          "args": [
+            "academy.builder.publish"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyBuilderCourse.tsx",
+          "line": 321,
+          "args": [
+            "academy.builder.publish"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyBuilderLibrary.tsx",
+          "line": 173,
+          "args": [
+            "academy.builder.publish"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyAddCoursePage.tsx",
+          "line": 397,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderCourse.tsx",
+          "line": 321,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyBuilderLibrary.tsx",
+          "line": 173,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.certificates.view",
+      "label": "View all certificates",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.certificates.issue",
+      "label": "Issue / revoke certificate",
+      "action": "issue",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyCertificatesPage.tsx",
+          "line": 75,
+          "args": [
+            "academy.certificates.issue"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyCertificatesPage.tsx",
+          "line": 75,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.enrolments.view",
+      "label": "View all enrolments",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.enrolments.create",
+      "label": "Enrol a client in training",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+          "line": 126,
+          "args": [
+            "academy.enrolments.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyEnrolmentsPage.tsx",
+          "line": 126,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.enrolments.revoke",
+      "label": "Revoke / expire enrolment",
+      "action": "revoke",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+          "line": 127,
+          "args": [
+            "academy.enrolments.revoke",
+            "full"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/superadmin/AcademyEnrolmentsPage.tsx",
+          "line": 128,
+          "args": [
+            "academy.enrolments.revoke"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyEnrolmentsPage.tsx",
+          "line": 127,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyEnrolmentsPage.tsx",
+          "line": 128,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.mapping.view",
+      "label": "View mapping matrix",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 623,
+          "props": {
+            "featureKey": "academy.mapping.view",
+            "minLevel": "full"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\PermissionGate.tsx",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\superadmin\\AcademyPackageCourseRulesPage.tsx",
+          "line": 15,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 269,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 623,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.mapping.edit",
+      "label": "Create / edit mapping rules",
+      "action": "edit",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyPackageCourseRulesPage.tsx",
+          "line": 30,
+          "args": [
+            "academy.mapping.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyPackageCourseRulesPage.tsx",
+          "line": 30,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "academy.tenant_access.manage",
+      "label": "Manage tenant access",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/superadmin/AcademyTenantAccessPage.tsx",
+          "line": 43,
+          "args": [
+            "academy.tenant_access.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\superadmin\\AcademyTenantAccessPage.tsx",
+          "line": 43,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "admin.team_users.manage",
+      "label": "Team user management",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\activate-ghost-user\\index.ts",
+          "line": 58,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\bulk-account-actions\\index.ts",
+          "line": 69,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\bulk-user-action\\index.ts",
+          "line": 75,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\delete-user\\index.ts",
+          "line": 53,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\generate-recovery-link\\index.ts",
+          "line": 50,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\generate-staff-checklist\\index.ts",
+          "line": 33,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 6,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 115,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\invite-or-reset-user\\index.ts",
+          "line": 76,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\invite-user\\index.ts",
+          "line": 130,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 14,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 273,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 6,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 34,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 9,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 76,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 5,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 44,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-password-reset\\index.ts",
+          "line": 75,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 8,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 117,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\index.ts",
+          "line": 33,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 5,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 280,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\toggle-user-status\\index.ts",
+          "line": 50,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\update-user-profile\\index.ts",
+          "line": 41,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\update-user-role\\index.ts",
+          "line": 50,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\UserProfile.tsx",
+          "line": 148,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\activate-ghost-user\\index.ts",
+          "line": 58,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\bulk-account-actions\\index.ts",
+          "line": 69,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\bulk-user-action\\index.ts",
+          "line": 75,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\delete-user\\index.ts",
+          "line": 53,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-recovery-link\\index.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-staff-checklist\\index.ts",
+          "line": 33,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\allowlist.test.ts",
+          "line": 71,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 8,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\import-clickup-csv\\index.ts",
+          "line": 115,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\invite-or-reset-user\\index.ts",
+          "line": 76,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\invite-user\\index.ts",
+          "line": 130,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\invite-user\\index.ts",
+          "line": 145,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 14,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\issue-token\\index.ts",
+          "line": 273,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-enhanced-email\\index.ts",
+          "line": 34,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 9,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 76,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-magic-link\\index.ts",
+          "line": 87,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 5,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-mailgun-template\\index.ts",
+          "line": 44,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-password-reset\\index.ts",
+          "line": 75,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 8,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-staff-onboarding-email\\index.ts",
+          "line": 117,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\auth-gate.test.mjs",
+          "line": 5,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\auth-gate.test.mjs",
+          "line": 15,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\auth-gate.test.mjs",
+          "line": 52,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\index.ts",
+          "line": 30,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\staff-onboarding-workbook\\index.ts",
+          "line": 33,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\auth-gate.test.mjs",
+          "line": 22,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 5,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 7,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\sync-clickup-tasks\\index.ts",
+          "line": 280,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\toggle-user-status\\index.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\update-user-profile\\index.ts",
+          "line": 41,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\update-user-profile\\privilege-escalation.test.ts",
+          "line": 4,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\update-user-role\\index.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\admin-authorization.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\email-hardening.test.mjs",
+          "line": 161,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\email-hardening.test.mjs",
+          "line": 166,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\email-hardening.test.mjs",
+          "line": 171,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 24,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 63,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.tenant_users.manage",
+      "label": "Tenant user management",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "admin.invites.manage",
+      "label": "Manage invites",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\bulk-send-invitations\\index.ts",
+          "line": 68,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\cancel-invite\\index.ts",
+          "line": 51,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\resend-invite\\index.ts",
+          "line": 117,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 10,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 152,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\bulk-send-invitations\\auth-gate.test.mjs",
+          "line": 18,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\bulk-send-invitations\\index.ts",
+          "line": 68,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\cancel-invite\\index.ts",
+          "line": 51,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\resend-invite\\index.ts",
+          "line": 117,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 10,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 152,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-invitation-email\\index.ts",
+          "line": 184,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 64,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.cohort.send",
+      "label": "Cohort sender",
+      "action": "send",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\cohort-access-sender-worker\\index.ts",
+          "line": 62,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\cohort-access-sender-worker\\index.ts",
+          "line": 62,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 65,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.broadcast.send",
+      "label": "Send broadcast campaigns",
+      "action": "send",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\send-broadcast-campaign\\index.ts",
+          "line": 46,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\send-broadcast-campaign\\index.ts",
+          "line": 46,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 66,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.audit_log.view",
+      "label": "System audit logs",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "admin.email_templates.manage",
+      "label": "Email templates (system)",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\send-stage-email\\index.ts",
+          "line": 76,
+          "evidence": "FeatureKeys.adminEmailTemplates"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 61,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.system_config.manage",
+      "label": "System / kit config",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\addin-diagnostics-usage\\index.ts",
+          "line": 36,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\create-tasks-from-minutes\\index.ts",
+          "line": 42,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\export-client-timeline-pdf\\index.ts",
+          "line": 34,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\extract-copilot-minutes\\index.ts",
+          "line": 154,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\generate-excel-document\\index.ts",
+          "line": 171,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\generate-minutes-draft\\index.ts",
+          "line": 365,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\pdp-auto-evidence\\index.ts",
+          "line": 192,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\provision-m365-user\\index.ts",
+          "line": 78,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\regulator-watch-check\\index.ts",
+          "line": 42,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\repair-staff-uuids\\index.ts",
+          "line": 50,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\research-enrich-tenant\\index.ts",
+          "line": 31,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\tga-sync\\index.ts",
+          "line": 1730,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        },
+        {
+          "file": "supabase\\functions\\upload-sharepoint-file\\index.ts",
+          "line": 177,
+          "evidence": "FeatureKeys.adminSystemConfig"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 123,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 124,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 155,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 156,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 162,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 168,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\pdp-auto-evidence\\index.ts",
+          "line": 186,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 62,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.permissions.manage",
+      "label": "Edit role permissions",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\update-role-permission\\index.ts",
+          "line": 39,
+          "evidence": "FeatureKeys.adminPermissions"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 68,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 55,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.migration.unicorn1",
+      "label": "Unicorn 1 migration tools",
+      "action": "unicorn1",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\import-unicorn1-client\\index.ts",
+          "line": 257,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        },
+        {
+          "file": "supabase\\functions\\lookup-unicorn1-client\\index.ts",
+          "line": 78,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        },
+        {
+          "file": "supabase\\functions\\mark-unicorn1-user-mapped\\index.ts",
+          "line": 19,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        },
+        {
+          "file": "supabase\\functions\\search-unicorn1-users\\index.ts",
+          "line": 19,
+          "evidence": "FeatureKeys.adminUnicorn1"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 69,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 56,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.testing.seed",
+      "label": "Dashboard test seed",
+      "action": "seed",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\dashboard-test-seed\\index.ts",
+          "line": 36,
+          "evidence": "FeatureKeys.adminTestingSeed"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 70,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 57,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.vector.manage",
+      "label": "Vector index admin",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\embed-ask-viv-corpus\\index.ts",
+          "line": 467,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\embed-ask-viv-documents\\index.ts",
+          "line": 458,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\embed-srto-corpus\\index.ts",
+          "line": 308,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\generate-ask-viv-faqs\\index.ts",
+          "line": 74,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\vector-index-rebuild\\index.ts",
+          "line": 80,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\vector-index-remove\\index.ts",
+          "line": 56,
+          "evidence": "FeatureKeys.adminVector"
+        },
+        {
+          "file": "supabase\\functions\\vector-index-update\\index.ts",
+          "line": 67,
+          "evidence": "FeatureKeys.adminVector"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\vector-index-response-auth.test.mjs",
+          "line": 13,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 71,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 58,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.integrations.xero_connect",
+      "label": "Connect / disconnect Xero",
+      "action": "xero_connect",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\xero-auth\\index.ts",
+          "line": 58,
+          "evidence": "FeatureKeys.adminXeroConnect"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 72,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 59,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "admin.academy_mgmt.manage",
+      "label": "Academy management console",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "audits.setup",
+      "label": "Set up / create an audit",
+      "action": "setup",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/AuditsAssessments.tsx",
+          "line": 29,
+          "args": [
+            "audits.setup"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\AuditsAssessments.tsx",
+          "line": 29,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 425,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "audits.operate",
+      "label": "Operate / run the audit",
+      "action": "operate",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "audits.view",
+      "label": "View audit results",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "audits.report",
+      "label": "Generate & release report",
+      "action": "report",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/audit/workspace/ReportTab.tsx",
+          "line": 146,
+          "args": [
+            "audits.report"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 10,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 229,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 16,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 17,
+          "evidence": "literal-feature-key"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 81,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\components\\audit\\workspace\\ReportTab.tsx",
+          "line": 146,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 10,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\generate-client-audit-report-docx\\index.ts",
+          "line": 229,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 16,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 17,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 81,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\release-audit-report\\index.ts",
+          "line": 121,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 70,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "audits.export_pack",
+      "label": "Export compliance pack",
+      "action": "export_pack",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\export-compliance-pack\\index.ts",
+          "line": 34,
+          "evidence": "FeatureKeys.auditsExportPack"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 73,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 60,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "clients.profile.view",
+      "label": "View client profile & timeline",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "clients.login_history.view",
+      "label": "View client login history",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "clients.details.edit",
+      "label": "Edit client details",
+      "action": "edit",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/ClientDetail.tsx",
+          "line": 263,
+          "args": [
+            "clients.details.edit",
+            "limited"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\ClientDetail.tsx",
+          "line": 263,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "clients.activate",
+      "label": "Activate a client",
+      "action": "activate",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/tenant/TenantLifecycleActions.tsx",
+          "line": 24,
+          "args": [
+            "clients.activate"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\tenant\\TenantLifecycleActions.tsx",
+          "line": 24,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "clients.create",
+      "label": "Create / set up client",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/ManageTenants.tsx",
+          "line": 129,
+          "args": [
+            "clients.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\create-tenant\\index.ts",
+          "line": 47,
+          "evidence": "FeatureKeys.clientsCreate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\pages\\ManageTenants.tsx",
+          "line": 129,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\create-tenant\\index.ts",
+          "line": 6,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 68,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "clients.deactivate",
+      "label": "Deactivate / close client",
+      "action": "deactivate",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/tenant/TenantLifecycleActions.tsx",
+          "line": 23,
+          "args": [
+            "clients.deactivate"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\tenant\\TenantLifecycleActions.tsx",
+          "line": 23,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "clients.emails.manage",
+      "label": "Manage linked emails",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\unlink-email\\index.ts",
+          "line": 11,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\unlink-email\\index.ts",
+          "line": 30,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "admin.documents.bulk_generate",
+      "label": "Bulk generate documents",
+      "action": "bulk_generate",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_security_review",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\provision-tenant-sharepoint-folder\\index.ts",
+          "line": 388,
+          "evidence": "literal-feature-key"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\provision-tenant-sharepoint-folder\\index.ts",
+          "line": 388,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 67,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "eos.gwc_trends.view",
+      "label": "GWC Trends",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 755,
+          "props": {
+            "featureKey": "eos.gwc_trends.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 385,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 755,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.rock_analysis.view",
+      "label": "Rock Success Analysis",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 766,
+          "props": {
+            "featureKey": "eos.rock_analysis.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 385,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 766,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.client_impact.view",
+      "label": "Client Impact Reporting",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosClientImpactDetail.tsx",
+          "line": 13,
+          "args": [
+            "eos.client_impact.view"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 744,
+          "props": {
+            "featureKey": "eos.client_impact.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosClientImpactDetail.tsx",
+          "line": 13,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 384,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 400,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 744,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.leadership_dashboard.view",
+      "label": "Leadership Dashboard",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/routes/dashboardRoutes.tsx",
+          "line": 777,
+          "props": {
+            "featureKey": "eos.leadership_dashboard.view",
+            "redirectTo": "/eos"
+          },
+          "evidence": "PermissionGate"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 386,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\routes\\dashboardRoutes.tsx",
+          "line": 777,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.flight_plan.view",
+      "label": "Flight Plan — view",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.flight_plan.edit",
+      "label": "Flight Plan — edit",
+      "action": "edit",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosFlightPlan.tsx",
+          "line": 24,
+          "args": [
+            "eos.flight_plan.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosFlightPlan.tsx",
+          "line": 24,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.meetings.l10.participate",
+      "label": "L10 — participate",
+      "action": "participate",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.meetings.l10.create",
+      "label": "L10 — create / configure",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/MeetingTypeSelector.tsx",
+          "line": 12,
+          "args": [
+            "eos.meetings.l10.create"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/EosMeetings.tsx",
+          "line": 31,
+          "args": [
+            "eos.meetings.l10.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\MeetingTypeSelector.tsx",
+          "line": 12,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\EosMeetings.tsx",
+          "line": 31,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\EosMeetings.tsx",
+          "line": 38,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.meetings.samepage",
+      "label": "Same Page Meeting",
+      "action": "samepage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/MeetingTypeSelector.tsx",
+          "line": 13,
+          "args": [
+            "eos.meetings.samepage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\MeetingTypeSelector.tsx",
+          "line": 13,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.meetings.quarterly",
+      "label": "Quarterly / Annual — create",
+      "action": "quarterly",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/MeetingTypeSelector.tsx",
+          "line": 14,
+          "args": [
+            "eos.meetings.quarterly"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\MeetingTypeSelector.tsx",
+          "line": 14,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.configurations.manage",
+      "label": "Meeting Configurations — manage",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/eos/configurations/EosConfigurationEditor.tsx",
+          "line": 143,
+          "args": [
+            "eos.configurations.manage",
+            "full"
+          ],
+          "evidence": "usePermission"
+        },
+        {
+          "file": "src/pages/EosMeetings.tsx",
+          "line": 33,
+          "args": [
+            "eos.configurations.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\eos\\configurations\\EosConfigurationEditor.tsx",
+          "line": 143,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\EosMeetings.tsx",
+          "line": 33,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.mission_control.view",
+      "label": "Mission Control — view",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.mission_control.edit",
+      "label": "Mission Control — edit",
+      "action": "edit",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosVto.tsx",
+          "line": 18,
+          "args": [
+            "eos.mission_control.edit"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosVto.tsx",
+          "line": 18,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.overview.view",
+      "label": "EOS Overview — view",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.processes.view",
+      "label": "View processes",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.processes.create",
+      "label": "Create / edit process",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/AdminEOSProcesses.tsx",
+          "line": 70,
+          "args": [
+            "eos.processes.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\AdminEOSProcesses.tsx",
+          "line": 70,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.processes.publish",
+      "label": "Approve / publish process",
+      "action": "publish",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/AdminEOSProcesses.tsx",
+          "line": 71,
+          "args": [
+            "eos.processes.publish"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\AdminEOSProcesses.tsx",
+          "line": 71,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.qc.create",
+      "label": "Create QC (schedule)",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosQC.tsx",
+          "line": 84,
+          "args": [
+            "eos.qc.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosQC.tsx",
+          "line": 84,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.qc.own",
+      "label": "View & submit own QC",
+      "action": "own",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "own_resource (for the owner_only grant); global (for the full grant)",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.qc.all",
+      "label": "View all QCs (manager)",
+      "action": "all",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosQC.tsx",
+          "line": 85,
+          "args": [
+            "eos.qc.all"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosQC.tsx",
+          "line": 85,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.rocks.company.create",
+      "label": "Company Rock — create/edit",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosRocks.tsx",
+          "line": 80,
+          "args": [
+            "eos.rocks.company.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosRocks.tsx",
+          "line": 80,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.rocks.view",
+      "label": "Company Rock — view",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.rocks.own.manage",
+      "label": "Rock — tasks on own Rock",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosRocks.tsx",
+          "line": 81,
+          "args": [
+            "eos.rocks.own.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosRocks.tsx",
+          "line": 81,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.scorecard.view",
+      "label": "Scorecard — view",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.scorecard.update_own",
+      "label": "Scorecard — update own metric",
+      "action": "update_own",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "own_resource (for the owner_only grant); global (for the full grant)",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.scorecard.manage",
+      "label": "Scorecard — configure",
+      "action": "manage",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosScorecard.tsx",
+          "line": 67,
+          "args": [
+            "eos.scorecard.manage"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosScorecard.tsx",
+          "line": 67,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.todos.own",
+      "label": "Add To-Do for yourself",
+      "action": "own",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "eos.todos.others",
+      "label": "Add To-Do for others",
+      "action": "others",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/pages/EosTodos.tsx",
+          "line": 15,
+          "args": [
+            "eos.todos.others"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\pages\\EosTodos.tsx",
+          "line": 15,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "packages.view",
+      "label": "View package & progress",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "packages.items.tick",
+      "label": "Tick off package items",
+      "action": "tick",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "packages.notes.add",
+      "label": "Add notes / log time / share",
+      "action": "add",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "packages.create",
+      "label": "Create / start a package",
+      "action": "create",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/client/ClientPackagesTab.tsx",
+          "line": 105,
+          "args": [
+            "packages.create"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\AddStageDialog.tsx",
+          "line": 123,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\components\\client\\ClientPackagesTab.tsx",
+          "line": 105,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "src\\pages\\ManageStages.tsx",
+          "line": 136,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "packages.close",
+      "label": "Close a package",
+      "action": "close",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "all_tenants",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [
+        {
+          "file": "src/components/client/ClientPackagesTab.tsx",
+          "line": 106,
+          "args": [
+            "packages.close"
+          ],
+          "evidence": "usePermission"
+        }
+      ],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\components\\client\\ClientPackagesTab.tsx",
+          "line": 106,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "resource_hub.view",
+      "label": "View / browse resources",
+      "action": "view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "resource_hub.upload",
+      "label": "Upload / create resource",
+      "action": "upload",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "resource_hub.approve",
+      "label": "Approve & publish resource",
+      "action": "approve",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 125,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 126,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 149,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\rbac\\role-access.test.tsx",
+          "line": 150,
+          "kind": "test_reference"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "resource_hub.archive",
+      "label": "Archive / remove resource",
+      "action": "archive",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "staff.internal",
+      "label": "Vivacity staff (generic)",
+      "action": "internal",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\create-client-audit\\index.ts",
+          "line": 65,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\generate-certificate-pdf\\index.ts",
+          "line": 54,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\notify-chat\\index.ts",
+          "line": 21,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\notify-suggestion-submitted\\index.ts",
+          "line": 66,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\record-completed-audit\\index.ts",
+          "line": 20,
+          "evidence": "FeatureKeys.staffInternal"
+        },
+        {
+          "file": "supabase\\functions\\tenant-lifecycle\\index.ts",
+          "line": 43,
+          "evidence": "FeatureKeys.staffInternal"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 10,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 170,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 176,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 186,
+          "kind": "test_reference"
+        },
+        {
+          "file": "src\\test\\qa\\data-lifecycle-tenant.test.ts",
+          "line": 250,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\tenant-lifecycle\\index.ts",
+          "line": 125,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\tenant-lifecycle\\suspend-close-superadmin.test.mjs",
+          "line": 8,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 58,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 45,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.addin.use",
+      "label": "Outlook add-in",
+      "action": "use",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\addin-auth.ts",
+          "line": 97,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 67,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 54,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace route guards, direct role predicates, RPC callers, RLS, and non-literal Edge Function gates; absence of a recognized key is not proof of absence."
+    },
+    {
+      "feature_key": "staff.ai.use",
+      "label": "Staff AI assistants",
+      "action": "use",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\assistant-answer\\index.ts",
+          "line": 94,
+          "evidence": "FeatureKeys.staffAi"
+        },
+        {
+          "file": "supabase\\functions\\clickup-ai-search\\index.ts",
+          "line": 33,
+          "evidence": "FeatureKeys.staffAi"
+        },
+        {
+          "file": "supabase\\functions\\client-ai-companion\\index.ts",
+          "line": 107,
+          "evidence": "FeatureKeys.staffAi"
+        },
+        {
+          "file": "supabase\\functions\\copilot-chat\\index.ts",
+          "line": 62,
+          "evidence": "FeatureKeys.staffAi"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 62,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 49,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.billing.xero_view",
+      "label": "View Xero invoice status",
+      "action": "xero_view",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\xero-auth\\index.ts",
+          "line": 65,
+          "evidence": "FeatureKeys.staffXeroView"
+        },
+        {
+          "file": "supabase\\functions\\xero-invoice-list\\index.ts",
+          "line": 114,
+          "evidence": "FeatureKeys.staffXeroView"
+        },
+        {
+          "file": "supabase\\functions\\xero-invoice-status\\index.ts",
+          "line": 46,
+          "evidence": "FeatureKeys.staffXeroView"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 65,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 52,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.documents.generate",
+      "label": "Generate / deliver documents",
+      "action": "generate",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\analyze-document\\index.ts",
+          "line": 701,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\bulk-generate-phase-documents\\index.ts",
+          "line": 79,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\deliver-governance-document\\index.ts",
+          "line": 637,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\generate-document\\index.ts",
+          "line": 63,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\generate-membership-certificate\\index.ts",
+          "line": 75,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\generate-pack\\index.ts",
+          "line": 30,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\get-message-attachment-url\\index.ts",
+          "line": 49,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\scan-document\\index.ts",
+          "line": 392,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\upload-message-attachment\\index.ts",
+          "line": 78,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        },
+        {
+          "file": "supabase\\functions\\upload-portal-document\\index.ts",
+          "line": 121,
+          "evidence": "FeatureKeys.staffDocumentsGenerate"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 61,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 48,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.email.send",
+      "label": "Send composed / Graph email",
+      "action": "send",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\send-composed-email\\index.ts",
+          "line": 57,
+          "evidence": "FeatureKeys.staffEmailSend"
+        },
+        {
+          "file": "supabase\\functions\\send-email-graph\\index.ts",
+          "line": 125,
+          "evidence": "FeatureKeys.staffEmailSend"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\send-composed-email\\index.ts",
+          "line": 54,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\send-email-graph\\auth-gate.test.mjs",
+          "line": 28,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\send-email-graph\\index.ts",
+          "line": 121,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 60,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 47,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.integrations.tga",
+      "label": "TGA integration",
+      "action": "tga",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_enforcement_inventory",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\get-organisation-details\\index.ts",
+          "line": 59,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\search-organisations\\index.ts",
+          "line": 20,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\tga-integration\\index.ts",
+          "line": 227,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\tga-integration\\index.ts",
+          "line": 281,
+          "evidence": "FeatureKeys.staffTga"
+        },
+        {
+          "file": "supabase\\functions\\tga-rto-sync\\index.ts",
+          "line": 544,
+          "evidence": "FeatureKeys.staffTga"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 66,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 53,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.meetings.use",
+      "label": "Meeting artefacts",
+      "action": "use",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\generate-meeting-recurrence\\index.ts",
+          "line": 128,
+          "evidence": "FeatureKeys.staffMeetings"
+        },
+        {
+          "file": "supabase\\functions\\generate-minutes-from-transcript\\index.ts",
+          "line": 270,
+          "evidence": "FeatureKeys.staffMeetings"
+        },
+        {
+          "file": "supabase\\functions\\publish-meeting-minutes\\index.ts",
+          "line": 227,
+          "evidence": "FeatureKeys.staffMeetings"
+        },
+        {
+          "file": "supabase\\functions\\sync-meeting-artifacts\\index.ts",
+          "line": 329,
+          "evidence": "FeatureKeys.staffMeetings"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 64,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 51,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.research.use",
+      "label": "Research / knowledge tools",
+      "action": "use",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\query-knowledge-graph\\index.ts",
+          "line": 17,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-answer\\index.ts",
+          "line": 23,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-audit-intelligence\\index.ts",
+          "line": 54,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-evidence-gap-check\\index.ts",
+          "line": 79,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-public-snapshot\\index.ts",
+          "line": 64,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-scrape\\index.ts",
+          "line": 23,
+          "evidence": "FeatureKeys.staffResearch"
+        },
+        {
+          "file": "supabase\\functions\\research-tas-context\\index.ts",
+          "line": 103,
+          "evidence": "FeatureKeys.staffResearch"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 63,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 50,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    },
+    {
+      "feature_key": "staff.sharepoint.use",
+      "label": "SharePoint browse / provision",
+      "action": "use",
+      "target": "unresolved — derive from the first trusted server boundary; feature labels are not target proof",
+      "actor": "unresolved — derive from the authenticated principal/seat at the first trusted boundary",
+      "scope": "global",
+      "relationship_proof": "unreconciled in this static pass",
+      "first_enforcement_boundary": "unreconciled in this static pass",
+      "denial_case": "not characterized; requires named negative persona/probe",
+      "owner": "RBAC v6 with product/security review",
+      "readiness": "needs_product_input",
+      "policy_state": "candidate_not_approved",
+      "frontend_gate_refs": [],
+      "edge_gate_refs": [
+        {
+          "file": "supabase\\functions\\browse-sharepoint-folder\\index.ts",
+          "line": 122,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\check-tenant-sharepoint-liveness\\index.ts",
+          "line": 111,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\import-sharepoint-template\\index.ts",
+          "line": 33,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\resolve-sharepoint-folder-url\\index.ts",
+          "line": 22,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\resolve-tenant-folder\\index.ts",
+          "line": 32,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\upload-sharepoint-file\\index.ts",
+          "line": 130,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\validate-sharepoint-root-folder\\index.ts",
+          "line": 179,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\validate-sharepoint-root-folder\\index.ts",
+          "line": 236,
+          "evidence": "FeatureKeys.staffSharepoint"
+        },
+        {
+          "file": "supabase\\functions\\verify-compliance-folder\\index.ts",
+          "line": 23,
+          "evidence": "FeatureKeys.staffSharepoint"
+        }
+      ],
+      "source_refs": [
+        {
+          "file": "supabase\\functions\\check-tenant-sharepoint-liveness\\index.ts",
+          "line": 13,
+          "kind": "frontend_source"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.test.mjs",
+          "line": 59,
+          "kind": "test_reference"
+        },
+        {
+          "file": "supabase\\functions\\_shared\\requireCaller.ts",
+          "line": 46,
+          "kind": "frontend_source"
+        }
+      ],
+      "next_static_action": "Trace the Edge Function request/target relationship, RLS boundary, and denial outcome."
+    }
+  ]
+}
