@@ -83,6 +83,8 @@ jobs:
       - name: Generate ephemeral TOM storage states
         shell: bash
         env:
+          QA_E2E_SUPERADMIN_PASSWORD: ${{ secrets.QA_E2E_SUPERADMIN_PASSWORD }}
+          QA_E2E_CLIENT_PASSWORD: ${{ secrets.QA_E2E_CLIENT_PASSWORD }}
           QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
           QA_TOM_CLIENT_ADMIN_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
           QA_TOM_CLIENT_USER_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_USER_A_PASSWORD }}
@@ -90,12 +92,16 @@ jobs:
           QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
         run: |
           declare -A emails=(
+            [qa-superadmin]="qa-e2e-superadmin@example.qa"
+            [qa-client]="qa-e2e-client@example.qa"
             [tom-client-admin-a]="${QA_TOM_FIXTURE_TAG}_client_admin_a@example.qa"
             [tom-client-user-a]="${QA_TOM_FIXTURE_TAG}_client_user_a@example.qa"
             [tom-client-admin-b]="${QA_TOM_FIXTURE_TAG}_client_admin_b@example.qa"
             [tom-csc]="${QA_TOM_FIXTURE_TAG}_csc@example.qa"
           )
           declare -A passwords=(
+            [qa-superadmin]="$QA_E2E_SUPERADMIN_PASSWORD"
+            [qa-client]="$QA_E2E_CLIENT_PASSWORD"
             [tom-client-admin-a]="$QA_TOM_CLIENT_ADMIN_A_PASSWORD"
             [tom-client-user-a]="$QA_TOM_CLIENT_USER_A_PASSWORD"
             [tom-client-admin-b]="$QA_TOM_CLIENT_ADMIN_B_PASSWORD"
@@ -108,7 +114,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
-        run: npm run e2e:qa -- --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --trace=off
+        run: npm run e2e:qa -- --project=qa-superadmin --project=qa-client --project=qa-tom-client-admin-a --project=qa-tom-client-user-a --project=qa-tom-client-admin-b --project=qa-tom-csc --repeat-each=3 --trace=off
       - name: Upload redacted run evidence
         if: always()
         uses: actions/upload-artifact@v4
