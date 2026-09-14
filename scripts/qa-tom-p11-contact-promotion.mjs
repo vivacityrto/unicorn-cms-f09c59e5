@@ -91,10 +91,6 @@ async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
   if (!RECOVERY_RUN_TAG) {
     throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
   }
-  if (recipient && recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG) {
-    throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
-  }
-
   const { data: contacts, error: contactsError } = await serviceClient
     .from("tenant_contacts")
     .select("id")
@@ -114,6 +110,11 @@ async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
     .eq("first_name", "TOM P1.1")
     .eq("last_name", RECOVERY_RUN_TAG);
   if (invitationsError) throw new Error(`recovery invitation lookup: ${invitationsError.message}`);
+
+  const hasScopedRows = (contacts?.length ?? 0) > 0 || (invitations?.length ?? 0) > 0;
+  if (recipient && recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG && !hasScopedRows) {
+    throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
+  }
 
   const errors = [];
   if (recipient) {
@@ -201,16 +202,6 @@ async function main() {
     }
 
     recipientPassword = `TOM-P11-${randomBytes(18).toString("base64url")}a1!`;
-    const { data: recipientAuth, error: recipientError } = await serviceClient.auth.admin.createUser({
-      email: RECIPIENT_EMAIL,
-      password: recipientPassword,
-      email_confirm: true,
-      user_metadata: { qa_tom_p11_run_tag: RUN_TAG },
-    });
-    if (recipientError || !recipientAuth.user) {
-      throw new Error(`recipient auth create: ${recipientError?.message ?? "no user returned"}`);
-    }
-    recipientId = recipientAuth.user.id;
 
     const { data: seededContact, error: contactError } = await serviceClient
       .from("tenant_contacts")
@@ -311,6 +302,10 @@ async function main() {
       await browser.close();
     }
 
+    const recipient = await findAuthUserByEmail(serviceClient, RECIPIENT_EMAIL);
+    if (!recipient) throw new Error("accepted recipient auth user was not created");
+    recipientId = recipient.id;
+
     const invitation = await requireSingle(
       serviceClient
         .from("user_invitations")
@@ -365,6 +360,23 @@ async function main() {
     result.acceptance.retry_code = retryResult.code;
   } finally {
     result.cleanup.attempted = true;
+    if (!recipientId && tenantId && inviterId) {
+      try {
+        const orphanRecipient = await findAuthUserByEmail(serviceClient, RECIPIENT_EMAIL);
+        const { data: scopedContacts, error: scopedContactError } = await serviceClient
+          .from("tenant_contacts")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .eq("created_by", inviterId)
+          .eq("email", RECIPIENT_EMAIL)
+          .eq("first_name", "TOM P1.1")
+          .in("last_name", [RUN_TAG, RECOVERY_RUN_TAG].filter(Boolean));
+        if (scopedContactError) throw new Error(scopedContactError.message);
+        if (orphanRecipient && (scopedContacts?.length ?? 0) > 0) recipientId = orphanRecipient.id;
+      } catch (error) {
+        cleanupErrors.push(`orphan recipient lookup: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     if (tenantId && recipientId) {
       const { error } = await serviceClient.from("tenant_members").delete().eq("tenant_id", tenantId).eq("user_id", recipientId);
       if (error) cleanupErrors.push(`tenant_members: ${error.message}`);
