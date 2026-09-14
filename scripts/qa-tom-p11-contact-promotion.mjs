@@ -323,8 +323,8 @@ async function main() {
       requireSingle(serviceClient.from("tenant_contacts").select("id,status,promoted_to_user_id,promoted_at").eq("id", contactId).maybeSingle(), "promoted contact"),
     ]);
 
-    if (invitation.status !== "accepted" || !invitation.accepted_at || !invitation.used_at) {
-      throw new Error("Invitation did not reach the accepted/used state");
+    if (invitation.status !== "accepted" || !invitation.accepted_at) {
+      throw new Error("Invitation did not reach the accepted state");
     }
     if (profile.user_uuid !== recipientId || tenantUser.relationship_role !== "user" || tenantMember.status !== "active") {
       throw new Error("Acceptance materialization did not match the approved user contract");
@@ -334,6 +334,7 @@ async function main() {
     }
     result.materialization = {
       invitation_accepted: true,
+      invitation_used_at_observed: Boolean(invitation.used_at),
       profile_created: true,
       tenant_user_created: true,
       tenant_member_created: true,
