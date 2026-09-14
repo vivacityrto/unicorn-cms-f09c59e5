@@ -46,7 +46,10 @@ marker as well as the QA mode value.
 
 ## 2. Proposed QA delivery contract
 
-If PR #1281 is approved and merged, the allowlisted QA environment may use:
+The allowlisted QA project may use the following mode. The project URL is also
+hard-coded as a fail-closed QA marker so the mode remains safe even if the
+optional environment secret is unavailable; production's different project URL
+cannot activate suppression.
 
 ```text
 INVITATION_EMAIL_ENVIRONMENT=qa

@@ -10,6 +10,7 @@ test("QA no-send mode is explicit and fail-closed", () => {
     source,
     /invitationEmailMode === ['"]qa-no-send['"] && invitationEmailEnvironment === ['"]qa['"]/, 
   );
+  assert.match(source, /SUPABASE_URL === QA_PROJECT_URL/);
   assert.match(source, /if \(suppressQaDelivery\)/);
   assert.match(source, /supabase\.functions\.invoke\(['"]send-invitation-email['"]/, 
   );
