@@ -1,7 +1,7 @@
 # Cross-initiative blocker-resolution packet — 2026-09-13
 
 > **Status:** decision-ready coordination packet; no decision, credential, hosted run, runtime change, or production action is authorized
-> **Inputs:** [Program Index](../../program-index.md), [RBAC P1-l golden-matrix review draft](../../rbac-v6/p1/p1-l-aj-csc-golden-matrix-review-draft.md), [TOM offline QA manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md), [Client Health H0.3b/c evidence](../../client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md), [AdminStageDetail joint ownership matrix](../phase-4/admin-stage-detail-joint-ownership-matrix.md), [remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md)
+> **Inputs:** [Program Index](../../program-index.md), [RBAC P1-l golden-matrix review draft](../../rbac-v6/p1/p1-l-aj-csc-golden-matrix-review-draft.md), [RBAC P1-v read-boundary fixture contract](../../rbac-v6/p1/p1-v-aj-csc-read-boundary-fixture-contract.md), [TOM offline QA manifest](../../tenant-operating-model/p0/p0-2-p0-3-offline-qa-fixture-manifest.md), [TOM P1.1 writer evidence reconciliation](../../tenant-operating-model/p1/p1-1-first-contact-promotion-implementation-packet.md), [Client Health H0.3b/c evidence](../../client-health-activity-analytics/h0/h0-3b-3c-forecast-job-disposition-evidence.md), [AdminStageDetail joint ownership matrix](../phase-4/admin-stage-detail-joint-ownership-matrix.md), [remaining gated approval packets](remaining-gated-approval-packets-2026-09-12.md)
 > **Owner:** Carl, with product, security, data, operations, consultant, and environment owners named below
 > **Scope:** convert the four initiatives' remaining blockers into explicit owner asks and safe next boundaries
 > **Audit entry:** none needed — documentation-only planning; no credential, hosted, authorization, schema, deployment, scheduled-job, or live-data action
@@ -14,6 +14,21 @@ source reconciliation, synthetic fixture design, documentation, and a
 reviewable implementation packet; it does not authorize runtime, database,
 authorization, scheduled-job, hosted-QA, pilot, or production changes.
 
+## Evidence update — 2026-09-14
+
+Two bounded preparation units have now landed and are evidence only:
+
+- [RBAC P1-v](../../rbac-v6/p1/p1-v-aj-csc-read-boundary-fixture-contract.md)
+  defines the named package-instance and client-stage read-boundary fixture,
+  denial cases, and approval gates; PR [#1291](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1291)
+  did not authorize a hosted run or policy change.
+- [TOM P1.1's writer reconciliation](../../tenant-operating-model/p1/p1-1-first-contact-promotion-implementation-packet.md)
+  records the current UI, adapter, invitation-writer, and acceptance contracts
+  plus the remaining oracle and execution-owner gaps; PR [#1292](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1292)
+  did not change runtime behavior or clear the implementation gates.
+
+The blocker rows and their stop boundaries remain unchanged.
+
 ## Current state and exact blocker asks
 
 | Initiative / gate | Evidence already complete | Exact owner input still needed | Evidence required before the next boundary | Safe stop boundary |
@@ -22,7 +37,7 @@ authorization, scheduled-job, hosted-QA, pilot, or production changes.
 | RBAC — golden capability matrix | P0.1, P1 ledgers, seat/pilot worksheet, shadow contract, source-boundary preparation, and P1-l candidate rows are delivered | Product/security must approve or reject each atomic action, target resource, scope kind, relationship proof, delegability, and unresolved-row disposition | Versioned approved rows, named policy owner, direct boundary evidence, positive/negative probes, review record | No role defaults, grants, evaluator cutover, route/nav gate, RLS, RPC, or Edge change |
 | RBAC — R2-e/f AJ/CSC pilot | Candidate seat bundles, minimum read boundary, 14-day shadow contract, mismatch thresholds, and rollback shape are prepared | Product/operations + Carl/Vivacity must name the cohort/resources, personas, pilot owner, rollback owner, telemetry storage/retention/reviewer, and security approver | Approved golden rows, QA personas, named resources, shadow artifact contract, zero-tolerance gates | No pilot enrollment, grant, telemetry/logger deployment, or production observation |
 | TOM — T1-x hosted QA | Offline fixture/persona manifest and ghost classifier are prepared; local ghost oracle is 7/7 and offline tests are 10/10 | Carl/environment/security/TOM/operations must confirm QA target, short-lived QA-only identities or explicit unavailable personas, fixture/reset approval, operator/window, and private artifact owner/retention | Completed preflight form, approved synthetic fixture, storage states, cleanup and residue-verification plan | No credential creation/use by this task, Supabase connection, fixture write/reset, migration sync, or hosted query |
-| TOM — T2 implementation | P0.1 source-of-truth, identity, view/RPC/write graph, and owner-disposition directions are complete | Carl/product/data/security must name one exact object or writer, canonical source, canary fixture, negative case, rollback, and audit owner | Contract-specific implementation packet and audit entry | No schema, RLS, RPC, trigger, Realtime, normalization, membership, or production change |
+| TOM — T2 implementation | P0.1 source-of-truth, identity, view/RPC/write graph, owner-disposition directions, and the P1.1 writer evidence-gap reconciliation are complete | Carl/product/data/security must name one exact object or writer, canonical source, canary fixture, negative case, rollback, and audit owner | Contract-specific implementation packet and audit entry | No schema, RLS, RPC, trigger, Realtime, normalization, membership, or production change |
 | Client Health — H2 forecast jobs | H0.3b/c source/live-schema, caller/consumer, and deployed-state evidence is complete; jobs have no cron/history/output activity and have material source mismatches | **Approved 2026-09-13:** retain as evidence, keep stopped, and keep consumers unavailable. A replacement-shadow packet would require separate authorization. | Recorded owner disposition; any replacement path needs data owner, synthetic inputs, versioned run ledger, shadow/rollback contract | No restart, repair, deletion, backfill, cron change, or replacement deployment |
 | Client Health — H3 consultant input | Research pack defines the safe input format and explicitly excludes identifiable client material | **Acknowledged by Carl 2026-09-13:** AJ/Ezel/consultants + Carl must provide consolidated operational reports | Reports on cadence, blocker ownership, intervention patterns, quiet/data-insufficient cases, and pilot usefulness | No health thresholds, confidence semantics, cohort selection, score, or pilot acceptance inferred from repository/live data |
 
@@ -53,8 +68,9 @@ authorization, scheduled-job, hosted-QA, pilot, or production changes.
   credentials or hosted data.
 - Prepare a replacement-shadow packet for Client Health only after its owner
   chooses that path; until then preserve the stopped-job/unavailable posture.
-- Compare source contracts and document evidence gaps for TOM writers and
-  Client Health metrics.
+- Compare source contracts and document evidence gaps for remaining Client
+  Health metrics; the first TOM contact-promotion writer family is reconciled
+  in the P1.1 packet above.
 - Review the `AdminStageDetail.tsx` call graph and pure display boundaries;
   do not move behavior-bearing code without a cleared oracle and owner.
 
