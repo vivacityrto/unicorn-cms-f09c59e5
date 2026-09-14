@@ -1,0 +1,43 @@
+{
+  "evidence_id": "synthetic-001",
+  "report_id": "synthetic-client-health-2026-09",
+  "claim_type": "operational_observation",
+  "subject_grain": "client_service_engagement",
+  "scope": {
+    "package": "synthetic-delivery",
+    "lifecycle": "delivery",
+    "cohort": "synthetic-mid-market"
+  },
+  "observation_window": {
+    "starts_at": "2026-09-01T00:00:00Z",
+    "ends_at": "2026-09-07T23:59:59Z",
+    "timezone": "UTC"
+  },
+  "claim": "A planned quiet period with an explicitly owned next checkpoint should not create an engagement alert by itself.",
+  "operational_context": "The example distinguishes planned quiet from an unowned or overdue commitment.",
+  "ownership": "shared",
+  "source": {
+    "class": "synthetic_example",
+    "reference": "H0.4 synthetic example 1",
+    "observed_at": "2026-09-08T00:00:00Z",
+    "effective_at": "2026-09-01T00:00:00Z",
+    "as_of": "2026-09-14T00:00:00Z"
+  },
+  "quality": {
+    "freshness": "current",
+    "coverage": "single_case",
+    "confidence": "low",
+    "limitations": "Synthetic example only; it does not establish a cadence threshold or health policy."
+  },
+  "classification": "observation",
+  "sensitivity": "public_process",
+  "redaction": "synthetic",
+  "review": {
+    "status": "unreviewed",
+    "reviewer": "client-health packet owner",
+    "reviewed_at": "2026-09-14T00:00:00Z"
+  },
+  "contradictions": [],
+  "supersedes": [],
+  "implementation_use": "blocked_pending_policy"
+}
