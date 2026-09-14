@@ -1,8 +1,8 @@
 # `AdminStageDetail.tsx` — joint ownership and characterization matrix
 
-> **Last updated:** 2026-09-12 · **Status:** planning matrix; no extraction or policy decision authorized
+> **Last updated:** 2026-09-14 · **Status:** planning matrix; fresh source-cutoff recheck complete; no extraction or policy decision authorized
 > **Parent:** [Phase 4 P6 exit re-audit joint recommendation](p6-exit-reaudit-joint-recommendation.md)
-> **File:** `src/pages/AdminStageDetail.tsx` (about 2,703 lines at the 2026-09-11 re-audit)
+> **File:** `src/pages/AdminStageDetail.tsx` (2,702 lines at the 2026-09-14 source-cutoff recheck)
 > **Owners:** Codebase Optimization coordinates; TOM and RBAC are required reviewers; Client Health is conditional on a proven consumer link
 > **Audit entry:** none needed — repository characterization only; no code, schema, permission, or production change
 
@@ -128,3 +128,13 @@ The matrix is complete for planning when every behavior-bearing row has a
 named owner, source/caller evidence, oracle choice, and blocker/exit condition.
 That completion does not authorize code, schema, RLS, grants, Realtime,
 deployment, migration, or production changes.
+
+## Fresh source-cutoff recheck — 2026-09-14
+
+The current `origin/main@58593d35db059fbef80352f1ef43b79f629b708f` snapshot
+matches the call graph and ownership conclusions above. The page remains 2,702
+lines with 11 direct Supabase boundaries when wrapped chains are counted. The
+only policy-neutral local display candidate is `renderReuseInfoBadge`, called
+six times with explicit `usageCount`/`overrideCount` inputs; it remains a
+candidate only because this matrix does not authorize extraction. No new
+Client Health consumer was found in the page's current source path.

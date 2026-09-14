@@ -681,24 +681,35 @@ serve(async (req) => {
       });
     }
 
-    // 8. Send invitation email via custom function (uses APP_BASE_URL on the server)
-    try {
-      const { error: emailErr } = await supabase.functions.invoke('send-invitation-email', {
-        body: {
-          invitation_id: insertedInvite.id,
-          token_plaintext: inviteToken,
-        },
-        // Deno's functions.invoke does not auto-forward the service-role token;
-        // send-invitation-email requires it for its trusted-internal path.
-        headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
-      });
-      if (emailErr) {
-        console.warn('send-invitation-email returned error:', emailErr);
-      } else {
-        console.log(`Invitation email dispatched for ${payload.email} (invitation ${insertedInvite.id})`);
+    // 8. Send invitation email via custom function (uses APP_BASE_URL on the server).
+    // QA characterization can preserve the pending-invitation/acceptance flow
+    // without sending real Mailgun mail. The environment and mode checks are
+    // intentionally fail-closed: production and unknown values still send.
+    const invitationEmailMode = Deno.env.get('INVITATION_EMAIL_MODE') ?? 'send';
+    const suppressQaDelivery =
+      invitationEmailMode === 'qa-no-send' && Deno.env.get('SUPABASE_ENVIRONMENT') === 'qa';
+
+    if (suppressQaDelivery) {
+      console.log(`Invitation email delivery suppressed for QA (invitation ${insertedInvite.id})`);
+    } else {
+      try {
+        const { error: emailErr } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            invitation_id: insertedInvite.id,
+            token_plaintext: inviteToken,
+          },
+          // Deno's functions.invoke does not auto-forward the service-role token;
+          // send-invitation-email requires it for its trusted-internal path.
+          headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+        });
+        if (emailErr) {
+          console.warn('send-invitation-email returned error:', emailErr);
+        } else {
+          console.log(`Invitation email dispatched for ${payload.email} (invitation ${insertedInvite.id})`);
+        }
+      } catch (emailError) {
+        console.warn('Failed to invoke send-invitation-email:', emailError);
       }
-    } catch (emailError) {
-      console.warn('Failed to invoke send-invitation-email:', emailError);
     }
 
     const inviteUrl = `${APP_BASE_URL}/accept-invitation?token=${inviteToken}`;

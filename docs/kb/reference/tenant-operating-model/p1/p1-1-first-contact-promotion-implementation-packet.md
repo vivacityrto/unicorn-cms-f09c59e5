@@ -11,6 +11,9 @@
 > **Related lifecycle design:** [P1.2 ghost-user retirement and contact
 > promotion scope](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 >
+> **QA delivery verification:** [QA invitation-delivery verification and
+> runbook](p1-1-qa-invitation-delivery-verification.md)
+>
 > **Owners:** TOM (relationship and lifecycle semantics), RBAC (capability and
 > denial interpretation), Client Health (provenance if a source is consumed),
 > security (identity, invitation, and privileged-boundary review)
@@ -166,6 +169,27 @@ scope, source commit, run ID/tag, and cleanup disposition. It must contain no
 browser storage state, service key, real email, invitation secret, or copied
 production UUID. A hosted run is a separate authorization gate; absent
 credentials/personas are `Inconclusive`, never a substituted pass.
+
+### QA delivery mode
+
+The standard invitation path must remain the lifecycle under test: it creates a
+pending `user_invitations` row and returns the invitation link for the
+acceptance step. QA must not send real Mailgun mail, and must not use the
+existing `skip_email` request flag because that flag creates identity and
+membership rows directly and bypasses acceptance.
+
+The bounded delivery seam uses two explicit environment values in the
+allowlisted QA deployment only:
+
+```text
+SUPABASE_ENVIRONMENT=qa
+INVITATION_EMAIL_MODE=qa-no-send
+```
+
+The default or any unknown mode remains `send`; the suppression condition is
+therefore fail-closed for production and misconfigured environments. The
+private QA harness may use the returned link, but tokens, raw emails, storage
+state, and credentials remain outside the repository and shared chat.
 
 ## 5. Characterization and verification plan
 

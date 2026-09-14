@@ -19,6 +19,7 @@
     "tenant:p0:inventory": "node scripts/tenant-p0-inventory.mjs",
     "tenant:ghost-dry-run": "node scripts/ghost-contact-dry-run.mjs",
     "rbac:golden:validate": "node scripts/validate-rbac-golden-ledger.mjs",
+    "client-health:evidence:validate": "node scripts/validate-client-health-evidence.mjs",
     "routes": "node scripts/generate-route-manifest.mjs",
     "routes:check-drift": "node scripts/check-route-drift.mjs",
     "check:kb-links": "node scripts/check-kb-links.mjs",
