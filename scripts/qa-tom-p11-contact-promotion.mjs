@@ -19,6 +19,7 @@ const STORAGE_STATE = process.env.QA_TOM_P11_STORAGE_STATE ?? "playwright/.auth/
 const RESULT_PATH = process.env.QA_TOM_P11_RESULT_PATH ?? "qa-artifacts/tom-p11-result.json";
 const TOM_FIXTURE_TAG = process.env.QA_TOM_FIXTURE_TAG ?? "tom_qa_20260913_seed_01";
 const INVITER_EMAIL = `${TOM_FIXTURE_TAG}_client_admin_a@example.qa`;
+const RECOVERY_RUN_TAG = process.env.QA_TOM_P11_RECOVERY_RUN_TAG ?? "";
 
 const supabaseUrl = (process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
 const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -72,6 +73,58 @@ async function writeResult(result) {
   writeFileSync(RESULT_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");
 }
 
+async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
+  if (!RECOVERY_RUN_TAG || recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG) {
+    throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
+  }
+
+  const { data: contacts, error: contactsError } = await serviceClient
+    .from("tenant_contacts")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("created_by", inviterId)
+    .eq("email", RECIPIENT_EMAIL)
+    .eq("first_name", "TOM P1.1")
+    .eq("last_name", RECOVERY_RUN_TAG);
+  if (contactsError) throw new Error(`recovery contact lookup: ${contactsError.message}`);
+
+  const { data: invitations, error: invitationsError } = await serviceClient
+    .from("user_invitations")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("invited_by", inviterId)
+    .eq("email", RECIPIENT_EMAIL)
+    .eq("first_name", "TOM P1.1");
+  if (invitationsError) throw new Error(`recovery invitation lookup: ${invitationsError.message}`);
+
+  const errors = [];
+  const { error: memberError } = await serviceClient
+    .from("tenant_members")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("user_id", recipient.id);
+  if (memberError) errors.push(`tenant_members: ${memberError.message}`);
+  const { error: tenantUserError } = await serviceClient
+    .from("tenant_users")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("user_id", recipient.id);
+  if (tenantUserError) errors.push(`tenant_users: ${tenantUserError.message}`);
+  const { error: profileError } = await serviceClient.from("users").delete().eq("user_uuid", recipient.id);
+  if (profileError) errors.push(`users: ${profileError.message}`);
+  const { error: authError } = await serviceClient.auth.admin.deleteUser(recipient.id);
+  if (authError) errors.push(`auth.users: ${authError.message}`);
+  for (const contact of contacts ?? []) {
+    const { error } = await serviceClient.from("tenant_contacts").delete().eq("id", contact.id);
+    if (error) errors.push(`tenant_contacts: ${error.message}`);
+  }
+  for (const invitation of invitations ?? []) {
+    const { error } = await serviceClient.from("user_invitations").delete().eq("id", invitation.id);
+    if (error) errors.push(`user_invitations: ${error.message}`);
+  }
+  if (errors.length > 0) throw new Error(`failed-run recovery incomplete: ${errors.join("; ")}`);
+}
+
 async function main() {
   requireValue("VITE_SUPABASE_URL", supabaseUrl);
   requireValue("VITE_SUPABASE_PUBLISHABLE_KEY", publishableKey);
@@ -121,7 +174,7 @@ async function main() {
 
     const existingRecipient = await findAuthUserByEmail(serviceClient, RECIPIENT_EMAIL);
     if (existingRecipient) {
-      throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
+      await recoverFailedRun(serviceClient, tenantId, inviter.id, existingRecipient);
     }
 
     recipientPassword = `TOM-P11-${randomBytes(18).toString("base64url")}a1!`;
@@ -157,10 +210,6 @@ async function main() {
     try {
       const inviterContext = await browser.newContext({ storageState: STORAGE_STATE });
       const inviterPage = await inviterContext.newPage();
-      const inviteResponsePromise = inviterPage.waitForResponse(
-        (response) => response.url().includes("/functions/v1/invite-user") && response.request().method() === "POST",
-        { timeout: 45_000 },
-      );
 
       await inviterPage.goto(`${APP_URL}/client/users`, { waitUntil: "domcontentloaded" });
       await expect(inviterPage).not.toHaveURL(/\/login/);
@@ -173,9 +222,18 @@ async function main() {
       await inviterPage.getByRole("menuitem", { name: "Promote to User", exact: true }).click();
       const promoteDialog = inviterPage.getByRole("dialog", { name: "Promote to User" });
       await expect(promoteDialog).toBeVisible();
-      await promoteDialog.getByRole("button", { name: "Promote", exact: true }).click();
-
-      const inviteResponse = await inviteResponsePromise;
+      const inviteResponsePromise = inviterPage.waitForResponse(
+        (response) => response.url().includes("/functions/v1/invite-user") && response.request().method() === "POST",
+        { timeout: 45_000 },
+      );
+      let inviteResponse;
+      try {
+        await promoteDialog.getByRole("button", { name: "Promote", exact: true }).click();
+        inviteResponse = await inviteResponsePromise;
+      } catch (error) {
+        await inviteResponsePromise.catch(() => undefined);
+        throw error;
+      }
       const inviteBody = await inviteResponse.json();
       if (!inviteResponse.ok() || !inviteBody?.ok || typeof inviteBody.inviteUrl !== "string") {
         throw new Error(`invite-user returned ${inviteResponse.status()} without a usable invitation URL`);

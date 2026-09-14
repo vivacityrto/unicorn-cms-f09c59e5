@@ -2,6 +2,11 @@ name: QA TOM P1.1 contact-promotion canary
 
 on:
   workflow_dispatch:
+    inputs:
+      recovery_run_tag:
+        description: "Exact prior QA run tag to recover after an interrupted run"
+        required: false
+        type: string
 
 concurrency:
   group: unicorn-qa-tom-p11-contact-promotion
@@ -64,6 +69,7 @@ jobs:
           QA_TOM_P11_STORAGE_STATE: playwright/.auth/tom-p11-client-admin-a.json
           QA_TOM_P11_RESULT_PATH: qa-artifacts/tom-p11-result.json
           QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
+          QA_TOM_P11_RECOVERY_RUN_TAG: ${{ inputs.recovery_run_tag }}
         run: node scripts/qa-tom-p11-contact-promotion.mjs
       - name: Upload redacted canary evidence
         if: always()
