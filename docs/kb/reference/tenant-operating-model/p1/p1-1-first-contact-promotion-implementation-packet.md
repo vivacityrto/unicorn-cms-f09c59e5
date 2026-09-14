@@ -22,6 +22,31 @@
 > implementation, migration, invitation, Edge, schema, RLS, grant, trigger,
 > or production-data action requires its own audit entry and authorization.
 
+## 0. Decision record — 2026-09-14
+
+The following decisions were confirmed by Carl for the next bounded TOM
+evaluation. They narrow the packet; they do not authorize schema, RLS, Edge,
+email-provider, production-data, or other behavior-bearing changes.
+
+1. **Bounded lifecycle:** cover only `contact → invite-user` pending
+   invitation → `accept_invitation_v2` acceptance materialization.
+2. **Canonical writer path:** treat `TenantContactsSection` /
+   `promoteContact` as the initiating UI and adapter, `invite-user` as the
+   pending-invitation writer, and `accept_invitation_v2` as the acceptance
+   materializer. Legacy writers remain out of scope.
+3. **Acceptance contract:** deny wrong-tenant and disabled actors; make
+   acceptance retry-safe and idempotent; and prevent partial materialization.
+4. **Final approval owner:** Carl owns final approval of the contract, QA
+   evidence, rollback plan, and audit evidence.
+5. **Rollback owner:** Carl owns rollback approval and execution.
+6. **Audit owner:** Carl owns the audit evidence.
+7. **Hosted QA authorization:** hosted QA may proceed against the existing
+   allowlisted `unicorn-qa` project (`qfpxvumcrnzrjyvqkicq`). Before any
+   fixture write or acceptance run, the operator must still identify the
+   approved QA identities, synthetic tenant/contact fixture, reset/cleanup
+   method, and execution window. Secrets must remain in the protected QA
+   environment and must not be pasted into chat or committed.
+
 ## 1. Packet recommendation
 
 The first TOM runtime packet should establish the already-approved lifecycle
@@ -109,9 +134,10 @@ The resulting evidence ledger is:
 - **W-03 — acceptance boundary:** a server-side/static contract plus an
   approved authenticated QA oracle must prove retry, concurrency, and
   reconciliation behavior.
-- **W-04 — execution ownership:** the QA target, operator, artifact owner,
-  retention, rollback owner, and security reviewer remain unchecked approval
-  gates in this packet.
+- **W-04 — execution ownership:** the QA target and rollback/audit ownership
+  are now recorded above. The approved QA identities, synthetic fixture,
+  reset/cleanup method, artifact owner/retention, execution window, and
+  security review remain unchecked execution gates.
 
 This register records evidence gaps only. It does not approve a hosted run,
 credential use, fixture seeding, runtime change, migration, invitation, Edge
