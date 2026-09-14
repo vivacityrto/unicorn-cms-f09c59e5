@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unicorn.invalid/client-health/h0/consultant-evidence.schema.json",
+  "title": "Client Health consultant claim-level evidence",
+  "description": "Safe, provenance-preserving evidence record for consultant-report consolidation. This schema does not define a health score or policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "report_id",
+    "claim_type",
+    "subject_grain",
+    "scope",
+    "observation_window",
+    "claim",
+    "operational_context",
+    "ownership",
+    "source",
+    "quality",
+    "classification",
+    "sensitivity",
+    "redaction",
+    "review",
+    "contradictions",
+    "supersedes",
+    "implementation_use"
+  ],
+  "properties": {
+    "evidence_id": { "type": "string", "minLength": 1 },
+    "report_id": { "type": "string", "minLength": 1 },
+    "claim_type": { "type": "string", "minLength": 1 },
+    "subject_grain": { "type": "string", "minLength": 1 },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package", "lifecycle", "cohort"],
+      "properties": {
+        "package": { "type": "string", "minLength": 1 },
+        "lifecycle": {
+          "type": "string",
+          "enum": ["onboarding", "delivery", "renewal", "other"]
+        },
+        "cohort": { "type": "string", "minLength": 1 }
+      }
+    },
+    "observation_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["starts_at", "ends_at", "timezone"],
+      "properties": {
+        "starts_at": { "type": "string", "format": "date-time" },
+        "ends_at": { "type": "string", "format": "date-time" },
+        "timezone": { "type": "string", "minLength": 1 }
+      }
+    },
+    "claim": { "type": "string", "minLength": 1 },
+    "operational_context": { "type": "string", "minLength": 1 },
+    "ownership": {
+      "type": "string",
+      "enum": ["client", "vivacity", "shared", "third_party", "unknown"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "reference", "observed_at", "effective_at", "as_of"],
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": ["consultant_experience", "synthetic_example", "repository_evidence", "external_source"]
+        },
+        "reference": { "type": "string", "minLength": 1 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "effective_at": { "type": "string", "format": "date-time" },
+        "as_of": { "type": "string", "format": "date-time" }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["freshness", "coverage", "confidence", "limitations"],
+      "properties": {
+        "freshness": { "type": "string", "enum": ["current", "dated", "unknown"] },
+        "coverage": { "type": "string", "enum": ["representative", "partial", "single_case", "unknown"] },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "limitations": { "type": "string", "minLength": 1 }
+      }
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["observation", "interpretation", "proposal", "decision_request", "open_question"]
+    },
+    "sensitivity": {
+      "type": "string",
+      "enum": ["public_process", "internal", "restricted", "unknown"]
+    },
+    "redaction": {
+      "type": "string",
+      "enum": ["synthetic", "deidentified", "irreversibly_redacted", "not_applicable"]
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer", "reviewed_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["unreviewed", "consultant_complete", "consolidated", "accepted", "rejected", "inconclusive"]
+        },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "reviewed_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "contradictions": { "type": "array", "items": { "type": "string" } },
+    "supersedes": { "type": "array", "items": { "type": "string" } },
+    "implementation_use": {
+      "type": "string",
+      "const": "blocked_pending_policy"
+    }
+  }
+}

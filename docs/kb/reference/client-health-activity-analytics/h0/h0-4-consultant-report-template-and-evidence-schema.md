@@ -181,7 +181,29 @@ Required semantics:
 - `implementation_use` remains `blocked_pending_policy` until the applicable
   Client Health, TOM, RBAC, privacy, and security gates are separately met.
 
-## 5. Consolidation and readiness checklist
+## 5. Local handback validation
+
+The repository now includes a machine-readable version of this record shape,
+one synthetic example, and a fail-closed local validator:
+
+- [JSON Schema](data/consultant-evidence.schema.json) captures the required
+  provenance, uncertainty, redaction, review, and policy-blocking fields.
+- [Synthetic example](data/consultant-evidence.example.json) contains no
+  client identifier, raw note, credential, or consultant-derived policy.
+- `npm run client-health:evidence:validate --
+  docs/kb/reference/client-health-activity-analytics/h0/data/consultant-evidence.example.json`
+  validates one JSON object (or an array of records) without hosted access.
+- `node --test scripts/validate-client-health-evidence.test.mjs` covers the
+  valid record, missing provenance, unsafe content/redaction, and invalid
+  timestamp/enum cases.
+
+The validator is intentionally narrower than a general DLP system: it rejects
+known unsafe field names and obvious identifier/credential-shaped text, while
+requiring human review of names, combinations of attributes, and any supplied
+consultant material. It does not approve a claim, infer a threshold, or make
+consultant reports safe for repository storage by itself.
+
+## 6. Consolidation and readiness checklist
 
 Codex may begin consolidation only after both final reports are supplied. The
 consolidated handoff must:
@@ -205,7 +227,7 @@ stale forecast tables, a single consultant anecdote, or a repository-only
 inference. The existing plan's H1 metric definitions, confidence thresholds,
 pilot cohorts, and usefulness criteria therefore remain provisional.
 
-## 6. Stop boundary
+## 7. Stop boundary
 
 This artifact authorizes no credential creation, hosted QA access, production
 query or write, schema/RLS/RPC/trigger/grant/Realtime/Edge/cron change, AI
