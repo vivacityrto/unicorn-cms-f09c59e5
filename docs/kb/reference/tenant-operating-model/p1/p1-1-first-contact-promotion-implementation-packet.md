@@ -86,6 +86,37 @@ payload/auth guard; they do not prove the Edge denial matrix or the
 `SECURITY DEFINER` acceptance transaction. Those remain required before a
 runtime or server-boundary packet can be authorized.
 
+### 1.2 Writer contract reconciliation and evidence gaps (2026-09-14)
+
+This reconciliation is limited to the first contact-promotion writer family.
+The legacy ghost, bulk-invitation, cohort, and M365 provisioning writers stay
+outside this packet and require their own caller, operational, and retirement
+evidence.
+
+| Boundary | Current contract evidence | Evidence status and remaining gap |
+|---|---|---|
+| Contact UI and pending presentation | `TenantContactsSection.tsx` reads active contacts and pending `user_invitations` rows, normalizes pending email state, exposes an explicit relationship-role selector, and calls `promoteContactViaInvite`. | Static source evidence is complete for the current flow. No focused component oracle was found for loading/empty/pending/duplicate states or pending-state refresh after an error. |
+| Promotion adapter | `promoteContact.ts` requires an authenticated session, preserves the `invite-user` payload, maps relationship roles to the current legacy role field, and keeps `skip_email: false`. `promote-contact.test.ts` covers the payload and unauthenticated denial. | Adapter contract is unit-tested. UI error mapping, pending-state side effects, and the Edge boundary remain unproven by an integrated oracle. |
+| Invitation writer | The standard `invite-user` path checks caller/tenant and role boundaries, capacity, active duplicate invitations, expiry cleanup, pending-row insertion, audit/event side effects, and QA no-send delivery ordering. `email-delivery-mode.test.mjs` covers the no-send seam and keeps it separate from the direct-membership `skip_email` path. | Static and delivery-mode evidence exists. A complete direct contract matrix is still required for wrong tenant/actor, disabled actor, collision, concurrent duplicate attempts, capacity, audit failure, and email-dispatch failure semantics. |
+| Acceptance materialization | `accept_invitation_v2` authenticates the invited identity, handles pending/accepted/expired states, derives the compatibility mapping, upserts `public.users`, `tenant_users`, and `tenant_members`, archives the matching contact, and records timeline/audit evidence. | No dedicated acceptance test was found in the repository. Exactly-once retry, concurrent acceptance, identity collision, wrong-tenant/disabled-actor denial, and no-half-materialization behavior remain unproven. |
+
+The resulting evidence ledger is:
+
+- **W-01 — UI oracle:** focused component coverage for pending and duplicate
+  promotion states is required before a runtime UI change.
+- **W-02 — invitation boundary:** direct Edge contract coverage must prove the
+  negative authorization and idempotency cases without sending real email.
+- **W-03 — acceptance boundary:** a server-side/static contract plus an
+  approved authenticated QA oracle must prove retry, concurrency, and
+  reconciliation behavior.
+- **W-04 — execution ownership:** the QA target, operator, artifact owner,
+  retention, rollback owner, and security reviewer remain unchecked approval
+  gates in this packet.
+
+This register records evidence gaps only. It does not approve a hosted run,
+credential use, fixture seeding, runtime change, migration, invitation, Edge
+deployment, or production action.
+
 ## 2. Canonical contract and invariants
 
 The packet carries forward the approved TOM directions:
