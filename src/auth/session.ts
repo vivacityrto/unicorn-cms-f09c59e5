@@ -41,10 +41,25 @@ export function useAuthSession(onSignedOut: () => void): AuthSessionState {
   // token refresh.
   const lastUserIdRef = useRef<string | null>(null);
 
+  // The auth signup response can reach the browser just before the
+  // auth.users -> public.users profile trigger has committed its row. Retry
+  // only the empty-profile result; real query errors should remain visible
+  // immediately instead of being hidden behind retries.
+  const profileRetryDelaysMs = [100, 250, 500];
+
   const fetchUserProfile = async (userId: string, generation: number) => {
     setProfileError(null);
     try {
-      const { data, error } = await loadUserProfile(userId);
+      let profileResult = await loadUserProfile(userId);
+
+      for (const delayMs of profileRetryDelaysMs) {
+        if (profileResult.error || profileResult.data) break;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, delayMs));
+        if (!mountedRef.current || generation !== authGenerationRef.current) return;
+        profileResult = await loadUserProfile(userId);
+      }
+
+      const { data, error } = profileResult;
 
       if (!mountedRef.current || generation !== authGenerationRef.current) return;
       if (error) {
