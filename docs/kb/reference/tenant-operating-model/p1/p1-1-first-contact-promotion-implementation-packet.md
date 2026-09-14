@@ -46,6 +46,12 @@ email-provider, production-data, or other behavior-bearing changes.
    approved QA identities, synthetic tenant/contact fixture, reset/cleanup
    method, and execution window. Secrets must remain in the protected QA
    environment and must not be pasted into chat or committed.
+8. **Delivery and acceptance evidence:** exercise the standard invitation
+   path with the approved controlled plus-alias, capture the `inviteUrl`
+   returned by `invite-user`, and open that URL directly as the recipient. If
+   the allowlisted QA deployment has its existing fail-closed no-send mode
+   enabled, no mailbox access is needed; otherwise Mailgun webhook status is
+   supplementary delivery evidence, not the source of the invitation token.
 
 ## 1. Packet recommendation
 
@@ -71,7 +77,7 @@ promotion/acceptance writer family:
 | Boundary | Current source evidence | Proposed packet treatment |
 |---|---|---|
 | Promotion UI | `TenantContactsSection.tsx:247-277` calls `promoteContactViaInvite(tenantId, contact, promoteRole)` and exposes an explicit relationship-role selector | Characterize and preserve role selection; no label-based Parent/Child inference |
-| Promotion adapter | `src/features/client-identity/promoteContact.ts` invokes `invite-user` with `skip_email: false` | Keep the current production invitation contract; use the explicit QA no-send mode for characterization so QA never calls Mailgun; define idempotency, pending-state, and error contract |
+| Promotion adapter | `src/features/client-identity/promoteContact.ts` invokes `invite-user` with `skip_email: false` | Keep the current production invitation contract; send the canary to the controlled QA alias and use the returned invitation URL for acceptance; define idempotency, pending-state, and error contract |
 | Invitation writer | `supabase/functions/invite-user/index.ts` validates `relationship_role` and creates the pending invitation path | Review authenticated caller, tenant-admin boundary, role mapping, duplicate/seat behavior, and audit evidence |
 | Acceptance materialization | `accept_invitation_v2` creates/relinks `public.users`, `tenant_users`, and `tenant_members` after acceptance | Treat acceptance as the access materialization boundary; prove exactly-once behavior |
 | Contact presentation | `TenantContactsSection.tsx:282` filters active, unpromoted contacts; pending state is a documented target | Preserve contact visibility with `Pending invitation`; block duplicate promotion |
@@ -92,7 +98,7 @@ packet, not an authorization to change any of these boundaries:
 | Role selection | `TenantContactsSection.tsx:241-250` defaults to `user`, lets the operator choose a `RelationshipRole`, and calls the adapter with the selected value. | Relationship role is explicit UI input; no Parent/Child inference is performed by the caller. |
 | Adapter | `src/features/client-identity/promoteContact.ts:10-41` requires a session, invokes `invite-user`, maps `primary_contact`/`secondary_contact` to legacy `Admin` and other roles to `User`, and always uses `skip_email: false`. | The adapter preserves the standard invitation contract. Its focused test oracle is `src/test/client-identity/promote-contact.test.ts:26-60` (payload plus unauthenticated denial). |
 | Tenant-admin guard | `invite-user/index.ts:64-120,199-236` resolves the bearer identity, loads `public.users`, verifies target-tenant membership in `tenant_users`, and restricts client invites to `academy_user`, `secondary_contact`, or `user`; non-staff may assign only `Admin` or `User`. | **Resolved policy:** primary-contact promotion is staff-only. Preserve the current tenant-admin denial (`RELATIONSHIP_ROLE_NOT_ALLOWED`) and do not widen the Edge allowlist; any future change requires a separate RBAC/security packet. |
-| Pending invitation | `invite-user/index.ts:613-681` performs capacity checking, rejects an active same-email/tenant pending invitation with `INVITE_EXISTS`, deletes an expired one, inserts `user_invitations` with the explicit `relationship_role`, and invokes `send-invitation-email` unless the explicit QA no-send mode is requested. | QA characterization must use no-send mode and assert that no Mailgun delivery is attempted. Concurrent duplicate-attempt behavior and email-dispatch failure semantics remain separate cases for any production-delivery change. |
+| Pending invitation | `invite-user/index.ts:613-681` performs capacity checking, rejects an active same-email/tenant pending invitation with `INVITE_EXISTS`, deletes an expired one, inserts `user_invitations` with the explicit `relationship_role`, conditionally invokes `send-invitation-email` under the fail-closed QA delivery seam, and returns the generated invitation URL. | The pending-invitation canary uses the standard path with a controlled QA alias; acceptance uses the returned URL whether delivery is enabled or QA no-send is active. The `skip_email` flag is excluded because it creates membership directly and bypasses acceptance. Concurrent duplicate-attempt behavior and email-dispatch failure semantics remain separate cases. |
 | Acceptance | `20260827020000_contact_swap_promote_timeline_events.sql:190-254` authenticates the token/user relationship, handles pending/accepted/expired states, and resolves the invitation relationship role. Lines `262-343` derive legacy role/access fields and upsert `public.users`, `tenant_users`, and `tenant_members`; `:345-363` updates the profile, marks the invitation accepted, and archives/matches the contact; `:365-413` writes timeline/audit evidence. | This is a `SECURITY DEFINER` materialization boundary and is out of scope for a compatibility-only frontend change. Exactly-once retry and concurrent acceptance require direct server-side characterization before authorization. |
 
 The current mapping is therefore:
@@ -122,7 +128,7 @@ evidence.
 |---|---|---|
 | Contact UI and pending presentation | `TenantContactsSection.tsx` reads active contacts and pending `user_invitations` rows, normalizes pending email state, exposes an explicit relationship-role selector, and calls `promoteContactViaInvite`. | Static source evidence is complete for the current flow. No focused component oracle was found for loading/empty/pending/duplicate states or pending-state refresh after an error. |
 | Promotion adapter | `promoteContact.ts` requires an authenticated session, preserves the `invite-user` payload, maps relationship roles to the current legacy role field, and keeps `skip_email: false`. `promote-contact.test.ts` covers the payload and unauthenticated denial. | Adapter contract is unit-tested. UI error mapping, pending-state side effects, and the Edge boundary remain unproven by an integrated oracle. |
-| Invitation writer | The standard `invite-user` path checks caller/tenant and role boundaries, capacity, active duplicate invitations, expiry cleanup, pending-row insertion, audit/event side effects, and QA no-send delivery ordering. `email-delivery-mode.test.mjs` covers the no-send seam and keeps it separate from the direct-membership `skip_email` path. | Static and delivery-mode evidence exists. A complete direct contract matrix is still required for wrong tenant/actor, disabled actor, collision, concurrent duplicate attempts, capacity, audit failure, and email-dispatch failure semantics. |
+| Invitation writer | The standard `invite-user` path checks caller/tenant and role boundaries, capacity, active duplicate invitations, expiry cleanup, pending-row insertion, audit/event side effects, conditionally invokes `send-invitation-email` through the fail-closed QA seam, and returns an invitation URL. | Static evidence exists. The bounded canary will use the controlled QA alias and returned URL; Mailgun webhook status or QA suppression is recorded when observable. A complete direct contract matrix is still required for wrong tenant/actor, disabled actor, collision, concurrent duplicate attempts, capacity, audit failure, and email-dispatch failure semantics. |
 | Acceptance materialization | `accept_invitation_v2` authenticates the invited identity, handles pending/accepted/expired states, derives the compatibility mapping, upserts `public.users`, `tenant_users`, and `tenant_members`, archives the matching contact, and records timeline/audit evidence. | No dedicated acceptance test was found in the repository. Exactly-once retry, concurrent acceptance, identity collision, wrong-tenant/disabled-actor denial, and no-half-materialization behavior remain unproven. |
 
 The resulting evidence ledger is:
@@ -182,10 +188,11 @@ The packet must preserve these invariants:
 ### In scope for a future authorized canary
 
 1. One approved synthetic QA tenant and one contact with no auth identity.
-2. The existing contact promotion UI and `invite-user` path, exercised in QA
-   with the explicit no-send delivery mode. The current production
+2. The existing contact promotion UI and standard `invite-user` path,
+   exercised in QA with the controlled plus-alias. The current production
    `skip_email: false` behavior is characterized but not changed by this
-   packet; changing production delivery requires separate approval.
+   packet; the QA run captures the returned invitation URL and does not
+   require inbox access.
 3. One explicit relationship role selected from the approved role set.
 4. Pending invitation presentation and duplicate-promotion suppression.
 5. One recipient acceptance through `accept_invitation_v2`.
@@ -230,26 +237,21 @@ browser storage state, service key, real email, invitation secret, or copied
 production UUID. A hosted run is a separate authorization gate; absent
 credentials/personas are `Inconclusive`, never a substituted pass.
 
-### QA delivery mode
+### QA delivery and acceptance
 
-The standard invitation path must remain the lifecycle under test: it creates a
-pending `user_invitations` row and returns the invitation link for the
-acceptance step. QA must not send real Mailgun mail, and must not use the
-existing `skip_email` request flag because that flag creates identity and
-membership rows directly and bypasses acceptance.
+The standard invitation path is the lifecycle under test: it creates a
+pending `user_invitations` row, conditionally invokes
+`send-invitation-email` through the existing fail-closed QA seam, and returns
+the generated invitation URL. The bounded canary uses only the approved
+controlled plus-alias if delivery is enabled; it does not use the existing
+`skip_email` request flag, because that flag creates identity and membership
+rows directly and bypasses acceptance.
 
-The bounded delivery seam uses two explicit environment values in the
-allowlisted QA deployment only:
-
-```text
-SUPABASE_ENVIRONMENT=qa
-INVITATION_EMAIL_MODE=qa-no-send
-```
-
-The default or any unknown mode remains `send`; the suppression condition is
-therefore fail-closed for production and misconfigured environments. The
-private QA harness may use the returned link, but tokens, raw emails, storage
-state, and credentials remain outside the repository and shared chat.
+The private QA harness captures the returned URL, opens it directly as the
+run-scoped recipient, and records Mailgun webhook/delivery status or the
+absence of a delivery message when it is available. No inbox access or manual
+email click is required. Tokens, raw emails, storage state, and credentials
+remain outside the repository and shared chat.
 
 ## 5. Characterization and verification plan
 
@@ -333,9 +335,10 @@ The following are packet gates, not implied approvals:
 - [ ] RBAC confirms the promotion actor, tenant scope, relationship-role
       handling, direct denial expectations, and the staff-only primary-contact
       promotion boundary.
-- [ ] QA characterization uses the explicit no-send delivery mode and records
-      the no-external-email assertion; no production Mailgun behavior is
-      changed by this packet.
+- [ ] QA characterization uses only the approved controlled plus-alias when
+      delivery is enabled, captures the returned invitation URL, and records
+      delivery status or QA suppression when observable; no production Mailgun
+      behavior is changed by this packet.
 - [ ] Security reviews the identity-linking, invitation, acceptance, retry,
       and audit boundaries.
 - [ ] Client Health confirms whether any contact/invitation/membership event is

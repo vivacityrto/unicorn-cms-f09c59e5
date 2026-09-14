@@ -1,0 +1,77 @@
+name: QA TOM P1.1 contact-promotion canary
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: unicorn-qa-tom-p11-contact-promotion
+  cancel-in-progress: false
+
+jobs:
+  contact-promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Require QA-only credentials
+        env:
+          QA_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          QA_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          QA_INVITER_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
+        run: |
+          test -n "$QA_PUBLISHABLE_KEY" || { echo "QA_SUPABASE_PUBLISHABLE_KEY is not configured"; exit 1; }
+          test -n "$QA_SERVICE_ROLE_KEY" || { echo "QA_SUPABASE_SERVICE_ROLE_KEY is not configured"; exit 1; }
+          test -n "$QA_INVITER_PASSWORD" || { echo "QA_TOM_CLIENT_ADMIN_A_PASSWORD is not configured"; exit 1; }
+      - name: Start QA-pointed dev server
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          nohup npm run dev > "$RUNNER_TEMP/unicorn-qa-vite.log" 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:8080 >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/unicorn-qa-vite.log" >&2
+          exit 1
+      - name: Generate inviter storage state
+        shell: bash
+        env:
+          E2E_EMAIL: tom_qa_20260913_seed_01_client_admin_a@example.qa
+          E2E_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
+        run: node e2e/auth-setup.mjs tom-p11-client-admin-a
+      - name: Run bounded TOM P1.1 canary
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          QA_APP_URL: http://localhost:8080
+          QA_TOM_CLIENT_ADMIN_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
+          QA_TOM_P11_RECIPIENT_EMAIL: carl+tom-p11-qa-20260914@complyhub.ai
+          QA_TOM_P11_STORAGE_STATE: playwright/.auth/tom-p11-client-admin-a.json
+          QA_TOM_P11_RESULT_PATH: qa-artifacts/tom-p11-result.json
+          QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
+        run: node scripts/qa-tom-p11-contact-promotion.mjs
+      - name: Upload redacted canary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-p11-contact-promotion-${{ github.run_id }}
+          retention-days: 30
+          path: |
+            qa-artifacts/tom-p11-result.json
+            ${{ runner.temp }}/unicorn-qa-vite.log
+          if-no-files-found: ignore
