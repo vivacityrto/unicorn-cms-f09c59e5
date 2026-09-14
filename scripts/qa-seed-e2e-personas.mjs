@@ -280,7 +280,7 @@ async function ensureTenantPrimaryContact(tenantId, userId) {
   console.log(`tenant_users: linked dedicated TOM P1.1 inviter to tenant ${tenantId} (relationship_role=primary_contact, access_scope=full)`);
 }
 
-async function ensureTenantMember(tenantId, userId) {
+async function ensureTenantMember(tenantId, userId, role = "General User") {
   const { data: existing, error: findErr } = await svc
     .from("tenant_members")
     .select("id")
@@ -289,13 +289,18 @@ async function ensureTenantMember(tenantId, userId) {
     .maybeSingle();
   if (findErr) throw new Error(`tenant_members lookup: ${findErr.message}`);
   if (existing) {
-    console.log(`tenant_members: already links tenant ${tenantId} <-> user ${userId}`);
+    const { error: updateErr } = await svc
+      .from("tenant_members")
+      .update({ role, status: "active" })
+      .eq("id", existing.id);
+    if (updateErr) throw new Error(`tenant_members update: ${updateErr.message}`);
+    console.log(`tenant_members: ensured tenant ${tenantId} <-> user ${userId} (${role})`);
     return;
   }
   const { error: insertErr } = await svc.from("tenant_members").insert({
     tenant_id: tenantId,
     user_id: userId,
-    role: "General User",
+    role,
     status: "active",
     joined_at: new Date().toISOString(),
   });
@@ -356,7 +361,7 @@ async function main() {
     tenantId: tenantAId,
     userId: fixtureUuid("client_primary_inviter"),
   });
-  await ensureTenantMember(tenantAId, tomClientPrimaryInviterId);
+  await ensureTenantMember(tenantAId, tomClientPrimaryInviterId, "Admin");
   await ensureTenantPrimaryContact(tenantAId, tomClientPrimaryInviterId);
 
   const tomClientUserAId = await upsertPersona({
