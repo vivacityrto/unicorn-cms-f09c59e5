@@ -94,7 +94,15 @@ observation, credential action, or live-data action is authorized.
 
 ## Verification
 
-Validate the JSON shape and counts, then run
+Validate the JSON shape, counts, and unapproved policy state with the local
+repository-only guard:
+
+```text
+npm run rbac:golden:validate
+node --test scripts/validate-rbac-golden-ledger.test.mjs
+```
+
+Then run
 `node scripts/check-kb-links.mjs`, `node scripts/check-kb-doc-size.mjs`,
 and `git diff --check`. Runtime suites and live verification are not
 applicable because this packet changes documentation and preparation data only.
