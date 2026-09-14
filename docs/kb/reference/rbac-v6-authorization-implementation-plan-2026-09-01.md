@@ -36,6 +36,12 @@ The next work is packet-level reconciliation of the remaining rows and
 implementation sequence, with product/security review where the linked gate
 packets require it.
 
+The named P1-v synthetic read-boundary fixture contract is a documentation-only
+evidence slice for the package-instance and client-stage read candidates. It
+defines the future fixture, denial cases, and approval gates but does not
+authorize a hosted run, credential use, fixture seeding, capability or role
+change, telemetry, implementation, or production state change.
+
 ## 1. Executive decision
 
 Unicorn should not replace its existing RBAC tables with a new authorization product or a large framework. It should evolve the working v5 foundation into a single, target-aware authorization model and progressively route every enforcement point through it.
