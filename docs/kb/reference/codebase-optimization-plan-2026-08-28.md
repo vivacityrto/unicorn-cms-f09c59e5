@@ -12,7 +12,7 @@
 >
 > **Scope:** structural codebase health — routing/layout simplification, lint/type debt, dead-code retirement, Edge Function convergence, and the bounded consolidation work tracked in `codebase-optimization/`
 >
-> **Dependencies:** cross-links with [RBAC v6](rbac-v6-authorization-implementation-plan-2026-09-01.md) and [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md) where retirement/consolidation candidates touch their scope; see each phase folder's own header for specifics
+> **Dependencies:** cross-links with [RBAC v6](rbac-v6-authorization-implementation-plan-2026-09-01.md) and [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md) where retirement/consolidation candidates touch their scope; Academy Solo is a bounded delivery workstream whose invitation/UI fix must preserve route, guard, test, and documentation discipline; see each phase folder's own header for specifics
 >
 > **Exit criteria:** see §21 "Definition of done for each implementation PR" — there is no single program-level exit, phases close individually
 >

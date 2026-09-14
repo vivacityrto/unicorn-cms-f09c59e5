@@ -1,6 +1,6 @@
 # Unicorn 2.0 — Program Index
 
-> **Last updated:** 2026-09-14 · **Reconsider by:** 2026-10-10 · **Confidence:** high (status lines below are read from each initiative's own master doc header and the latest merged phase/packet evidence, not inferred).
+> **Last updated:** 2026-09-15 · **Reconsider by:** 2026-10-10 · **Confidence:** high (status lines below are read from each initiative's own master doc header and the latest merged phase/packet evidence, not inferred).
 
 Canonical glue across the four active initiatives. This file records
 **status, current phase/packet, dependencies/gates, authoritative document
@@ -38,7 +38,7 @@ initiatives above without becoming new cross-cutting programs.
 
 | Workstream | Status | Current packet | Dependencies/gates |
 |---|---|---|---|
-| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15) | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; named-user approval; staff lifecycle audit; QA negative cases; separate hosted migration review. |
+| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15); invitation compatibility fix verified in allowlisted QA, broader pilot gates remain | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; valid legacy `User` role plus `academy_user`/`academy_only` authority; distinct Academy Customers lifecycle; Manage Clients visibility without RTO/package/Client Health semantics; named-user approval; QA negative cases; separate hosted migration review. |
 
 ## Active work
 
@@ -53,7 +53,7 @@ real-time state.
 | RBAC v6 | P0.1/P1 preparation delivered; generic preparation paused; named capability rows, role defaults, shadow telemetry, and pilot remain review-gated | — | Codex | 2026-09-14 |
 | Tenant Operating Model | P0 evidence/preparation delivered; bounded P1.1 hosted-QA canary passed; negative cases and runtime work remain separately gated | — | Codex | 2026-09-15 |
 | Client Health Activity Analytics | H0 containment and evidence preparation delivered; consultant operational data blocks metric policy; replacement shadow remains separately gated | — | Claude Code / Codex | 2026-09-14 |
-| Academy Solo MVP delivery workstream | Phase 1 server boundary and manual lifecycle | `codex/academy-solo-mvp` | Codex | 2026-09-14 |
+| Academy Solo MVP delivery workstream | Phase 1 invitation compatibility and account-surface correction | `codex/academy-solo-fix-20260915` | Codex | 2026-09-15 |
 
 ## Dependencies and gates
 
@@ -80,6 +80,13 @@ real-time state.
   fifth program initiative. Its packet is the authority for the controlled
   pilot; the four initiative plans remain authoritative for RBAC, tenant
   semantics, codebase process, and Client Health impact.
+- **Academy Solo cross-initiative truth-sync (2026-09-15):** the invitation
+  compatibility fix uses the existing `User` role vocabulary and keeps
+  `academy_user`/`academy_only` as the access boundary; it creates no Sidekick
+  package and no compliance-stage or Client Health subject. The four plans'
+  dependency notes point back to the Academy Solo packet; no initiative
+  should infer a new global role, package, analytics metric, or RTO workflow
+  from this workstream.
 - **Codebase Optimization**'s Phase 2.6 stabilization is the operational
   execution lane for bug fixes and consolidation surfaced across all
   three other initiatives' investigation work — it does not own their
@@ -134,6 +141,14 @@ runtime or production work begins.
   are approved. The first tenant/user fixture and authenticated negative-case
   verification remain required. Public checkout, billing, Team/Elite, and
   legacy-user conversion remain out of scope.
+- **Academy Solo invitation correction (2026-09-15):** the first QA browser
+  run found the acceptance RPC writing a non-existent `Academy User` lookup
+  value. The QA-applied fix writes legacy `User`, returns relationship context,
+  safely binds anonymous acceptance to the invited auth identity, and preserves
+  the Academy-only relationship/access fields. Authenticated browser
+  re-verification passed and created no package instance. Supabase Auth email
+  rate limiting and the empty QA published-course catalogue remain recorded as
+  environment/data readiness limitations, not application evidence.
 
 ## Recent relevant audit entries
 
@@ -144,3 +159,4 @@ record. These are the entries most load-bearing for current status:
 - [2026-09-08 — Allow tenant-less users to save notification preferences](../../audit-log/entries/2026-09-08-allow-tenant-less-notification-prefs.md) — closed Codebase Optimization P4-D's last item; parked the tenant-assignment decision to Tenant Operating Model §18.
 - [2026-09-08 — P3A main-dashboard health-read retirement](../../audit-log/entries/2026-09-08-p3a-main-dashboard-health-read-retirement.md) — closed Codebase Optimization P3-A / Client Health consumer containment.
 - [2026-09-08 — M4 forecast/health cron retirement](../../audit-log/entries/2026-09-08-retire-m4-forecast-health-crons.md) — unscheduled the empty-output forecast jobs and retained their data/functions for the Client Health replacement.
+- [2026-09-15 — Academy Solo invitation compatibility and account-surface decision](../../audit-log/entries/2026-09-15-academy-solo-invitation-compatibility.md) — corrected role vocabulary, Academy invitation copy, no-Sidekick boundary, distinct Manage Clients visibility contract, and allowlisted QA browser evidence.

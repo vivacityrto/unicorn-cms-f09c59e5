@@ -16,6 +16,7 @@ interface InvitationTokenResult {
   first_name?: string | null;
   last_name?: string | null;
   unicorn_role?: string | null;
+  relationship_role?: string | null;
   error?: string;
 }
 
@@ -109,7 +110,11 @@ export default function AcceptInvitation() {
       // Fetch tenant context so Academy Solo invitations can use Academy copy
       // instead of the legacy client/RTO invitation presentation.
       let tenantName: string | null = null;
-      let isAcademySolo = false;
+      // The invitation relationship is available from the token-validation
+      // RPC even when the anonymous tenant read is intentionally restricted.
+      // Use it as the primary signal; tenant metadata is a compatibility
+      // fallback for older invitations that predate relationship_role.
+      let isAcademySolo = data.relationship_role === 'academy_user';
       if (data.tenant_id) {
         const { data: tenantData } = await supabase
           .from('tenants')
@@ -118,7 +123,7 @@ export default function AcceptInvitation() {
           .maybeSingle();
         
         tenantName = tenantData?.name || null;
-        isAcademySolo = isAcademySoloMetadata(tenantData?.metadata);
+        isAcademySolo = isAcademySolo || isAcademySoloMetadata(tenantData?.metadata);
       }
       
       setInvitationData({
@@ -232,6 +237,32 @@ export default function AcceptInvitation() {
     setIsLoading(true);
     try {
       const tokenHash = await hashToken(token!);
+
+      // An invited user may already be authenticated (for example, after
+      // completing sign-up in another tab). Finalize that session directly so
+      // we do not call signUp again and accidentally pass a different user id
+      // to the invitation RPC.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionEmail = sessionData.session?.user?.email?.toLowerCase();
+      if (sessionData.session?.user?.id && sessionEmail === invitationData!.email.toLowerCase()) {
+        const result = await finalizeInvitation(sessionData.session.user.id, tokenHash);
+
+        if (!result.ok && result.code !== 'ALREADY_ACCEPTED') {
+          toast({
+            title: invitationData.isAcademySolo ? 'Academy setup incomplete' : 'Setup incomplete',
+            description: result.message || `Could not finalise your invitation (${result.code}). Contact your administrator.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        toast({
+          title: invitationData.isAcademySolo ? 'Welcome to Vivacity Academy!' : 'Welcome back!',
+          description: 'Your account is ready. Redirecting to your dashboard…',
+        });
+        setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
+        return;
+      }
       
       // Sign up the user with all metadata for the trigger
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
