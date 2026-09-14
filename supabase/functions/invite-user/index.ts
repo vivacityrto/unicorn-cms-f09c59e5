@@ -684,13 +684,9 @@ serve(async (req) => {
 
     // 8. Send invitation email via custom function (uses APP_BASE_URL on the server).
     // QA characterization can preserve the pending-invitation/acceptance flow
-    // without sending real Mailgun mail. The environment and mode checks are
-    // intentionally fail-closed: production and unknown values still send.
-    const invitationEmailMode = Deno.env.get('INVITATION_EMAIL_MODE') ?? 'send';
-    const invitationEmailEnvironment =
-      Deno.env.get('INVITATION_EMAIL_ENVIRONMENT') ?? (SUPABASE_URL === QA_PROJECT_URL ? 'qa' : '');
-    const suppressQaDelivery =
-      invitationEmailMode === 'qa-no-send' && invitationEmailEnvironment === 'qa';
+    // without sending real Mailgun mail. The exact QA project identity is the
+    // fail-closed boundary: production and unknown project URLs still send.
+    const suppressQaDelivery = SUPABASE_URL === QA_PROJECT_URL;
 
     if (suppressQaDelivery) {
       console.log(`Invitation email delivery suppressed for QA (invitation ${insertedInvite.id})`);

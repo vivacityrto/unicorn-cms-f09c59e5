@@ -46,10 +46,10 @@ marker as well as the QA mode value.
 
 ## 2. Proposed QA delivery contract
 
-The allowlisted QA project may use the following mode. The project URL is also
-hard-coded as a fail-closed QA marker so the mode remains safe even if the
-optional environment secret is unavailable; production's different project URL
-cannot activate suppression.
+The allowlisted QA project always suppresses downstream invitation delivery.
+Its project URL is hard-coded as a fail-closed QA marker; production's
+different project URL cannot activate suppression. The following secrets remain
+documented for operator visibility, but the project-bound guard is authoritative:
 
 ```text
 INVITATION_EMAIL_ENVIRONMENT=qa
