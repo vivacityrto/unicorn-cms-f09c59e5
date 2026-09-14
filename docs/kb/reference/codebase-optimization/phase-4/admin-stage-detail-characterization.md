@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-09-14 · **Status:** characterization complete for the current static pass; no extraction or policy change authorized
 > **Parent:** [joint ownership matrix](admin-stage-detail-joint-ownership-matrix.md)
-> **Source:** `origin/main@05bfb110f498632b3e1aec03e4ae2966a3fab050`
+> **Source:** `origin/main@58593d35db059fbef80352f1ef43b79f629b708f`
 > **File:** `src/pages/AdminStageDetail.tsx` (2,702 lines at this source commit)
 > **Owners:** Codebase Optimization coordinates; TOM and RBAC are required reviewers; Client Health is conditional on a proven consumer link
 > **Audit entry:** none needed — repository characterization only; no code, schema, permission, credential, or production change
@@ -60,6 +60,23 @@ boundaries: `usePackageBuilder`, `useStageActiveUsage`,
 `useStageTypeOptions`. These are reachable through the component's hook calls
 at `AdminStageDetail.tsx:79-136`; their readers and writers must be included
 in the same contract ledger before any hook or handler is moved.
+
+### Fresh source-cutoff recheck — 2026-09-14
+
+The current `origin/main` snapshot was independently re-read after the Phase 4
+close. `AdminStageDetail.tsx` remains 2,702 lines and has no source drift from
+the characterization described above. Wrapped method chains included, it still
+has 11 direct Supabase boundaries: stage/package reads, one stage update, five
+audit inserts, and the `cascade_stage_recurring` RPC. A grep that counts only
+the line containing `supabase.` undercounts these chains and is not an adequate
+call-site oracle.
+
+The only page-local Codebase candidate remains `renderReuseInfoBadge`: it is
+called six times, accepts only the parent `usageCount` and `overrideCount`,
+returns conditional markup, and owns no hook, query, mutation, authorization,
+tenant resolution, or callback. All remaining behavior-bearing boundaries are
+still routed to TOM/RBAC/security (and Client Health only if a concrete reader
+is later proven). This recheck does not authorize extracting the helper.
 
 ## Pure display boundary characterization
 

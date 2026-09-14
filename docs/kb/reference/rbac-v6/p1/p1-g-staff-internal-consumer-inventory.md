@@ -150,9 +150,10 @@ relationship semantics for each endpoint, with particular attention to
 completed-audit writes, signed certificate output, notifications, and the
 suggestion plan bypass.
 
-The next unattended preparation is to produce the endpoint-by-endpoint
-replacement worksheet and focused negative-case contract. That work can remain
-source-only; it must stop before changing a gate or live catalogue row.
+The next unattended preparation is recorded in the [endpoint-by-endpoint
+replacement worksheet and focused negative-case contract](p1-t-staff-internal-replacement-and-negative-case-worksheet.md).
+That work remains source-only and must stop before changing a gate or live
+catalogue row.
 
 ## Verification
 
