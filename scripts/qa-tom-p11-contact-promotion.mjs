@@ -328,6 +328,12 @@ async function main() {
     if (!recipient) throw new Error("accepted recipient auth user was not created");
     recipientId = recipient.id;
 
+    const { error: confirmError } = await serviceClient.auth.admin.updateUserById(recipientId, {
+      email_confirm: true,
+    });
+    if (confirmError) throw new Error(`recipient email confirmation: ${confirmError.message}`);
+    result.acceptance.email_confirmed_for_retry = true;
+
     const invitation = await requireSingle(
       serviceClient
         .from("user_invitations")
