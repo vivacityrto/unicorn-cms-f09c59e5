@@ -233,6 +233,25 @@ async function main() {
     try {
       const inviterContext = await browser.newContext({ storageState: STORAGE_STATE });
       const inviterPage = await inviterContext.newPage();
+      const browserEvents = [];
+      inviterPage.on("request", (request) => {
+        if (request.url().includes("/functions/v1/invite-user")) {
+          browserEvents.push({ event: "request", method: request.method(), url: request.url() });
+        }
+      });
+      inviterPage.on("response", (response) => {
+        if (response.url().includes("/functions/v1/invite-user")) {
+          browserEvents.push({ event: "response", status: response.status(), url: response.url() });
+        }
+      });
+      inviterPage.on("requestfailed", (request) => {
+        if (request.url().includes("/functions/v1/invite-user")) {
+          browserEvents.push({ event: "requestfailed", failure: request.failure()?.errorText ?? "unknown" });
+        }
+      });
+      inviterPage.on("pageerror", (error) => {
+        browserEvents.push({ event: "pageerror", message: error.message.slice(0, 1000) });
+      });
 
       await inviterPage.goto(`${APP_URL}/client/users`, { waitUntil: "domcontentloaded" });
       await uiExpect(inviterPage).not.toHaveURL(/\/login/);
@@ -260,7 +279,9 @@ async function main() {
         inviteResponse = await inviteResponsePromise;
       } catch (error) {
         await inviteResponsePromise.catch(() => undefined);
-        throw error;
+        await reportBrowserState(inviterPage, "invite-user-timeout");
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`${detail}; browser_events=${JSON.stringify(browserEvents).slice(0, 4000)}`);
       }
       const inviteBody = await inviteResponse.json();
       if (!inviteResponse.ok() || !inviteBody?.ok || typeof inviteBody.inviteUrl !== "string") {
