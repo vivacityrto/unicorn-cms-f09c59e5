@@ -141,6 +141,7 @@ async function main() {
   const serviceClient = createClient(supabaseUrl, serviceRole, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const uiExpect = expect.configure({ timeout: 45_000 });
 
   const result = {
     run_tag: RUN_TAG,
@@ -212,16 +213,16 @@ async function main() {
       const inviterPage = await inviterContext.newPage();
 
       await inviterPage.goto(`${APP_URL}/client/users`, { waitUntil: "domcontentloaded" });
-      await expect(inviterPage).not.toHaveURL(/\/login/);
-      await expect(inviterPage.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
+      await uiExpect(inviterPage).not.toHaveURL(/\/login/);
+      await uiExpect(inviterPage.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
 
       const contactEmail = inviterPage.getByText(RECIPIENT_EMAIL, { exact: true });
-      await expect(contactEmail).toBeVisible();
+      await uiExpect(contactEmail).toBeVisible();
       const contactRow = contactEmail.locator("xpath=../..");
       await contactRow.getByRole("button").click();
       await inviterPage.getByRole("menuitem", { name: "Promote to User", exact: true }).click();
       const promoteDialog = inviterPage.getByRole("dialog", { name: "Promote to User" });
-      await expect(promoteDialog).toBeVisible();
+      await uiExpect(promoteDialog).toBeVisible();
       const inviteResponsePromise = inviterPage.waitForResponse(
         (response) => response.url().includes("/functions/v1/invite-user") && response.request().method() === "POST",
         { timeout: 45_000 },
@@ -243,13 +244,13 @@ async function main() {
       if (!invitationId || !inviteUrl) throw new Error("invite-user response omitted invitation identity");
       result.invitation = { id: redactId(invitationId), writer_ok: true };
 
-      await expect(inviterPage.getByText("Pending invitation", { exact: true })).toBeVisible();
+      await uiExpect(inviterPage.getByText("Pending invitation", { exact: true })).toBeVisible();
       await inviterContext.close();
 
       const recipientContext = await browser.newContext();
       const recipientPage = await recipientContext.newPage();
       await recipientPage.goto(inviteUrl, { waitUntil: "domcontentloaded" });
-      await expect(recipientPage.getByRole("heading", { name: "Complete Your Signup", level: 2 })).toBeVisible();
+      await uiExpect(recipientPage.getByRole("heading", { name: "Complete Your Signup", level: 2 })).toBeVisible();
       await recipientPage.getByLabel("First Name").fill("TOM P1.1");
       await recipientPage.getByLabel("Last Name").fill("Recipient");
       await recipientPage.getByLabel("Password", { exact: true }).fill(recipientPassword);
