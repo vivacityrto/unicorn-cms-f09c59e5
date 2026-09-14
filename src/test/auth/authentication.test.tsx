@@ -242,6 +242,52 @@ describe("useAuth session management", () => {
     expect(screen.getByTestId("profile-error").textContent).toBe("none");
   });
 
+  it("retries a profile that is briefly absent while the signup trigger commits", async () => {
+    let profileAttempts = 0;
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "user-123" } } },
+    });
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "users") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => {
+                profileAttempts += 1;
+                return Promise.resolve(
+                  profileAttempts === 1
+                    ? { data: null, error: null }
+                    : { data: { user_uuid: "user-123", unicorn_role: "Academy User" }, error: null },
+                );
+              },
+            }),
+          }),
+        };
+      }
+
+      return {
+        select: () => {
+          const chain = {
+            eq: vi.fn(() => chain),
+            then: (resolve: (value: { data: never[]; error: null }) => void) =>
+              resolve({ data: [], error: null }),
+          };
+          return chain;
+        },
+      };
+    });
+
+    renderWithProviders(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("profile-role").textContent).toBe("Academy User"));
+    expect(profileAttempts).toBe(2);
+    expect(screen.getByTestId("profile-error").textContent).toBe("none");
+  });
+
   it("clears local auth state and calls supabase.auth.signOut() on Sign Out", async () => {
     mockGetSession.mockResolvedValue({
       data: { session: { user: { id: "user-123" } } },
