@@ -88,7 +88,10 @@ async function reportBrowserState(page, label) {
 }
 
 async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
-  if (!RECOVERY_RUN_TAG || recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG) {
+  if (!RECOVERY_RUN_TAG) {
+    throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
+  }
+  if (recipient && recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG) {
     throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
   }
 
@@ -108,26 +111,29 @@ async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
     .eq("tenant_id", tenantId)
     .eq("invited_by", inviterId)
     .eq("email", RECIPIENT_EMAIL)
-    .eq("first_name", "TOM P1.1");
+    .eq("first_name", "TOM P1.1")
+    .eq("last_name", RECOVERY_RUN_TAG);
   if (invitationsError) throw new Error(`recovery invitation lookup: ${invitationsError.message}`);
 
   const errors = [];
-  const { error: memberError } = await serviceClient
-    .from("tenant_members")
-    .delete()
-    .eq("tenant_id", tenantId)
-    .eq("user_id", recipient.id);
-  if (memberError) errors.push(`tenant_members: ${memberError.message}`);
-  const { error: tenantUserError } = await serviceClient
-    .from("tenant_users")
-    .delete()
-    .eq("tenant_id", tenantId)
-    .eq("user_id", recipient.id);
-  if (tenantUserError) errors.push(`tenant_users: ${tenantUserError.message}`);
-  const { error: profileError } = await serviceClient.from("users").delete().eq("user_uuid", recipient.id);
-  if (profileError) errors.push(`users: ${profileError.message}`);
-  const { error: authError } = await serviceClient.auth.admin.deleteUser(recipient.id);
-  if (authError) errors.push(`auth.users: ${authError.message}`);
+  if (recipient) {
+    const { error: memberError } = await serviceClient
+      .from("tenant_members")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("user_id", recipient.id);
+    if (memberError) errors.push(`tenant_members: ${memberError.message}`);
+    const { error: tenantUserError } = await serviceClient
+      .from("tenant_users")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("user_id", recipient.id);
+    if (tenantUserError) errors.push(`tenant_users: ${tenantUserError.message}`);
+    const { error: profileError } = await serviceClient.from("users").delete().eq("user_uuid", recipient.id);
+    if (profileError) errors.push(`users: ${profileError.message}`);
+    const { error: authError } = await serviceClient.auth.admin.deleteUser(recipient.id);
+    if (authError) errors.push(`auth.users: ${authError.message}`);
+  }
   for (const contact of contacts ?? []) {
     const { error } = await serviceClient.from("tenant_contacts").delete().eq("id", contact.id);
     if (error) errors.push(`tenant_contacts: ${error.message}`);
@@ -175,6 +181,7 @@ async function main() {
   let inviteUrl = null;
   let recipientPassword = null;
   let tenantId = null;
+  let inviterId = null;
   const cleanupErrors = [];
 
   try {
@@ -186,9 +193,10 @@ async function main() {
 
     const inviter = await findAuthUserByEmail(serviceClient, INVITER_EMAIL);
     if (!inviter) throw new Error("Approved Client Admin A persona was not found");
+    inviterId = inviter.id;
 
     const existingRecipient = await findAuthUserByEmail(serviceClient, RECIPIENT_EMAIL);
-    if (existingRecipient) {
+    if (existingRecipient || RECOVERY_RUN_TAG) {
       await recoverFailedRun(serviceClient, tenantId, inviter.id, existingRecipient);
     }
 
@@ -352,9 +360,24 @@ async function main() {
       const { error } = await serviceClient.from("tenant_contacts").delete().eq("id", contactId);
       if (error) cleanupErrors.push(`tenant_contacts: ${error.message}`);
     }
-    if (invitationId) {
-      const { error } = await serviceClient.from("user_invitations").delete().eq("id", invitationId);
-      if (error) cleanupErrors.push(`user_invitations: ${error.message}`);
+    const cleanupInvitationLastNames = [...new Set([RUN_TAG, RECOVERY_RUN_TAG].filter(Boolean))];
+    if (tenantId && inviterId && cleanupInvitationLastNames.length > 0) {
+      const { data: runScopedInvitations, error: invitationLookupError } = await serviceClient
+        .from("user_invitations")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("invited_by", inviterId)
+        .eq("email", RECIPIENT_EMAIL)
+        .eq("first_name", "TOM P1.1")
+        .in("last_name", cleanupInvitationLastNames);
+      if (invitationLookupError) {
+        cleanupErrors.push(`user_invitations lookup: ${invitationLookupError.message}`);
+      } else {
+        for (const invitation of runScopedInvitations ?? []) {
+          const { error } = await serviceClient.from("user_invitations").delete().eq("id", invitation.id);
+          if (error) cleanupErrors.push(`user_invitations: ${error.message}`);
+        }
+      }
     }
     result.cleanup.complete = cleanupErrors.length === 0;
     result.cleanup.errors = cleanupErrors;
