@@ -13,14 +13,20 @@ const staffMigrationPath = resolve(
   here,
   "../../migrations/20260914060040_academy_solo_internal_staff_and_demo_invite_support.sql",
 );
+const provisioningMigrationPath = resolve(
+  here,
+  "../../migrations/20260914064041_academy_solo_account_provisioning.sql",
+);
 
 const migration = await readFile(migrationPath, "utf8");
 const staffMigration = await readFile(staffMigrationPath, "utf8");
+const provisioningMigration = await readFile(provisioningMigrationPath, "utf8");
 
 test("Academy Solo migration has a recursion-safe server entitlement gate", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.has_academy_access_safe\(p_user_id uuid\)/);
   assert.match(migration, /t\.academy_access_enabled IS TRUE/);
   assert.match(migration, /tu\.access_scope IS NULL OR tu\.access_scope IN \('full', 'academy_only'\)/);
+  assert.match(migration, /t\.academy_subscription_expires_at IS NULL OR t\.academy_subscription_expires_at > now\(\)/);
   assert.match(migration, /u\.disabled IS DISTINCT FROM TRUE/);
   assert.match(migration, /u\.archived IS DISTINCT FROM TRUE/);
   assert.match(migration, /SET row_security = off/);
@@ -61,4 +67,17 @@ test("Solo lifecycle capability covers every active internal staff role", () => 
       new RegExp(`academy\\.tenant_access\\.manage'.*'${role}'.*'full'`),
     );
   }
+});
+
+test("Solo account provisioning bypasses RTO/package onboarding", () => {
+  assert.match(provisioningMigration, /CREATE OR REPLACE FUNCTION public\.create_academy_solo_account/);
+  assert.match(provisioningMigration, /is_vivacity_team_safe\(v_actor\)/);
+  assert.match(provisioningMigration, /academy_account_type', 'individual'/);
+  assert.match(provisioningMigration, /catalogue_scope', 'all_published_courses'/);
+  assert.match(provisioningMigration, /compliance_system_enabled,\s*resource_hub_enabled,\s*documents_enabled/);
+  assert.match(provisioningMigration, /'rto_profile_created', false/);
+  assert.match(provisioningMigration, /'package_created', false/);
+  assert.match(provisioningMigration, /audit_eos_events/);
+  assert.match(provisioningMigration, /REVOKE ALL ON FUNCTION public\.create_academy_solo_account/);
+  assert.match(migration, /WHEN p_is_solo_pilot OR COALESCE\(metadata, '\{\}'::jsonb\) \? 'academy_solo' THEN 1/);
 });

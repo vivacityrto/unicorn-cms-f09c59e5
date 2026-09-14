@@ -21,13 +21,14 @@ export const UPGRADE_PATHS: Record<TenantType, TenantType | null> = {
  * Check if a tenant can accept more users
  */
 export async function checkSeatAvailability(
-  tenantId: number
+  tenantId: number,
+  academySolo = false,
 ): Promise<{ canInvite: boolean; currentUsers: number; maxUsers: number | null; message?: string }> {
   try {
     // Get tenant info including type and max users
     const { data: tenant, error: tenantError } = await supabase
       .from("tenants")
-      .select("tenant_type, academy_max_users")
+      .select("tenant_type, academy_max_users, metadata")
       .eq("id", tenantId)
       .single();
 
@@ -36,7 +37,9 @@ export async function checkSeatAvailability(
     }
 
     const tenantType = tenant.tenant_type as TenantType;
-    const maxUsers = tenant.academy_max_users ?? SEAT_LIMITS[tenantType];
+    const maxUsers = academySolo
+      ? (tenant.academy_max_users ?? 1)
+      : (tenant.academy_max_users ?? SEAT_LIMITS[tenantType]);
 
     // Count current active members
     const { count, error: countError } = await supabase

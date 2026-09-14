@@ -208,15 +208,28 @@ const handler = async (req: Request): Promise<Response> => {
     // ── 6. Build and send email ───────────────────────────────────────────
     // Resolve tenant name
     let tenantName = "your organisation";
+    let isAcademySolo = false;
     if (invitation.tenant_id === VIVACITY_TENANT_ID) {
       tenantName = "Vivacity Coaching & Consulting";
     } else {
       const { data: tenantRow } = await supabase
         .from("tenants")
-        .select("name")
+        .select("name, metadata")
         .eq("id", invitation.tenant_id)
         .maybeSingle();
+      const academySoloMarker =
+        tenantRow?.metadata &&
+        typeof tenantRow.metadata === "object" &&
+        !Array.isArray(tenantRow.metadata)
+          ? (tenantRow.metadata as Record<string, unknown>).academy_solo
+          : null;
+      isAcademySolo =
+        !!academySoloMarker &&
+        typeof academySoloMarker === "object" &&
+        !Array.isArray(academySoloMarker) &&
+        (academySoloMarker as Record<string, unknown>).plan_code === "academy_solo";
       if (tenantRow?.name) tenantName = tenantRow.name;
+      if (isAcademySolo) tenantName = "Vivacity Academy";
     }
 
     // Resolve inviter name
@@ -238,7 +251,9 @@ const handler = async (req: Request): Promise<Response> => {
       `/accept-invitation?token=${encodeURIComponent(body.token_plaintext)}`,
     );
 
-    const roleLabel = ROLE_LABELS[invitation.unicorn_role] || invitation.unicorn_role;
+    const roleLabel = isAcademySolo
+      ? "Academy learner"
+      : ROLE_LABELS[invitation.unicorn_role] || invitation.unicorn_role;
     const expiryDate = formatExpiry(invitation.expires_at);
     const fromEmail = MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
 
@@ -249,13 +264,20 @@ const handler = async (req: Request): Promise<Response> => {
       invite_url: inviteUrl,
       expiry_date: expiryDate,
       role_label: roleLabel,
+      product_name: isAcademySolo ? "Vivacity Academy" : "Unicorn 2.0",
+      invitation_context: isAcademySolo ? "Academy Solo" : "",
       inviter_name: inviterName,
     };
 
     const formData = new FormData();
     formData.append("from", `${MAILGUN_FROM_NAME} <${fromEmail}>`);
     formData.append("to", invitation.email);
-    formData.append("subject", `You've been invited to ${tenantName} on Unicorn`);
+    formData.append(
+      "subject",
+      isAcademySolo
+        ? "You've been invited to Vivacity Academy"
+        : `You've been invited to ${tenantName} on Unicorn`,
+    );
     formData.append("template", "unicorn_accept_invite_v1");
     // ============================================================================
     // DO NOT ADD A `v:NAME` LOOP HERE. DO NOT "ALSO PASS AS t:VARIABLES".

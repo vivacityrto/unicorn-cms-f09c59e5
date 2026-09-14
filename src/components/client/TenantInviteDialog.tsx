@@ -41,6 +41,10 @@ interface TenantInviteDialogProps {
   onSuccess?: () => void;
   initialRelationshipRole?: RelationshipRole;
   sendInvitationByDefault?: boolean;
+  academySolo?: boolean;
+  initialFirstName?: string;
+  initialLastName?: string;
+  initialEmail?: string;
 }
 
 const VIVACITY_TENANT_ID = 6372;
@@ -70,6 +74,10 @@ export function TenantInviteDialog({
   onSuccess,
   initialRelationshipRole,
   sendInvitationByDefault = false,
+  academySolo = false,
+  initialFirstName = '',
+  initialLastName = '',
+  initialEmail = '',
 }: TenantInviteDialogProps) {
   const { session } = useAuth();
   const isClientTenant = tenantId !== VIVACITY_TENANT_ID;
@@ -99,7 +107,12 @@ export function TenantInviteDialog({
   useEffect(() => {
     setRole(initialRelationshipRole ?? getDefaultRole(tenantId));
     setSendInvitation(sendInvitationByDefault);
-  }, [initialRelationshipRole, sendInvitationByDefault, tenantId, open]);
+    if (open) {
+      setFirstName(initialFirstName);
+      setLastName(initialLastName);
+      setEmail(initialEmail);
+    }
+  }, [initialEmail, initialFirstName, initialLastName, initialRelationshipRole, sendInvitationByDefault, tenantId, open]);
 
   // For client tenants: fetch existing primary/secondary occupancy so we can
   // disable those options in the dropdown.
@@ -130,16 +143,18 @@ export function TenantInviteDialog({
   const checkSeats = useCallback(async () => {
     setCheckingSeats(true);
     try {
-      // Get tenant type first
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("tenant_type")
-        .eq("id", tenantId)
-        .single();
+      if (academySolo) {
+        setTenantType(null);
+      } else {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("tenant_type")
+          .eq("id", tenantId)
+          .single();
+        setTenantType(tenant?.tenant_type as TenantType || null);
+      }
 
-      setTenantType(tenant?.tenant_type as TenantType || null);
-
-      const result = await checkSeatAvailability(tenantId);
+      const result = await checkSeatAvailability(tenantId, academySolo);
       setCanInvite(result.canInvite);
       setCurrentUsers(result.currentUsers);
       setMaxUsers(result.maxUsers);
@@ -149,7 +164,7 @@ export function TenantInviteDialog({
     } finally {
       setCheckingSeats(false);
     }
-  }, [tenantId]);
+  }, [academySolo, tenantId]);
 
   // Check seat availability when dialog opens
   useEffect(() => {
@@ -227,7 +242,7 @@ export function TenantInviteDialog({
     }
 
     // Double-check seat availability before sending
-    const seatCheck = await checkSeatAvailability(tenantId);
+    const seatCheck = await checkSeatAvailability(tenantId, academySolo);
     if (!seatCheck.canInvite) {
       // Log the blocked invite attempt
       await logUpgradeAttempt({
@@ -310,7 +325,7 @@ export function TenantInviteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite User</DialogTitle>
+          <DialogTitle>{academySolo ? 'Invite Academy learner' : 'Invite User'}</DialogTitle>
           <DialogDescription>
             Invite a new user to <strong>{tenantName}</strong>
           </DialogDescription>
@@ -427,7 +442,12 @@ export function TenantInviteDialog({
 
             <div className="space-y-2">
               <Label>Role</Label>
-              {isClientTenant ? (
+              {academySolo ? (
+                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                  <span className="font-medium">Academy learner</span>
+                  <span className="ml-2 text-muted-foreground">Course access only</span>
+                </div>
+              ) : isClientTenant ? (
                 <>
                   <Select value={role} onValueChange={setRole}>
                     <SelectTrigger>

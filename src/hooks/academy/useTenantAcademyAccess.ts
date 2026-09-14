@@ -92,6 +92,21 @@ export interface TenantRow {
   enrolled_count: number;
 }
 
+export interface AcademySoloAccountCreation {
+  tenant_id: number;
+  account_name: string;
+  account_type: "individual";
+  plan_code: "academy_solo";
+  catalogue_scope: "all_published_courses";
+  max_users: 1;
+}
+
+export interface AcademySoloAccountInput {
+  accountName: string;
+  notes?: string;
+  expiresAt?: string | null;
+}
+
 export interface AutoEnrolRule {
   id: number;
   package_id: number;
@@ -133,6 +148,27 @@ export function useTenantSummaries() {
       }));
     },
     staleTime: 30_000,
+  });
+}
+
+export function useCreateAcademySoloAccount() {
+  const qc = useQueryClient();
+
+  return useMutation<AcademySoloAccountCreation, Error, AcademySoloAccountInput>({
+    mutationFn: async ({ accountName, notes, expiresAt }) => {
+      const { data, error } = await supabase.rpc("create_academy_solo_account", {
+        p_account_name: accountName,
+        p_notes: notes?.trim() || null,
+        p_expires_at: expiresAt ?? null,
+      });
+      if (error) throw error;
+      return data as unknown as AcademySoloAccountCreation;
+    },
+    onSuccess: () => {
+      toast.success("Academy Solo account created");
+      qc.invalidateQueries({ queryKey: [TENANT_KEY] });
+    },
+    onError: (error) => toast.error(error.message || "Failed to create Academy Solo account"),
   });
 }
 

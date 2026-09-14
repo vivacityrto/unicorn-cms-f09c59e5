@@ -1,6 +1,6 @@
 # Academy Solo MVP — Phase 1 implementation packet
 
-> **Status:** implementation in progress — controlled pilot approved
+> **Status:** implementation in progress — controlled pilot approved; QA and production migrations applied for invite testing
 > **Started:** 2026-09-14  
 > **Target:** pilot-ready by 2026-09-15, subject to the approval gates below  
 > **Owner:** Academy Solo delivery workstream  
@@ -12,6 +12,13 @@ This is a time-boxed delivery workstream, not a fifth cross-cutting program.
 It implements the smallest safe Academy Solo slice on the existing identity,
 tenant, Academy membership, enrolment, progress, and certificate primitives.
 The four tracked initiatives remain authoritative for their own concerns.
+
+The account boundary is deliberately separated from the RTO client workflow:
+the existing `tenants` row is used temporarily for isolation and existing
+Academy foreign keys, but an Academy Solo account is provisioned by its own
+staff-only flow with no RTO profile, package instance, payment, consultant,
+SharePoint, stage, or Client Health side effect. This is a compatibility
+bridge, not a claim that Solo is an RTO customer.
 
 The product discovery source is
 `C:/Users/carls/.codex/.chatgpt-projects/g-p-6aa73a757abc8191971caabac7d73939/academy-solo-discovery-handoff.md`.
@@ -25,6 +32,8 @@ The pilot is coherent only when all of these are true:
 
 - one existing or newly invited identity is used through the existing
   `invite-user` / Academy User flow;
+- staff can create the Academy-only account from **Academy Customers → Create
+  Academy Solo**, without opening the ordinary Add Client workflow;
 - exactly one named learner is given an Academy-only membership for the pilot;
 - Academy catalogue, enrolment, lesson content, assessment, progress writes,
   and certificate issuance are protected server-side;
@@ -59,6 +68,7 @@ protected-content boundary.
 | Area | Observed state | Required response |
 |---|---|---|
 | Identity | Existing auth/public user and tenant membership paths exist. | Reuse identity; do not create a second account system. |
+| Account provisioning | Ordinary Add Client is RTO/package-oriented. | Use the staff-only `create_academy_solo_account` RPC and Academy Customers UI; retain the tenant row only as the temporary isolation boundary. |
 | Academy UI | `AcademyLayout` uses tenant-level `academy_access_enabled`; routes already exist. | Keep route shape; make the server boundary authoritative. |
 | Catalogue RLS | Later policies allow published courses and module outlines to any authenticated caller. | Replace with `has_academy_access_safe(auth.uid())`. |
 | Lesson RLS | Full lesson content is partly enrolment-gated, but preview/content policy is not tied to entitlement. | Require current Academy access, then enrolment for non-preview content. |
@@ -69,20 +79,25 @@ protected-content boundary.
 
 ## Delivery slices
 
-1. **Server boundary (in progress).** Add the recursion-safe Academy access
+1. **Account provisioning.** Add the staff-only Academy Solo account creation
+   RPC/UI path. It creates one Academy-enabled account with one seat,
+   disables RTO-side feature flags, writes an audit event, and never creates a
+   package or payment.
+2. **Server boundary (in progress).** Add the recursion-safe Academy access
    helper and tighten catalogue, lesson, assessment, question, enrolment,
    attempt, and progress policies. Keep history readable after access ends.
-2. **Manual lifecycle.** Provide staff-only activation/suspension/reactivation/
+3. **Manual lifecycle.** Provide staff-only activation/suspension/reactivation/
    end actions for a tenant and named learner, with an audit event containing
    actor, tenant, prior state, new state, and reason. Identity creation uses
    the existing Academy User invitation flow; no new auth system or payment
    collection is introduced.
-3. **Named-user guard.** Enforce the one-user pilot operationally and surface
+4. **Named-user guard.** Enforce the one-user pilot operationally and surface
    the Academy-only membership clearly to staff. Do not alter RTO contacts or
    ordinary client user roles.
-4. **Verification.** Run static migration contract tests, frontend tests,
-   edge tests, typecheck, lint ratchet, build, and an authenticated negative
-   case against an approved QA fixture before any hosted apply.
+5. **Verification.** Run static migration contract tests, frontend tests,
+   edge tests, typecheck, lint ratchet, build, then complete authenticated
+   positive and negative cases against the pilot account before treating the
+   controlled pilot as ready.
 
 ## Approval questions consolidated
 
@@ -114,9 +129,10 @@ parentheses until answered:
 
 ## Local demo test data
 
-The repository has no local Supabase service; `npm run dev` uses the configured
-hosted Supabase project. These values are therefore a safe test-data recipe,
-not an automatic production seed:
+The repository has no local Supabase service; the current dev server is pointed
+at the configured production Supabase project (`yxkgdalkbrriasiyyrwk`) so the
+existing invitation Edge Functions are available. These values are a manual
+test-data recipe, not an automatic seed:
 
 - Tenant label: `Academy Solo Demo`
 - Learner name: `Demo Academy User`
@@ -130,10 +146,13 @@ not an automatic production seed:
 - Suggested expiry: `2026-09-21`
 - Internal note: `Solo pilot — Demo Academy User — local verification`
 
-For local verification, open the staff Academy Tenant Access screen, mark the
-tenant as an Academy Solo pilot, save it, then use **Invite Academy User**.
-The invitation defaults to the real identity-creation path; do not use the
-no-email path if you need the user to authenticate.
+For local verification, open the staff **Academy Customers** screen, choose
+**Create Academy Solo**, enter the account and Demo Academy User details, and
+submit. The account is created without the Add Client/package workflow and the
+invitation dialog opens with the learner prefilled. The current local server
+uses production because its existing `invite-user` and
+`send-invitation-email` Edge Functions are deployed there; this is for the
+explicit controlled-pilot invite test only, not a public launch.
 
 ## Stop/release gates
 
@@ -149,13 +168,13 @@ Do not call this a production launch if any of these remain unverified:
 - activation/suspension/end is not attributable to a staff actor;
 - existing RTO Academy access regresses;
 - the exact catalogue and named pilot account are not approved;
-- the migration is applied to the hosted project without the required review,
-  audit entry, and rollback plan.
+- the controlled pilot is treated as a public paid launch without payment,
+  renewal, refund, support, and failure-policy decisions.
 
 ## Follow-up explicitly deferred
 
-The next product phase may introduce a first-class subscription/entitlement
-model, public checkout, billing provider integration, renewal state machine,
-legacy-user commercial policy, Team/Elite seat semantics, self-service
-onboarding, and a formal Academy account type. Those are not hidden inside
-this pilot packet.
+The next product phase may replace the temporary tenant-backed bridge with a
+first-class subscription/entitlement model, public checkout, billing provider
+integration, renewal state machine, legacy-user commercial policy, Team/Elite
+seat semantics, self-service onboarding, and a formal Academy account type.
+Those are not hidden inside this pilot packet.

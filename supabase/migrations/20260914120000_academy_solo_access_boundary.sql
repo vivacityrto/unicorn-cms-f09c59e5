@@ -28,6 +28,7 @@ AS $$
       JOIN public.users u ON u.user_uuid = tu.user_id
       WHERE tu.user_id = p_user_id
         AND t.academy_access_enabled IS TRUE
+        AND (t.academy_subscription_expires_at IS NULL OR t.academy_subscription_expires_at > now())
         AND (tu.access_scope IS NULL OR tu.access_scope IN ('full', 'academy_only'))
         AND u.disabled IS DISTINCT FROM TRUE
         AND u.archived IS DISTINCT FROM TRUE
@@ -40,6 +41,7 @@ AS $$
       WHERE tm.user_id = p_user_id
         AND tm.status = 'active'
         AND t.academy_access_enabled IS TRUE
+        AND (t.academy_subscription_expires_at IS NULL OR t.academy_subscription_expires_at > now())
         AND u.disabled IS DISTINCT FROM TRUE
         AND u.archived IS DISTINCT FROM TRUE
     );
@@ -49,6 +51,7 @@ COMMENT ON FUNCTION public.has_academy_access_safe(uuid) IS
   'Recursion-safe Academy entitlement gate. Staff, active tenant members of an Academy-enabled tenant, and academy_only tenant_users may access Academy content. It intentionally does not depend on tenant_type or package mappings.';
 
 REVOKE ALL ON FUNCTION public.has_academy_access_safe(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.has_academy_access_safe(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.has_academy_access_safe(uuid) TO authenticated, service_role;
 
 -- Staff lifecycle writes go through one audited RPC. It updates only the
@@ -96,7 +99,10 @@ BEGIN
 
   UPDATE public.tenants
   SET academy_access_enabled = p_enabled,
-      academy_max_users = p_max_users,
+      academy_max_users = CASE
+        WHEN p_is_solo_pilot OR COALESCE(metadata, '{}'::jsonb) ? 'academy_solo' THEN 1
+        ELSE p_max_users
+      END,
       academy_subscription_expires_at = p_expires_at,
       metadata = CASE
         WHEN p_is_solo_pilot OR COALESCE(metadata, '{}'::jsonb) ? 'academy_solo' THEN
@@ -108,7 +114,7 @@ BEGIN
               true
             ),
             '{academy_solo}',
-            jsonb_build_object(
+            COALESCE(metadata -> 'academy_solo', '{}'::jsonb) || jsonb_build_object(
               'status', p_action,
               'last_changed_at', now(),
               'last_changed_by', (SELECT auth.uid())
@@ -130,7 +136,7 @@ BEGIN
     p_tenant_id,
     (SELECT auth.uid()),
     'academy_solo_access',
-    p_tenant_id::text,
+    NULL,
     p_action,
     'Academy Solo lifecycle change',
     jsonb_build_object(
@@ -156,6 +162,7 @@ COMMENT ON FUNCTION public.manage_academy_solo_access(bigint, text, boolean, int
   'Staff-only, audited Academy Solo pilot lifecycle update. Reuses the existing tenant access flag and does not create identities or modify RTO membership.';
 
 REVOKE ALL ON FUNCTION public.manage_academy_solo_access(bigint, text, boolean, integer, timestamptz, text, boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.manage_academy_solo_access(bigint, text, boolean, integer, timestamptz, text, boolean) FROM anon;
 GRANT EXECUTE ON FUNCTION public.manage_academy_solo_access(bigint, text, boolean, integer, timestamptz, text, boolean) TO authenticated, service_role;
 
 -- This RPC is SECURITY DEFINER in the live Academy completion path, so its
@@ -233,6 +240,7 @@ END;
 $function$;
 
 GRANT EXECUTE ON FUNCTION public.complete_academy_enrollment(bigint) TO authenticated;
+REVOKE ALL ON FUNCTION public.complete_academy_enrollment(bigint) FROM anon;
 
 -- Course and module catalogue reads must not be available to every
 -- authenticated user. Staff continue to use their existing manage policies.
