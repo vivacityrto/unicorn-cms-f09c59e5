@@ -14,12 +14,14 @@ const QA_PROJECT_REF = "qfpxvumcrnzrjyvqkicq";
 const QA_PROJECT_URL = `https://${QA_PROJECT_REF}.supabase.co`;
 const APP_URL = process.env.QA_APP_URL ?? "http://localhost:8080";
 const RUN_TAG = process.env.QA_TOM_P11_RUN_TAG ?? `tom_p11_${process.env.GITHUB_RUN_ID ?? Date.now()}`;
-const RECIPIENT_EMAIL = process.env.QA_TOM_P11_RECIPIENT_EMAIL ?? "carl+tom-p11-qa-20260914@complyhub.ai";
+const RECOVERY_RUN_TAG = process.env.QA_TOM_P11_RECOVERY_RUN_TAG ?? "";
+const RECIPIENT_EMAIL =
+  process.env.QA_TOM_P11_RECIPIENT_EMAIL ||
+  `carl+tom-p11-qa-${process.env.GITHUB_RUN_ID ?? Date.now()}@complyhub.ai`;
 const STORAGE_STATE = process.env.QA_TOM_P11_STORAGE_STATE ?? "playwright/.auth/tom-p11-client-primary-inviter.json";
 const RESULT_PATH = process.env.QA_TOM_P11_RESULT_PATH ?? "qa-artifacts/tom-p11-result.json";
 const TOM_FIXTURE_TAG = process.env.QA_TOM_FIXTURE_TAG ?? "tom_qa_20260913_seed_01";
 const INVITER_EMAIL = `${TOM_FIXTURE_TAG}_client_primary_inviter@example.qa`;
-const RECOVERY_RUN_TAG = process.env.QA_TOM_P11_RECOVERY_RUN_TAG ?? "";
 
 const supabaseUrl = (process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
 const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -188,7 +190,12 @@ async function main() {
     invitation: null,
     acceptance: null,
     materialization: null,
-    cleanup: { attempted: false, complete: false, audit_rows_retained: true },
+    cleanup: {
+      attempted: false,
+      complete: false,
+      audit_rows_retained: true,
+      auth_user_retained_for_audit: false,
+    },
   };
 
   let recipientId = null;
@@ -402,8 +409,19 @@ async function main() {
     if (recipientId) {
       const { error } = await serviceClient.from("users").delete().eq("user_uuid", recipientId);
       if (error) cleanupErrors.push(`users: ${error.message}`);
-      const { error: authError } = await serviceClient.auth.admin.deleteUser(recipientId);
-      if (authError) cleanupErrors.push(`auth.users: ${authError.message}`);
+      const { data: auditRows, error: auditLookupError } = await serviceClient
+        .from("audit_eos_events")
+        .select("id")
+        .eq("user_id", recipientId)
+        .limit(1);
+      if (auditLookupError) {
+        cleanupErrors.push(`audit_eos_events lookup: ${auditLookupError.message}`);
+      } else if (auditRows?.length) {
+        result.cleanup.auth_user_retained_for_audit = true;
+      } else {
+        const { error: authError } = await serviceClient.auth.admin.deleteUser(recipientId);
+        if (authError) cleanupErrors.push(`auth.users: ${authError.message}`);
+      }
     }
     if (contactId) {
       const { error } = await serviceClient.from("tenant_contacts").delete().eq("id", contactId);
