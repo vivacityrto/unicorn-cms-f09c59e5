@@ -31,6 +31,15 @@ a new PR closes a named gate.
 | Tenant Operating Model | planning | All 13 §18 decisions are closed. P0.1/P0.2/P0.3 evidence and owner dispositions are complete, including the synthetic QA characterization and negative-case/cleanup preparation. The first [P1.1 contact-promotion packet](tenant-operating-model/p1/p1-1-first-contact-promotion-implementation-packet.md) records staff-only primary promotion and QA no-send behavior, but remains a draft implementation packet; exact contract, owner, QA, rollback, and audit gates remain. Generic P0 refreshes are paused. | [`tenant-operating-model-data-architecture-plan-2026-09-02.md`](tenant-operating-model-data-architecture-plan-2026-09-02.md) |
 | Client Health Activity Analytics | planning (architecturally a child of Tenant Operating Model — see Dependencies below) | H0 characterization/containment and H0.3b/c forecast disposition are delivered, and the [consultant report template/evidence schema](client-health-activity-analytics/h0/h0-4-consultant-report-template-and-evidence-schema.md) is prepared. Replacement-shadow, freshness/quality, metric policy, and consultant-data gates remain open; H1 scoring work has not started. | [`client-health-activity-analytics-plan-2026-09-03.md`](client-health-activity-analytics-plan-2026-09-03.md) |
 
+## Time-boxed delivery workstreams
+
+These are bounded product deliveries that coordinate with the four
+initiatives above without becoming new cross-cutting programs.
+
+| Workstream | Status | Current packet | Dependencies/gates |
+|---|---|---|---|
+| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15) | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; named-user approval; staff lifecycle audit; QA negative cases; separate hosted migration review. |
+
 ## Active work
 
 One row per initiative — a glance-able summary of who's on what right now,
@@ -44,6 +53,7 @@ real-time state.
 | RBAC v6 | P0.1/P1 preparation delivered; generic preparation paused; named capability rows, role defaults, shadow telemetry, and pilot remain review-gated | — | Codex | 2026-09-14 |
 | Tenant Operating Model | P0 evidence/preparation delivered; P1.1 packet records the staff-only/no-send boundary but remains draft; runtime work remains separately gated | — | Codex | 2026-09-14 |
 | Client Health Activity Analytics | H0 containment and evidence preparation delivered; consultant operational data blocks metric policy; replacement shadow remains separately gated | — | Claude Code / Codex | 2026-09-14 |
+| Academy Solo MVP delivery workstream | Phase 1 server boundary and manual lifecycle | `codex/academy-solo-mvp` | Codex | 2026-09-14 |
 
 ## Dependencies and gates
 
@@ -66,6 +76,10 @@ real-time state.
   Codebase Optimization's Phase 3 work overlaps directly with Client
   Health (see `codebase-optimization/phase-3/` — P3-A's own packet doc
   lives there, cross-linked to the Client Health plan).
+- **Academy Solo** is intentionally a time-boxed delivery workstream, not a
+  fifth program initiative. Its packet is the authority for the controlled
+  pilot; the four initiative plans remain authoritative for RBAC, tenant
+  semantics, codebase process, and Client Health impact.
 - **Codebase Optimization**'s Phase 2.6 stabilization is the operational
   execution lane for bug fixes and consolidation surfaced across all
   three other initiatives' investigation work — it does not own their
@@ -114,6 +128,11 @@ runtime or production work begins.
   disposition now record retaining the current composite jobs without
   restart/repair; replacement-shadow, freshness/quality, and consultant-data
   gates remain open.
+- **Academy Solo Phase 1 is implementation-gated, not commercially launched:**
+  exact catalogue, named-account, staff-role, and webinar/replay decisions,
+  plus authenticated negative-case verification, remain required. Public
+  checkout, billing, Team/Elite, and legacy-user conversion remain out of
+  scope.
 
 ## Recent relevant audit entries
 

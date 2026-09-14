@@ -5,6 +5,83 @@ import type { Json } from "@/integrations/supabase/types";
 
 const TENANT_KEY = "academy-tenant-access";
 
+type AcademySoloAction = "activate" | "suspend" | "reactivate" | "end" | "settings_updated";
+
+type TenantAccessSnapshot = Pick<
+  TenantRow,
+  "academy_access_enabled" | "academy_max_users" | "academy_subscription_expires_at" | "metadata"
+>;
+
+function academySoloAction(
+  previousEnabled: boolean,
+  nextEnabled: boolean,
+  metadata: Json | null | undefined,
+): AcademySoloAction {
+  if (previousEnabled === nextEnabled) return "settings_updated";
+  if (!nextEnabled) return "suspend";
+  const previousAction = academySoloStatus(metadata);
+  return previousAction === "suspend" || previousAction === "end" ? "reactivate" : "activate";
+}
+
+function academySoloStatus(metadata: Json | null | undefined): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const solo = (metadata as Record<string, unknown>).academy_solo;
+  if (!solo || typeof solo !== "object" || Array.isArray(solo)) return null;
+  const status = (solo as Record<string, unknown>).status;
+  return typeof status === "string" ? status : null;
+}
+
+function academyNotes(metadata: Json | null | undefined): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const value = (metadata as Record<string, unknown>).academy_notes;
+  return typeof value === "string" ? value : null;
+}
+
+async function manageAcademySoloAccess(
+  tenantId: number,
+  requested: {
+    lifecycleAction?: AcademySoloAction;
+    academy_access_enabled?: boolean;
+    academy_solo?: boolean;
+    academy_max_users?: number | null;
+    academy_subscription_expires_at?: string | null;
+    metadata?: Json;
+  },
+) {
+  const { data: current, error: currentError } = await supabase
+    .from("tenants")
+    .select("academy_access_enabled, academy_max_users, academy_subscription_expires_at, metadata")
+    .eq("id", tenantId)
+    .single();
+  if (currentError) throw currentError;
+
+  const snapshot = current as TenantAccessSnapshot;
+  const enabled = requested.academy_access_enabled ?? snapshot.academy_access_enabled ?? false;
+  const metadata = requested.metadata ?? snapshot.metadata;
+  const soloPilot = requested.academy_solo ?? Boolean(
+    metadata && typeof metadata === "object" && !Array.isArray(metadata) &&
+    (metadata as Record<string, unknown>).academy_solo,
+  );
+  const { error } = await supabase.rpc("manage_academy_solo_access", {
+    p_tenant_id: tenantId,
+    p_action: requested.lifecycleAction ?? academySoloAction(
+      snapshot.academy_access_enabled ?? false,
+      enabled,
+      snapshot.metadata,
+    ),
+    p_enabled: enabled,
+    p_max_users: requested.academy_max_users !== undefined
+      ? requested.academy_max_users
+      : snapshot.academy_max_users,
+    p_expires_at: requested.academy_subscription_expires_at !== undefined
+      ? requested.academy_subscription_expires_at
+      : snapshot.academy_subscription_expires_at,
+    p_notes: academyNotes(metadata),
+    p_is_solo_pilot: soloPilot,
+  });
+  if (error) throw error;
+}
+
 export interface TenantRow {
   id: number;
   name: string;
@@ -63,11 +140,7 @@ export function useToggleTenantAccess() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
-      const { error } = await supabase
-        .from("tenants")
-        .update({ academy_access_enabled: enabled })
-        .eq("id", id);
-      if (error) throw error;
+      await manageAcademySoloAccess(id, { academy_access_enabled: enabled });
     },
     onSuccess: (_, vars) => {
       toast.success(`Academy access ${vars.enabled ? "enabled" : "disabled"}`);
@@ -83,17 +156,15 @@ export function useUpdateTenantAccess() {
     mutationFn: async ({ tenantId, data }: {
       tenantId: number;
       data: {
+        lifecycleAction?: AcademySoloAction;
         academy_access_enabled?: boolean;
+        academy_solo?: boolean;
         academy_max_users?: number | null;
         academy_subscription_expires_at?: string | null;
         metadata?: Json;
       };
     }) => {
-      const { error } = await supabase
-        .from("tenants")
-        .update(data)
-        .eq("id", tenantId);
-      if (error) throw error;
+      await manageAcademySoloAccess(tenantId, data);
     },
     onSuccess: () => {
       toast.success("Academy settings saved");

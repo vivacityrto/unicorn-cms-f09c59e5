@@ -49,6 +49,7 @@ export default function AcademyTenantAccessPage() {
 
   // Drawer form state
   const [formAccess, setFormAccess] = useState(false);
+  const [formSoloPilot, setFormSoloPilot] = useState(false);
   const [formMaxUsers, setFormMaxUsers] = useState<number | "">("");
   const [formExpires, setFormExpires] = useState<Date | undefined>();
   const [formNotes, setFormNotes] = useState("");
@@ -75,6 +76,10 @@ export default function AcademyTenantAccessPage() {
   const openDrawer = (t: TenantRow) => {
     setDrawerTenant(t);
     setFormAccess(t.academy_access_enabled);
+    setFormSoloPilot(Boolean(
+      t.metadata && typeof t.metadata === "object" && !Array.isArray(t.metadata) &&
+      (t.metadata as Record<string, unknown>).academy_solo,
+    ));
     setFormMaxUsers(t.academy_max_users ?? "");
     setFormExpires(t.academy_subscription_expires_at ? new Date(t.academy_subscription_expires_at) : undefined);
     setFormNotes((t.metadata as { academy_notes?: string } | null)?.academy_notes ?? "");
@@ -163,6 +168,7 @@ export default function AcademyTenantAccessPage() {
         tenantId: drawerTenant.id,
         data: {
           academy_access_enabled: formAccess,
+          academy_solo: formSoloPilot,
           academy_max_users: formMaxUsers === "" ? null : formMaxUsers as number,
           academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
           metadata: newMeta,
@@ -179,7 +185,7 @@ export default function AcademyTenantAccessPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tenant Access</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Control Academy access and subscription settings for each client
+            Control Academy access and the manually provisioned Solo pilot lifecycle for each client
           </p>
         </div>
 
@@ -336,9 +342,27 @@ export default function AcademyTenantAccessPage() {
           </SheetHeader>
 
           <div className="space-y-6 py-6">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Academy Solo pilot</p>
+              <p className="mt-1">
+                Use an existing named user with Academy-only membership. This action changes protected Academy access,
+                never creates an identity, package, RTO record, or payment.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between">
               <Label className="text-base font-medium">Academy Access</Label>
               <Switch checked={formAccess} onCheckedChange={setFormAccess} />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div>
+                <Label className="text-base font-medium">Academy Solo pilot</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Explicitly mark this tenant for the one-user manual Solo lifecycle. Leave off for existing RTO Academy access.
+                </p>
+              </div>
+              <Switch checked={formSoloPilot} onCheckedChange={setFormSoloPilot} />
             </div>
 
             <div className="space-y-2">
@@ -459,6 +483,38 @@ export default function AcademyTenantAccessPage() {
 
           <SheetFooter className="gap-2">
             <Button variant="outline" onClick={() => setDrawerTenant(null)}>Cancel</Button>
+            {Boolean(
+              drawerTenant?.metadata &&
+              typeof drawerTenant.metadata === "object" &&
+              !Array.isArray(drawerTenant.metadata) &&
+              (drawerTenant.metadata as Record<string, unknown>).academy_solo,
+            ) && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (!drawerTenant) return;
+                  const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, unknown>;
+                  const newMeta = { ...existingMeta, academy_notes: formNotes || null };
+                  saveMutation.mutate(
+                    {
+                      tenantId: drawerTenant.id,
+                      data: {
+                        lifecycleAction: "end",
+                        academy_access_enabled: false,
+                        academy_solo: true,
+                        academy_max_users: formMaxUsers === "" ? null : formMaxUsers as number,
+                        academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
+                        metadata: newMeta,
+                      },
+                    },
+                    { onSuccess: () => setDrawerTenant(null) },
+                  );
+                }}
+                disabled={saveMutation.isPending}
+              >
+                End Solo Access
+              </Button>
+            )}
             <Button onClick={handleSaveSettings} disabled={saveMutation.isPending}>
               Save Settings
             </Button>
