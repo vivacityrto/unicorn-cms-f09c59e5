@@ -24,6 +24,7 @@ type Payload = {
 };
 
 const VIVACITY_TENANT_ID = 6372;
+const QA_PROJECT_URL = "https://qfpxvumcrnzrjyvqkicq.supabase.co";
 const VIVACITY_ROLES: UnicornRole[] = [
   "Super Admin", "Team Leader", "Team Member",
   "Integrator", "BGT", "CSC", "CET",
@@ -686,7 +687,8 @@ serve(async (req) => {
     // without sending real Mailgun mail. The environment and mode checks are
     // intentionally fail-closed: production and unknown values still send.
     const invitationEmailMode = Deno.env.get('INVITATION_EMAIL_MODE') ?? 'send';
-    const invitationEmailEnvironment = Deno.env.get('INVITATION_EMAIL_ENVIRONMENT') ?? '';
+    const invitationEmailEnvironment =
+      Deno.env.get('INVITATION_EMAIL_ENVIRONMENT') ?? (SUPABASE_URL === QA_PROJECT_URL ? 'qa' : '');
     const suppressQaDelivery =
       invitationEmailMode === 'qa-no-send' && invitationEmailEnvironment === 'qa';
 
