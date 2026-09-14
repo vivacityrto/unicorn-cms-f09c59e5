@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unicorn.invalid/client-health/h0/run-ledger.schema.json",
+  "title": "Client Health versioned run ledger",
+  "description": "Synthetic/preparation contract for an observable Client Health run. It does not authorize a forecast job or score.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "metric",
+    "contract_version",
+    "status",
+    "requested_at",
+    "started_at",
+    "completed_at",
+    "source_watermark",
+    "input",
+    "output",
+    "source_quality",
+    "error",
+    "owner",
+    "retry_key",
+    "retention_ref"
+  ],
+  "properties": {
+    "run_id": { "type": "string", "minLength": 1 },
+    "metric": { "type": "string", "minLength": 1 },
+    "contract_version": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["success", "partial", "failed", "aborted"] },
+    "requested_at": { "type": "string", "format": "date-time" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "source_watermark": { "type": ["string", "null"] },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row_count", "distinct_tenant_count", "skipped_count", "invalid_count", "error_count"],
+      "properties": {
+        "row_count": { "type": "integer", "minimum": 0 },
+        "distinct_tenant_count": { "type": "integer", "minimum": 0 },
+        "skipped_count": { "type": "integer", "minimum": 0 },
+        "invalid_count": { "type": "integer", "minimum": 0 },
+        "error_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row_count", "distinct_tenant_count"],
+      "properties": {
+        "row_count": { "type": "integer", "minimum": 0 },
+        "distinct_tenant_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "source_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["freshness_percent", "coverage_percent"],
+      "properties": {
+        "freshness_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "coverage_percent": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "diagnostic_ref"],
+      "properties": {
+        "class": { "type": ["string", "null"] },
+        "diagnostic_ref": { "type": ["string", "null"] }
+      }
+    },
+    "owner": { "type": "string", "minLength": 1 },
+    "retry_key": { "type": "string", "minLength": 1 },
+    "retention_ref": { "type": "string", "minLength": 1 }
+  }
+}
