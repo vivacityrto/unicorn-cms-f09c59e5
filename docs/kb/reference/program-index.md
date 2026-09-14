@@ -129,10 +129,11 @@ runtime or production work begins.
   restart/repair; replacement-shadow, freshness/quality, and consultant-data
   gates remain open.
 - **Academy Solo Phase 1 is implementation-gated, not commercially launched:**
-  exact catalogue, named-account, staff-role, and webinar/replay decisions,
-  plus authenticated negative-case verification, remain required. Public
-  checkout, billing, Team/Elite, and legacy-user conversion remain out of
-  scope.
+  the controlled pilot, published-course catalogue, all-internal-staff scope,
+  Vivacity Academy course/replay interpretation, and identity creation path
+  are approved. The first tenant/user fixture and authenticated negative-case
+  verification remain required. Public checkout, billing, Team/Elite, and
+  legacy-user conversion remain out of scope.
 
 ## Recent relevant audit entries
 

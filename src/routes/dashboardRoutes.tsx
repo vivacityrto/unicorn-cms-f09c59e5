@@ -9,6 +9,7 @@ const DashboardLayoutRoute = lazy(() => import("@/components/layout/DashboardLay
 // always allowed by ProtectedRoute). Was a local const in App.tsx before
 // these routes moved here.
 const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
+const ACADEMY_TENANT_ACCESS_ROLES = ["Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"];
 
 const AdminManageStages = lazy(() => import("@/pages/AdminManageStages"));
 const AdminStageDetail = lazy(() => import("@/pages/AdminStageDetail"));
@@ -608,7 +609,6 @@ export const dashboardLayoutRoutes = (
     <Route element={<ProtectedRoute allowedRoles={ACADEMY_BUILDER_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/superadmin/academy/enrollments" element={<AcademyEnrolmentsPage />} />
       <Route path="/superadmin/workforce-pdp" element={<SuperAdminWorkforcePdp />} />
-      <Route path="/superadmin/academy/tenant-access" element={<AcademyTenantAccessPage />} />
       <Route path="/superadmin/academy/certificates" element={<AcademyCertificatesAdminPage />} />
       <Route path="/superadmin/academy/builder" element={<AcademyBuilderLibrary />} />
       <Route path="/superadmin/academy/add-course" element={<AcademyAddCoursePage />} />
@@ -616,6 +616,9 @@ export const dashboardLayoutRoutes = (
       <Route path="/superadmin/academy/course-cleanup" element={<AcademyCourseCleanupPage />} />
       <Route path="/superadmin/academy/tag-management" element={<AcademyTagManagementPage />} />
       <Route path="/superadmin/academy/builder/:courseId" element={<AcademyBuilderCourse />} />
+    </Route>
+    <Route element={<ProtectedRoute allowedRoles={ACADEMY_TENANT_ACCESS_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
+      <Route path="/superadmin/academy/tenant-access" element={<AcademyTenantAccessPage />} />
     </Route>
     <Route
       element={

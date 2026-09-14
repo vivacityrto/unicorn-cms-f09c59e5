@@ -39,6 +39,8 @@ interface TenantInviteDialogProps {
   tenantId: number;
   tenantName: string;
   onSuccess?: () => void;
+  initialRelationshipRole?: RelationshipRole;
+  sendInvitationByDefault?: boolean;
 }
 
 const VIVACITY_TENANT_ID = 6372;
@@ -66,6 +68,8 @@ export function TenantInviteDialog({
   tenantId,
   tenantName,
   onSuccess,
+  initialRelationshipRole,
+  sendInvitationByDefault = false,
 }: TenantInviteDialogProps) {
   const { session } = useAuth();
   const isClientTenant = tenantId !== VIVACITY_TENANT_ID;
@@ -73,9 +77,9 @@ export function TenantInviteDialog({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   // For client tenants, `role` holds a RelationshipRole value; for Vivacity, an unicorn_role string.
-  const [role, setRole] = useState<string>(() => getDefaultRole(tenantId));
+  const [role, setRole] = useState<string>(() => initialRelationshipRole ?? getDefaultRole(tenantId));
   const [isSending, setIsSending] = useState(false);
-  const [sendInvitation, setSendInvitation] = useState(false);
+  const [sendInvitation, setSendInvitation] = useState(sendInvitationByDefault);
   const [position, setPosition] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
 
@@ -93,8 +97,9 @@ export function TenantInviteDialog({
 
   // Reset role default whenever the dialog opens or tenant changes
   useEffect(() => {
-    setRole(getDefaultRole(tenantId));
-  }, [tenantId, open]);
+    setRole(initialRelationshipRole ?? getDefaultRole(tenantId));
+    setSendInvitation(sendInvitationByDefault);
+  }, [initialRelationshipRole, sendInvitationByDefault, tenantId, open]);
 
   // For client tenants: fetch existing primary/secondary occupancy so we can
   // disable those options in the dropdown.
@@ -157,10 +162,10 @@ export function TenantInviteDialog({
     setFirstName('');
     setLastName('');
     setEmail('');
-    setRole(getDefaultRole(tenantId));
+    setRole(initialRelationshipRole ?? getDefaultRole(tenantId));
     setPosition('');
     setPhoneNumber('');
-    setSendInvitation(false);
+    setSendInvitation(sendInvitationByDefault);
     onOpenChange(false);
   };
 

@@ -9,8 +9,13 @@ const migrationPath = resolve(
   here,
   "../../migrations/20260914120000_academy_solo_access_boundary.sql",
 );
+const staffMigrationPath = resolve(
+  here,
+  "../../migrations/20260914060040_academy_solo_internal_staff_and_demo_invite_support.sql",
+);
 
 const migration = await readFile(migrationPath, "utf8");
+const staffMigration = await readFile(staffMigrationPath, "utf8");
 
 test("Academy Solo migration has a recursion-safe server entitlement gate", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.has_academy_access_safe\(p_user_id uuid\)/);
@@ -47,4 +52,13 @@ test("Solo lifecycle writes are staff-only and audited", () => {
   assert.match(migration, /INSERT INTO public\.audit_eos_events/);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.manage_academy_solo_access/);
   assert.doesNotMatch(migration, /ALTER TABLE public\.tenants[\s\S]*tenant_type/);
+});
+
+test("Solo lifecycle capability covers every active internal staff role", () => {
+  for (const role of ["Super Admin", "Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"]) {
+    assert.match(
+      staffMigration,
+      new RegExp(`academy\\.tenant_access\\.manage'.*'${role}'.*'full'`),
+    );
+  }
 });

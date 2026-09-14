@@ -1,6 +1,6 @@
 # Academy Solo MVP — Phase 1 implementation packet
 
-> **Status:** implementation in progress — controlled pilot only  
+> **Status:** implementation in progress — controlled pilot approved
 > **Started:** 2026-09-14  
 > **Target:** pilot-ready by 2026-09-15, subject to the approval gates below  
 > **Owner:** Academy Solo delivery workstream  
@@ -23,7 +23,8 @@ controls.
 
 The pilot is coherent only when all of these are true:
 
-- one existing or manually pre-provisioned identity is reused;
+- one existing or newly invited identity is used through the existing
+  `invite-user` / Academy User flow;
 - exactly one named learner is given an Academy-only membership for the pilot;
 - Academy catalogue, enrolment, lesson content, assessment, progress writes,
   and certificate issuance are protected server-side;
@@ -49,7 +50,7 @@ protected-content boundary.
 | Initiative | Solo dependency | Decision for this packet |
 |---|---|---|
 | Codebase Optimization | Route/guard and test discipline | Use existing Academy routes; add only bounded code and focused verification. |
-| RBAC v6 | Server authorization and staff capability boundary | Do not wait for the full RBAC v6 program; use the existing staff permission for the pilot and enforce content access in RLS. |
+| RBAC v6 | Server authorization and staff capability boundary | Do not wait for the full RBAC v6 program; grant the existing Academy tenant-access capability to all active internal staff and enforce content access in RLS. |
 | Tenant Operating Model | Identity/membership semantics and tenant isolation | Reuse existing tenant + `tenant_users`; do not run contact promotion, tenant cutover, or RTO onboarding. |
 | Client Health Activity Analytics | Avoid contaminating health/ops metrics | Solo accounts are not Client Health subjects; no analytics schema or metric work is part of this packet. |
 
@@ -72,9 +73,10 @@ protected-content boundary.
    helper and tighten catalogue, lesson, assessment, question, enrolment,
    attempt, and progress policies. Keep history readable after access ends.
 2. **Manual lifecycle.** Provide staff-only activation/suspension/reactivation/
-   end actions for a pre-provisioned account, with an audit event containing
-   actor, tenant, user, prior state, new state, and reason. No automated
-   account creation or payment collection in this slice.
+   end actions for a tenant and named learner, with an audit event containing
+   actor, tenant, prior state, new state, and reason. Identity creation uses
+   the existing Academy User invitation flow; no new auth system or payment
+   collection is introduced.
 3. **Named-user guard.** Enforce the one-user pilot operationally and surface
    the Academy-only membership clearly to staff. Do not alter RTO contacts or
    ordinary client user roles.
@@ -96,19 +98,42 @@ parentheses until answered:
    course, or a named allowlist excluding trainer-facing/private content?
    (**Working assumption: every published course approved for the pilot.**)
 3. Which staff roles may activate, suspend, reactivate, and end Solo access?
-   (**Working assumption: existing Academy tenant-access managers, subject to
-   the existing server-side staff gate.**)
+   (**Confirmed: all active internal Vivacity staff.**)
 4. Are monthly live webinars and on-demand replays required on day one, and
    do they already have the same Academy access boundary? (**Working
    assumption: only content already reachable through the Academy catalogue;
    webinar entitlements are not invented in this slice.**)
 5. Should the pilot invite an existing authenticated user only, or may staff
-   create a new identity after a separate side-effect review? (**Working
-   assumption: existing/pre-provisioned user only.**)
+   create a new identity after a separate side-effect review? (**Confirmed:
+   identity creation is allowed through the existing Academy User invitation
+   flow.**)
 6. Which tenant and named user are the first pilot, who owns the account, and
-   what are the activation and end dates? (**Working assumption: one approved
-   tenant, one existing user, a named internal owner, and an explicit end date
-   before hosted activation.**)
+   what are the activation and end dates? (**Confirmed for local testing:
+   use the Demo Academy User fixture below; the real tenant/email remains
+   local-dev/QA data until supplied.**)
+
+## Local demo test data
+
+The repository has no local Supabase service; `npm run dev` uses the configured
+hosted Supabase project. These values are therefore a safe test-data recipe,
+not an automatic production seed:
+
+- Tenant label: `Academy Solo Demo`
+- Learner name: `Demo Academy User`
+- Learner email: `demo.academy.user@example.test` (replace with an inbox that
+  can receive the invitation when testing the acceptance flow)
+- Relationship role: `Academy User` / `academy_user`
+- Academy Solo marker: on
+- Maximum users: `1`
+- Catalogue: every published Vivacity Academy course
+- Activation: `2026-09-14`
+- Suggested expiry: `2026-09-21`
+- Internal note: `Solo pilot — Demo Academy User — local verification`
+
+For local verification, open the staff Academy Tenant Access screen, mark the
+tenant as an Academy Solo pilot, save it, then use **Invite Academy User**.
+The invitation defaults to the real identity-creation path; do not use the
+no-email path if you need the user to authenticate.
 
 ## Stop/release gates
 

@@ -20,7 +20,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, startOfMonth, endOfMonth, addMonths, isAfter, isBefore } from "date-fns";
 import {
-  Search, Settings, Eye, CalendarIcon, Shield, ShieldOff, Clock, X, Plus,
+  Search, Settings, Eye, CalendarIcon, Shield, ShieldOff, Clock, X, Plus, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -36,6 +36,7 @@ import {
   type TenantRow,
 } from "@/hooks/academy/useTenantAcademyAccess";
 import { usePermission } from "@/hooks/usePermission";
+import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 
 type StatusTab = "all" | "enabled" | "disabled" | "expiring";
 
@@ -45,6 +46,7 @@ export default function AcademyTenantAccessPage() {
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
   const [drawerTenant, setDrawerTenant] = useState<TenantRow | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
 
   // Drawer form state
@@ -71,6 +73,12 @@ export default function AcademyTenantAccessPage() {
   const addRuleMutation = useAddPackageCourseRule();
   const removeRuleMutation = useRemovePackageCourseRule();
   const { packages: allPackages, courses: allCourses } = useRuleFormOptions(showAddRule);
+  const persistedSoloPilot = Boolean(
+    drawerTenant?.metadata &&
+    typeof drawerTenant.metadata === "object" &&
+    !Array.isArray(drawerTenant.metadata) &&
+    (drawerTenant.metadata as Record<string, unknown>).academy_solo,
+  );
 
   // ── Open drawer ──
   const openDrawer = (t: TenantRow) => {
@@ -185,7 +193,7 @@ export default function AcademyTenantAccessPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tenant Access</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Control Academy access and the manually provisioned Solo pilot lifecycle for each client
+            Control Academy access and the manually managed Solo pilot lifecycle for each client
           </p>
         </div>
 
@@ -335,7 +343,7 @@ export default function AcademyTenantAccessPage() {
       </div>
 
       {/* ── Settings Drawer ── */}
-      <Sheet open={!!drawerTenant} onOpenChange={(open) => { if (!open) setDrawerTenant(null); }}>
+      <Sheet open={!!drawerTenant} onOpenChange={(open) => { if (!open) { setDrawerTenant(null); setShowInvite(false); } }}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{drawerTenant?.name} — Academy Settings</SheetTitle>
@@ -345,8 +353,8 @@ export default function AcademyTenantAccessPage() {
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
               <p className="font-medium text-foreground">Academy Solo pilot</p>
               <p className="mt-1">
-                Use an existing named user with Academy-only membership. This action changes protected Academy access,
-                never creates an identity, package, RTO record, or payment.
+                Use an existing named user or invite a new Academy User. This action changes protected Academy access,
+                never creates a package, RTO record, or payment.
               </p>
             </div>
 
@@ -364,6 +372,22 @@ export default function AcademyTenantAccessPage() {
               </div>
               <Switch checked={formSoloPilot} onCheckedChange={setFormSoloPilot} />
             </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => setShowInvite(true)}
+              disabled={!formSoloPilot || !formAccess || !persistedSoloPilot}
+            >
+              <UserPlus className="h-4 w-4" />
+              Invite Academy User
+            </Button>
+            {(!formSoloPilot || !formAccess || !persistedSoloPilot) && (
+              <p className="-mt-4 text-xs text-muted-foreground">
+                Save an enabled Academy Solo pilot before inviting its named learner.
+              </p>
+            )}
 
             <div className="space-y-2">
               <Label>Maximum Users</Label>
@@ -521,6 +545,18 @@ export default function AcademyTenantAccessPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      {drawerTenant && (
+        <TenantInviteDialog
+          open={showInvite}
+          onOpenChange={setShowInvite}
+          tenantId={drawerTenant.id}
+          tenantName={drawerTenant.name}
+          initialRelationshipRole="academy_user"
+          sendInvitationByDefault
+          onSuccess={() => setShowInvite(false)}
+        />
+      )}
     </>
   );
 }

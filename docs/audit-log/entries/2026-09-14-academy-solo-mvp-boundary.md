@@ -8,8 +8,10 @@
 
 ## Decision
 
-Implement Academy Solo as a manually provisioned, one-named-user controlled
-pilot at the existing Academy access boundary. Do not revive the deprecated
+Implement Academy Solo as a controlled, one-named-user pilot at the existing
+Academy access boundary. All active internal Vivacity staff may manage the
+pilot lifecycle. Identity creation uses the existing Academy User invitation
+flow. Do not revive the deprecated
 `tenants.tenant_type` tier model, use a Sidekick package as a security
 authority, create a second identity system, or introduce public billing in
 this delivery slice.
@@ -26,18 +28,22 @@ this delivery slice.
   and certificates as readable history while requiring current Academy access
   for progress/attempt writes and active completion.
 - Added a staff-only `manage_academy_solo_access` RPC that updates the existing
-  Academy fields and writes an `audit_eos_events` lifecycle record. It does not
-  create identities, packages, RTO records, or payment state.
+  Academy fields and writes an `audit_eos_events` lifecycle record. The RPC
+  does not create packages, RTO records, or payment state; identity creation
+  remains in the existing invitation flow.
 - Routed the existing staff Academy Tenant Access page through that audited
-  RPC and added an explicit Solo-pilot marker/end action so ordinary RTO
-  Academy access is not silently reclassified.
+  RPC, expanded the staff route/capability to all active internal staff, and
+  added an explicit Solo-pilot marker/end action so ordinary RTO Academy access
+  is not silently reclassified.
+- Added a bounded **Invite Academy User** action that reuses the existing
+  invitation/identity flow and defaults to the `academy_user` relationship.
 - Added static Edge contract tests and the Phase 1 implementation packet,
   including the four-initiative dependency matrix and consolidated product
   questions.
 
 ## Verification
 
-- `npm run test:edge` — passed (297 tests, including the four new Academy Solo
+- `npm run test:edge` — passed (298 tests, including the five new Academy Solo
   contract tests).
 - `npm run lint:ratchet` — passed for the changed frontend files.
 - `npm run typecheck` — passed for the final tree.
@@ -56,7 +62,7 @@ this delivery slice.
 ## Hosted/deployment boundary
 
 No Supabase migration, hosted function, production data, production tenant,
-or production account was changed by this worktree. Applying the migration
-requires review of the exact catalogue, pilot account, staff-role scope, and
-webinar/replay interpretation, followed by the repository's normal migration
-approval and rollback process.
+or production account was changed by this worktree. Applying the migrations
+requires selecting the QA tenant and real invitation inbox, followed by the
+repository's normal migration approval, negative-case QA, and rollback
+process.
