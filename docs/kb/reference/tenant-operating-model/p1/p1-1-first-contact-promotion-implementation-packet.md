@@ -46,7 +46,7 @@ promotion/acceptance writer family:
 | Boundary | Current source evidence | Proposed packet treatment |
 |---|---|---|
 | Promotion UI | `TenantContactsSection.tsx:247-277` calls `promoteContactViaInvite(tenantId, contact, promoteRole)` and exposes an explicit relationship-role selector | Characterize and preserve role selection; no label-based Parent/Child inference |
-| Promotion adapter | `src/features/client-identity/promoteContact.ts` invokes `invite-user` with `skip_email: false` | Keep standard invitation path; define idempotency, pending-state, and error contract |
+| Promotion adapter | `src/features/client-identity/promoteContact.ts` invokes `invite-user` with `skip_email: false` | Keep the current production invitation contract; use the explicit QA no-send mode for characterization so QA never calls Mailgun; define idempotency, pending-state, and error contract |
 | Invitation writer | `supabase/functions/invite-user/index.ts` validates `relationship_role` and creates the pending invitation path | Review authenticated caller, tenant-admin boundary, role mapping, duplicate/seat behavior, and audit evidence |
 | Acceptance materialization | `accept_invitation_v2` creates/relinks `public.users`, `tenant_users`, and `tenant_members` after acceptance | Treat acceptance as the access materialization boundary; prove exactly-once behavior |
 | Contact presentation | `TenantContactsSection.tsx:282` filters active, unpromoted contacts; pending state is a documented target | Preserve contact visibility with `Pending invitation`; block duplicate promotion |
@@ -66,8 +66,8 @@ packet, not an authorization to change any of these boundaries:
 | Contact surface | `TenantContactsSection.tsx:102-134` reads `tenant_contacts` and pending `user_invitations`; `:282-287` presents active, unpromoted persisted contacts plus legacy contacts. | Pre-login contacts have no seat or access row. Pending state is inferred by normalized email and must not be treated as acceptance. |
 | Role selection | `TenantContactsSection.tsx:241-250` defaults to `user`, lets the operator choose a `RelationshipRole`, and calls the adapter with the selected value. | Relationship role is explicit UI input; no Parent/Child inference is performed by the caller. |
 | Adapter | `src/features/client-identity/promoteContact.ts:10-41` requires a session, invokes `invite-user`, maps `primary_contact`/`secondary_contact` to legacy `Admin` and other roles to `User`, and always uses `skip_email: false`. | The adapter preserves the standard invitation contract. Its focused test oracle is `src/test/client-identity/promote-contact.test.ts:26-60` (payload plus unauthenticated denial). |
-| Tenant-admin guard | `invite-user/index.ts:64-120,199-236` resolves the bearer identity, loads `public.users`, verifies target-tenant membership in `tenant_users`, and restricts client invites to `academy_user`, `secondary_contact`, or `user`; non-staff may assign only `Admin` or `User`. | **Open policy gate:** the UI offers `primary_contact`, but a tenant-admin caller receives `RELATIONSHIP_ROLE_NOT_ALLOWED` for that selection. Do not silently widen the Edge allowlist; TOM/RBAC/security must decide whether primary promotion is staff-only or the tenant-admin contract changes. |
-| Pending invitation | `invite-user/index.ts:613-681` performs capacity checking, rejects an active same-email/tenant pending invitation with `INVITE_EXISTS`, deletes an expired one, inserts `user_invitations` with the explicit `relationship_role`, and invokes `send-invitation-email`. | The flow has a duplicate/error oracle, but concurrent duplicate-attempt behavior and email-dispatch failure semantics still need a named QA case. |
+| Tenant-admin guard | `invite-user/index.ts:64-120,199-236` resolves the bearer identity, loads `public.users`, verifies target-tenant membership in `tenant_users`, and restricts client invites to `academy_user`, `secondary_contact`, or `user`; non-staff may assign only `Admin` or `User`. | **Resolved policy:** primary-contact promotion is staff-only. Preserve the current tenant-admin denial (`RELATIONSHIP_ROLE_NOT_ALLOWED`) and do not widen the Edge allowlist; any future change requires a separate RBAC/security packet. |
+| Pending invitation | `invite-user/index.ts:613-681` performs capacity checking, rejects an active same-email/tenant pending invitation with `INVITE_EXISTS`, deletes an expired one, inserts `user_invitations` with the explicit `relationship_role`, and invokes `send-invitation-email` unless the explicit QA no-send mode is requested. | QA characterization must use no-send mode and assert that no Mailgun delivery is attempted. Concurrent duplicate-attempt behavior and email-dispatch failure semantics remain separate cases for any production-delivery change. |
 | Acceptance | `20260827020000_contact_swap_promote_timeline_events.sql:190-254` authenticates the token/user relationship, handles pending/accepted/expired states, and resolves the invitation relationship role. Lines `262-343` derive legacy role/access fields and upsert `public.users`, `tenant_users`, and `tenant_members`; `:345-363` updates the profile, marks the invitation accepted, and archives/matches the contact; `:365-413` writes timeline/audit evidence. | This is a `SECURITY DEFINER` materialization boundary and is out of scope for a compatibility-only frontend change. Exactly-once retry and concurrent acceptance require direct server-side characterization before authorization. |
 
 The current mapping is therefore:
@@ -125,7 +125,10 @@ The packet must preserve these invariants:
 ### In scope for a future authorized canary
 
 1. One approved synthetic QA tenant and one contact with no auth identity.
-2. The existing contact promotion UI and standard `invite-user` email path.
+2. The existing contact promotion UI and `invite-user` path, exercised in QA
+   with the explicit no-send delivery mode. The current production
+   `skip_email: false` behavior is characterized but not changed by this
+   packet; changing production delivery requires separate approval.
 3. One explicit relationship role selected from the approved role set.
 4. Pending invitation presentation and duplicate-promotion suppression.
 5. One recipient acceptance through `accept_invitation_v2`.
@@ -271,7 +274,11 @@ The following are packet gates, not implied approvals:
 - [ ] TOM confirms contact versus authenticated membership semantics and the
       exact pending-invitation presentation.
 - [ ] RBAC confirms the promotion actor, tenant scope, relationship-role
-      handling, and direct denial expectations.
+      handling, direct denial expectations, and the staff-only primary-contact
+      promotion boundary.
+- [ ] QA characterization uses the explicit no-send delivery mode and records
+      the no-external-email assertion; no production Mailgun behavior is
+      changed by this packet.
 - [ ] Security reviews the identity-linking, invitation, acceptance, retry,
       and audit boundaries.
 - [ ] Client Health confirms whether any contact/invitation/membership event is
