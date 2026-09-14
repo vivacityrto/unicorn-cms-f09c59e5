@@ -112,7 +112,22 @@ async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
   if (invitationsError) throw new Error(`recovery invitation lookup: ${invitationsError.message}`);
 
   const hasScopedRows = (contacts?.length ?? 0) > 0 || (invitations?.length ?? 0) > 0;
-  if (recipient && recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG && !hasScopedRows) {
+  let hasOrphanAuthOnly = false;
+  if (recipient && !hasScopedRows) {
+    const [profileResult, tenantUsersResult, tenantMembersResult] = await Promise.all([
+      serviceClient.from("users").select("user_uuid").eq("user_uuid", recipient.id).limit(1),
+      serviceClient.from("tenant_users").select("user_id").eq("user_id", recipient.id).limit(1),
+      serviceClient.from("tenant_members").select("user_id").eq("user_id", recipient.id).limit(1),
+    ]);
+    if (profileResult.error) throw new Error(`recovery profile lookup: ${profileResult.error.message}`);
+    if (tenantUsersResult.error) throw new Error(`recovery tenant_users lookup: ${tenantUsersResult.error.message}`);
+    if (tenantMembersResult.error) throw new Error(`recovery tenant_members lookup: ${tenantMembersResult.error.message}`);
+    hasOrphanAuthOnly =
+      (profileResult.data?.length ?? 0) === 0 &&
+      (tenantUsersResult.data?.length ?? 0) === 0 &&
+      (tenantMembersResult.data?.length ?? 0) === 0;
+  }
+  if (recipient && recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG && !hasScopedRows && !hasOrphanAuthOnly) {
     throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
   }
 
