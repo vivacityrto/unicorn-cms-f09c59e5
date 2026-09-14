@@ -73,6 +73,20 @@ async function writeResult(result) {
   writeFileSync(RESULT_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");
 }
 
+async function reportBrowserState(page, label) {
+  const bodyText = await page.locator("body").innerText().catch(() => "[body unavailable]");
+  console.error(
+    JSON.stringify({
+      browser_diagnostic: {
+        label,
+        url: page.url(),
+        title: await page.title().catch(() => "[title unavailable]"),
+        body: safeError(bodyText).slice(0, 4000),
+      },
+    }),
+  );
+}
+
 async function recoverFailedRun(serviceClient, tenantId, inviterId, recipient) {
   if (!RECOVERY_RUN_TAG || recipient.user_metadata?.qa_tom_p11_run_tag !== RECOVERY_RUN_TAG) {
     throw new Error("Recipient alias already exists; refuse to reuse a prior run-scoped identity");
@@ -214,7 +228,12 @@ async function main() {
 
       await inviterPage.goto(`${APP_URL}/client/users`, { waitUntil: "domcontentloaded" });
       await uiExpect(inviterPage).not.toHaveURL(/\/login/);
-      await uiExpect(inviterPage.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
+      try {
+        await uiExpect(inviterPage.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
+      } catch (error) {
+        await reportBrowserState(inviterPage, "inviter-users-page");
+        throw error;
+      }
 
       const contactEmail = inviterPage.getByText(RECIPIENT_EMAIL, { exact: true });
       await uiExpect(contactEmail).toBeVisible();
