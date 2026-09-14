@@ -1,6 +1,7 @@
 # TOM P1.1 — first contact-promotion implementation packet
 
-> **Status:** draft implementation packet; planning only; no runtime, schema,
+> **Status:** draft implementation packet; static characterization refreshed
+> 2026-09-14; planning only; no runtime, schema,
 > data, credential, hosted-QA, invitation, or production action authorized
 > by this document.
 >
@@ -51,6 +52,36 @@ The legacy `activate-ghost-user` path, bulk activation action, cohort worker,
 ghost projection/backfill, and any global ledger read swap are explicitly out
 of this first packet. They need separate caller, migration, operational, and
 retirement evidence.
+
+### 1.1 Static characterization refresh (2026-09-14)
+
+The current source confirms the following exact flow. This is evidence for the
+packet, not an authorization to change any of these boundaries:
+
+| Step | Current behavior and source evidence | Gate/implication |
+|---|---|---|
+| Contact surface | `TenantContactsSection.tsx:102-134` reads `tenant_contacts` and pending `user_invitations`; `:282-287` presents active, unpromoted persisted contacts plus legacy contacts. | Pre-login contacts have no seat or access row. Pending state is inferred by normalized email and must not be treated as acceptance. |
+| Role selection | `TenantContactsSection.tsx:241-250` defaults to `user`, lets the operator choose a `RelationshipRole`, and calls the adapter with the selected value. | Relationship role is explicit UI input; no Parent/Child inference is performed by the caller. |
+| Adapter | `src/features/client-identity/promoteContact.ts:10-41` requires a session, invokes `invite-user`, maps `primary_contact`/`secondary_contact` to legacy `Admin` and other roles to `User`, and always uses `skip_email: false`. | The adapter preserves the standard invitation contract. Its focused test oracle is `src/test/client-identity/promote-contact.test.ts:26-60` (payload plus unauthenticated denial). |
+| Tenant-admin guard | `invite-user/index.ts:64-120,199-236` resolves the bearer identity, loads `public.users`, verifies target-tenant membership in `tenant_users`, and restricts client invites to `academy_user`, `secondary_contact`, or `user`; non-staff may assign only `Admin` or `User`. | **Open policy gate:** the UI offers `primary_contact`, but a tenant-admin caller receives `RELATIONSHIP_ROLE_NOT_ALLOWED` for that selection. Do not silently widen the Edge allowlist; TOM/RBAC/security must decide whether primary promotion is staff-only or the tenant-admin contract changes. |
+| Pending invitation | `invite-user/index.ts:613-681` performs capacity checking, rejects an active same-email/tenant pending invitation with `INVITE_EXISTS`, deletes an expired one, inserts `user_invitations` with the explicit `relationship_role`, and invokes `send-invitation-email`. | The flow has a duplicate/error oracle, but concurrent duplicate-attempt behavior and email-dispatch failure semantics still need a named QA case. |
+| Acceptance | `20260827020000_contact_swap_promote_timeline_events.sql:190-254` authenticates the token/user relationship, handles pending/accepted/expired states, and resolves the invitation relationship role. Lines `262-343` derive legacy role/access fields and upsert `public.users`, `tenant_users`, and `tenant_members`; `:345-363` updates the profile, marks the invitation accepted, and archives/matches the contact; `:365-413` writes timeline/audit evidence. | This is a `SECURITY DEFINER` materialization boundary and is out of scope for a compatibility-only frontend change. Exactly-once retry and concurrent acceptance require direct server-side characterization before authorization. |
+
+The current mapping is therefore:
+
+| Selected relationship role | Current legacy/access mapping at acceptance |
+|---|---|
+| `primary_contact` | `tenant_users.role=parent`, `primary_contact=true`, `access_scope=full`; `public.users.unicorn_role=Admin`, `user_type=Client Parent`; `tenant_members.role=Admin`, `status=active` |
+| `secondary_contact` | `tenant_users.role=parent`, `secondary_contact=true`, `access_scope=full`; `public.users.unicorn_role=Admin`, `user_type=Client Parent`; `tenant_members.role=Admin`, `status=active` |
+| `user` | `tenant_users.role=child`, `access_scope=full`; `public.users.unicorn_role=User`, `user_type=Client Child`; `tenant_members.role=General User`, `status=active` |
+| `academy_user` | `tenant_users.role=child`, `access_scope=academy_only`; `public.users.unicorn_role=Academy User`, `user_type=Client Child`; `tenant_members.role=General User`, `status=inactive` |
+
+This mapping describes current compatibility behavior only. It does not
+approve a future RBAC capability, role default, or tenant-membership authority.
+The existing adapter tests are a focused unit oracle for the client-side
+payload/auth guard; they do not prove the Edge denial matrix or the
+`SECURITY DEFINER` acceptance transaction. Those remain required before a
+runtime or server-boundary packet can be authorized.
 
 ## 2. Canonical contract and invariants
 
