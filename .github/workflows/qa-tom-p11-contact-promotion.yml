@@ -55,18 +55,18 @@ jobs:
       - name: Generate inviter storage state
         shell: bash
         env:
-          E2E_EMAIL: tom_qa_20260913_seed_01_client_admin_a@example.qa
+          E2E_EMAIL: tom_qa_20260913_seed_01_client_primary_inviter@example.qa
           E2E_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
-        run: node e2e/auth-setup.mjs tom-p11-client-admin-a
+        run: node e2e/auth-setup.mjs tom-p11-client-primary-inviter
       - name: Run bounded TOM P1.1 canary
         env:
           VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
           QA_APP_URL: http://localhost:8080
-          QA_TOM_CLIENT_ADMIN_A_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
+          QA_TOM_CLIENT_PRIMARY_INVITER_PASSWORD: ${{ secrets.QA_TOM_CLIENT_ADMIN_A_PASSWORD }}
           QA_TOM_P11_RECIPIENT_EMAIL: carl+tom-p11-qa-20260914@complyhub.ai
-          QA_TOM_P11_STORAGE_STATE: playwright/.auth/tom-p11-client-admin-a.json
+          QA_TOM_P11_STORAGE_STATE: playwright/.auth/tom-p11-client-primary-inviter.json
           QA_TOM_P11_RESULT_PATH: qa-artifacts/tom-p11-result.json
           QA_TOM_FIXTURE_TAG: tom_qa_20260913_seed_01
           QA_TOM_P11_RECOVERY_RUN_TAG: ${{ inputs.recovery_run_tag }}

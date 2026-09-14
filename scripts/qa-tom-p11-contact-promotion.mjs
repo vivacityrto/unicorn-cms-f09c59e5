@@ -15,16 +15,16 @@ const QA_PROJECT_URL = `https://${QA_PROJECT_REF}.supabase.co`;
 const APP_URL = process.env.QA_APP_URL ?? "http://localhost:8080";
 const RUN_TAG = process.env.QA_TOM_P11_RUN_TAG ?? `tom_p11_${process.env.GITHUB_RUN_ID ?? Date.now()}`;
 const RECIPIENT_EMAIL = process.env.QA_TOM_P11_RECIPIENT_EMAIL ?? "carl+tom-p11-qa-20260914@complyhub.ai";
-const STORAGE_STATE = process.env.QA_TOM_P11_STORAGE_STATE ?? "playwright/.auth/tom-p11-client-admin-a.json";
+const STORAGE_STATE = process.env.QA_TOM_P11_STORAGE_STATE ?? "playwright/.auth/tom-p11-client-primary-inviter.json";
 const RESULT_PATH = process.env.QA_TOM_P11_RESULT_PATH ?? "qa-artifacts/tom-p11-result.json";
 const TOM_FIXTURE_TAG = process.env.QA_TOM_FIXTURE_TAG ?? "tom_qa_20260913_seed_01";
-const INVITER_EMAIL = `${TOM_FIXTURE_TAG}_client_admin_a@example.qa`;
+const INVITER_EMAIL = `${TOM_FIXTURE_TAG}_client_primary_inviter@example.qa`;
 const RECOVERY_RUN_TAG = process.env.QA_TOM_P11_RECOVERY_RUN_TAG ?? "";
 
 const supabaseUrl = (process.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "");
 const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const inviterPassword = process.env.QA_TOM_CLIENT_ADMIN_A_PASSWORD ?? "";
+const inviterPassword = process.env.QA_TOM_CLIENT_PRIMARY_INVITER_PASSWORD ?? process.env.QA_TOM_CLIENT_ADMIN_A_PASSWORD ?? "";
 
 function requireValue(name, value) {
   if (!value) throw new Error(`Missing required protected value: ${name}`);
@@ -143,7 +143,7 @@ async function main() {
   requireValue("VITE_SUPABASE_URL", supabaseUrl);
   requireValue("VITE_SUPABASE_PUBLISHABLE_KEY", publishableKey);
   requireValue("SUPABASE_SERVICE_ROLE_KEY", serviceRole);
-  requireValue("QA_TOM_CLIENT_ADMIN_A_PASSWORD", inviterPassword);
+  requireValue("QA_TOM_CLIENT_PRIMARY_INVITER_PASSWORD", inviterPassword);
 
   if (supabaseUrl !== QA_PROJECT_URL) {
     throw new Error(`Refusing to run: target must be ${QA_PROJECT_URL}`);

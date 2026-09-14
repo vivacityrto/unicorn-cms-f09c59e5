@@ -52,6 +52,10 @@ email-provider, production-data, or other behavior-bearing changes.
    the allowlisted QA deployment has its existing fail-closed no-send mode
    enabled, no mailbox access is needed; otherwise Mailgun webhook status is
    supplementary delivery evidence, not the source of the invitation token.
+9. **Hosted QA inviter:** use a dedicated synthetic primary-contact persona
+   provisioned by the protected QA seed workflow. Do not change the existing
+   `Client Admin A` fixture to make the canary reachable; its current
+   `relationship_role=user` state remains an intentional baseline.
 
 ## 1. Packet recommendation
 
@@ -187,7 +191,8 @@ The packet must preserve these invariants:
 
 ### In scope for a future authorized canary
 
-1. One approved synthetic QA tenant and one contact with no auth identity.
+1. One approved synthetic QA tenant, one dedicated primary-contact inviter,
+   and one contact with no auth identity.
 2. The existing contact promotion UI and standard `invite-user` path,
    exercised in QA with the controlled plus-alias. The current production
    `skip_email: false` behavior is characterized but not changed by this

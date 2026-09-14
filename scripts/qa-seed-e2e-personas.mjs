@@ -42,6 +42,7 @@ const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const superAdminPassword = process.env.QA_E2E_SUPERADMIN_PASSWORD ?? "";
 const clientPassword = process.env.QA_E2E_CLIENT_PASSWORD ?? "";
 const tomClientAdminAPassword = process.env.QA_TOM_CLIENT_ADMIN_A_PASSWORD ?? "";
+const tomClientPrimaryInviterPassword = process.env.QA_TOM_CLIENT_PRIMARY_INVITER_PASSWORD ?? tomClientAdminAPassword;
 const tomClientUserAPassword = process.env.QA_TOM_CLIENT_USER_A_PASSWORD ?? "";
 const tomClientAdminBPassword = process.env.QA_TOM_CLIENT_ADMIN_B_PASSWORD ?? "";
 const tomCscPassword = process.env.QA_TOM_CSC_PASSWORD ?? "";
@@ -255,6 +256,30 @@ async function ensureTenantUser(tenantId, userId) {
   console.log(`tenant_users: linked tenant ${tenantId} <-> user ${userId} (relationship_role=user, access_scope=full)`);
 }
 
+async function ensureTenantPrimaryContact(tenantId, userId) {
+  const { data: existing, error: findErr } = await svc
+    .from("tenant_users")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (findErr) throw new Error(`tenant_users primary lookup: ${findErr.message}`);
+
+  const payload = {
+    role: "parent",
+    primary_contact: true,
+    secondary_contact: false,
+    access_scope: "full",
+    relationship_role: "primary_contact",
+  };
+  const query = existing
+    ? svc.from("tenant_users").update(payload).eq("id", existing.id)
+    : svc.from("tenant_users").insert({ tenant_id: tenantId, user_id: userId, ...payload });
+  const { error } = await query;
+  if (error) throw new Error(`tenant_users primary upsert: ${error.message}`);
+  console.log(`tenant_users: linked dedicated TOM P1.1 inviter to tenant ${tenantId} (relationship_role=primary_contact, access_scope=full)`);
+}
+
 async function ensureTenantMember(tenantId, userId) {
   const { data: existing, error: findErr } = await svc
     .from("tenant_members")
@@ -320,6 +345,19 @@ async function main() {
   });
   await ensureTenantMember(tenantAId, tomClientAdminAId);
   await ensureTenantUser(tenantAId, tomClientAdminAId);
+
+  const tomClientPrimaryInviterId = await upsertPersona({
+    email: fixtureEmail("client_primary_inviter"),
+    password: tomClientPrimaryInviterPassword,
+    firstName: "TOM QA",
+    lastName: "P1.1 Primary Inviter",
+    unicornRole: "Admin",
+    userType: "Client Parent",
+    tenantId: tenantAId,
+    userId: fixtureUuid("client_primary_inviter"),
+  });
+  await ensureTenantMember(tenantAId, tomClientPrimaryInviterId);
+  await ensureTenantPrimaryContact(tenantAId, tomClientPrimaryInviterId);
 
   const tomClientUserAId = await upsertPersona({
     email: fixtureEmail("client_user_a"),
