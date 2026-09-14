@@ -19,6 +19,15 @@ interface InvitationTokenResult {
   error?: string;
 }
 
+function isAcademySoloMetadata(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return false;
+  }
+
+  const academySolo = (metadata as Record<string, unknown>).academy_solo;
+  return Boolean(academySolo && typeof academySolo === 'object' && !Array.isArray(academySolo));
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unable to validate invitation';
 }
@@ -31,7 +40,7 @@ export default function AcceptInvitation() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [validating, setValidating] = useState(true);
-const [invitationData, setInvitationData] = useState<{
+  const [invitationData, setInvitationData] = useState<{
     email: string;
     tenantId: number | null;
     userType: 'vivacity' | 'client';
@@ -39,6 +48,7 @@ const [invitationData, setInvitationData] = useState<{
     firstName: string | null;
     lastName: string | null;
     unicornRole: string;
+    isAcademySolo: boolean;
   } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -96,19 +106,22 @@ const [invitationData, setInvitationData] = useState<{
       const VIVACITY_TENANT_ID = 6372;
       const isVivacity = data.tenant_id === VIVACITY_TENANT_ID;
       
-      // Fetch tenant name
+      // Fetch tenant context so Academy Solo invitations can use Academy copy
+      // instead of the legacy client/RTO invitation presentation.
       let tenantName: string | null = null;
+      let isAcademySolo = false;
       if (data.tenant_id) {
         const { data: tenantData } = await supabase
           .from('tenants')
-          .select('name')
+          .select('name, metadata')
           .eq('id', data.tenant_id)
           .maybeSingle();
         
         tenantName = tenantData?.name || null;
+        isAcademySolo = isAcademySoloMetadata(tenantData?.metadata);
       }
       
-setInvitationData({
+      setInvitationData({
         email: data.email,
         tenantId: data.tenant_id,
         userType: isVivacity ? 'vivacity' : 'client',
@@ -116,6 +129,7 @@ setInvitationData({
         firstName: data.first_name || null,
         lastName: data.last_name || null,
         unicornRole: data.unicorn_role || (isVivacity ? 'Team Member' : 'User'),
+        isAcademySolo,
       });
       
       // Pre-populate form fields with invitation data
@@ -314,7 +328,10 @@ unicorn_role: invitationData!.unicornRole,
             return;
           }
 
-          toast({ title: 'Account activated!', description: 'Redirecting to your dashboard…' });
+          toast({
+            title: invitationData.isAcademySolo ? 'Welcome to Vivacity Academy!' : 'Account activated!',
+            description: 'Redirecting to your dashboard…',
+          });
           setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
           return;
         }
@@ -334,7 +351,7 @@ unicorn_role: invitationData!.unicornRole,
           }
 
           toast({
-            title: 'Welcome back!',
+            title: invitationData.isAcademySolo ? 'Welcome back to Vivacity Academy!' : 'Welcome back!',
             description: 'Your account was already set up. Redirecting to dashboard...',
           });
           setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
@@ -380,7 +397,7 @@ unicorn_role: invitationData!.unicornRole,
       }
 
       toast({
-        title: 'Account created successfully',
+        title: invitationData.isAcademySolo ? 'Welcome to Vivacity Academy!' : 'Account created successfully',
         description: 'Redirecting...',
       });
 
@@ -439,11 +456,17 @@ unicorn_role: invitationData!.unicornRole,
         {/* Signup Form */}
         <div className="bg-white rounded-xl p-6 shadow-2xl">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-foreground mb-1">Complete Your Signup</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-1">
+              {invitationData.isAcademySolo ? 'Join Vivacity Academy' : 'Complete Your Signup'}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              You've been invited as a <strong>{invitationData.userType === 'vivacity' ? 'Vivacity' : 'Client'}</strong> user
+              {invitationData.isAcademySolo
+                ? <>You've been invited to Vivacity Academy as an <strong>Academy learner</strong></>
+                : <>You've been invited as a <strong>{invitationData.userType === 'vivacity' ? 'Vivacity' : 'Client'}</strong> user</>}
               {invitationData.tenantName && (
-                <span className="block mt-1">RTO: <strong>{invitationData.tenantName}</strong></span>
+                <span className="block mt-1">
+                  {invitationData.isAcademySolo ? 'Academy account' : 'RTO'}: <strong>{invitationData.tenantName}</strong>
+                </span>
               )}
             </p>
           </div>
@@ -464,15 +487,15 @@ unicorn_role: invitationData!.unicornRole,
               />
             </div>
 
-            {/* RTO Name (read-only) - only show if tenant name exists */}
+            {/* Organisation name (read-only) - only show if tenant name exists */}
             {invitationData.tenantName && (
               <div className="space-y-2">
-                <Label htmlFor="rtoName" className="flex items-center gap-2">
+                <Label htmlFor={invitationData.isAcademySolo ? 'academyAccountName' : 'rtoName'} className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  RTO Name
+                  {invitationData.isAcademySolo ? 'Academy Account' : 'RTO Name'}
                 </Label>
                 <Input
-                  id="rtoName"
+                  id={invitationData.isAcademySolo ? 'academyAccountName' : 'rtoName'}
                   type="text"
                   value={invitationData.tenantName}
                   disabled
@@ -567,7 +590,11 @@ unicorn_role: invitationData!.unicornRole,
               className="w-full h-12 bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
               disabled={isLoading}
             >
-              {isLoading ? 'Creating account...' : 'Complete Signup'}
+              {isLoading
+                ? 'Creating account...'
+                : invitationData.isAcademySolo
+                  ? 'Join Vivacity Academy'
+                  : 'Complete Signup'}
             </Button>
           </form>
         </div>
@@ -578,7 +605,11 @@ unicorn_role: invitationData!.unicornRole,
             <span className="text-sm">Powered by</span>
             <span className="font-bold text-lg">✒️ Vivacity</span>
           </div>
-          <p className="text-xs tracking-wider">RTO + CRICOS SUPERHERO</p>
+          <p className="text-xs tracking-wider">
+            {invitationData.isAcademySolo
+              ? 'PROFESSIONAL LEARNING FOR THE VET SECTOR'
+              : 'RTO + CRICOS SUPERHERO'}
+          </p>
         </div>
       </div>
     </div>
