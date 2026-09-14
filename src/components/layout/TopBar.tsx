@@ -151,7 +151,7 @@ const routeTitles: Record<string, string> = {
   // SuperAdmin Academy routes
   "/superadmin/academy/certificates": "Certificates",
   "/superadmin/academy/enrollments": "Enrolments",
-  "/superadmin/academy/tenant-access": "Tenant Access",
+  "/superadmin/academy/tenant-access": "Academy Customers",
   "/superadmin/academy/builder": "Academy Builder",
   "/superadmin/academy/course-cleanup": "Course Cleanup",
   "/superadmin/academy/package-course-rules": "Package → Course Rules",

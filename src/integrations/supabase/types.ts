@@ -69608,6 +69608,26 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: undefined
       }
+      create_academy_solo_account: {
+        Args: {
+          p_account_name: string
+          p_expires_at?: string | null
+          p_notes?: string | null
+        }
+        Returns: Json
+      }
+      manage_academy_solo_access: {
+        Args: {
+          p_action: string
+          p_enabled: boolean
+          p_expires_at?: string | null
+          p_is_solo_pilot?: boolean
+          p_max_users?: number | null
+          p_notes?: string | null
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       admin_fix_invitations: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_memberships: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_profile_linkage: { Args: { dry_run?: boolean }; Returns: Json }

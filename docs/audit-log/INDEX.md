@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-14 — Academy Solo MVP server boundary and audited pilot lifecycle](entries/2026-09-14-academy-solo-mvp-boundary.md) — controlled-pilot implementation with tenant-backed Academy-only account provisioning (without RTO/package/payment side effects), server-side Academy access boundary, audited staff lifecycle RPC, explicit Solo-pilot marker/end action, history-preserving access rules, and contract tests; Academy Solo migrations plus the corrective anon-grant migration are applied to allowlisted `unicorn-qa` and production for controlled invite testing, with no pilot account, invitation, learner data, billing, or public launch created by the migration
+
 - [2026-09-13 — TOM QA address contract repair and client Ask Viv history characterization](entries/2026-09-13-tom-address-repair-and-client-ask-viv-history.md) — QA-only `tenant_addresses`/`dd_address_type` shape repaired to match the independently read production contract; protected Client User A history read then returned both owner-scoped relations with HTTP 200 and rendered the synthetic turns in run `34761219013`; no production or policy change
 
 - [2026-09-13 — TOM tenant-address browser characterization — protected SuperAdmin route/card reached with no page errors, but the populated `tenant_addresses` query returned HTTP 400 in `unicorn-qa`; the synthetic row was not claimed as rendered, and no schema, lookup, RLS, grant, Realtime, Edge, cron, export, credential, or production-data change was made](entries/2026-09-13-tom-address-browser-characterization.md) · tag: `audit-2026-09-13-tom-address-browser-characterization` · author: Codex

@@ -124,7 +124,7 @@ const administrationMenuItems: AdministrationMenuItem[] = [
 
 // 6. ACADEMY BUILDER Section - Super Admin Only
 const academyBuilderMenuItems = [
-  { icon: ShieldCheck, label: "Tenant Access", path: "/superadmin/academy/tenant-access" },
+  { icon: ShieldCheck, label: "Academy Customers", path: "/superadmin/academy/tenant-access" },
   { icon: Users, label: "Enrolments", path: "/superadmin/academy/enrollments" },
   { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
   { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
