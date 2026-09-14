@@ -3,6 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §7 P1
 > **Inputs:** [P1-d static enforcement ledger](p1-d-static-enforcement-ledger.md), [P1-e verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-l golden-matrix review draft](p1-l-aj-csc-golden-matrix-review-draft.md), [TOM P0.1 source inventory](../../../codebase-state/tenant-p0-source-inventory.md)
 > **Machine-readable ledger:** [P1-m normalized row ledger](data/p1-m-row-by-row-golden-preparation.json)
+> **TOM intersection:** [P1.1 contact-promotion row reconciliation](p1-1-tom-contact-promotion-row-reconciliation.md)
 > **Program index:** [Program Index](../../program-index.md)
 > **Status:** preparation ledger delivered 2026-09-14; all 85 feature rows carry the required review fields; unresolved actor/target/boundary values remain explicit and no row is an approved policy or implementation grant
 > **Owner:** RBAC v6 with product/security approval; TOM owns tenant/resource relationship semantics
