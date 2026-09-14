@@ -1,0 +1,32 @@
+{
+  "run_id": "synthetic-run-001",
+  "metric": "synthetic_engagement_signal",
+  "contract_version": "client-health-shadow/v1",
+  "status": "success",
+  "requested_at": "2026-09-14T00:00:00Z",
+  "started_at": "2026-09-14T00:00:01Z",
+  "completed_at": "2026-09-14T00:00:03Z",
+  "source_watermark": "2026-09-13T23:59:59Z",
+  "input": {
+    "row_count": 2,
+    "distinct_tenant_count": 2,
+    "skipped_count": 0,
+    "invalid_count": 0,
+    "error_count": 0
+  },
+  "output": {
+    "row_count": 2,
+    "distinct_tenant_count": 2
+  },
+  "source_quality": {
+    "freshness_percent": 100,
+    "coverage_percent": 100
+  },
+  "error": {
+    "class": null,
+    "diagnostic_ref": null
+  },
+  "owner": "client-health packet owner",
+  "retry_key": "synthetic-run-001-attempt-1",
+  "retention_ref": "synthetic-run-ledger-retention-v1"
+}

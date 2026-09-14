@@ -93,8 +93,10 @@ when a left join or `COALESCE` has supplied a default.
 
 ### Run-ledger minimum fields
 
-Any future forecast repair or replacement must be versioned and observable,
-but this packet does not authorize its implementation. The minimum evidence
+Any future forecast repair or replacement must be versioned and observable;
+the [H0.3a run-ledger and shadow contract](h0-3a-run-ledger-and-shadow-contract.md)
+now provides the local schema/validator and additive comparison boundary, but
+this packet does not authorize implementation. The minimum evidence
 for a later H0.3a packet is:
 
 - metric and contract version;
