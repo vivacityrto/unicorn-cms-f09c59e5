@@ -11,6 +11,9 @@
 > **Related lifecycle design:** [P1.2 ghost-user retirement and contact
 > promotion scope](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 >
+> **QA delivery verification:** [QA invitation-delivery verification and
+> runbook](p1-1-qa-invitation-delivery-verification.md)
+>
 > **Owners:** TOM (relationship and lifecycle semantics), RBAC (capability and
 > denial interpretation), Client Health (provenance if a source is consumed),
 > security (identity, invitation, and privileged-boundary review)
