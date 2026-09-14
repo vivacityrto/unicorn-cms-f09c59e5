@@ -631,6 +631,17 @@ export const dashboardLayoutRoutes = (
     >
       <Route path="/superadmin/academy/package-course-rules" element={<AcademyPackageCourseRulesPage />} />
     </Route>
+    <Route
+      element={
+        <ProtectedRoute>
+          <PermissionGate featureKey="admin.email_templates.manage">
+            <DashboardLayoutRoute />
+          </PermissionGate>
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/admin/email-templates" element={<ManageEmailTemplates />} />
+    </Route>
     <Route element={<ProtectedRoute><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/admin/integrations/tga" element={<AdminTgaIntegration />} />
       <Route path="/admin/integrations/xero" element={<AdminXeroIntegration />} />
@@ -641,7 +652,6 @@ export const dashboardLayoutRoutes = (
       <Route path="/email-triage" element={<EmailTriagePage />} />
       <Route path="/manage-categories" element={<ManageCategories />} />
       <Route path="/manage-documents" element={<ManageDocuments />} />
-      <Route path="/admin/email-templates" element={<ManageEmailTemplates />} />
       <Route path="/manage-stages" element={<ManageStages />} />
       <Route path="/manage-tenants" element={<ManageTenants />} />
       <Route path="/manage-users" element={<ManageUsers />} />
