@@ -49,7 +49,7 @@ marker as well as the QA mode value.
 If PR #1281 is approved and merged, the allowlisted QA environment may use:
 
 ```text
-SUPABASE_ENVIRONMENT=qa
+INVITATION_EMAIL_ENVIRONMENT=qa
 INVITATION_EMAIL_MODE=qa-no-send
 ```
 

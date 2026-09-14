@@ -8,7 +8,7 @@ test("QA no-send mode is explicit and fail-closed", () => {
   assert.match(source, /Deno\.env\.get\(['"]INVITATION_EMAIL_MODE['"]\) \?\? ['"]send['"]/);
   assert.match(
     source,
-    /invitationEmailMode === ['"]qa-no-send['"] && Deno\.env\.get\(['"]SUPABASE_ENVIRONMENT['"]\) === ['"]qa['"]/, 
+    /invitationEmailMode === ['"]qa-no-send['"] && invitationEmailEnvironment === ['"]qa['"]/, 
   );
   assert.match(source, /if \(suppressQaDelivery\)/);
   assert.match(source, /supabase\.functions\.invoke\(['"]send-invitation-email['"]/, 

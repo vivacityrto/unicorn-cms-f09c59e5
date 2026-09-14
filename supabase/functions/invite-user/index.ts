@@ -686,8 +686,9 @@ serve(async (req) => {
     // without sending real Mailgun mail. The environment and mode checks are
     // intentionally fail-closed: production and unknown values still send.
     const invitationEmailMode = Deno.env.get('INVITATION_EMAIL_MODE') ?? 'send';
+    const invitationEmailEnvironment = Deno.env.get('INVITATION_EMAIL_ENVIRONMENT') ?? '';
     const suppressQaDelivery =
-      invitationEmailMode === 'qa-no-send' && Deno.env.get('SUPABASE_ENVIRONMENT') === 'qa';
+      invitationEmailMode === 'qa-no-send' && invitationEmailEnvironment === 'qa';
 
     if (suppressQaDelivery) {
       console.log(`Invitation email delivery suppressed for QA (invitation ${insertedInvite.id})`);
