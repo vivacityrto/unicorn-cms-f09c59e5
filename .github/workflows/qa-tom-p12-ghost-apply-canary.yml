@@ -42,6 +42,11 @@ jobs:
           test -n "$QA_SERVICE_ROLE_KEY"
           test -n "$SUPABASE_ACCESS_TOKEN"
 
+      - name: Verify the management query transport without writing
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq "SELECT 1 AS tom_p12_transport_preflight;"
+
       - name: Run one fresh private identifier-bearing QA snapshot
         env:
           SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
@@ -111,7 +116,7 @@ jobs:
             const summary = JSON.parse(readFileSync(process.env.GHOST_CONTACT_SUMMARY, "utf8"));
             writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SQL, generatePostflightSql(manifest, summary.batch_id));
           '
-          supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq --file "$GHOST_CONTACT_POSTFLIGHT_SQL" --output-format json > "$GHOST_CONTACT_POSTFLIGHT_OUTPUT"
+          supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq --file "$GHOST_CONTACT_POSTFLIGHT_SQL" > "$GHOST_CONTACT_POSTFLIGHT_OUTPUT"
 
       - name: Verify the redacted postflight evidence
         env:
