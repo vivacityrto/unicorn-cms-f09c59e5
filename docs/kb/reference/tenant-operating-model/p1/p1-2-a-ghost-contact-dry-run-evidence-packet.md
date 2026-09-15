@@ -165,8 +165,10 @@ execution:
   `tenant_members`, `tenant_contacts`, and `user_invitations`;
 - [`scripts/ghost-contact-dry-run.test.mjs`](../../../../../scripts/ghost-contact-dry-run.test.mjs)
   characterizes normalization, candidate projection, multi-tenant grain,
-  missing-tenant quarantine, contact collisions, pending invitations, and
-  duplicate ghost collisions;
+  missing-tenant and malformed-email quarantine, active-versus-archived
+  contacts, live-versus-expired invitations, contact collisions, pending
+  invitations, duplicate ghost collisions, zero-write invariants, and
+  default-output identifier redaction;
 - `npm run tenant:ghost-dry-run` is the named entry point.
 
 The CLI refuses browser credentials, targets `unicorn-qa` by default, and

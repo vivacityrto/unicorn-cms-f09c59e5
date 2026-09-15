@@ -237,11 +237,12 @@ function redactValue(value) {
   return createHash("sha256").update(String(value)).digest("hex").slice(0, 12);
 }
 
-function redactReport(report) {
+export function redactReport(report) {
   return {
     ...report,
     rows: report.rows.map((row) => ({
       ...row,
+      tenant_id: row.tenant_id === null ? null : `sha256:${redactValue(row.tenant_id)}`,
       normalized_email: row.normalized_email ? `sha256:${redactValue(row.normalized_email)}` : null,
       first_name: row.first_name ? "[redacted]" : null,
       last_name: row.last_name ? "[redacted]" : null,
@@ -249,6 +250,8 @@ function redactReport(report) {
       job_title: row.job_title ? "[redacted]" : null,
       source_user_uuid: row.source_user_uuid ? `sha256:${redactValue(row.source_user_uuid)}` : null,
       source_user_uuids: row.source_user_uuids.map((value) => `sha256:${redactValue(value)}`),
+      tenant_users_rows: row.tenant_users_rows.map((value) => `sha256:${redactValue(value)}`),
+      tenant_members_rows: row.tenant_members_rows.map((value) => `sha256:${redactValue(value)}`),
       existing_contact_id: row.existing_contact_id ? "[redacted]" : null,
       existing_contact_promoted_to_user_id: row.existing_contact_promoted_to_user_id ? "[redacted]" : null,
       pending_invitation_id: row.pending_invitation_id ? "[redacted]" : null,
