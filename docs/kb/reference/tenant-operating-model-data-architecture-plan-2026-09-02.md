@@ -27,6 +27,16 @@ No implementation has been authorized by these ADRs alone — Phase P0/P1
 scoping and Carl's per-packet approval remain required before any code,
 schema, or production change per the Production rule above.
 
+### Cross-initiative implementation note (2026-09-15)
+
+The shared `/manage-tenants` directory now treats Academy Solo as a distinct
+account surface: it remains discoverable for internal staff, exposes an
+account-type filter, and routes lifecycle work to Academy Customers. Academy
+rows are not RTO tenants for package, invoice, renewal, registration, CSC,
+compliance-stage, or related operational metrics/actions. The temporary
+tenant-backed isolation bridge is therefore not a reason to run RTO contact
+promotion, onboarding, or tenant-operating-model transitions.
+
 The P0.1 source inventory and owner-disposition register are complete. The
 expanded P0.2/P0.3 characterization and representative QA query-family
 preparation are recorded, alongside the negative-case/cleanup runbook and

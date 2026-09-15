@@ -38,7 +38,7 @@ initiatives above without becoming new cross-cutting programs.
 
 | Workstream | Status | Current packet | Dependencies/gates |
 |---|---|---|---|
-| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15); invitation compatibility fix verified in allowlisted QA, broader pilot gates remain | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; valid legacy `User` role plus `academy_user`/`academy_only` authority; distinct Academy Customers lifecycle; Manage Clients visibility without RTO/package/Client Health semantics; named-user approval; QA negative cases; separate hosted migration review. |
+| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15); invitation compatibility fix verified in allowlisted QA; Manage Clients account-surface separation implemented, authenticated pilot verification pending | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; valid legacy `User` role plus `academy_user`/`academy_only` authority; distinct Academy Customers lifecycle; explicit Academy-vs-RTO directory classification; no RTO/package/Client Health semantics; named-user approval; QA negative cases; separate hosted migration review. |
 
 ## Active work
 
@@ -53,7 +53,7 @@ real-time state.
 | RBAC v6 | P0.1/P1 preparation delivered; generic preparation paused; named capability rows, role defaults, shadow telemetry, and pilot remain review-gated | — | Codex | 2026-09-14 |
 | Tenant Operating Model | P0 evidence/preparation delivered; bounded P1.1 hosted-QA canary passed; negative cases and runtime work remain separately gated | — | Codex | 2026-09-15 |
 | Client Health Activity Analytics | H0 containment and evidence preparation delivered; consultant operational data blocks metric policy; replacement shadow remains separately gated | — | Claude Code / Codex | 2026-09-14 |
-| Academy Solo MVP delivery workstream | Phase 1 invitation compatibility and account-surface correction | `codex/academy-solo-fix-20260915` | Codex | 2026-09-15 |
+| Academy Solo MVP delivery workstream | Phase 1 invitation compatibility, server boundary, manual lifecycle, and directory/account-surface separation | `codex/manage-clients-academy-surface-20260915` | Codex | 2026-09-15 |
 
 ## Dependencies and gates
 
@@ -79,14 +79,13 @@ real-time state.
 - **Academy Solo** is intentionally a time-boxed delivery workstream, not a
   fifth program initiative. Its packet is the authority for the controlled
   pilot; the four initiative plans remain authoritative for RBAC, tenant
-  semantics, codebase process, and Client Health impact.
-- **Academy Solo cross-initiative truth-sync (2026-09-15):** the invitation
-  compatibility fix uses the existing `User` role vocabulary and keeps
-  `academy_user`/`academy_only` as the access boundary; it creates no Sidekick
-  package and no compliance-stage or Client Health subject. The four plans'
-  dependency notes point back to the Academy Solo packet; no initiative
-  should infer a new global role, package, analytics metric, or RTO workflow
-  from this workstream.
+  semantics, codebase process, and Client Health impact. Its temporary
+  tenant-backed row may remain visible in the shared directory, but the
+  account-type classification and RTO-only metric/action exclusions are part
+  of the packet contract. The invitation compatibility fix uses the existing
+  `User` role vocabulary and keeps `academy_user`/`academy_only` as the access
+  boundary; no initiative should infer a new global role, package, analytics
+  metric, or RTO workflow from this workstream.
 - **Codebase Optimization**'s Phase 2.6 stabilization is the operational
   execution lane for bug fixes and consolidation surfaced across all
   three other initiatives' investigation work — it does not own their

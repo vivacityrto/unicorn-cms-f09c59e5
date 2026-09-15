@@ -10,6 +10,7 @@ export interface TenantBasic {
   access_status: string | null;
   risk_level: string | null;
   created_at: string;
+  metadata?: unknown | null;
   rto_id?: string | null;
   complyhub_membership_tier?: string | null;
   xero_invoice_paid?: boolean | null;

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
   Search, Settings, Eye, CalendarIcon, Shield, ShieldOff, Clock, X, Plus, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import { CreateAcademySoloDialog, type AcademySoloLearnerDetails } from "@/components/academy/admin/CreateAcademySoloDialog";
 import {
@@ -53,6 +53,7 @@ function isAcademySoloAccount(metadata: TenantRow["metadata"]): boolean {
 
 export default function AcademyTenantAccessPage() {
   const canManage = usePermission('academy.tenant_access.manage');
+  const [searchParams] = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
@@ -97,7 +98,7 @@ export default function AcademyTenantAccessPage() {
   const { packages: allPackages, courses: allCourses } = useRuleFormOptions(showAddRule && !persistedSoloPilot);
 
   // ── Open drawer ──
-  const openDrawer = (t: TenantRow) => {
+  const openDrawer = useCallback((t: TenantRow) => {
     setDrawerTenant(t);
     setFormAccess(t.academy_access_enabled);
     setFormSoloPilot(isAcademySoloAccount(t.metadata));
@@ -105,7 +106,16 @@ export default function AcademyTenantAccessPage() {
     setFormExpires(t.academy_subscription_expires_at ? new Date(t.academy_subscription_expires_at) : undefined);
     setFormNotes((t.metadata as { academy_notes?: string } | null)?.academy_notes ?? "");
     setShowAddRule(false);
-  };
+  }, []);
+
+  // Manage Clients links Academy rows here with a tenant query parameter so
+  // staff land on the Academy lifecycle drawer instead of the RTO detail page.
+  useEffect(() => {
+    const tenantId = Number(searchParams.get("tenant"));
+    if (!tenantId || !tenants.length || drawerTenant?.id === tenantId) return;
+    const target = tenants.find((tenant) => tenant.id === tenantId);
+    if (target) openDrawer(target);
+  }, [drawerTenant?.id, openDrawer, searchParams, tenants]);
 
   // ── Computed stats ──
   const stats = useMemo(() => {
