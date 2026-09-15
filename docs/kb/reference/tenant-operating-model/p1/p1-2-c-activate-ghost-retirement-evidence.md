@@ -121,6 +121,29 @@ timestamps). It contained zero requests to
 it is not historical zero-caller proof. A longer owner-approved window or an
 equivalent retained export is still required.
 
+### Approved hold and historical invocation review (2026-09-15)
+
+Carl approved a non-destructive hold for the two stale cancelled-job items
+and the 31 never-signed-in current `ghost_activation` accounts. This work
+does not retry, close, delete, bulk-repair, or newly invite any of those
+rows. Any future account completion must use individually classified standard
+contact/invitation flow, and the existing password-reset path remains
+supported. The hold is a disposition decision, not a live state mutation.
+
+The hosted fail-closed guards are active in `bulk-account-actions` version
+284 and `cohort-access-sender-worker` version 283, both deployed at
+`2026-09-15T05:07:04.936Z`. The approved historical review covered the
+retained contiguous window from `2026-06-17T05:00:00Z` through that deployment
+timestamp. The provider returned no retained function rows for the queried
+`2026-06-03` through `2026-06-16` slices; this is a retention/coverage gap,
+not proof of zero usage. In the retained window it returned 109 requests to
+the exact `/functions/v1/activate-ghost-user` path: 50 `OPTIONS`/200,
+55 `POST`/200, and 4 `POST`/403. No exact-path request was observed in the
+final `2026-09-13T05:00:00Z` to guard-effective slice. The logs expose HTTP
+status but not the response body or row-level outcome, so the 55 `POST`/200
+responses are historical legacy invocations, not proof of 55 distinct account
+activations or successful mutations.
+
 ## Compatibility dependencies that are not callers
 
 - `set-invite-password` recognizes `ghost_activation` metadata and has a
@@ -147,19 +170,22 @@ equivalent retained export is still required.
 2. **Job-state disposition:** the census and aggregate reconciliation are
    complete. The 2 cancelled activation jobs contain stale ghost snapshots
    for active primary contacts and match expired sent/no-token invitations;
-   they still need an explicit hold/close decision. Do not assume the absence
-   of a cron schedule is a disposition.
-3. **Live invocation history:** review the provider's function logs over an
-   owner-approved window that covers the last possible manual, UI, bulk, and
-   worker invocation. A single 24-hour query is insufficient for historical
-   zero-caller proof; use repeated bounded windows or an equivalent retained
-   log export and record the exact interval.
+   Carl approved a non-destructive hold, with no retry, close, delete, or
+   mutation performed. Do not assume the absence of a cron schedule is a
+   disposition.
+3. **Live invocation history:** the approved retained-window review is
+   complete for the provider-retained period, but the queried June 3–16
+   slices have no retained rows and therefore cannot establish historical
+   zero-caller proof. The 109 retained-window requests, including 55 POST/200
+   and 4 POST/403 responses, require row-level/account reconciliation or an
+   alternative retained export before retirement authority can be considered.
 4. **Outstanding-account disposition:** the first census found 31
    never-signed-in `ghost_activation` accounts, 35 expired sent/no-token
    legacy invitation rows, and a broad 411-row public-profile/auth mismatch
-   population. These need a safe completion or explicit hold path before the
-   old function is disabled; no row-level classification or mutation has been
-   performed.
+   population. Carl approved a non-destructive account-level hold; no row-level
+   completion, invitation, repair, or mutation has been performed. The broad
+   mismatch population remains outside the ghost set until individually
+   classified.
 5. **Replacement workflow evidence:** the approved QA fixture has now proven
    contact projection plus contact promotion → pending invitation → acceptance
    with exactly-once behavior, QA no-send, idempotent retry, cleanup, and audit
@@ -174,12 +200,14 @@ equivalent retained export is still required.
 The safest sequence is additive and reversible:
 
 1. preserve the merged fail-closed activation guards and reset sender;
-2. obtain an explicit hold/close disposition for the 2 cancelled jobs and
+2. retain the approved non-destructive hold for the 2 cancelled jobs and
    their 2 pending items, without assuming that a cancelled status is enough;
-3. define a safe completion/hold path for the 31 never-signed-in ghost
-   accounts and reconcile the expired legacy invitation ledger;
-4. review an owner-approved historical log window and complete the RBAC/
-   security review; and
+3. retain the approved account-level hold for the 31 never-signed-in ghost
+   accounts and reconcile the expired legacy invitation ledger only through
+   individually classified, separately authorized work;
+4. obtain an alternative retained log export for the June 3–16 coverage gap,
+   reconcile the retained invocations, and complete the RBAC/security review;
+   and
 5. only then open a separate retirement/deployment packet for disabling or
    deleting `activate-ghost-user`, with rollback owner and audit entry.
 
@@ -192,10 +220,11 @@ operational action and is not implied by this packet.
 The candidate is now **static-zero-caller after the bounded guard**: the direct
 per-row staff UI path is absent, and the two indirect paths reject before any
 legacy sender invocation or cohort-item lease. The approved QA replacement
-evidence and first aggregate-only census are complete, but retirement remains
-held by the 2 stale cancelled-job items, the 31 never-signed-in ghost-flagged
-accounts, the need to reconcile the broader legacy profile set, the missing
-historical log window, and the pending RBAC/security review. A separate
-deployment/retirement decision is still required.
+evidence, non-destructive job/account holds, and retained-window log review
+are complete. Retirement remains held because June 3–16 provider retention is
+missing, the retained history contains 55 POST/200 and 4 POST/403 legacy-path
+responses whose row-level outcomes are unavailable, the broader legacy
+profile set is not classified, and the RBAC/security review is pending. A
+separate deployment/retirement decision is still required.
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md)
+**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md)
