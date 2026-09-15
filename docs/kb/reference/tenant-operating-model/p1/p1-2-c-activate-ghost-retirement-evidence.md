@@ -144,6 +144,19 @@ status but not the response body or row-level outcome, so the 55 `POST`/200
 responses are historical legacy invocations, not proof of 55 distinct account
 activations or successful mutations.
 
+The durable `public.audit_eos_events` trail provides row-level corroboration
+without exporting identifiers. It records 8 distinct `ghost_user_activated`
+target users in the pre-retained June 3–16 period and 56 distinct target users
+in the retained period through guard deployment. In the retained set, all 56
+still have current auth and public-profile rows, 39 still carry the current
+`ghost_activation` flag, 31 have never signed in, and 55 have some invitation
+match. The audit details report `email_sent = true` for 52 and `false` for 4
+of those retained events. There are zero `ghost_user_activated` audit rows
+after the guard-effective timestamp. This is stronger account-level evidence
+than the HTTP status alone, but it does not turn the 55 POST/200 responses into
+a one-to-one request/event mapping; the audit insert is best-effort and the
+provider log body is unavailable. See the [durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md).
+
 ## Compatibility dependencies that are not callers
 
 - `set-invite-password` recognizes `ghost_activation` metadata and has a
@@ -173,19 +186,24 @@ activations or successful mutations.
    Carl approved a non-destructive hold, with no retry, close, delete, or
    mutation performed. Do not assume the absence of a cron schedule is a
    disposition.
-3. **Live invocation history:** the approved retained-window review is
-   complete for the provider-retained period, but the queried June 3–16
-   slices have no retained rows and therefore cannot establish historical
-   zero-caller proof. The 109 retained-window requests, including 55 POST/200
-   and 4 POST/403 responses, require row-level/account reconciliation or an
-   alternative retained export before retirement authority can be considered.
+3. **Live invocation history:** the approved provider-log review is complete
+   for the retained period, and the durable audit trail supplies aggregate
+   account-level corroboration for 8 pre-retained and 56 retained historical
+   activation events. The queried June 3–16 provider-log slices still have no
+   retained rows, so they cannot establish zero-caller proof; the 109 retained
+   HTTP requests and 64 durable activation audit events show historical use,
+   not retirement safety. No alternative export is required to keep the
+   function held, but it would be needed for a complete request-by-request
+   historical reconstruction.
 4. **Outstanding-account disposition:** the first census found 31
    never-signed-in `ghost_activation` accounts, 35 expired sent/no-token
    legacy invitation rows, and a broad 411-row public-profile/auth mismatch
-   population. Carl approved a non-destructive account-level hold; no row-level
-   completion, invitation, repair, or mutation has been performed. The broad
-   mismatch population remains outside the ghost set until individually
-   classified.
+   population. Durable activation-audit reconciliation confirms 56 retained
+   historical target users are still present, including the 31 never-signed-in
+   current ghost-flagged accounts; Carl approved a non-destructive account-level
+   hold, and no row-level completion, invitation, repair, or mutation has been
+   performed. The broad mismatch population remains outside the ghost set until
+   individually classified.
 5. **Replacement workflow evidence:** the approved QA fixture has now proven
    contact projection plus contact promotion → pending invitation → acceptance
    with exactly-once behavior, QA no-send, idempotent retry, cleanup, and audit
@@ -205,9 +223,9 @@ The safest sequence is additive and reversible:
 3. retain the approved account-level hold for the 31 never-signed-in ghost
    accounts and reconcile the expired legacy invitation ledger only through
    individually classified, separately authorized work;
-4. obtain an alternative retained log export for the June 3–16 coverage gap,
-   reconcile the retained invocations, and complete the RBAC/security review;
-   and
+4. retain the current guarded deployment, optionally obtain an alternative
+   request-log export if request-by-request reconstruction is required, and
+   complete the RBAC/security review; and
 5. only then open a separate retirement/deployment packet for disabling or
    deleting `activate-ghost-user`, with rollback owner and audit entry.
 
@@ -221,10 +239,12 @@ The candidate is now **static-zero-caller after the bounded guard**: the direct
 per-row staff UI path is absent, and the two indirect paths reject before any
 legacy sender invocation or cohort-item lease. The approved QA replacement
 evidence, non-destructive job/account holds, and retained-window log review
-are complete. Retirement remains held because June 3–16 provider retention is
-missing, the retained history contains 55 POST/200 and 4 POST/403 legacy-path
-responses whose row-level outcomes are unavailable, the broader legacy
-profile set is not classified, and the RBAC/security review is pending. A
-separate deployment/retirement decision is still required.
+are complete. Durable audit correlation now confirms 64 historical activation
+events across the provider-retention gap and retained window, including 31
+never-signed-in current ghost-flagged accounts in the retained set, with zero
+post-guard activation audit rows. Retirement remains held because the request
+log has a June 3–16 retention gap, the broader legacy profile set is not
+classified, and the RBAC/security review is pending. A separate
+deployment/retirement decision is still required.
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md)
+**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md)
