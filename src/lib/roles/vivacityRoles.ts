@@ -5,12 +5,12 @@
  */
 export const VIVACITY_STAFF_ROLES = [
   'Super Admin',
-  'Team Leader',
-  'Team Member', // transitional — retiring, kept for backward compat
+  'Team Leader', // transitional — retired 2026-09-15 (zero holders), kept for backward compat like Team Member below; is_vivacity_team access checks still need to recognize it
+  'Team Member', // transitional — retiring, kept for backward compat (5 disabled/archived legacy holders)
   'Integrator',
   'BGT',
   'CSC',
-  'CET',
+  // CET retired 2026-09-15 (zero holders, no backward-compat need) — see dd_unicorn_roles.is_active=false
 ] as const;
 
 export type VivacityStaffRole = typeof VIVACITY_STAFF_ROLES[number];

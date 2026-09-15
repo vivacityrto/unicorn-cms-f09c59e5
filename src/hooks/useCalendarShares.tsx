@@ -73,7 +73,7 @@ export function useCalendarShares() {
         .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
         .neq('user_uuid', user.id) // Exclude self
         .eq('is_system_account', false)
-        .or('kpi_pod.is.null,kpi_pod.neq.qa')
+        .eq('is_qa_persona', false)
         .order('first_name');
 
       if (error) throw error;

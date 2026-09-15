@@ -26,7 +26,7 @@ export function useTriageStaffOptions() {
         .eq("disabled", false)
         .eq("archived", false)
         .eq("is_system_account", false)
-        .or("kpi_pod.is.null,kpi_pod.neq.qa")
+        .eq("is_qa_persona", false)
         .order("first_name", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((u: Pick<Tables<"users">, "user_uuid" | "first_name" | "last_name" | "email" | "avatar_url" | "unicorn_role">) => ({

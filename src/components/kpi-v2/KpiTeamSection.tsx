@@ -252,17 +252,16 @@ export function KpiTeamSection({ period }: Props) {
       }
       const { data: profiles } = await supabase
         .from("users")
-        .select("user_uuid, kpi_role, kpi_pod")
+        .select("user_uuid, kpi_role")
         .in("user_uuid", uuids);
-      const byUuid = new Map<string, { kpi_role: string | null; kpi_pod: string | null }>();
-      (profiles ?? []).forEach((p) => byUuid.set(p.user_uuid, { kpi_role: p.kpi_role, kpi_pod: p.kpi_pod }));
+      const byUuid = new Map<string, { kpi_role: string | null }>();
+      (profiles ?? []).forEach((p) => byUuid.set(p.user_uuid, { kpi_role: p.kpi_role }));
 
       const merged: Staff[] = (dir ?? [])
         .map((r) => {
-          const meta = byUuid.get(r.user_uuid) ?? { kpi_role: null, kpi_pod: null };
-          return { ...r, kpi_role: meta.kpi_role, kpi_pod: meta.kpi_pod } as Staff & { kpi_pod: string | null };
-        })
-        .filter((s) => (s as Staff & { kpi_pod: string | null }).kpi_pod !== "qa");
+          const meta = byUuid.get(r.user_uuid) ?? { kpi_role: null };
+          return { ...r, kpi_role: meta.kpi_role } as Staff;
+        });
 
       if (cancelled) return;
       setStaff(merged);

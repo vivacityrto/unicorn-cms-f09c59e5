@@ -180,6 +180,24 @@
       "owner": "Carl",
       "reason": "Reviewed false positives: UPDATE and INSERT statements are inside the existing staff-only SECURITY DEFINER Academy lifecycle RPC. The migration makes Solo marker and seat-cap changes reversible by preserving the prior cap, removes the marker on disable, and keeps the invitation capacity read on the caller-scoped one-argument RPC. Covered by static contract tests and bounded browser verification; no production deployment is performed by this PR.",
       "expires": "2026-10-15"
+    },
+    {
+      "id": "add-qa-persona-flag-and-role-retirements",
+      "file": "supabase/migrations/20260915032729_add_qa_persona_flag_and_role_retirements.sql",
+      "categories": ["data-mutation", "destructive-mutation", "hard-coded-id"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved (2026-09-15): backfills is_qa_persona=true for the 5 accounts already flagged kpi_pod='qa' (live query confirmed kpi_pod has only ever held null or 'qa' across the entire database), inserts one supplemental CSC user_roles row for Nova's real account (755d843d-8d93-4179-8bb8-50c61a6f21fe, confirmed via live query -- she is an Integrator who also runs the CSC seat, using the existing user_roles/check_permission() multi-role infrastructure already proven in production via the Bulk Generate Automation precedent), and sets dd_unicorn_roles.is_active=false for Team Leader and CET (both confirmed zero current holders) per the RBAC v6 plan's 2026-09-10 baseline. A separate duplicate account (nova+csc@vivacity.com.au) was found and deliberately left untouched, deferred to a later session.",
+      "expires": "2026-10-15"
+    },
+    {
+      "id": "migrate-staff-directory-fns-to-qa-persona-function-bodies",
+      "file": "supabase/migrations/20260915032908_migrate_staff_directory_fns_to_qa_persona.sql",
+      "categories": ["data-mutation", "destructive-mutation", "hard-coded-id"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive, same shape as prior function-body entries above: all flagged INSERT statements are inside the CREATE OR REPLACE FUNCTION bodies for seed_meeting_attendees_from_roles and sync_l10_meeting_participants (eos_meeting_attendees/eos_meeting_participants inserts) -- unchanged from each function's existing production behavior except swapping the kpi_pod='qa' exclusion for is_qa_persona (sync_l10_meeting_participants previously had no qa-exclusion at all, a separate pre-existing gap closed here), only executed later, per-caller, when a real meeting is scheduled/synced. The migration itself performs no direct data mutation; it only redefines get_vivacity_team_directory, get_vivacity_team_directory_staff, seed_meeting_attendees_from_roles, and sync_l10_meeting_participants. The flagged tenant_id=6372 literal is the pre-existing, unchanged Vivacity-tenant constant already used throughout this function.",
+      "expires": "2026-10-15"
     }
   ]
 }

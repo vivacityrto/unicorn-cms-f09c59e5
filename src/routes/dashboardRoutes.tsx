@@ -8,8 +8,8 @@ const DashboardLayoutRoute = lazy(() => import("@/components/layout/DashboardLay
 // Non-SuperAdmin roles allowed on Academy Builder admin routes (SuperAdmin is
 // always allowed by ProtectedRoute). Was a local const in App.tsx before
 // these routes moved here.
-const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"];
-const ACADEMY_TENANT_ACCESS_ROLES = ["Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"];
+const ACADEMY_BUILDER_ROLES = ["Team Leader", "Integrator", "CSC"]; // Team Leader retired 2026-09-15 (zero holders) but kept for backward compat, matching vivacityRoles.ts
+const ACADEMY_TENANT_ACCESS_ROLES = ["Team Leader", "Team Member", "Integrator", "BGT", "CSC"]; // CET retired 2026-09-15 (zero holders, no backward-compat need)
 
 const AdminManageStages = lazy(() => import("@/pages/AdminManageStages"));
 const AdminStageDetail = lazy(() => import("@/pages/AdminStageDetail"));

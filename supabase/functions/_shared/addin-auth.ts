@@ -14,7 +14,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
 
 // Allowed Vivacity Team roles
-const VIVACITY_TEAM_ROLES = ['Super Admin', 'Team Leader', 'Team Member', 'SuperAdmin'];
+const VIVACITY_TEAM_ROLES = ['Super Admin', 'Team Leader', 'Team Member', 'SuperAdmin']; // Team Leader retired 2026-09-15 (zero holders) but kept for backward compat, matching vivacityRoles.ts
 
 export interface AddinTokenPayload {
   user_uuid: string;

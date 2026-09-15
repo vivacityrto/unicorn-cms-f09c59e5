@@ -48,7 +48,7 @@ export function useTenantTeamUsers() {
           .eq('archived', false)
           .eq('disabled', false)
           .eq('is_system_account', false)
-          .or('kpi_pod.is.null,kpi_pod.neq.qa')
+          .eq('is_qa_persona', false)
           .order('first_name', { ascending: true });
 
         if (error) throw error;
