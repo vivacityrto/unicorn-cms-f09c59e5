@@ -36,11 +36,17 @@ therefore have been incomplete.
 
 - Live read-only policy inspection confirmed all resource write policies call
   `can_manage_academy_resources()`.
+- Migration `academy_resources_csc_integrator_access` (hosted version
+  `20260915071001`) was applied to the hosted Supabase project after explicit
+  deployment authorization. A live
+  function-definition query confirmed the deployed allowlist includes CSC and
+  Integrator, and a policy query confirmed the resource SELECT/INSERT/UPDATE/
+  DELETE paths still use the centralized gate.
 - Focused helper tests cover positive access for CSC and Integrator and
   negative access for BGT and unauthenticated/no-role input.
-- Full migration application and authenticated CSC/Integrator browser
-  verification remain PR/release gates; no hosted database state was changed
-  during investigation.
+- Authenticated CSC/Integrator browser verification remains a release follow-up
+  because the available local browser session was Super Admin; no resource
+  data was created or changed during verification.
 
 ## Rollback and residuals
 

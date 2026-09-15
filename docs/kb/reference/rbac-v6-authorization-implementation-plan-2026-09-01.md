@@ -67,7 +67,9 @@ the approved CSC and Integrator builder workflows unable to see or execute
 Add Resource. The bounded correction adds `CSC` and `Integrator` to that same
 gate and updates the client mirror; it does not add a new RBAC v6 capability
 row, alter Academy Solo or learner access, or broaden unrelated builder
-actions. The migration and evidence are recorded in the
+actions. The migration was applied to the hosted project on 2026-09-15 and
+the deployed function and policy wiring were re-queried successfully. The
+migration and evidence are recorded in the
 [Academy Builder resource-management audit entry](../../audit-log/entries/2026-09-15-academy-builder-resource-csc-integrator-access.md).
 
 ## 1. Executive decision
