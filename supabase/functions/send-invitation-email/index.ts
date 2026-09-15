@@ -18,6 +18,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { appUrl } from "../_shared/app-base-url.ts";
+import { escapeHtml } from "../_shared/escape-html.ts";
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
@@ -82,6 +83,68 @@ function timingSafeEqualHex(a: string, b: string): boolean {
     mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return mismatch === 0;
+}
+
+function buildAcademyInviteHtml(params: {
+  firstName: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiryDate: string;
+  roleLabel: string;
+}): string {
+  const firstName = escapeHtml(params.firstName);
+  const inviterName = escapeHtml(params.inviterName);
+  const inviteUrl = escapeHtml(params.inviteUrl);
+  const expiryDate = escapeHtml(params.expiryDate);
+  const roleLabel = escapeHtml(params.roleLabel);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You've been invited to Vivacity Academy</title>
+  </head>
+  <body style="margin:0;background:#f1edf5;font-family:'Segoe UI',Arial,sans-serif;color:#fff;">
+    <div style="max-width:600px;margin:22px auto;background:#292929;border-radius:14px;overflow:hidden;">
+      <div style="padding:28px 24px;background:linear-gradient(135deg,#7130a0 0%,#d51c49 100%);text-align:center;">
+        <div style="font-size:14px;font-weight:700;letter-spacing:2px;">VIVACITY ACADEMY</div>
+        <h1 style="margin:16px 0 0;font-size:30px;line-height:1.1;">YOU'VE BEEN INVITED</h1>
+      </div>
+      <div style="padding:34px 38px;font-size:15px;line-height:1.65;">
+        <p style="margin:0 0 22px;">Hi ${firstName},</p>
+        <p style="margin:0 0 24px;">${inviterName} has invited you to join <strong style="color:#d8a7ff;">Vivacity Academy</strong> as an <strong>${roleLabel}</strong>.</p>
+        <p style="margin:0 0 22px;text-align:center;">
+          <a href="${inviteUrl}" style="display:inline-block;padding:15px 30px;background:#007d9b;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;">Accept your invitation</a>
+        </p>
+        <p style="margin:0 0 24px;font-size:13px;color:#d6d0dc;">This invitation expires on ${expiryDate}. If you weren't expecting this, you can safely ignore the email.</p>
+        <p style="margin:0;font-size:12px;color:#d6d0dc;">Trouble with the button? Copy and paste this link into your browser:<br><a href="${inviteUrl}" style="color:#d8a7ff;word-break:break-all;">${inviteUrl}</a></p>
+      </div>
+      <div style="padding:24px;text-align:center;background:#70488a;">
+        <div style="font-size:14px;font-weight:700;letter-spacing:1px;">WE MAKE COMPLIANCE SIMPLE!</div>
+        <div style="margin-top:6px;font-size:12px;">Vivacity Coaching &amp; Consulting&nbsp; | &nbsp;vivacity.com.au</div>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+function buildAcademyInviteText(params: {
+  firstName: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiryDate: string;
+  roleLabel: string;
+}): string {
+  return [
+    `Hi ${params.firstName},`,
+    "",
+    `${params.inviterName} has invited you to join Vivacity Academy as an ${params.roleLabel}.`,
+    "",
+    `Accept your invitation: ${params.inviteUrl}`,
+    "",
+    `This invitation expires on ${params.expiryDate}. If you weren't expecting this, you can safely ignore the email.`,
+  ].join("\n");
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -252,7 +315,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     const roleLabel = isAcademySolo
-      ? "Academy learner"
+      ? "Academy Learner"
       : ROLE_LABELS[invitation.unicorn_role] || invitation.unicorn_role;
     const expiryDate = formatExpiry(invitation.expires_at);
     const fromEmail = MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
@@ -278,18 +341,31 @@ const handler = async (req: Request): Promise<Response> => {
         ? "You've been invited to Vivacity Academy"
         : `You've been invited to ${tenantName} on Unicorn`,
     );
-    formData.append("template", "unicorn_accept_invite_v1");
-    // ============================================================================
-    // DO NOT ADD A `v:NAME` LOOP HERE. DO NOT "ALSO PASS AS t:VARIABLES".
-    // Mailgun reads template variables from the h:X-Mailgun-Variables header ONLY.
-    // Appending v:<name> form params in addition to the header causes Mailgun to
-    // run substitution TWICE, doubling every variable in the rendered email and
-    // breaking every click-through link (including the invite acceptance URL).
-    // This bug has regressed twice. Live v501 is the canonical fix.
-    // If a future sync wants to re-add the loop "for safety" — it is not safety,
-    // it is the bug. Leave this block as-is.
-    // ============================================================================
-    formData.append("h:X-Mailgun-Variables", JSON.stringify(variables));
+
+    if (isAcademySolo) {
+      const academyCopy = {
+        firstName: invitation.first_name || "there",
+        inviterName,
+        inviteUrl,
+        expiryDate,
+        roleLabel,
+      };
+      formData.append("html", buildAcademyInviteHtml(academyCopy));
+      formData.append("text", buildAcademyInviteText(academyCopy));
+    } else {
+      formData.append("template", "unicorn_accept_invite_v1");
+      // ============================================================================
+      // DO NOT ADD A `v:NAME` LOOP HERE. DO NOT "ALSO PASS AS t:VARIABLES".
+      // Mailgun reads template variables from the h:X-Mailgun-Variables header ONLY.
+      // Appending v:<name> form params in addition to the header causes Mailgun to
+      // run substitution TWICE, doubling every variable in the rendered email and
+      // breaking every click-through link (including the invite acceptance URL).
+      // This bug has regressed twice. Live v501 is the canonical fix.
+      // If a future sync wants to re-add the loop "for safety" — it is not safety,
+      // it is the bug. Leave this block as-is.
+      // ============================================================================
+      formData.append("h:X-Mailgun-Variables", JSON.stringify(variables));
+    }
 
     const apiBase =
       MAILGUN_REGION === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
