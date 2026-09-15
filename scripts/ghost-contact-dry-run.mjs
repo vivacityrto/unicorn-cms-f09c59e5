@@ -16,7 +16,7 @@
  *   node scripts/ghost-contact-dry-run.mjs [--json] [--out <file>]
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -211,6 +211,9 @@ export function classifyGhosts({ ghosts, tenantUsers, tenantMembers, contacts, i
   const sorted = sortRows(rows);
   const candidateRows = sorted.filter((row) => row.tenant_id !== null);
   return {
+    // A stable report identifier is part of the P1.2 evidence contract. It
+    // identifies this snapshot without exposing any source row identifiers.
+    run_id: randomUUID(),
     generated_at: new Date().toISOString(),
     snapshot_at: snapshotAt.toISOString(),
     scope: "TOM P1.2-a read-only ghost-to-contact classification",
