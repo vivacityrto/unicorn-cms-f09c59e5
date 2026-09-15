@@ -46,8 +46,13 @@ Deno.serve(async (req) => {
   );
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) return json(req, { error: "Invalid or expired token" }, 401);
-  const { data: profile } = await supabase.from("users").select("unicorn_role, state").eq("user_uuid", user.id).maybeSingle();
-  if (profile?.unicorn_role !== "Super Admin" || profile.state === "inactive" || profile.state === "suspended") {
+  // `state` is unrelated numeric data (Australian state/territory), not an
+  // account-status field -- disabled/archived are the real flags. Disabling
+  // a user never revokes their Supabase Auth session, so this is the only
+  // place in this function's auth path that can reject a still-valid
+  // session for an account that has since been disabled or archived.
+  const { data: profile } = await supabase.from("users").select("unicorn_role, disabled, archived").eq("user_uuid", user.id).maybeSingle();
+  if (profile?.unicorn_role !== "Super Admin" || profile.disabled || profile.archived) {
     return json(req, { error: "Super Admin access required" }, 403);
   }
 
