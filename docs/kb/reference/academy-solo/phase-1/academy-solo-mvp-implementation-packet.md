@@ -1,6 +1,6 @@
 # Academy Solo MVP — Phase 1 implementation packet
 
-> **Status:** implementation in progress — controlled pilot approved; invitation compatibility fix verified in allowlisted QA, broader pilot gates remain
+> **Status:** implementation in progress — controlled pilot approved; invitation compatibility fix verified in allowlisted QA; QA and production migrations applied for invite testing; Manage Clients account-surface separation implemented, authenticated pilot verification pending
 > **Started:** 2026-09-14  
 > **Target:** pilot-ready by 2026-09-15, subject to the approval gates below  
 > **Owner:** Academy Solo delivery workstream  
@@ -19,6 +19,18 @@ Academy foreign keys, but an Academy Solo account is provisioned by its own
 staff-only flow with no RTO profile, package instance, payment, consultant,
 SharePoint, stage, or Client Health side effect. This is a compatibility
 bridge, not a claim that Solo is an RTO customer.
+
+### Directory/account-surface contract
+
+Academy Solo remains visible in **Manage Clients** so internal staff have one
+discoverable tenant directory, but it is classified from the persisted
+`metadata.academy_solo` marker rather than from the deprecated
+`tenants.tenant_type` or a Sidekick package. The directory provides an
+explicit account-type filter and routes Academy lifecycle work to **Academy
+Customers**. Academy rows are excluded from RTO-only package, invoice,
+renewal, registration, CSC-load, compliance-stage, and Client Health metrics
+and actions; future Academy analytics must use Academy entitlement/activity
+facts instead.
 
 The product discovery source is
 `C:/Users/carls/.codex/.chatgpt-projects/g-p-6aa73a757abc8191971caabac7d73939/academy-solo-discovery-handoff.md`.
@@ -122,9 +134,10 @@ application success.
    actor, tenant, prior state, new state, and reason. Identity creation uses
    the existing Academy User invitation flow; no new auth system or payment
    collection is introduced.
-4. **Named-user guard.** Enforce the one-user pilot operationally and surface
-   the Academy-only membership clearly to staff. Do not alter RTO contacts or
-   ordinary client user roles.
+4. **Named-user and directory guard.** Enforce the one-user pilot
+   operationally, surface the Academy-only membership clearly to staff, and
+   keep Academy rows discoverable without treating them as RTO clients. Do not
+   alter RTO contacts or ordinary client user roles.
 5. **Verification.** Run static migration contract tests, frontend tests,
    edge tests, typecheck, lint ratchet, build, then complete authenticated
    positive and negative cases against the pilot account before treating the

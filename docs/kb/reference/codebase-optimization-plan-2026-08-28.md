@@ -30,6 +30,16 @@ unassigned Phase 4 backlog. The earlier instruction below to finish slices 5-8
 and then re-audit is retained as historical sequencing evidence. Any future
 Phase 5 or Phase 2.6 work needs its own bounded packet and authorization.
 
+### Cross-initiative implementation note (2026-09-15)
+
+The Academy Solo delivery workstream now has a bounded Manage Clients
+account-surface change: shared directory discovery is retained, while
+Academy-vs-RTO classification and routing are explicit and RTO-only columns,
+filters, metrics, and actions are suppressed for Academy rows. This is a
+product-boundary change, not a Phase 4 extraction or a Phase 5 authorization;
+the implementation and focused verification are tracked by the Academy Solo
+packet and its reviewable PR.
+
 ## 1. Executive decision
 
 The next optimization program should not be another repo-wide deletion sweep. The 27–28 August dead-code program already removed the largest set of confidently orphaned frontend files and retired multiple obsolete Edge Functions. The remaining opportunity is structural: reduce the cost of understanding and changing active code without obscuring business behavior behind extra abstraction.

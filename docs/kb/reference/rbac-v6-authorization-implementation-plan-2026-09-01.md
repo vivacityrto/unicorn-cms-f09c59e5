@@ -36,6 +36,15 @@ The next work is packet-level reconciliation of the remaining rows and
 implementation sequence, with product/security review where the linked gate
 packets require it.
 
+### Cross-initiative implementation note (2026-09-15)
+
+Academy Solo's shared Manage Clients visibility does not add or alter an RBAC
+v6 capability. The existing all-internal-staff Academy Customers boundary
+remains authoritative; the directory only classifies Academy rows and routes
+their lifecycle work to that existing surface. RTO operational actions remain
+inapplicable to Academy accounts, so this change must not be interpreted as a
+new package, compliance, or staff-assignment grant.
+
 The named P1-v synthetic read-boundary fixture contract is a documentation-only
 evidence slice for the package-instance and client-stage read candidates. It
 defines the future fixture, denial cases, and approval gates but does not

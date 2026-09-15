@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, AlertTriangle, DollarSign, X } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database, Clock, AlertTriangle, DollarSign, GraduationCap, X } from "lucide-react";
 import { isXeroInvoiceOverdue } from "@/lib/xeroInvoiceStatus";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelect, type MultiSelectOption } from "@/components/documents/bulk-generate/MultiSelect";
 
 import { cn } from "@/lib/utils";
+import { getTenantAccountType, type TenantAccountType } from "@/lib/tenantAccountSurface";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
 import { BulkReassignCscDialog } from "@/components/client/BulkReassignCscDialog";
 
@@ -50,6 +51,8 @@ interface Tenant {
   access_status: string;
   risk_level: string;
   created_at: string;
+  metadata?: unknown | null;
+  accountType: TenantAccountType;
   member_count: number;
   rto_id?: string | null;
   csc_name?: string | null;
@@ -95,11 +98,18 @@ interface CSCFilterOption {
   archived: boolean;
 }
 
+function tenantSurfacePath(tenant: Pick<Tenant, "id" | "accountType">): string {
+  return tenant.accountType === "academy_solo"
+    ? `/superadmin/academy/tenant-access?tenant=${tenant.id}`
+    : `/tenant/${tenant.id}`;
+}
+
 export default function ManageTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("live");
+  const [accountTypeFilter, setAccountTypeFilter] = useState<TenantAccountType | "all">("all");
   const [moneyAtRiskOnly, setMoneyAtRiskOnly] = useState(false);
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [cscFilter, setCscFilter] = useState<string>("all");
@@ -184,6 +194,7 @@ export default function ManageTenants() {
       const firstPackage = firstNonKS || activePackages[0];
       return {
         ...t,
+        accountType: getTenantAccountType(t.metadata),
         lifecycle_status: t.lifecycle_status || 'active',
         access_status: t.access_status || 'enabled',
         member_count: contacts?.member_count || 0,
@@ -218,7 +229,8 @@ export default function ManageTenants() {
   // cutoff), matching the existing renewalFilter="1" semantics reused below.
   const stats = useMemo(() => {
     const now = new Date();
-    const liveTenants = tenants.filter(t => LIVE_STATUSES.includes(t.status) && !t.archived_at);
+    const rtoTenants = tenants.filter(t => t.accountType === "rto");
+    const liveTenants = rtoTenants.filter(t => LIVE_STATUSES.includes(t.status) && !t.archived_at);
     const totalMembers = liveTenants.reduce((sum, t) => sum + (t.member_count || 0), 0);
 
     const renewalCutoff1mo = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
@@ -235,7 +247,8 @@ export default function ManageTenants() {
     const regExpiringSoon = liveTenants.filter(t => t.registration_end_date && new Date(t.registration_end_date) <= regCutoff6mo).length;
 
     return {
-      total: tenants.length,
+      total: rtoTenants.length,
+      academyAccounts: tenants.filter(t => t.accountType === "academy_solo").length,
       live: liveTenants.length,
       renewalsNeedingAction,
       renewalsOverdue,
@@ -251,6 +264,7 @@ export default function ManageTenants() {
   // combination of whichever panel was clicked last.
   const applyQuickFilter = (opts: { renewal?: string; regEnd?: string; moneyAtRisk?: boolean }) => {
     setSearchQuery("");
+    setAccountTypeFilter("rto");
     setStatusFilter("live");
     setRenewalFilter(opts.renewal ?? "all");
     setRegEndFilter(opts.regEnd ?? "all");
@@ -401,7 +415,7 @@ export default function ManageTenants() {
   // Clear selection whenever the underlying filtered set or filter changes
   useEffect(() => {
     setSelectedTenantIds(new Set());
-  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
+  }, [searchQuery, accountTypeFilter, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
 
   const toggleRowSelected = (id: number, checked: boolean) => {
     setSelectedTenantIds(prev => {
@@ -439,6 +453,10 @@ export default function ManageTenants() {
   const applyFiltersAndSort = useCallback(() => {
     let filtered = [...tenants];
 
+    if (accountTypeFilter !== "all") {
+      filtered = filtered.filter(tenant => tenant.accountType === accountTypeFilter);
+    }
+
     if (searchQuery) {
       // Search overrides every other filter/toggle below — a client should
       // always be findable by name/slug regardless of status, package, CSC,
@@ -470,29 +488,29 @@ export default function ManageTenants() {
       // flagged as in arrears.
       if (moneyAtRiskOnly) {
         filtered = filtered.filter(tenant =>
-          tenant.status === "In Arears" || (tenant.xero_invoice_paid === false && isXeroInvoiceOverdue(tenant.xero_invoice_due_date))
+          tenant.accountType === "rto" && (tenant.status === "In Arears" || (tenant.xero_invoice_paid === false && isXeroInvoiceOverdue(tenant.xero_invoice_due_date)))
         );
       }
 
       // Package filter
       if (packageFilter === "complyhub") {
-        filtered = filtered.filter(tenant => !!tenant.complyhub_membership_tier);
+        filtered = filtered.filter(tenant => tenant.accountType === "rto" && !!tenant.complyhub_membership_tier);
       } else if (packageFilter !== "all") {
-        filtered = filtered.filter(tenant => tenant.all_packages.some(p => p.id.toString() === packageFilter));
+        filtered = filtered.filter(tenant => tenant.accountType === "rto" && tenant.all_packages.some(p => p.id.toString() === packageFilter));
       }
 
       // CSC filter
       if (cscFilter === "unassigned") {
-        filtered = filtered.filter(tenant => !tenant.csc_user_id);
+        filtered = filtered.filter(tenant => tenant.accountType === "rto" && !tenant.csc_user_id);
       } else if (cscFilter !== "all") {
-        filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
+        filtered = filtered.filter(tenant => tenant.accountType === "rto" && tenant.csc_user_id === cscFilter);
       }
 
       // Renewal due filter
       if (renewalFilter === "overdue") {
         const now = new Date();
         filtered = filtered.filter(tenant => {
-          if (!tenant.next_renewal_date) return false;
+          if (tenant.accountType !== "rto" || !tenant.next_renewal_date) return false;
           return new Date(tenant.next_renewal_date) < now;
         });
       } else if (renewalFilter !== "all") {
@@ -500,7 +518,7 @@ export default function ManageTenants() {
         const now = new Date();
         const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
         filtered = filtered.filter(tenant => {
-          if (!tenant.next_renewal_date) return false;
+          if (tenant.accountType !== "rto" || !tenant.next_renewal_date) return false;
           const renewal = new Date(tenant.next_renewal_date);
           return renewal <= cutoff;
         });
@@ -514,7 +532,7 @@ export default function ManageTenants() {
         const recurringSelected = invoiceStatusFilter.includes("recurring");
 
         if (paymentFilters.length > 0) {
-          filtered = filtered.filter(tenant => paymentFilters.some(value => {
+          filtered = filtered.filter(tenant => tenant.accountType === "rto" && paymentFilters.some(value => {
             if (value === "paid") return tenant.xero_invoice_paid === true;
             if (value === "unpaid") return tenant.xero_invoice_paid === false;
             if (value === "not_linked") return tenant.xero_invoice_paid === null || tenant.xero_invoice_paid === undefined;
@@ -523,7 +541,7 @@ export default function ManageTenants() {
         }
 
         if (recurringSelected) {
-          filtered = filtered.filter(tenant => !!tenant.xero_repeating_invoice_url?.trim());
+          filtered = filtered.filter(tenant => tenant.accountType === "rto" && !!tenant.xero_repeating_invoice_url?.trim());
         }
       }
 
@@ -533,7 +551,7 @@ export default function ManageTenants() {
         const now = new Date();
         const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
         filtered = filtered.filter(tenant => {
-          if (!tenant.registration_end_date) return false;
+          if (tenant.accountType !== "rto" || !tenant.registration_end_date) return false;
           const regEnd = new Date(tenant.registration_end_date);
           return regEnd <= cutoff;
         });
@@ -557,7 +575,7 @@ export default function ManageTenants() {
       return 0;
     });
     setFilteredTenants(filtered);
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
+  }, [tenants, searchQuery, accountTypeFilter, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
 
   useEffect(() => {
     applyFiltersAndSort();
@@ -729,7 +747,12 @@ export default function ManageTenants() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-[28px] font-bold">Manage Clients</h1>
-          <p className="text-muted-foreground">View and manage all client organisations</p>
+          <p className="text-muted-foreground">View RTO clients and Academy accounts in one directory</p>
+          {stats.academyAccounts > 0 && (
+            <Badge variant="outline" className="mt-2 border-primary/30 text-primary">
+              {stats.academyAccounts} Academy account{stats.academyAccounts === 1 ? "" : "s"} · excluded from RTO metrics
+            </Badge>
+          )}
         </div>
         {(canCreateClient || isSuperAdmin) && (
           <div className="flex flex-wrap gap-2">
@@ -772,7 +795,7 @@ export default function ManageTenants() {
             </div>
           </div>
           <p className="text-2xl font-bold mb-1">{stats.live}</p>
-          <p className="text-xs text-muted-foreground">of {stats.total} total — active relationships needing attention</p>
+          <p className="text-xs text-muted-foreground">of {stats.total} RTO clients total — active relationships needing attention</p>
         </div>
 
         <div
@@ -843,9 +866,9 @@ export default function ManageTenants() {
         </div>
       )}
 
-      {/* CSC Client Distribution */}
+      {/* CSC Client Distribution — Academy accounts are not CSC-managed RTO clients. */}
       {(() => {
-        const activeTenantsList = tenants.filter(t => t.status === 'active');
+        const activeTenantsList = tenants.filter(t => t.accountType === "rto" && t.status === 'active');
         const cscCounts: Record<string, { name: string; count: number }> = {};
         let unassigned = 0;
         activeTenantsList.forEach(t => {
@@ -893,10 +916,25 @@ export default function ManageTenants() {
         <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px] w-full" />
       </div>
 
-      {/* Fixed 6-column grid (collapsing at narrower breakpoints) so all six
-          filters wrap evenly instead of flex-wrap stranding whichever one
-          doesn't fit the remaining space on its own row. */}
+      {/* Filter grid — account type is deliberately first so the directory
+          can be narrowed before applying RTO-only operational filters. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Combobox
+          options={[
+            { value: "all", label: "All Account Types", icon: Building2, iconColor: "text-muted-foreground" },
+            { value: "rto", label: "RTO Clients", icon: Building2, iconColor: "text-primary" },
+            { value: "academy_solo", label: "Academy Solo", icon: GraduationCap, iconColor: "text-primary" },
+          ]}
+          value={accountTypeFilter}
+          onValueChange={(value) => setAccountTypeFilter(value as TenantAccountType | "all")}
+          placeholder="Filter by account type..."
+          searchPlaceholder="Search account types..."
+          emptyText="No account types found."
+          className="w-full h-[48px]"
+          showIcons
+          showSeparators
+        />
+
         <Combobox
           options={[
             { value: "all", label: "All Packages", icon: Package2, iconColor: "text-muted-foreground" },
@@ -919,13 +957,13 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All CSC", icon: Users, iconColor: "text-muted-foreground" },
-            { value: "unassigned", label: `Unassigned (${tenants.filter(t => !t.csc_user_id).length})`, icon: UserPlus, iconColor: "text-amber-600" },
+            { value: "unassigned", label: `Unassigned (${tenants.filter(t => t.accountType === "rto" && !t.csc_user_id).length})`, icon: UserPlus, iconColor: "text-amber-600" },
             ...cscFilterOptions.filter(u => !u.archived).map(csc => {
-              const clientCount = tenants.filter(t => t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
+              const clientCount = tenants.filter(t => t.accountType === "rto" && t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
               return { value: csc.user_uuid, label: `${csc.first_name} ${csc.last_name} (${clientCount})`, icon: Users, iconColor: "text-primary" };
             }),
             ...cscFilterOptions.filter(u => u.archived).map(csc => {
-              const clientCount = tenants.filter(t => t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
+              const clientCount = tenants.filter(t => t.accountType === "rto" && t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
               return { value: csc.user_uuid, label: `${csc.first_name} ${csc.last_name} (${clientCount})`, badge: "Archived", icon: Archive, iconColor: "text-muted-foreground" };
             })
           ]}
@@ -1117,6 +1155,8 @@ export default function ManageTenants() {
               </TableHeader>
               <TableBody>
                 {filteredTenants.map((tenant, index) => {
+                  const isAcademyAccount = tenant.accountType === "academy_solo";
+                  const surfacePath = tenantSurfacePath(tenant);
                   const hasKickStart = tenant.all_packages.some(p => p.name.startsWith('KS'));
                   const nonKSPackages = tenant.all_packages.filter(p => !p.name.startsWith('KS'));
                   const primaryPkg = nonKSPackages[0];
@@ -1131,7 +1171,7 @@ export default function ManageTenants() {
                       "hover:bg-primary/5 animate-fade-in",
                       (tenant.status !== "active" || !!tenant.archived_at) && "opacity-60"
                     )}
-                    onClick={() => navigate(`/tenant/${tenant.id}`)}
+                    onClick={() => navigate(surfacePath)}
                   >
                     {bulkSelectionEnabled && (
                       <TableCell
@@ -1162,7 +1202,7 @@ export default function ManageTenants() {
                       <div>
                         <div>
                           <Link
-                            to={`/tenant/${tenant.id}`}
+                            to={surfacePath}
                             aria-label={`Open ${tenant.name}`}
                             className="inline-flex max-w-full rounded-sm font-semibold text-foreground pb-[10px] whitespace-nowrap hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             onClick={(event) => event.stopPropagation()}
@@ -1172,11 +1212,14 @@ export default function ManageTenants() {
                               <span className="text-primary font-bold mr-1.5">KS</span>
                             )}
                             {tenant.name}
+                            {isAcademyAccount && (
+                              <Badge variant="outline" className={cn(tablePillClass, "ml-2 border-primary/30 text-primary")}>Academy Solo</Badge>
+                            )}
                           </Link>
                           <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
                             <span className="flex items-center gap-1">
                               <User className="w-3 h-3" />
-                              {tenant.primary_contact_name || "No primary contact"}
+                              {isAcademyAccount ? "Academy account" : (tenant.primary_contact_name || "No primary contact")}
                             </span>
                             <span>{tenant.state || ""}</span>
                           </div>
@@ -1184,26 +1227,33 @@ export default function ManageTenants() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 min-w-[200px] pr-8">
-                      <div>
-                        <div className="flex items-center gap-2 font-semibold text-foreground pb-[10px] whitespace-nowrap">
-                          <span>{primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}</span>
-                          {secondaryPkg && (
-                            <span className="text-[10px] font-normal text-muted-foreground">
-                              {secondaryPkg.name}
-                            </span>
-                          )}
+                      {isAcademyAccount ? (
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge variant="outline" className={cn(tablePillClass, "border-primary/30 text-primary")}>Academy account</Badge>
+                          <span className="text-xs text-muted-foreground">No RTO package</span>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
-                          <Package2 className="w-3 h-3" />
-                          <span>{primaryPkg?.full_text || (tenant.all_packages.length > 0 ? tenant.all_packages[0].full_text : "No Packages Added")}</span>
+                      ) : (
+                        <div>
+                          <div className="flex items-center gap-2 font-semibold text-foreground pb-[10px] whitespace-nowrap">
+                            <span>{primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}</span>
+                            {secondaryPkg && (
+                              <span className="text-[10px] font-normal text-muted-foreground">
+                                {secondaryPkg.name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                            <Package2 className="w-3 h-3" />
+                            <span>{primaryPkg?.full_text || (tenant.all_packages.length > 0 ? tenant.all_packages[0].full_text : "No Packages Added")}</span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[132px] min-w-[132px] px-3 align-middle">
-                      {renderInvoiceStatusBadges(tenant)}
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">Not applicable</span> : renderInvoiceStatusBadges(tenant)}
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 text-center whitespace-nowrap">
-                      {(() => {
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">—</span> : (() => {
                         const used = tenant.hours_used_minutes || 0;
                         const included = tenant.hours_included_minutes || 0;
                         if (included === 0 && used === 0) return <span className="text-xs text-muted-foreground">—</span>;
@@ -1224,7 +1274,7 @@ export default function ManageTenants() {
                       })()}
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[132px] min-w-[132px] px-3 align-middle">
-                      {tenant.complyhub_membership_tier ? (
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">Not applicable</span> : tenant.complyhub_membership_tier ? (
                         <Badge variant="outline" className={cn(tablePillClass, "border-primary/30 text-primary")}>
                           {tenant.complyhub_membership_tier}
                         </Badge>
@@ -1255,13 +1305,17 @@ export default function ManageTenants() {
                     <TableCell
                       className="py-4 border-r border-border/50 whitespace-nowrap"
                       onClick={(e) => {
-                        if (isSuperAdmin || isTeamLeader) {
+                        if (!isAcademyAccount && (isSuperAdmin || isTeamLeader)) {
                           e.stopPropagation();
                           setCscAssignDialog({ open: true, tenant });
                         }
                       }}
                     >
-                      {tenant.csc_name ? (
+                      {isAcademyAccount ? (
+                        <div className="flex justify-center">
+                          <span className="text-xs text-muted-foreground">Not applicable</span>
+                        </div>
+                      ) : tenant.csc_name ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1312,7 +1366,7 @@ export default function ManageTenants() {
                       <span className="font-semibold">{tenant.member_count}</span>
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[120px] min-w-[120px] px-3 align-middle">
-                      {(() => {
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">Not applicable</span> : (() => {
                         const riskColors: Record<string, string> = {
                           low: "bg-emerald-500/10 text-emerald-600 border-emerald-600",
                           medium: "bg-amber-500/10 text-amber-600 border-amber-600",
@@ -1328,7 +1382,7 @@ export default function ManageTenants() {
                       })()}
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 whitespace-nowrap">
-                      {tenant.next_renewal_date ? (() => {
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">Not applicable</span> : tenant.next_renewal_date ? (() => {
                         const renewal = new Date(tenant.next_renewal_date);
                         const now = new Date();
                         const diffDays = Math.ceil((renewal.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -1350,7 +1404,7 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-4 border-r border-border/50 whitespace-nowrap">
-                      {tenant.registration_end_date ? (() => {
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">Not applicable</span> : tenant.registration_end_date ? (() => {
                         const regEnd = new Date(tenant.registration_end_date);
                         const now = new Date();
                         const diffDays = Math.ceil((regEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -1372,7 +1426,7 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-4 px-4 text-center whitespace-nowrap">
-                      {tenant.last_note_date ? (
+                      {isAcademyAccount ? <span className="text-xs text-muted-foreground">—</span> : tenant.last_note_date ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>

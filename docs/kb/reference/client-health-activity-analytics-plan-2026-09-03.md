@@ -38,6 +38,16 @@ The Phase 2.6 M4 decision now retires the legacy forecast/health cron lane
 retained as evidence, and any replacement schedule requires a new Client
 Health contract, tests and audit entry.
 
+### Cross-initiative implementation note (2026-09-15)
+
+Academy Solo accounts are deliberately excluded from the RTO-oriented
+Client Health and operational directory metrics. Their shared Manage Clients
+row is for staff discovery only; it shows the account classification and
+suppresses RTO health/action semantics. Any future Academy analytics must be
+defined over Academy entitlement and learning activity, with its own metric
+policy and evidence gate, rather than by treating the temporary tenant row as
+a Client Health subject.
+
 The approved H1 unknown-state direction has since been implemented in five
 bounded, read-only consumer slices: the executive retention overview and team
 capacity widgets, dashboard triage, Ask Viv portfolio facts, and Ask Viv
