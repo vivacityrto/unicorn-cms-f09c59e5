@@ -424,7 +424,7 @@ export function parseCliResult(output, prefix = "TOM_APPLY_RESULT:") {
 }
 
 function executeSql(sqlPath) {
-  const result = spawnSync("supabase", ["db", "query", "--linked", "--project-ref", QA_PROJECT_REF, "--file", sqlPath, "--output-format", "json"], {
+  const result = spawnSync("supabase", ["db", "query", "--linked", "--project-ref", QA_PROJECT_REF, "--file", sqlPath], {
     encoding: "utf8",
     env: { ...process.env },
     windowsHide: true,
@@ -445,7 +445,7 @@ function safeCliDiagnostic(stderr) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => /^(error|detail|hint|warning):/i.test(line));
-  const fallback = String(stderr ?? "").split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+  const fallback = String(stderr ?? "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean).at(-1);
   const diagnostic = (lines.join(" ") || fallback || "database returned no safe diagnostic")
     .replace(UUID_PATTERN, "[uuid-redacted]")
     .replace(EMAIL_PATTERN, "[email-redacted]")
