@@ -235,7 +235,10 @@ export default function StaffEngagementDetail() {
         .from("users")
         .select("user_uuid, full_name")
         .eq("is_vivacity_internal", true)
+        .eq("archived", false)
+        .eq("disabled", false)
         .eq("is_system_account", false)
+        .eq("is_qa_persona", false)
         .ilike("full_name", `%${linkSearch}%`)
         .limit(8);
       if (error) throw error;

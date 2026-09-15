@@ -87,6 +87,7 @@ export function useSeatSuccession() {
         .select('user_uuid, first_name, last_name, leave_from, leave_until')
         .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
         .eq('archived', false)
+        .eq('disabled', false)
         .eq('is_system_account', false)
         .eq('is_qa_persona', false);
 

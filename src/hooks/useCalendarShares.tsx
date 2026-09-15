@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { toast } from 'sonner';
 
 export interface CalendarShare {
@@ -60,32 +60,17 @@ export function useCalendarShares() {
     enabled: !!user?.id,
   });
 
-  // Fetch Vivacity team members (for the share dropdown)
-  const { data: teamMembers = [], isLoading: isLoadingTeam } = useQuery({
-    queryKey: ['vivacity-team-members', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      // Get Vivacity team members (those with Vivacity roles)
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email, unicorn_role')
-        .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-        .neq('user_uuid', user.id) // Exclude self
-        .eq('is_system_account', false)
-        .eq('is_qa_persona', false)
-        .order('first_name');
-
-      if (error) throw error;
-
-      return (data || []).map((member) => ({
-        user_uuid: member.user_uuid,
-        full_name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown',
-        email: member.email,
-      })) as VivacityTeamMember[];
-    },
-    enabled: !!user?.id,
-  });
+  // Fetch Vivacity team members (for the share dropdown) via the centralized,
+  // correctly-scoped (archived/disabled/system-account/qa-persona) staff directory.
+  const { data: vivacityTeam = [], isLoading: isLoadingTeam } = useVivacityTeamUsers();
+  const teamMembers: VivacityTeamMember[] = vivacityTeam
+    .filter((member) => member.user_uuid !== user?.id) // Exclude self
+    .map((member) => ({
+      user_uuid: member.user_uuid,
+      full_name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown',
+      email: member.email,
+    }))
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   // Create a new share
   const createShareMutation = useMutation({

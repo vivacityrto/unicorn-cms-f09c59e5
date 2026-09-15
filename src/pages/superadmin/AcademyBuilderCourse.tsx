@@ -355,6 +355,7 @@ export default function AcademyBuilderCourse() {
         .select("user_uuid, full_name, archived, disabled")
         .eq("is_vivacity_internal", true)
         .eq("is_system_account", false)
+        .eq("is_qa_persona", false)
         .order("full_name");
       if (error) throw error;
       // Historical drafts may intentionally retain an inactive facilitator.

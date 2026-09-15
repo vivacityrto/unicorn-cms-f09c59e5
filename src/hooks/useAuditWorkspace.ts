@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { toast } from 'sonner';
 import { useCallback, useEffect, useRef } from 'react';
 import type { AuditSection, AuditResponse, AuditFinding, AuditAction, AuditDocument, TemplateQuestion } from '@/types/auditWorkspace';
@@ -585,25 +586,10 @@ export function useUpdateSectionRiskLevel(auditId: string | undefined) {
 }
 
 // ─── Internal Users for dropdowns ───
-export function useInternalUsers() {
-  return useQuery({
-    queryKey: ['internal-users'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, avatar_url')
-        .eq('is_vivacity_internal', true)
-        .eq('is_system_account', false);
-      if (error) throw error;
-      return (data || []) as unknown as Array<{
-        user_uuid: string;
-        first_name: string;
-        last_name: string;
-        avatar_url: string | null;
-      }>;
-    },
-  });
-}
+// Delegates to the centralized, correctly-scoped (archived/disabled/
+// system-account/qa-persona) staff directory instead of a second
+// hand-rolled query -- this used to be missing all four of those filters.
+export const useInternalUsers = useVivacityTeamUsers;
 
 // ─── Findings without action items (Critical/High) ───
 export interface FindingWithoutAction {
