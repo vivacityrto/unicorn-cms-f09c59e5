@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-12 · **Status:** repository evidence; retirement not authorized
+> **Last updated:** 2026-09-15 · **Status:** evidence refreshed; retirement not authorized
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -19,13 +19,14 @@ production data.
 
 ## Static caller census at current `origin/main`
 
-The following references remain in the checked-in code at `origin/main` after
-PR #1201:
+The following references were re-checked at `origin/main` commit
+`bed59df19` on 2026-09-15. The direct per-row activation UI has been removed;
+the two indirect activation chains remain executable and are the remaining
+static reachability work before retirement.
 
 | Path | Reference | Reachability | Retirement implication |
 | --- | --- | --- | --- |
-| `src/components/client/TenantUsersTab.tsx` | Direct `supabase.functions.invoke('activate-ghost-user')` in `handleActivateGhost`; ghost detection calls `is_ghost_user`; staff-only activation UI renders in the same component | Live per-row UI path | Must be replaced by the contact/promotion flow before retirement |
-| `src/components/client/TenantUsersTab.tsx` | `supabase.functions.invoke('bulk-account-actions')` with an `action` selected from the bulk UI | Live bulk UI path; indirect activation caller | The activation action must be removed, rejected, or explicitly migrated before the sender can be retired |
+| `src/components/client/TenantUsersTab.tsx` | `supabase.functions.invoke('bulk-account-actions')`; the current `BulkAction` union is reset-only and the component no longer exposes ghost activation | Live reset path; no current activation caller observed | Preserve reset behavior; no activation removal is required in this component unless a future change reintroduces the action |
 | `supabase/functions/bulk-account-actions/index.ts` | `senderName = action === 'activate' ? 'activate-ghost-user' : 'send-password-reset'` and internal invoke | Live Edge-to-Edge path when `action='activate'` | Must account for queued/in-flight requests and reject new activation requests before retirement |
 | `src/pages/admin/CohortAccessSenderJob.tsx` | Invokes `cohort-access-sender-worker` | Live staff job UI path; indirect activation caller | Existing jobs and the activation action need a drain/hold decision |
 | `supabase/functions/cohort-access-sender-worker/index.ts` | `senderName = action === 'activate' ? 'activate-ghost-user' : 'send-password-reset'` | Live worker-to-Edge path when a job action is `activate` | Must inspect job rows and worker history; source comment says `pg_cron` is not permitted, but that is not historical proof |
@@ -35,6 +36,22 @@ The census found no other direct function-name invocation under `src/`,
 `supabase/functions/`, or `scripts/`. It did find documentation, migration,
 RBAC inventory, and `set-invite-password` compatibility references. Those are
 not additional callers, but they are retirement evidence dependencies.
+
+## Evidence status after the approved QA projection
+
+The approved P1.2-d QA projection is now complete: the one-row canary plus
+5/5/4 bounded batches created 15 contact projections and 15 audit rows in
+allowlisted `unicorn-qa`. Its terminal read-only reconciliation reported 15
+existing-contact matches, zero eligible candidates, zero collision/manual
+rows, and zero projected future inserts. This proves the bounded QA
+replacement projection and its postflight contract only; it does not prove
+that production ghosts, queued activation jobs, or historical invocations are
+safe to retire. See the [P1.2-d bounded-batch audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-bounded-batch.md).
+
+The P1.1 QA contact-promotion canary also passed the real contact → invitation
+→ acceptance path with QA no-send, idempotent retry, cleanup, and audit
+preservation. That is replacement-workflow evidence for the approved QA
+fixture, not production retirement authority. See the [P1.1 QA audit](../../../../audit-log/entries/2026-09-15-tom-p11-contact-promotion-qa-canary.md).
 
 ## Compatibility dependencies that are not callers
 
@@ -55,10 +72,11 @@ not additional callers, but they are retirement evidence dependencies.
 
 ## Evidence still required before retirement
 
-1. **Static reachability closure:** remove or migrate the direct UI and both
+1. **Static reachability closure:** remove or migrate the two remaining
    indirect activation chains, then re-run the repository census on the final
-   candidate commit. The result must show no executable caller, while retaining
-   only intentional documentation or migration-history references.
+   candidate commit. The direct per-row UI path is already absent in the
+   observed source. The final result must show no executable caller, while
+   retaining only intentional documentation or migration-history references.
 2. **Job-state census:** inspect `cohort_send_jobs` and its item table for
    activation jobs in queued, running, failed, or retryable states. Freeze or
    disposition them explicitly; do not assume the absence of a cron schedule
@@ -72,10 +90,11 @@ not additional callers, but they are retirement evidence dependencies.
    metadata, auth users without passwords, pending invitations, and legacy
    profiles. The set must have a safe completion or explicit hold path before
    the old function is disabled.
-5. **Replacement workflow evidence:** use the approved QA fixture to prove
-   contact promotion → pending invitation → acceptance creates/relinks the
-   intended profile and membership exactly once, with the relevant denial and
-   duplicate cases covered.
+5. **Replacement workflow evidence:** the approved QA fixture has now proven
+   contact projection plus contact promotion → pending invitation → acceptance
+   with exactly-once behavior, QA no-send, idempotent retry, cleanup, and audit
+   preservation. Any production or broader-tenant observation remains a
+   separate gate.
 6. **RBAC/security review:** confirm the replacement preserves the capability
    boundary and that no browser or orchestrator caller can bypass the standard
    invitation path.
@@ -100,12 +119,14 @@ operational action and is not implied by this packet.
 
 ## Current conclusion
 
-The function is **not yet a zero-caller candidate**. The direct staff UI and
-two indirect activation chains are still present and reachable in source. The
-previous short-window “no invocation” observation is useful but insufficient
-to override that evidence. The immediate safe next step is the approved QA
-replacement characterization plus a separately authorized historical job/log
-census; retirement remains held until both are complete.
+The function is **not yet a zero-caller candidate**. The direct per-row staff
+UI path is absent in the observed source, but the two indirect activation
+chains remain reachable. The approved QA replacement evidence is complete;
+the job-state census, owner-approved historical log review, outstanding-account
+census, indirect-caller closure, and RBAC/security review remain open. The
+immediate safe next step is a separately approved bounded implementation to
+freeze/remove those indirect activation paths while preserving reset behavior,
+followed by the job/log/account evidence gates. Retirement remains held.
 
 **Audit entry:** none needed — repository evidence and planning only; no
 schema, permission, deployment, production-data, or operational schedule
