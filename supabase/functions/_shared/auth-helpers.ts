@@ -34,6 +34,8 @@ export interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   state: string | null;
+  disabled: boolean | null;
+  archived: boolean | null;
 }
 
 /**
@@ -108,7 +110,7 @@ export async function verifyAuth(
     // Fetch the user's profile
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("user_uuid, unicorn_role, email, first_name, last_name, state")
+      .select("user_uuid, unicorn_role, email, first_name, last_name, state, disabled, archived")
       .eq("user_uuid", user.id)
       .single();
 
@@ -121,8 +123,12 @@ export async function verifyAuth(
       };
     }
 
-    // Check if user is active
-    if (profile.state === "inactive" || profile.state === "suspended") {
+    // Check if user is active. `state` is not an account-status field (it's
+    // unrelated numeric data on this table) -- disabling/archiving a user
+    // never revokes their Supabase Auth session, so this is the only place
+    // in this auth path that can reject a still-valid session for an
+    // account that has since been disabled or archived.
+    if (profile.disabled || profile.archived) {
       return {
         user: null,
         profile: null,

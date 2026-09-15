@@ -52,9 +52,11 @@ export async function validateAskVivAccess(
   }
 
   // Note: no separate active-state check here — verifyAuth() (auth-helpers.ts) already
-  // gates on profile.state ('inactive'/'suspended') and nulls the profile before this
-  // function is ever reached, so a second check on a nonexistent `profile.status` field
-  // was dead code. Don't re-add without checking why verifyAuth's gate stopped applying.
+  // gates on profile.disabled/profile.archived and nulls the profile before this
+  // function is ever reached (fixed 2026-09-15 — it previously compared profile.state,
+  // a bigint column unrelated to account status, so this gate was silently dead for
+  // an unknown period; see docs/audit-log/entries/2026-09-15-fix-verify-auth-dead-account-status-check.md).
+  // Don't re-add a second check here without confirming why verifyAuth's gate stopped applying.
 
   return { allowed: true };
 }
@@ -122,10 +124,12 @@ const CLIENT_ASK_VIV_ROLES = ["Admin", "User"];
  *
  * Fail-fast checks (in order):
  *  1. profile.unicorn_role must be 'Admin' or 'User'.
- *  2. profile.state must not be 'inactive' or 'suspended'.
- *     (NOTE: UserProfile exposes `state`, not `status`. The existing
- *     validateAskVivAccess above mistakenly reads `profile.status` —
- *     do not repeat that bug here.)
+ *  2. profile.disabled and profile.archived must both be falsy.
+ *     (NOTE: UserProfile's `state` field is unrelated numeric data, not an
+ *     account-status field — a prior version of this check compared
+ *     profile.state to 'inactive'/'suspended', which could never match and
+ *     left this gate silently dead; fixed 2026-09-15, see
+ *     docs/audit-log/entries/2026-09-15-fix-verify-auth-dead-account-status-check.md.)
  *  3. Exactly one active tenant_members row must exist for the user.
  */
 export async function validateClientAskVivAccess(
@@ -150,8 +154,9 @@ export async function validateClientAskVivAccess(
     return { allowed: false, reason: "not_client_role" };
   }
 
-  // 2. Account state gate — UserProfile uses `state`, NOT `status`.
-  if (profile?.state === "inactive" || profile?.state === "suspended") {
+  // 2. Account status gate — profile.state is unrelated numeric data, not
+  // an account-status field; disabled/archived are the real flags.
+  if (profile?.disabled || profile?.archived) {
     await logDeniedAccess(supabase, userId, role, endpoint, "user_archived");
     return { allowed: false, reason: "user_archived" };
   }
