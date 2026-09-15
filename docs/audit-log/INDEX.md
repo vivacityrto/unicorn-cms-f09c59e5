@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-09-15 — TOM P1.2-c supervised QA timing approved](entries/2026-09-15-tom-p12c-retirement-timing-approval.md) — Carl approved the disable-first QA action for the next supervised window after a passing preflight; no unattended run, production action, or hosted change authorized
 - [2026-09-15 — TOM P1.2-c disable-first action shape approved](entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md) — Carl approved disabling `activate-ghost-user` first in `unicorn-qa`, with deletion deferred until a separate clean observation and approval; execution remains unauthorized and no hosted action occurred
 - [2026-09-15 — TOM P1.2-c retirement packet target approved as `unicorn-qa` only](entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md) — Carl approved project `qfpxvumcrnzrjyvqkicq` for the planning/QA-only packet and explicitly excluded production; no Edge, job, account, invitation, credential, migration, or hosted action was authorized
 - [2026-09-15 — TOM P1.2-c operational retirement packet prepared](entries/2026-09-15-tom-p12c-retirement-operational-packet.md) — read-only control-plane metadata captured for the exact `activate-ghost-user` target (ACTIVE v304); prepared a disable-first, reversible packet with explicit Carl-owned environment/timing/rollback gates; no hosted action occurred and retirement remains unauthorized
