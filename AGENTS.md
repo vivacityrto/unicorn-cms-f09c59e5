@@ -486,6 +486,24 @@ alter runtime behavior. The things worth reviewing each time:
   additional confidence there — it only stops paying for verification
   that provably can't find anything.
 
+- **Hosted QA implementation fast path (added 2026-09-15).** For any
+  implementation that will later run against a hosted QA target, front-load
+  the transport and failure-contract work before the first hosted mutation.
+  Freeze the target, credential scope, row/batch limit, private-artifact
+  contract, and postflight assertions in one checklist. In the same
+  implementation PR, add local tests for the exact CLI/API invocation using
+  representative success and failure responses, including sanitized
+  diagnostics and sentinel parsing; do not discover basic transport defects
+  through repeated live runs. Bundle mechanical corrections that preserve the
+  same scope before opening the PR, rather than paying a full CI/review/merge
+  cycle for each one-line fix. Then run one non-mutating hosted preflight, one
+  tightly bounded canary, and one read-only postflight/reconciliation. Use a
+  single implementation PR plus one documentation/audit PR where practical.
+  This is an overhead reduction only: it never removes the allowlisted-target
+  guard, fail-closed credential and mode checks, private identifier handling,
+  explicit row limit, postflight, audit evidence, or separate approval for a
+  larger batch or production.
+
 The bar for any of these: does it reduce repeated overhead without
 skipping, weakening, or reordering-around a verification step? If yes,
 it's fair game to apply proactively, not just when asked.
