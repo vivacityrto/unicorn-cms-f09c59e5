@@ -12,7 +12,7 @@
 >
 > **Scope:** one canonical `authorize(subject, action, resource, tenant_context)` decision path, replacing scattered raw role checks and duplicated database policy logic
 >
-> **Dependencies:** blocks wider Tenant Operating Model rollout (see [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md)'s own "Stop gate"); assumes the [Codebase Optimization Plan](codebase-optimization-plan-2026-08-28.md)'s route/guard composition work reaches a stable checkpoint first
+> **Dependencies:** blocks wider Tenant Operating Model rollout (see [Tenant Operating Model](tenant-operating-model-data-architecture-plan-2026-09-02.md)'s own "Stop gate"); assumes the [Codebase Optimization Plan](codebase-optimization-plan-2026-08-28.md)'s route/guard composition work reaches a stable checkpoint first; Academy Solo remains a bounded exception lane using `User` plus `academy_user`/`academy_only`, not a new RBAC role or package-derived authority
 >
 > **Exit criteria:** see §14 "Definition of program completion"
 >

@@ -1,6 +1,6 @@
 # Academy Solo MVP — Phase 1 implementation packet
 
-> **Status:** implementation in progress — controlled pilot approved; QA and production migrations applied for invite testing
+> **Status:** implementation in progress — controlled pilot approved; invitation compatibility fix verified in allowlisted QA, broader pilot gates remain
 > **Started:** 2026-09-14  
 > **Target:** pilot-ready by 2026-09-15, subject to the approval gates below  
 > **Owner:** Academy Solo delivery workstream  
@@ -54,6 +54,37 @@ authorities for this slice. The existing `academy_access_enabled` flag is the
 temporary coarse entitlement switch, with a dedicated RLS helper defining the
 protected-content boundary.
 
+## Current truth-sync (2026-09-15)
+
+The first authenticated QA invite exposed a compatibility defect in the
+acceptance RPC: `academy_user` attempted to write the display role
+`Academy User`, but that value is not present in `public.dd_unicorn_roles`.
+The corrective migrations keep the valid legacy `User` value in
+`public.users.unicorn_role`, return `relationship_role` from token validation,
+bind anonymous RPC acceptance to the invited email's auth identity, and retain
+`academy_user` plus `academy_only` as the relationship and authorization
+authorities. The invitation page now uses Vivacity Academy language for Solo
+invitations, finalizes an already-authenticated matching identity directly,
+and preserves ordinary RTO invitation copy.
+
+The approved operating shape is explicit: Academy Solo accounts remain
+visible to staff as a distinct account type, but Academy Customers remains the
+authoritative lifecycle surface. Manage Clients may provide cross-directory
+visibility, but must not treat Solo as an RTO client or expose package,
+invoice, CSC, compliance-stage, or Client Health actions for it. No Sidekick
+package is created; future analytics should consume an explicit Academy
+account/entitlement event rather than infer product identity from a compliance
+package.
+
+The allowlisted `unicorn-qa` browser verification now passes the authenticated
+invite path: the learner reaches `/academy`, receives the Academy welcome
+message, and produces the expected `User` profile, `academy_user` /
+`academy_only` membership, and zero package instances. Two non-code readiness
+limits remain: Supabase Auth email rate limiting blocked repeated fresh-identity
+signups, and the QA Academy catalogue currently contains no published
+courses. These remain environment/data gates and are not silently treated as
+application success.
+
 ## Cross-initiative decision matrix
 
 | Initiative | Solo dependency | Decision for this packet |
@@ -97,7 +128,10 @@ protected-content boundary.
 5. **Verification.** Run static migration contract tests, frontend tests,
    edge tests, typecheck, lint ratchet, build, then complete authenticated
    positive and negative cases against the pilot account before treating the
-   controlled pilot as ready.
+   controlled pilot as ready. The positive authenticated invite case is now
+   verified in allowlisted QA; the required repository checks also pass. The
+   negative authorization cases and a fresh-identity run remain separate
+   gates.
 
 ## Approval questions consolidated
 
@@ -129,16 +163,15 @@ parentheses until answered:
 
 ## Local demo test data
 
-The repository has no local Supabase service; the current dev server is pointed
-at the configured production Supabase project (`yxkgdalkbrriasiyyrwk`) so the
-existing invitation Edge Functions are available. These values are a manual
-test-data recipe, not an automatic seed:
+The repository has no local Supabase service. Use the allowlisted
+`unicorn-qa` project for hosted invite verification; these values are a
+manual test-data recipe, not an automatic seed:
 
 - Tenant label: `Academy Solo Demo`
 - Learner name: `Demo Academy User`
 - Learner email: `demo.academy.user@example.test` (replace with an inbox that
   can receive the invitation when testing the acceptance flow)
-- Relationship role: `Academy User` / `academy_user`
+- Relationship role: Academy learner / `academy_user` (stored legacy role: `User`)
 - Academy Solo marker: on
 - Maximum users: `1`
 - Catalogue: every published Vivacity Academy course
@@ -149,10 +182,11 @@ test-data recipe, not an automatic seed:
 For local verification, open the staff **Academy Customers** screen, choose
 **Create Academy Solo**, enter the account and Demo Academy User details, and
 submit. The account is created without the Add Client/package workflow and the
-invitation dialog opens with the learner prefilled. The current local server
-uses production because its existing `invite-user` and
-`send-invitation-email` Edge Functions are deployed there; this is for the
-explicit controlled-pilot invite test only, not a public launch.
+invitation dialog opens with the learner prefilled. A local server may use a
+hosted project because its existing `invite-user` and
+`send-invitation-email` Edge Functions are deployed there; use QA fixtures for
+the explicit controlled-pilot invite test and never create pilot data in
+production as part of this packet.
 
 ## Stop/release gates
 

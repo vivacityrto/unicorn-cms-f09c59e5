@@ -126,6 +126,24 @@
       "owner": "Carl",
       "reason": "Approved Academy Solo access boundary and lifecycle controls: update the tenant marker during explicit provisioning, write audit events for staff lifecycle actions, and revoke access for the single-seat Academy learner on lifecycle completion. Applied to production and QA; anon EXECUTE was explicitly revoked in the follow-up corrective migration and all pilot counts remain zero.",
       "expires": "2026-09-21"
+    },
+    {
+      "id": "academy-solo-invitation-role-compatibility-function-body",
+      "file": "supabase/migrations/20260914230604_academy_solo_invitation_role_compatibility.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body preserves the existing invitation writes while adding Academy-role compatibility and is covered by the Academy invitation contract tests and audit entry.",
+      "expires": "2026-10-15"
+    },
+    {
+      "id": "academy-solo-invitation-anonymous-binding-function-body",
+      "file": "supabase/migrations/20260915030000_academy_solo_invitation_anonymous_identity_binding.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body binds an accepted invitation to the authenticated identity and is covered by the Academy invitation contract tests and audit entry.",
+      "expires": "2026-10-15"
     }
   ]
 }

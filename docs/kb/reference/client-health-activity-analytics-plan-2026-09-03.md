@@ -11,7 +11,7 @@
 > **Implementation owner:** Claude Code, one bounded PR at a time, only after Carl approves the phase
 > **Production rule:** every schema, RLS, function, trigger, grant, cron, backfill, model-processing, or data correction change requires a dated audit entry and separate explicit production authority
 > **Program index:** [Program Index](program-index.md)
-> **Scope:** client health/activity metrics, consultant triage, and intervention analytics surfaced on the triage dashboard, main dashboard, client-activity view, tenant detail, and staff Ask Viv
+> **Scope:** client health/activity metrics, consultant triage, and intervention analytics surfaced on the triage dashboard, main dashboard, client-activity view, tenant detail, and staff Ask Viv; Academy Solo accounts are explicitly excluded from Client Health subjects unless a future product decision defines a separate analytics entitlement
 > **Exit criteria:** not yet defined at the program level — tracked per phase (see P3-A in [`codebase-optimization/phase-3/`](codebase-optimization/phase-3/))
 > **Evidence:** "Current implementation reconciliation" below, plus [`codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md`](codebase-optimization/phase-3/p3-a-client-health-consumer-characterization.md) and the [`consultant research project pack`](../handoffs/client-health-consultant-research-project-pack.md)
 > **Audit entry:** none at the program level — implementation PRs record their own per the Production rule above
