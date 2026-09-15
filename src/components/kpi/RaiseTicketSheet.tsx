@@ -35,9 +35,9 @@ export function RaiseTicketButton({ variant = "default" }: { variant?: "default"
     (async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("user_uuid, first_name, last_name, kpi_role, kpi_pod, archived, disabled")
+        .select("user_uuid, first_name, last_name, kpi_role, archived, disabled")
         .eq("kpi_role", "developer")
-        .or("kpi_pod.is.null,kpi_pod.neq.qa")
+        .eq("is_qa_persona", false)
         .order("first_name", { ascending: true });
       if (error) {
         console.error("[RaiseTicket] load devs", error);

@@ -58908,6 +58908,7 @@ export type Database = {
           global_role: string | null
           head_office_address: string | null
           is_csc: boolean | null
+          is_qa_persona: boolean
           is_system_account: boolean
           is_team: boolean | null
           is_vivacity_internal: boolean
@@ -58997,6 +58998,7 @@ export type Database = {
           global_role?: string | null
           head_office_address?: string | null
           is_csc?: boolean | null
+          is_qa_persona?: boolean
           is_system_account?: boolean
           is_team?: boolean | null
           is_vivacity_internal?: boolean
@@ -59086,6 +59088,7 @@ export type Database = {
           global_role?: string | null
           head_office_address?: string | null
           is_csc?: boolean | null
+          is_qa_persona?: boolean
           is_system_account?: boolean
           is_team?: boolean | null
           is_vivacity_internal?: boolean

@@ -209,7 +209,7 @@ export default function TenantNotes() {
         .eq("disabled", false)
         .eq("archived", false)
         .eq("is_system_account", false)
-        .or("kpi_pod.is.null,kpi_pod.neq.qa")
+        .eq("is_qa_persona", false)
         .order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);

@@ -70,7 +70,7 @@ export function BulkReassignCscDialog({ open, onOpenChange, fromUserId, fromUser
         .eq("is_csc", true)
         .eq("archived", false)
         .eq("disabled", false)
-        .or("kpi_pod.is.null,kpi_pod.neq.qa")
+        .eq("is_qa_persona", false)
         .order("first_name", { ascending: true });
       if (cancelled) return;
       if (error) {

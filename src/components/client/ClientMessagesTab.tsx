@@ -134,10 +134,10 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     (async () => {
       const { data } = await supabase
         .from('users')
-        .select('user_uuid, first_name, last_name, email, is_vivacity_internal, unicorn_role, disabled, archived, kpi_pod, is_system_account')
+        .select('user_uuid, first_name, last_name, email, is_vivacity_internal, unicorn_role, disabled, archived, is_qa_persona, is_system_account')
         .or('is_vivacity_internal.eq.true,unicorn_role.in.(Admin,CSC,Super Admin)');
       const rows = (data ?? []).filter(
-        (u) => !u.disabled && !u.archived && u.kpi_pod !== 'qa' && !u.is_system_account && u.user_uuid,
+        (u) => !u.disabled && !u.archived && !u.is_qa_persona && !u.is_system_account && u.user_uuid,
       );
       rows.sort((a, b) => staffName(a).localeCompare(staffName(b)));
       setStaffList(rows);

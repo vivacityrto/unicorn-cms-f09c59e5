@@ -144,7 +144,7 @@ export const LiveMeetingView = () => {
         .from('users')
         .select('user_uuid, first_name, last_name')
         .in('user_uuid', ownerIds)
-        .or('kpi_pod.is.null,kpi_pod.neq.qa');
+        .eq('is_qa_persona', false);
       if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(u => {
@@ -170,7 +170,7 @@ export const LiveMeetingView = () => {
         .from('users')
         .select('user_uuid, first_name, last_name')
         .in('user_uuid', todoOwnerIds)
-        .or('kpi_pod.is.null,kpi_pod.neq.qa');
+        .eq('is_qa_persona', false);
       if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(u => {
