@@ -170,6 +170,12 @@ separate audit entry and approval.
 
 ## Open decisions after the first report
 
+The bounded apply-design follow-up is now recorded in the
+[P1.2-d guarded apply-design packet](p1-2-d-ghost-contact-apply-design-packet.md).
+It remains planning-only: the accepted redacted artifact cannot drive writes,
+and any identifier-bearing manifest, write boundary, canary, or production
+operation needs its own gate.
+
 The following remain outside this execution packet:
 
 - durable source-metadata and migration-batch storage;
