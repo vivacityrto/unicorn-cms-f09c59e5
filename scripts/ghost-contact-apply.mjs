@@ -424,7 +424,7 @@ export function parseCliResult(output, prefix = "TOM_APPLY_RESULT:") {
 }
 
 function executeSql(sqlPath) {
-  const result = spawnSync("supabase", ["db", "query", "--linked", "--project-ref", QA_PROJECT_REF, "--file", sqlPath], {
+  const result = spawnSync("supabase", ["db", "query", "--linked", "--project-ref", QA_PROJECT_REF, "--file", sqlPath, "--debug"], {
     encoding: "utf8",
     env: { ...process.env },
     windowsHide: true,
