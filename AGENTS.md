@@ -808,6 +808,25 @@ For changes routed through a Lovable prompt specifically, read
 the prompt — it covers the phased-prompt workflow (audit → design decisions →
 implementation plan → phased implementation → dry-run → verification).
 
+**Guardrail: verifying a feature's tenant/relationship scope means checking
+RLS on the actual tables, not just the frontend page component.** A
+frontend page with zero `tenant_id`/`client_id` references is not proof a
+feature is internal-only — the real enforcement boundary for a Supabase-
+backed feature is RLS, and a page can look clean while its data-layer hooks
+and RLS policies grant a much wider audience. A real incident (2026-09-15,
+see `docs/audit-log/entries/2026-09-15-retire-client-eos-access.md`):
+`EosScorecard.tsx`/`EosRocks.tsx`/`EosConfigurationEditor.tsx` all had zero
+tenant references, leading to an initial "internal Vivacity-only"
+conclusion for all three — correct for the config-editor page (whose RLS
+independently routed through an internal-only `role_permissions` check),
+but wrong for scorecard and rocks, whose actual tables had real client-
+tenant-reachable RLS grants (a 2026-01-06 bulk-seeded `eos_user_roles`
+backfill across 377 tenants, plus several raw tenant-match clauses with no
+role check at all) that the page-component check could never have found.
+Before asserting a feature's scope (internal-only, per-tenant, owner-only),
+check `pg_policies` for every table the feature reads or writes — not just
+the page that renders it.
+
 **Guardrail: sweep RPC bodies, not just frontend code, before tightening a
 constraint.** Adding `NOT NULL`, a new `CHECK`, or narrowing an existing
 column on a table already in use requires checking every write path into
