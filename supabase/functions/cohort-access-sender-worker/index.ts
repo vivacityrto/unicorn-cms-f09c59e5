@@ -1,7 +1,7 @@
 // Cross-Tenant Cohort Access Sender — worker.
-// Staff-initiated, time-budgeted drain. Calls activate-ghost-user and
-// send-password-reset UNMODIFIED, carrying the caller's JWT. Never stores
-// the token. pg_cron is NOT permitted to invoke this function.
+// Staff-initiated, time-budgeted reset drain. Legacy ghost activation jobs
+// are rejected before leasing any item. The worker carries the caller's JWT
+// and never stores the token. pg_cron is NOT permitted to invoke this function.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -76,12 +76,22 @@ serve(async (req) => {
     .eq("id", jobId)
     .maybeSingle();
   if (jobErr || !job) return json(req, 404, { ok: false, code: "JOB_NOT_FOUND" });
+  if (job.action === "activate") {
+    return json(req, 410, {
+      ok: false,
+      code: "GHOST_ACTIVATION_RETIRED",
+      detail: "Ghost activation jobs are retired — use the standard contact invitation flow",
+    });
+  }
   if (job.status !== "running") {
     return json(req, 200, { ok: true, drained: 0, status: job.status, remaining: null, note: "Job not running" });
   }
 
-  const action = job.action as "activate" | "reset";
-  const senderName = action === "activate" ? "activate-ghost-user" : "send-password-reset";
+  if (job.action !== "reset") {
+    return json(req, 400, { ok: false, code: "INVALID_JOB_ACTION", detail: "Unsupported cohort sender action" });
+  }
+  const action = "reset" as const;
+  const senderName = "send-password-reset";
   const throttle = typeof job.throttle_ms === "number" ? job.throttle_ms : THROTTLE_MS_DEFAULT;
   const batchSize = typeof job.batch_size === "number" ? job.batch_size : 10;
   const workerId = `worker-${caller.id.slice(0,8)}-${crypto.randomUUID().slice(0,8)}`;
@@ -114,24 +124,12 @@ serve(async (req) => {
         skipped++; drained++; continue;
       }
 
-      // Activate requires a tenant assignment; skip if missing.
-      if (action === "activate" && (item.tenant_id === null || item.tenant_id === undefined)) {
-        await userClient.rpc("record_cohort_item_outcome", {
-          p_item_id: item.id, p_outcome: "skipped", p_reason: "No tenant assigned — cannot activate", p_caller_id: caller.id,
-        });
-        skipped++; drained++; continue;
-      }
-
-      const invokeBody = action === "activate"
-        ? { user_uuid: item.user_uuid, tenant_id: item.tenant_id }
-        : { user_uuid: item.user_uuid };
-
       let outcome: "sent" | "skipped" | "failed" = "failed";
       let reason: string | null = null;
       let payload: SenderPayload | undefined;
       try {
         const { data, error } = await admin.functions.invoke(senderName, {
-          body: invokeBody,
+          body: { user_uuid: item.user_uuid },
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -154,8 +152,7 @@ serve(async (req) => {
             code === "USER_NOT_FOUND";
           outcome = stateMismatch ? "skipped" : "failed";
           reason = payload.detail || code || "Sender refused the action";
-          if (code === "AUTH_USER_NOT_FOUND" && action === "reset") reason = "No auth account yet — use Activate";
-          if (code === "ALREADY_ACTIVATED" && action === "activate") reason = "Already activated — use Send password reset";
+          if (code === "AUTH_USER_NOT_FOUND") reason = "No auth account yet — promote the contact through the standard invitation flow";
         } else if (error) {
           outcome = "failed";
           reason = error.message || "Sender transport error";

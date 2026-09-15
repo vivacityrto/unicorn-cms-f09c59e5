@@ -1,11 +1,12 @@
-// Thin orchestrator over activate-ghost-user and send-password-reset.
-// NEVER reimplement the senders here — they are the single source of truth
-// for emails, URLs and audit. This function only loops with a circuit-breaker
-// and returns per-recipient outcomes (including partial results on abort).
+// Thin orchestrator over the password-reset sender.
+// Legacy ghost activation is deliberately rejected below; contact promotion
+// is the only supported path for a person without a login. NEVER reimplement
+// the sender here — it is the single source of truth for emails, URLs and
+// audit. This function only loops with a circuit-breaker and returns
+// per-recipient outcomes (including partial results on abort).
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 import { hasTenantAccessSafe } from "../_shared/auth-helpers.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -90,6 +91,13 @@ serve(async (req) => {
   if (!body || (body.action !== "activate" && body.action !== "reset")) {
     return json(req, 400, { ok: false, code: "INVALID_ACTION", detail: "action must be 'activate' or 'reset'" });
   }
+  if (body.action === "activate") {
+    return json(req, 410, {
+      ok: false,
+      code: "GHOST_ACTIVATION_RETIRED",
+      detail: "Ghost activation is retired — promote the contact through the standard invitation flow",
+    });
+  }
   if (typeof body.tenant_id !== "number") {
     return json(req, 400, { ok: false, code: "INVALID_PAYLOAD", detail: "tenant_id (number) required" });
   }
@@ -116,14 +124,11 @@ serve(async (req) => {
     .select("user_uuid, email, first_name, last_name")
     .in("user_uuid", uuids);
   const emailByUuid = new Map<string, string>();
-  const nameByUuid = new Map<string, string>();
   for (const u of (userRows || []) as { user_uuid: string; email: string | null; first_name: string | null; last_name: string | null }[]) {
     if (u.email) emailByUuid.set(u.user_uuid, u.email);
-    const full = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
-    if (full) nameByUuid.set(u.user_uuid, full);
   }
 
-  const senderName = body.action === "activate" ? "activate-ghost-user" : "send-password-reset";
+  const senderName = "send-password-reset";
   const details: ResultRow[] = [];
   let consecutiveFailures = 0;
   let aborted = false;
@@ -147,13 +152,8 @@ serve(async (req) => {
     if (invokedCount > 0) await sleep(THROTTLE_MS);
 
     try {
-      const invokeBody =
-        body.action === "activate"
-          ? { user_uuid, tenant_id: body.tenant_id }
-          : { user_uuid };
-
       const { data, error } = await admin.functions.invoke(senderName, {
-        body: invokeBody,
+        body: { user_uuid },
         headers: { Authorization: `Bearer ${token}` },
       });
       invokedCount += 1;
@@ -176,21 +176,6 @@ serve(async (req) => {
         });
         consecutiveFailures = 0;
 
-        if (body.action === "activate" && body.tenant_id) {
-          const name = nameByUuid.get(user_uuid) || email || "user";
-          await emitTimelineEvent(admin, {
-            tenant_id: body.tenant_id,
-            client_id: String(body.tenant_id),
-            event_type: 'account_invited',
-            title: `Invitation sent to ${name}`,
-            source: 'user',
-            visibility: 'internal',
-            entity_type: 'user',
-            entity_id: user_uuid,
-            metadata: { email: data.email ?? email, action: 'activate' },
-            created_by: caller.id,
-          });
-        }
       } else {
         // Sender returned ok:false — state-mismatch codes are skips, not failures.
         const code = data?.code as string | undefined;
@@ -201,10 +186,7 @@ serve(async (req) => {
           code === "USER_NOT_FOUND";
         let reason = data?.detail || code || "Sender refused the action";
         if (code === "AUTH_USER_NOT_FOUND" && body.action === "reset") {
-          reason = "No auth account yet — use Activate";
-        }
-        if (code === "ALREADY_ACTIVATED" && body.action === "activate") {
-          reason = "Already activated — use Send password reset";
+          reason = "No auth account yet — promote the contact through the standard invitation flow";
         }
         details.push({
           user_uuid,

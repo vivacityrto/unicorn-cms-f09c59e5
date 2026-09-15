@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-15 · **Status:** evidence refreshed; retirement not authorized
+> **Last updated:** 2026-09-15 · **Status:** bounded caller closure implemented in PR #1356; retirement not authorized
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -13,29 +13,34 @@ static reachability from live invocation history. A source grep cannot prove
 that a function is unused, and a short log window cannot prove that no old
 cohort job or manually triggered path remains.
 
-This is evidence and planning only. It does not remove UI, change a worker,
-disable a function, delete a deployment, alter invitations, or change
-production data.
+This packet now includes the bounded caller-closure implementation needed to
+freeze legacy activation dispatch. It does not disable or delete the
+`activate-ghost-user` function, drain or mutate existing jobs, alter
+invitations, query provider logs, or change production data.
 
 ## Static caller census at current `origin/main`
 
-The following references were re-checked at `origin/main` commit
-`bed59df19` on 2026-09-15. The direct per-row activation UI has been removed;
-the two indirect activation chains remain executable and are the remaining
-static reachability work before retirement.
+The final candidate references were re-checked at implementation commit
+`8a766d518` in [PR #1356](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1356)
+on 2026-09-15. The direct per-row activation UI is absent, and both indirect
+activation dispatch paths now fail closed before invoking the legacy sender or
+leasing a cohort item. The function deployment/configuration and compatibility
+references remain intentionally unchanged pending the later retirement gates.
 
 | Path | Reference | Reachability | Retirement implication |
 | --- | --- | --- | --- |
 | `src/components/client/TenantUsersTab.tsx` | `supabase.functions.invoke('bulk-account-actions')`; the current `BulkAction` union is reset-only and the component no longer exposes ghost activation | Live reset path; no current activation caller observed | Preserve reset behavior; no activation removal is required in this component unless a future change reintroduces the action |
-| `supabase/functions/bulk-account-actions/index.ts` | `senderName = action === 'activate' ? 'activate-ghost-user' : 'send-password-reset'` and internal invoke | Live Edge-to-Edge path when `action='activate'` | Must account for queued/in-flight requests and reject new activation requests before retirement |
+| `supabase/functions/bulk-account-actions/index.ts` | `action='activate'` returns 410 `GHOST_ACTIVATION_RETIRED` before user lookup or sender invocation; reset remains routed to `send-password-reset` | Fail-closed compatibility guard; no legacy sender invocation | Preserve the guard while completing job/log/account evidence; reset behavior remains supported |
 | `src/pages/admin/CohortAccessSenderJob.tsx` | Invokes `cohort-access-sender-worker` | Live staff job UI path; indirect activation caller | Existing jobs and the activation action need a drain/hold decision |
-| `supabase/functions/cohort-access-sender-worker/index.ts` | `senderName = action === 'activate' ? 'activate-ghost-user' : 'send-password-reset'` | Live worker-to-Edge path when a job action is `activate` | Must inspect job rows and worker history; source comment says `pg_cron` is not permitted, but that is not historical proof |
+| `supabase/functions/cohort-access-sender-worker/index.ts` | `job.action='activate'` returns 410 `GHOST_ACTIVATION_RETIRED` before leasing any item; reset remains routed to `send-password-reset` | Fail-closed compatibility guard; no legacy sender invocation or item lease | Must inspect existing job rows and worker history; the guard does not disposition existing job state |
 | `supabase/config.toml` | `[functions.activate-ghost-user] verify_jwt = false` | Deployment/configuration reference | Keep deployment unchanged until caller and outstanding-account gates are complete |
 
-The census found no other direct function-name invocation under `src/`,
+The census found no other executable caller of the legacy function under `src/`,
 `supabase/functions/`, or `scripts/`. It did find documentation, migration,
 RBAC inventory, and `set-invite-password` compatibility references. Those are
-not additional callers, but they are retirement evidence dependencies.
+not additional callers, but they are retirement evidence dependencies. The
+candidate guard test also confirms both indirect paths reject before invoking
+`activate-ghost-user` or leasing a cohort item.
 
 ## Evidence status after the approved QA projection
 
@@ -72,11 +77,12 @@ fixture, not production retirement authority. See the [P1.1 QA audit](../../../.
 
 ## Evidence still required before retirement
 
-1. **Static reachability closure:** remove or migrate the two remaining
-   indirect activation chains, then re-run the repository census on the final
-   candidate commit. The direct per-row UI path is already absent in the
-   observed source. The final result must show no executable caller, while
-   retaining only intentional documentation or migration-history references.
+1. **Static reachability closure:** the bounded implementation in PR #1356
+   now rejects both indirect activation chains before sender invocation or item
+   lease, and the candidate census shows no executable caller. After merge,
+   re-run the repository census on `origin/main` and retain only intentional
+   documentation, migration-history, configuration, and compatibility
+   references.
 2. **Job-state census:** inspect `cohort_send_jobs` and its item table for
    activation jobs in queued, running, failed, or retryable states. Freeze or
    disposition them explicitly; do not assume the absence of a cron schedule
@@ -103,8 +109,9 @@ fixture, not production retirement authority. See the [P1.1 QA audit](../../../.
 
 The safest sequence is additive and reversible:
 
-1. freeze new ghost activation job creation and remove the UI activation entry
-   points in a separately approved implementation packet;
+1. freeze legacy ghost activation dispatch while preserving the reset sender;
+   the bounded implementation is under review in PR #1356 and does not mutate
+   existing job rows;
 2. preserve the reset sender path and drain or explicitly close existing
    activation jobs;
 3. observe the replacement contact/invitation path for the approved window;
@@ -119,15 +126,13 @@ operational action and is not implied by this packet.
 
 ## Current conclusion
 
-The function is **not yet a zero-caller candidate**. The direct per-row staff
-UI path is absent in the observed source, but the two indirect activation
-chains remain reachable. The approved QA replacement evidence is complete;
-the job-state census, owner-approved historical log review, outstanding-account
-census, indirect-caller closure, and RBAC/security review remain open. The
-immediate safe next step is a separately approved bounded implementation to
-freeze/remove those indirect activation paths while preserving reset behavior,
-followed by the job/log/account evidence gates. Retirement remains held.
+The candidate is now **static-zero-caller after the bounded guard**: the direct
+per-row staff UI path is absent, and the two indirect paths reject before any
+legacy sender invocation or cohort-item lease. The approved QA replacement
+evidence is complete; the job-state census, owner-approved historical log
+review, outstanding-account census, post-merge repository census, and
+RBAC/security review remain open. Retirement remains held until those gates
+are independently complete and a separate deployment/retirement decision is
+approved.
 
-**Audit entry:** none needed — repository evidence and planning only; no
-schema, permission, deployment, production-data, or operational schedule
-changed.
+**Audit entry:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md)
