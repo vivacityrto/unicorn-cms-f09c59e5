@@ -207,6 +207,15 @@
       "owner": "Carl",
       "reason": "False positive, same shape as prior function-body entries above: the flagged INSERT/UPDATE statements are the pre-existing, unchanged body of the CREATE OR REPLACE FUNCTION upsert_rock_with_parenting (eos_rocks writes) -- only executed later, per-caller, when a real EOS rock is created or edited. This migration adds exactly one new statement (an is_vivacity_team_safe(auth.uid()) authorization gate as the function's first line) and changes nothing else; applied as an urgent same-day security fix after discovering the function had zero internal authorization check and its SECURITY DEFINER writes bypass eos_rocks RLS entirely (table owned by postgres, relforcerowsecurity=false) while being EXECUTE-granted to `authenticated` -- see the linked audit entry for full detail. Self-directed given severity (live, exploitable-today bypass), matching this session's established same-day-fix precedent for the eos_scorecard/eos_rocks client-tenant RLS gap; pending Carl's review via this PR, same as any other change to this repo.",
       "expires": "2026-10-15"
+    },
+    {
+      "id": "grant-eos-rocks-company-create-all-internal-roles",
+      "file": "supabase/migrations/20260915050212_grant_eos_rocks_company_create_all_internal_roles.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved (2026-09-15, RBAC v6 P1-x eos.rocks.own.manage golden-matrix packet): 'internal staff can create rocks' -- eos.rocks.company.create's Super-Admin/Team-Leader-only catalogue restriction is retired. Sets role_permissions.level='full' for BGT/CET/CSC/Integrator on this one feature_key, matching Super Admin/Team Leader (already full) and eos.rocks.own.manage (already full for every internal role). This brings the catalogue in line with already-live behavior -- neither the UI dropdown gate nor eos_rocks RLS ever actually checked rock_level on create, so no new access is granted, only the catalogue's stale claim is corrected.",
+      "expires": "2026-10-15"
     }
   ]
 }

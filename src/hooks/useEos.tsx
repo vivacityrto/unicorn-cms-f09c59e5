@@ -49,34 +49,6 @@ export const useEosRocks = () => {
     enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
-  const createRock = useMutation({
-    mutationFn: async (rock: Partial<EosRock> & { title: string; due_date: string; quarter_number: number; quarter_year: number }) => {
-      // EOS is Vivacity-internal only; fall back to Vivacity's tenant so this
-      // never lands NULL (see docs/audit-log/entries/2026-08-10-eos-todos-null-tenant-id.md).
-      // Not currently exercised by any real caller (useEosRocksHierarchy's own
-      // createRock is what the create-rock dialogs actually use), but fixed
-      // to match the same pattern as createIssue/createTodo below rather than
-      // leaving tenant_id silently dropped.
-      const insertData = { ...rock, tenant_id: rock.tenant_id ?? 6372 };
-      const { data, error } = await supabase
-        .from('eos_rocks')
-        .insert(insertData)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
-      toast({ title: 'Rock created successfully' });
-    },
-    onError: (error: Error) => {
-      toast({ title: 'Error creating rock', description: error.message, variant: 'destructive' });
-    },
-  });
-
   const updateRock = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<EosRock> & { id: string }) => {
       const { data, error } = await supabase
@@ -99,31 +71,10 @@ export const useEosRocks = () => {
     },
   });
 
-  const deleteRock = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('eos_rocks')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
-      toast({ title: 'Rock deleted successfully' });
-    },
-    onError: (error: Error) => {
-      toast({ title: 'Error deleting rock', description: error.message, variant: 'destructive' });
-    },
-  });
-
   return {
     rocks,
     isLoading,
-    createRock,
     updateRock,
-    deleteRock,
   };
 };
 
