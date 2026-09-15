@@ -2,6 +2,15 @@
   "version": 1,
   "entries": [
     {
+      "id": "retire-client-eos-access-user-roles-cleanup",
+      "file": "supabase/migrations/20260915004558_retire_client_eos_access.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved retirement of client-tenant EOS access (2026-09-15): DELETE FROM public.eos_user_roles removes 384 rows from a 2026-01-06 bulk backfill across 377 tenants that was never real onboarding (all identical timestamp, assigned_by NULL). Verified zero effect on Vivacity's own tenant (6372), which has zero rows in this table already.",
+      "expires": "2026-10-15"
+    },
+    {
       "id": "m2-retire-legacy-audit-cron-jobs",
       "file": "supabase/migrations/20260907120000_retire_legacy_audit_cron_jobs.sql",
       "categories": ["production-url", "cron-unschedule"],
