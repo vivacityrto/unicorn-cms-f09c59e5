@@ -48,6 +48,12 @@ defined over Academy entitlement and learning activity, with its own metric
 policy and evidence gate, rather than by treating the temporary tenant row as
 a Client Health subject.
 
+The 2026-09-15 Solo reversibility and invitation-capacity correction has no
+Client Health consumer or metric effect. It preserves the existing exclusion
+of Academy rows from RTO health subjects and leaves any future Academy
+analytics dependent on explicit Academy entitlement and learning-activity
+facts.
+
 The approved H1 unknown-state direction has since been implemented in five
 bounded, read-only consumer slices: the executive retention overview and team
 capacity widgets, dashboard triage, Ask Viv portfolio facts, and Ask Viv

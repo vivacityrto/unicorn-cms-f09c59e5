@@ -51,9 +51,18 @@ function isAcademySoloAccount(metadata: TenantRow["metadata"]): boolean {
   );
 }
 
+function getPreviousSoloMaxUsers(metadata: TenantRow["metadata"]): number | "" | null {
+  if (!isAcademySoloAccount(metadata)) return null;
+  const solo = (metadata as Record<string, unknown>).academy_solo;
+  if (!solo || typeof solo !== "object" || Array.isArray(solo)) return null;
+  const previous = (solo as Record<string, unknown>).previous_max_users;
+  if (previous === null) return "";
+  return typeof previous === "number" && Number.isInteger(previous) ? previous : null;
+}
+
 export default function AcademyTenantAccessPage() {
   const canManage = usePermission('academy.tenant_access.manage');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
@@ -70,6 +79,7 @@ export default function AcademyTenantAccessPage() {
   const [formAccess, setFormAccess] = useState(false);
   const [formSoloPilot, setFormSoloPilot] = useState(false);
   const [formMaxUsers, setFormMaxUsers] = useState<number | "">("");
+  const [soloPilotPreviousMaxUsers, setSoloPilotPreviousMaxUsers] = useState<number | "" | null>(null);
   const [formExpires, setFormExpires] = useState<Date | undefined>();
   const [formNotes, setFormNotes] = useState("");
 
@@ -103,6 +113,7 @@ export default function AcademyTenantAccessPage() {
     setFormAccess(t.academy_access_enabled);
     setFormSoloPilot(isAcademySoloAccount(t.metadata));
     setFormMaxUsers(t.academy_max_users ?? "");
+    setSoloPilotPreviousMaxUsers(getPreviousSoloMaxUsers(t.metadata));
     setFormExpires(t.academy_subscription_expires_at ? new Date(t.academy_subscription_expires_at) : undefined);
     setFormNotes((t.metadata as { academy_notes?: string } | null)?.academy_notes ?? "");
     setShowAddRule(false);
@@ -116,6 +127,17 @@ export default function AcademyTenantAccessPage() {
     const target = tenants.find((tenant) => tenant.id === tenantId);
     if (target) openDrawer(target);
   }, [drawerTenant?.id, openDrawer, searchParams, tenants]);
+
+  const closeDrawer = useCallback(() => {
+    setDrawerTenant(null);
+    setShowInvite(false);
+    setSearchParams((previous) => {
+      if (!previous.has("tenant")) return previous;
+      const next = new URLSearchParams(previous);
+      next.delete("tenant");
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   // ── Computed stats ──
   const stats = useMemo(() => {
@@ -205,7 +227,7 @@ export default function AcademyTenantAccessPage() {
           metadata: newMeta,
         },
       },
-      { onSuccess: () => setDrawerTenant(null) }
+      { onSuccess: closeDrawer }
     );
   };
 
@@ -382,7 +404,7 @@ export default function AcademyTenantAccessPage() {
       </div>
 
       {/* ── Settings Drawer ── */}
-      <Sheet open={!!drawerTenant} onOpenChange={(open) => { if (!open) { setDrawerTenant(null); setShowInvite(false); } }}>
+      <Sheet open={!!drawerTenant} onOpenChange={(open) => { if (!open) closeDrawer(); }}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{drawerTenant?.name} — Academy Settings</SheetTitle>
@@ -412,8 +434,10 @@ export default function AcademyTenantAccessPage() {
               <Switch
                 checked={formSoloPilot}
                 onCheckedChange={(checked) => {
+                  if (checked && !formSoloPilot) setSoloPilotPreviousMaxUsers(formMaxUsers);
                   setFormSoloPilot(checked);
-                  if (checked) setFormMaxUsers(1);
+                  setFormMaxUsers(checked ? 1 : (soloPilotPreviousMaxUsers ?? ""));
+                  if (!checked) setSoloPilotPreviousMaxUsers(null);
                 }}
               />
             </div>
@@ -559,7 +583,7 @@ export default function AcademyTenantAccessPage() {
           </div>
 
           <SheetFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDrawerTenant(null)}>Cancel</Button>
+            <Button variant="outline" onClick={closeDrawer}>Cancel</Button>
             {Boolean(
               drawerTenant?.metadata &&
               typeof drawerTenant.metadata === "object" &&
@@ -584,7 +608,7 @@ export default function AcademyTenantAccessPage() {
                         metadata: newMeta,
                       },
                     },
-                    { onSuccess: () => setDrawerTenant(null) },
+                    { onSuccess: closeDrawer },
                   );
                 }}
                 disabled={saveMutation.isPending}
