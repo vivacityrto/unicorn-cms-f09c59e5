@@ -225,7 +225,7 @@ BEGIN
   END IF;
 
   PERFORM pg_catalog.pg_advisory_xact_lock(
-    pg_catalog.hashtextextended(v_tenant_id::text || chr(0) || v_email, 0)
+    pg_catalog.hashtextextended(v_tenant_id::text || ':' || v_email, 0)
   );
 
   SELECT COALESCE(u.email, s.email), u.first_name, u.last_name,
