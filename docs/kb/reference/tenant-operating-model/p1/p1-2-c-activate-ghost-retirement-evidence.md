@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-15 · **Status:** static closure, aggregate classification, and read-only census complete; retirement not authorized
+> **Last updated:** 2026-09-16 · **Status:** production Edge deletion executed; final 60-minute observation and documentation reconciliation pending
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -8,16 +8,40 @@
 
 ## Purpose and boundary
 
-This packet records the independent repository caller census needed before the
-legacy ghost activation Edge Function can be retired. It deliberately separates
-static reachability from live invocation history. A source grep cannot prove
-that a function is unused, and a short log window cannot prove that no old
-cohort job or manually triggered path remains.
+This packet records the independent repository caller census and operational
+evidence for retiring the legacy ghost activation Edge Function. It
+deliberately separates static reachability from live invocation history. A
+source grep cannot prove that a function is unused, and a short log window
+cannot prove that no old cohort job or manually triggered path remains.
 
 This packet now includes the bounded caller-closure implementation needed to
-freeze legacy activation dispatch and the first aggregate-only live census.
-It does not disable or delete the `activate-ghost-user` function, drain or
-mutate existing jobs, alter invitations, or change production data.
+freeze legacy activation dispatch, the aggregate-only live census, and the
+post-action production retirement evidence. The earlier evidence phase did not
+authorize a hosted mutation. Carl later separately approved the exact
+production deletion sequence; no jobs, invitations, accounts, or other
+production data were mutated by that action.
+
+## Production retirement execution (2026-09-16)
+
+After the final preflight and the explicit action-time approval, the
+production `activate-ghost-user` deployment was permanently deleted through
+the authorized Supabase control plane. The read-only post-delete checks
+recorded:
+
+- production project ref `yxkgdalkbrriasiyyrwk` remained the confirmed target;
+- the Edge Function inventory decreased from 193 to 192;
+- an exact lookup for `activate-ghost-user` returned `Function not found`;
+- `bulk-account-actions` and `cohort-access-sender-worker` still contain the
+  fail-closed `GHOST_ACTIVATION_RETIRED` guards, and the worker still accepts
+  only the reset action;
+- open, locked, and unprocessed activation-job counts were all zero; the four
+  historical activation jobs remained non-open; and
+- no job, account, invitation, or unrelated function write was performed.
+
+The bounded post-delete observation began after those checks. Its final
+read-only request/log/audit check remains pending until the approved minimum
+60-minute window has elapsed. The private operator record contains the
+redacted aggregate evidence; no identifiers or credentials are stored here.
 
 ## Static caller census at current `origin/main`
 
@@ -276,9 +300,9 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
      retirement specifically, and are follow-up candidates for RBAC v6 or
      TOM, not blockers for this gate.
 
-## Proposed retirement sequence
+## Executed retirement sequence
 
-The safest sequence is additive and reversible:
+The approved sequence was completed as follows:
 
 1. preserve the merged fail-closed activation guards and reset sender;
 2. retain the approved non-destructive hold for the 2 cancelled jobs and
@@ -286,19 +310,24 @@ The safest sequence is additive and reversible:
 3. retain the approved account-level hold for the 31 never-signed-in ghost
    accounts and reconcile the expired legacy invitation ledger only through
    individually classified, separately authorized work;
-4. retain the current guarded deployment, optionally obtain an alternative
-   request-log export if request-by-request reconstruction is required — the
-   RBAC/security review is now complete (see item 6 above); and
-5. only then open a separate retirement/deployment packet for disabling or
-   deleting `activate-ghost-user`, with rollback owner and audit entry.
+4. retain the current guarded deployment while preserving the explicit
+   request-level reconstruction limitation; the RBAC/security review is
+   complete (see item 6 above);
+5. confirm the production target and zero queued activation work, then delete
+   `activate-ghost-user` only after Carl's separate action-time approval; and
+6. run the minimum 60-minute read-only observation and reconcile the dated
+   operational audit entry before closing the packet.
 
-Disabling the function before steps 1–4 would turn any stale UI, queued job, or
-old invitation into a broken workflow. Deleting the deployment is a separate
-operational action and is not implied by this packet.
+The QA disable-first plan remains historical and was not executed because the
+approved QA control plane did not contain the historical target. Production
+deletion was a separate, explicitly approved operational action; it did not
+authorize job repair, account repair, invitation, migration, RLS, or schema
+work.
 
 ## Current conclusion
 
-The candidate is now **static-zero-caller after the bounded guard**: the direct
+The candidate is now **static-zero-caller after the bounded guard and absent
+from the production control plane**: the direct
 per-row staff UI path is absent, and the two indirect paths reject before any
 legacy sender invocation or cohort-item lease. The approved QA replacement
 evidence, non-destructive job/account holds, and retained-window log review
@@ -308,12 +337,13 @@ never-signed-in current ghost-flagged accounts in the retained set, with zero
 post-guard activation audit rows. The all-source June 3–16 sweep and aggregate
 classification are now complete as evidence, but request-level reconstruction
 is unavailable and individual disposition of the 411-row legacy population is
-still held. Retirement therefore remains held. The RBAC/security review is now
-complete (item 6 above): the
+still held. Production Edge deletion is complete, with the final observation
+window still open at this update. The RBAC/security review is now complete
+(item 6 above): the
 replacement path's protection against privilege escalation was confirmed
 already correct, a real disabled-account gap in its authorization chain was
 found and fixed, and two smaller, non-escalation, non-blocking gaps were
-flagged as follow-ups. A separate deployment/retirement decision is still
-required. See the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
+flagged as follow-ups. The final conclusion remains pending the clean
+60-minute observation check. See the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 TOM P1.2-c aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [2026-09-15 TOM P1.2-c operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Audit entries:** [2026-09-16 TOM P1.2-c production deletion and observation](../../../../audit-log/entries/2026-09-16-tom-p12c-production-deletion-and-observation.md); [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 TOM P1.2-c aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [2026-09-15 TOM P1.2-c operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
