@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import {
   QA_PROJECT_URL,
   buildManifest,
+  generateBatchApplySql,
+  generateBatchPostflightSql,
   generateApplySql,
+  validateBatchContract,
   validateReport,
 } from "./ghost-contact-apply.mjs";
 
@@ -81,6 +84,47 @@ test("generates only the approved contact and audit inserts", () => {
   assert.doesNotMatch(sql, /UPDATE\s+(?:public\.)?(?:users|tenant_users|tenant_members|user_invitations)/i);
   assert.doesNotMatch(sql, /DELETE\s+FROM\s+(?:public\.)?(?:users|tenant_users|tenant_members|user_invitations)/i);
   assert.match(sql, /outside_scope_writes', 0/);
+});
+
+test("enforces the approved 5/5/4 batch sequence", () => {
+  const baseRow = report().rows[0];
+  const rows = Array.from({ length: 14 }, (_, index) => {
+    const uuid = `00000000-0000-7000-8000-${String(index + 1).padStart(12, "0")}`;
+    return {
+      ...baseRow,
+      tenant_id: 100 + index,
+      source_user_uuid: uuid,
+      source_user_uuids: [uuid],
+      normalized_email: `person${index}@example.com`,
+      tenant_users_rows: [101 + index],
+      tenant_members_rows: [201 + index],
+    };
+  });
+  const batchReport = report({ rows, counts: { eligible_candidates: 14 } });
+  assert.doesNotThrow(() => validateBatchContract(batchReport, { batchNumber: 1, batchSize: 5 }));
+  assert.throws(() => validateBatchContract(batchReport, { batchNumber: 2, batchSize: 5 }), /expected 9/);
+  assert.throws(() => validateBatchContract(batchReport, { batchNumber: 1, batchSize: 4 }), /exactly 5/);
+});
+
+test("generates one atomic bounded batch and matching redacted postflight", () => {
+  const baseRow = report().rows[0];
+  const rows = [0, 1, 2, 3, 4].map((index) => {
+    const uuid = `00000000-0000-7000-8000-${String(index + 1).padStart(12, "0")}`;
+    return { ...baseRow, tenant_id: 100 + index, source_user_uuid: uuid, source_user_uuids: [uuid], normalized_email: `person${index}@example.com`, tenant_users_rows: [101 + index], tenant_members_rows: [201 + index] };
+  });
+  const manifest = buildManifest(report({ rows, counts: { eligible_candidates: 5 } }));
+  const batchId = "33333333-3333-4333-8333-333333333333";
+  const sql = generateBatchApplySql(manifest, { selectedRowIndices: [0, 1, 2, 3, 4], batchId });
+  assert.equal((sql.match(/COMMIT;/g) ?? []).length, 1);
+  assert.equal((sql.match(/INSERT INTO public\.tenant_contacts/g) ?? []).length, 5);
+  assert.match(sql, /TOM_APPLY_BATCH_RESULT:/);
+  assert.doesNotMatch(sql, /TOM_APPLY_RESULT:/);
+  assert.match(sql, /tom_apply_manifest_0/);
+  assert.match(sql, /tom_apply_result_4/);
+  const postflight = generateBatchPostflightSql(manifest, batchId, { selectedRowIndices: [0, 1, 2, 3, 4] });
+  assert.match(postflight, /TOM_POSTFLIGHT_BATCH_RESULT:/);
+  assert.match(postflight, /'expected_rows'/);
+  assert.doesNotMatch(postflight, /source_user_uuid.*person@example/);
 });
 
 test("requires explicit canary mode and a private SQL destination", async () => {

@@ -20,6 +20,12 @@ import { spawnSync } from "node:child_process";
 export const QA_PROJECT_URL = "https://qfpxvumcrnzrjyvqkicq.supabase.co";
 export const QA_PROJECT_REF = "qfpxvumcrnzrjyvqkicq";
 export const APPLY_VERSION = "tom-p1.2-d-canary-v1";
+export const BATCH_APPLY_VERSION = "tom-p1.2-d-batch-v1";
+export const BATCH_CONTRACT = Object.freeze({
+  1: Object.freeze({ expectedCandidates: 14, batchSize: 5 }),
+  2: Object.freeze({ expectedCandidates: 9, batchSize: 5 }),
+  3: Object.freeze({ expectedCandidates: 4, batchSize: 4 }),
+});
 
 // PostgreSQL accepts UUID versions beyond v1-v5 (including v7). The apply
 // boundary needs canonical UUID syntax, not an obsolete version allowlist.
@@ -163,7 +169,12 @@ function jsonSql(value) {
   return `${sqlLiteral(JSON.stringify(value))}::jsonb`;
 }
 
-export function generateApplySql(manifest, { selectedRowIndex = manifest.selected_row_index } = {}) {
+export function generateApplySql(manifest, {
+  selectedRowIndex = manifest.selected_row_index,
+  batchId = randomUUID(),
+  applyVersion = APPLY_VERSION,
+  auditReason = "TOM P1.2-d approved unicorn-qa one-row canary",
+} = {}) {
   if (!manifest || manifest.target !== QA_PROJECT_URL || manifest.project_ref !== QA_PROJECT_REF) fail("manifest target is not the allowlisted QA project");
   if (!Array.isArray(manifest.rows) || manifest.rows.length === 0) fail("manifest has no rows");
   if (!Number.isInteger(selectedRowIndex) || selectedRowIndex < 0 || selectedRowIndex >= manifest.rows.length) fail("selected row is outside manifest");
@@ -172,7 +183,6 @@ export function generateApplySql(manifest, { selectedRowIndex = manifest.selecte
   validateUuid(manifest.report_run_id, "manifest.report_run_id");
   validateCommit(manifest.source_commit, "manifest.source_commit");
   validateUuid(row.source_user_uuid, "selected source UUID");
-  const batchId = randomUUID();
   const rowJson = jsonSql(row);
   const manifestHash = sqlLiteral(manifest.manifest_hash);
   const reportRunId = sqlLiteral(manifest.report_run_id);
@@ -320,7 +330,7 @@ BEGIN
     'tom_ghost_contact_projected',
     NULL,
     jsonb_build_object(
-      'apply_version', '${APPLY_VERSION}',
+      'apply_version', '${applyVersion}',
       'batch_id', v_batch_id,
       'report_run_id', v_report_run_id,
       'manifest_hash', v_manifest_hash,
@@ -329,7 +339,7 @@ BEGIN
       'source_user_uuid', v_source_uuid,
       'normalized_email', v_email
     ),
-    'TOM P1.2-d approved unicorn-qa one-row canary'
+    ${sqlLiteral(auditReason)}
   );
 
   INSERT INTO tom_apply_result (
@@ -350,6 +360,66 @@ SELECT 'TOM_APPLY_RESULT:' || json_build_object(
   'outside_scope_writes', 0
 )::text AS result
 FROM tom_apply_result;
+COMMIT;
+`;
+}
+
+function singleApplyBodyForBatch(manifest, selectedRowIndex, batchId, tableSuffix) {
+  const singleSql = generateApplySql(manifest, {
+    selectedRowIndex,
+    batchId,
+    applyVersion: BATCH_APPLY_VERSION,
+    auditReason: "TOM P1.2-d approved unicorn-qa bounded batch",
+  });
+  return singleSql
+    .replace(/^BEGIN;\r?\nSET LOCAL lock_timeout = '5s';\r?\nSET LOCAL statement_timeout = '30s';\r?\n/, "")
+    .replace(/\r?\nSELECT 'TOM_APPLY_RESULT:'[\s\S]*?FROM tom_apply_result;\r?\nCOMMIT;\s*$/, "")
+    .replaceAll("tom_apply_manifest", `tom_apply_manifest_${tableSuffix}`)
+    .replaceAll("tom_apply_result", `tom_apply_result_${tableSuffix}`);
+}
+
+export function validateBatchContract(report, { batchNumber, batchSize } = {}) {
+  const contract = BATCH_CONTRACT[batchNumber];
+  if (!contract) fail("batch number must be 1, 2, or 3");
+  if (batchSize !== contract.batchSize) fail(`batch ${batchNumber} must contain exactly ${contract.batchSize} rows`);
+  const candidateRows = validateReport(report);
+  if (candidateRows.length !== contract.expectedCandidates) {
+    fail(`batch ${batchNumber} expected ${contract.expectedCandidates} remaining candidates, found ${candidateRows.length}`);
+  }
+  return candidateRows;
+}
+
+export function generateBatchApplySql(manifest, { selectedRowIndices, batchId = randomUUID() } = {}) {
+  if (!manifest || manifest.target !== QA_PROJECT_URL || manifest.project_ref !== QA_PROJECT_REF) fail("manifest target is not the allowlisted QA project");
+  if (!Array.isArray(selectedRowIndices) || selectedRowIndices.length < 1 || selectedRowIndices.length > 5) fail("batch must contain between one and five rows");
+  validateUuid(batchId, "batch_id");
+  for (const selectedRowIndex of selectedRowIndices) {
+    const row = manifest.rows?.[selectedRowIndex];
+    if (!row || row.disposition !== "candidate" || row.expected_future_action !== "project_contact") fail("batch contains a non-candidate row");
+  }
+  const resultTables = selectedRowIndices.map((_, index) => `tom_apply_result_${index}`);
+  const createdCount = resultTables.map((table) => `(SELECT created_contact_count FROM ${table})`).join(" + ");
+  const writesCount = resultTables.map((table) => `(SELECT writes_performed FROM ${table})`).join(" + ");
+  const bodies = selectedRowIndices.map((selectedRowIndex, index) => singleApplyBodyForBatch(manifest, selectedRowIndex, batchId, index));
+  return `-- TOM P1.2-d bounded QA batch; generated privately; no production target is accepted.
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+${bodies.join("\n\n")}
+
+SELECT 'TOM_APPLY_BATCH_RESULT:' || json_build_object(
+  'status', 'created',
+  'created_contact_count', ${createdCount},
+  'writes_performed', ${writesCount},
+  'batch_id', '${batchId}'::uuid,
+  'report_run_id', ${sqlLiteral(manifest.report_run_id)}::uuid,
+  'manifest_hash', ${sqlLiteral(manifest.manifest_hash)},
+  'candidate_count', ${manifest.candidate_count},
+  'applied_row_count', ${selectedRowIndices.length},
+  'selected_row_indices', ${jsonSql(selectedRowIndices)},
+  'contact_id_present', (${createdCount} = ${selectedRowIndices.length}),
+  'outside_scope_writes', 0
+)::text AS result;
 COMMIT;
 `;
 }
@@ -379,8 +449,48 @@ export function generatePostflightSql(manifest, batchId, { selectedRowIndex = ma
 )::text AS result;\n`;
 }
 
+export function generateBatchPostflightSql(manifest, batchId, { selectedRowIndices } = {}) {
+  if (!manifest || manifest.target !== QA_PROJECT_URL || manifest.project_ref !== QA_PROJECT_REF) fail("manifest target is not the allowlisted QA project");
+  validateUuid(batchId, "batch_id");
+  if (!Array.isArray(selectedRowIndices) || selectedRowIndices.length < 1 || selectedRowIndices.length > 5) fail("postflight batch must contain between one and five rows");
+  const expectedRows = selectedRowIndices.map((selectedRowIndex) => {
+    const row = manifest.rows?.[selectedRowIndex];
+    if (!row || row.disposition !== "candidate") fail("postflight batch contains a non-candidate row");
+    return `(${Number(row.tenant_id)}, ${sqlLiteral(row.source_user_uuid)}::uuid, ${sqlLiteral(normalizeEmail(row.normalized_email))}, ${jsonSql(sortedStrings(row.tenant_users_rows))}, ${jsonSql(sortedStrings(row.tenant_members_rows))}, ${sqlLiteral(row.candidate_fingerprint)})`;
+  }).join(",\n    ");
+  const batch = sqlLiteral(batchId);
+  return `WITH expected(tenant_id, source_uuid, email, expected_users, expected_members, fingerprint) AS (
+  VALUES
+    ${expectedRows}
+), checks AS (
+  SELECT e.*,
+    (SELECT count(*) FROM public.tenant_contacts c WHERE c.tenant_id = e.tenant_id AND lower(trim(c.email)) = e.email AND lower(c.status) = 'active' AND EXISTS (SELECT 1 FROM public.audit_eos_events a WHERE a.entity = 'tenant_contacts' AND a.action = 'tom_ghost_contact_projected' AND a.entity_id = ${batch}::uuid AND (a.details->>'created_contact_id') = c.id::text AND a.details->>'candidate_fingerprint' = e.fingerprint)) AS contact_rows,
+    (SELECT count(*) FROM public.audit_eos_events a WHERE a.entity = 'tenant_contacts' AND a.action = 'tom_ghost_contact_projected' AND a.entity_id = ${batch}::uuid AND a.tenant_id = e.tenant_id AND a.details->>'candidate_fingerprint' = e.fingerprint) AS audit_rows,
+    (SELECT count(*) FROM public.tenant_contacts c WHERE c.tenant_id = e.tenant_id AND lower(trim(c.email)) = e.email AND lower(c.status) = 'active') AS duplicate_active_contacts,
+    EXISTS (SELECT 1 FROM public.users u WHERE u.user_uuid = e.source_uuid) AS source_profile_exists,
+    NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = e.source_uuid) AS source_is_ghost,
+    (SELECT COALESCE(jsonb_agg(to_jsonb(t.id::text) ORDER BY t.id), '[]'::jsonb) = e.expected_users FROM public.tenant_users t WHERE t.user_id = e.source_uuid AND t.tenant_id = e.tenant_id) AS tenant_users_evidence_matches,
+    (SELECT COALESCE(jsonb_agg(to_jsonb(t.id::text) ORDER BY t.id), '[]'::jsonb) = e.expected_members FROM public.tenant_members t WHERE t.user_id = e.source_uuid AND t.tenant_id = e.tenant_id) AS tenant_members_evidence_matches,
+    (SELECT count(*) FROM public.user_invitations i WHERE i.tenant_id = e.tenant_id AND lower(trim(i.email)) = e.email AND lower(i.status) IN ('pending', 'sent') AND i.revoked_at IS NULL AND i.accepted_at IS NULL AND i.used_at IS NULL AND i.expires_at > now()) AS pending_invitation_count
+  FROM expected e
+)
+SELECT 'TOM_POSTFLIGHT_BATCH_RESULT:' || json_build_object(
+  'contact_rows', COALESCE((SELECT sum(contact_rows) FROM checks), 0),
+  'audit_rows', COALESCE((SELECT sum(audit_rows) FROM checks), 0),
+  'duplicate_active_contacts', COALESCE((SELECT sum(duplicate_active_contacts) FROM checks), 0),
+  'source_profiles_exist', COALESCE((SELECT bool_and(source_profile_exists) FROM checks), false),
+  'source_ghosts', COALESCE((SELECT bool_and(source_is_ghost) FROM checks), false),
+  'tenant_users_evidence_matches', COALESCE((SELECT bool_and(tenant_users_evidence_matches) FROM checks), false),
+  'tenant_members_evidence_matches', COALESCE((SELECT bool_and(tenant_members_evidence_matches) FROM checks), false),
+  'pending_invitation_count', COALESCE((SELECT sum(pending_invitation_count) FROM checks), 0),
+  'expected_rows', (SELECT count(*) FROM checks),
+  'out_of_scope_writes', 0
+)::text AS result;
+`;
+}
+
 function parseArgs(argv) {
-  const options = { rowIndex: 0, report: null, manifestOut: null, sqlOut: null, summaryOut: null, execute: false };
+  const options = { rowIndex: 0, report: null, manifestOut: null, sqlOut: null, summaryOut: null, execute: false, batch: false, batchSize: null, batchNumber: null };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--report") options.report = argv[++index];
@@ -389,6 +499,9 @@ function parseArgs(argv) {
     else if (arg === "--sql-out") options.sqlOut = argv[++index];
     else if (arg === "--summary-out") options.summaryOut = argv[++index];
     else if (arg === "--canary") options.execute = true;
+    else if (arg === "--batch") { options.batch = true; options.execute = true; }
+    else if (arg === "--batch-size") options.batchSize = Number(argv[++index]);
+    else if (arg === "--batch-number") options.batchNumber = Number(argv[++index]);
     else if (arg === "--help") options.help = true;
     else fail(`unknown argument: ${arg}`);
   }
@@ -400,6 +513,7 @@ function printHelp() {
   console.log("Usage: node scripts/ghost-contact-apply.mjs --report <identifier-bearing-report.json> --canary");
   console.log("       [--row-index <eligible-candidate-index>] [--manifest-out <private-file>]");
   console.log("       [--sql-out <private-file>] [--summary-out <redacted-file>]");
+  console.log("Batch usage: node scripts/ghost-contact-apply.mjs --report <identifier-bearing-report.json> --batch --batch-number <1|2|3> --batch-size <5|4>");
 }
 
 export function parseCliResult(output, prefix = "TOM_APPLY_RESULT:") {
@@ -423,7 +537,7 @@ export function parseCliResult(output, prefix = "TOM_APPLY_RESULT:") {
   return null;
 }
 
-function executeSql(sqlPath) {
+function executeSql(sqlPath, prefix = "TOM_APPLY_RESULT:") {
   const result = spawnSync("supabase", ["db", "query", "--linked", "--project-ref", QA_PROJECT_REF, "--file", sqlPath, "--debug"], {
     encoding: "utf8",
     env: { ...process.env },
@@ -435,7 +549,7 @@ function executeSql(sqlPath) {
       : `QA apply SQL execution failed: ${safeCliDiagnostic(`${result.stderr}\n${result.stdout}`)}`;
     fail(error);
   }
-  const parsed = parseCliResult(result.stdout);
+  const parsed = parseCliResult(result.stdout, prefix);
   if (!parsed) fail("QA apply returned no safe result sentinel");
   return parsed;
 }
@@ -461,6 +575,48 @@ export async function main(argv = process.argv.slice(2)) {
   if (!options.execute) fail("--canary is required; this runner does not support an implicit apply");
   const expectedCommit = process.env.GHOST_CONTACT_SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? null;
   const report = JSON.parse(readFileSync(resolve(options.report), "utf8"));
+  if (options.batch) {
+    const contract = BATCH_CONTRACT[options.batchNumber];
+    if (!contract) fail("--batch-number must be 1, 2, or 3");
+    if (options.batchSize !== contract.batchSize) fail(`batch ${options.batchNumber} requires --batch-size ${contract.batchSize}`);
+    validateBatchContract(report, { batchNumber: options.batchNumber, batchSize: options.batchSize });
+    const manifest = buildManifest(report, { rowIndex: 0, expectedCommit });
+    const selectedRowIndices = Array.from({ length: options.batchSize }, (_, index) => index);
+    const batchId = randomUUID();
+    const sql = generateBatchApplySql(manifest, { selectedRowIndices, batchId });
+    const manifestPath = options.manifestOut ? resolve(options.manifestOut) : null;
+    const sqlPath = options.sqlOut ? resolve(options.sqlOut) : null;
+    if (manifestPath) writeFileSync(manifestPath, `${JSON.stringify({ ...manifest, selected_row_indices: selectedRowIndices, batch_number: options.batchNumber, batch_size: options.batchSize }, null, 2)}\n`, { mode: 0o600 });
+    if (!sqlPath) fail("--sql-out is required for the private SQL file");
+    writeFileSync(sqlPath, sql, { mode: 0o600 });
+    const result = executeSql(sqlPath, "TOM_APPLY_BATCH_RESULT:");
+    const summary = {
+      apply_version: BATCH_APPLY_VERSION,
+      status: result.status,
+      target: QA_PROJECT_URL,
+      project_ref: QA_PROJECT_REF,
+      source_commit: report.source_commit,
+      report_run_id: result.report_run_id,
+      batch_id: result.batch_id,
+      batch_number: options.batchNumber,
+      batch_size: options.batchSize,
+      selected_row_indices: selectedRowIndices,
+      candidate_count: manifest.candidate_count,
+      manifest_hash: result.manifest_hash,
+      created_contact_count: result.created_contact_count,
+      writes_performed: result.writes_performed,
+      contact_id_present: result.contact_id_present === true,
+      outside_scope_writes: result.outside_scope_writes,
+      forbidden_operations: [],
+    };
+    if (summary.target !== QA_PROJECT_URL || summary.status !== "created" || summary.created_contact_count !== options.batchSize || summary.writes_performed !== options.batchSize || summary.outside_scope_writes !== 0 || summary.contact_id_present !== true) {
+      fail("QA batch result did not satisfy the bounded write contract");
+    }
+    const rendered = `${JSON.stringify(summary, null, 2)}\n`;
+    if (options.summaryOut) writeFileSync(resolve(options.summaryOut), rendered, { mode: 0o600 });
+    else process.stdout.write(rendered);
+    return;
+  }
   const manifest = buildManifest(report, { rowIndex: options.rowIndex, expectedCommit });
   const sql = generateApplySql(manifest);
   const manifestPath = options.manifestOut ? resolve(options.manifestOut) : null;
