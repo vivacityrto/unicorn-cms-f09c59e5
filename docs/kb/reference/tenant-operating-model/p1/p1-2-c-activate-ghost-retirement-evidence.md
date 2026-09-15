@@ -268,6 +268,6 @@ replacement path's protection against privilege escalation was confirmed
 already correct, a real disabled-account gap in its authorization chain was
 found and fixed, and two smaller, non-escalation, non-blocking gaps were
 flagged as follow-ups. A separate deployment/retirement decision is still
-required.
+required. See the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
 
 **Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
