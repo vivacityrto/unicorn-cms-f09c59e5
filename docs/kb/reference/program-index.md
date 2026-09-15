@@ -50,7 +50,7 @@ real-time state.
 | Initiative | Current phase/packet | Branch | Owner/tool | Started |
 |---|---|---|---|---|
 | Codebase Optimization | Phase 4 closed 2026-09-11; no current implementation packet; Phase 5 deferred | — | Claude Code / Codex | 2026-09-14 |
-| RBAC v6 | P0.1/P1 preparation delivered; generic preparation paused; named capability rows, role defaults, shadow telemetry, and pilot remain review-gated | — | Codex | 2026-09-14 |
+| RBAC v6 | P0.1/P1 review-ask questions resolved 2026-09-15 (vocabulary, hard-SA lock list, owners, tenant/relationship semantics for all 18 P1-e rows); first vertical slice `eos.scorecard.manage` approved and golden-matrix draft ([P1-w](rbac-v6/p1/p1-w-eos-scorecard-golden-matrix-draft.md)) delivered, pending a one-line final confirmation. A real client-tenant RLS gap this work surfaced was fixed same-day (PRs #1323, #1325) | — | Claude Code | 2026-09-15 |
 | Tenant Operating Model | P0 evidence/preparation delivered; bounded P1.1 hosted-QA canary passed; negative cases and runtime work remain separately gated | — | Codex | 2026-09-15 |
 | Client Health Activity Analytics | H0 containment and evidence preparation delivered; consultant operational data blocks metric policy; replacement shadow remains separately gated | — | Claude Code / Codex | 2026-09-14 |
 | Academy Solo MVP delivery workstream | Phase 1 invitation compatibility, server boundary, manual lifecycle, and directory/account-surface separation | `codex/manage-clients-academy-surface-20260915` | Codex | 2026-09-15 |
