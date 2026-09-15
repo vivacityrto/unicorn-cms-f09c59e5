@@ -2,6 +2,15 @@
   "version": 1,
   "entries": [
     {
+      "id": "add-system-account-role-and-reclassify",
+      "file": "supabase/migrations/20260915025352_add_system_account_role_and_reclassify.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved (2026-09-15): inserts one new dd_unicorn_roles catalogue row (System Account) and reassigns unicorn_role/is_system_account for exactly 3 named accounts (admin@vivacity.com.au, angela+invitetest@vivacity.com.au, bulk-generate-automation@vivacity.com.au) already confirmed non-human/test/automation identities. bulk-generate-automation's real production capability is carried by a separate, untouched supplemental role -- this migration only reclassifies its primary role label. No other user rows are affected.",
+      "expires": "2026-10-15"
+    },
+    {
       "id": "add-email-templates-manage-capability",
       "file": "supabase/migrations/20260915014755_add_email_templates_manage_capability.sql",
       "categories": ["data-mutation", "destructive-mutation"],
