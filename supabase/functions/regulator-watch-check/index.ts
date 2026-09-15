@@ -10,11 +10,32 @@
  * Auth: Service-level (cron) or SuperAdmin manual trigger
  */
 import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
 
 type WatchEntry = { id: string; name: string; url: string; last_checked_at: string | null; check_frequency_days: number | null; last_content_hash: string | null; created_by: string; category?: string | null };
 type AffectedArea = { area?: string; standard_clause?: string; impact_type?: string };
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { requireCallerByUserId, FeatureKeys } from "../_shared/requireCaller.ts";
+
+function removeRegulatoryAnalysisJson(markdown: string): string {
+  return markdown
+    .replace(/```json\s*([\s\S]*?)\s*```/gi, (block, json: string) => {
+      try {
+        const parsed = JSON.parse(json);
+        if (
+          parsed &&
+          typeof parsed === "object" &&
+          ("impact_level" in parsed || "affected_areas" in parsed)
+        ) {
+          return "";
+        }
+      } catch {
+        // Keep malformed or unrelated code blocks in the stored summary.
+      }
+      return block;
+    })
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -248,7 +269,7 @@ End with: "This summary identifies potential operational impacts only. Human rev
                 index: i + 1, url, retrieved_at: new Date().toISOString(),
               }));
 
-              // Extract impact level and affected areas from response
+              // Extract impact level and affected areas from the machine block.
               const jsonMatch = changeSummaryMd.match(/```json\s*([\s\S]*?)\s*```/);
               if (jsonMatch) {
                 try {
@@ -258,10 +279,12 @@ End with: "This summary identifies potential operational impacts only. Human rev
                 } catch { /* keep defaults */ }
               }
 
+              const displaySummaryMd = removeRegulatoryAnalysisJson(changeSummaryMd);
+
               // Store finding
               await supabase.from("research_findings").insert({
                 job_id: job.id,
-                summary_md: changeSummaryMd,
+                summary_md: displaySummaryMd,
                 citations_json: citations,
                 risk_flags_json: affectedAreas.map((a) => ({
                   risk_category: a.area || "Regulator Change",
@@ -300,7 +323,7 @@ End with: "This summary identifies potential operational impacts only. Human rev
           new_hash: contentHash,
           impact_level: impactLevel,
           review_status: "pending",
-          change_summary_md: changeSummaryMd,
+          change_summary_md: removeRegulatoryAnalysisJson(changeSummaryMd),
           affected_areas_json: affectedAreas,
         });
 

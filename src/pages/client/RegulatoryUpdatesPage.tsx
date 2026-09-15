@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Globe, AlertTriangle, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { getRegulatorySummarySections } from "@/features/regulatory-updates/summaryFormatting";
 
 const IMPACT_COLORS: Record<string, string> = {
   low: "bg-blue-100 text-blue-800",
@@ -107,8 +108,11 @@ export default function RegulatoryUpdatesPage() {
           <div className="space-y-4">
             {data!.map((event) => {
               const wl = event.regulator_watchlist;
-              const excerpt = event.change_summary_md
-                ? stripMarkdown(event.change_summary_md).slice(0, 200)
+              const summary = event.change_summary_md
+                ? getRegulatorySummarySections(event.change_summary_md)
+                : null;
+              const excerpt = summary
+                ? stripMarkdown(summary.changeSummary).slice(0, 200)
                 : null;
               return (
                 <Card
@@ -118,8 +122,8 @@ export default function RegulatoryUpdatesPage() {
                 >
                   <CardContent className="p-5 space-y-2">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-secondary">
+                      <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                        <h3 className="min-w-0 break-words font-semibold text-secondary">
                           {wl?.name || "Regulator update"}
                         </h3>
                         {wl?.url && (

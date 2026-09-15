@@ -1,0 +1,12 @@
+---
+description: Keep repository work isolated from the shared local main checkout
+alwaysApply: true
+---
+
+# Shared checkout isolation
+
+- Never use the shared local `main` checkout as the working directory for implementation work.
+- Do not edit, stage, commit, rebase, merge, reset, install dependencies, run tests/builds, or start/stop dev servers from that checkout.
+- Create or use an isolated worktree and feature branch for all changes and verification.
+- Integrate through a reviewable GitHub pull request; merge the PR remotely, then leave the shared checkout untouched unless the user explicitly asks to sync it.
+- Preserve unrelated changes in every checkout. Never clean or reset the shared checkout to make a task easier.
