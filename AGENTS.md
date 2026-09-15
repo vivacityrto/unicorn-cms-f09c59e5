@@ -1032,51 +1032,74 @@ app-layer allowlist are the actual defense for anything invoked from
 
 ## Supabase deployment workflow
 
-**Edge Functions auto-deploy on merge to `main` via Supabase's native
-GitHub sync integration — but it has since been observed to fail
-silently, so treat it as unreliable, not just laggy.** The mechanism is
-configured on Supabase's dashboard side (Project Settings → Integrations
-→ GitHub — not a file in this repo; `.github/workflows/*.yml` contains no
-deploy step). It worked as expected once (2026-09-07, PR #970:
-`ask-viv-assistant` merged 05:29 UTC, deployed version advanced 147→148 by
-05:41 UTC, source verified byte-for-byte consistent) — but the very same
-day, PRs #967/#968 (7 functions total: `tga-rto-sync`,
-`add-missing-packages`, `tga-rto-import`, `bulk-send-invitations`,
-`create-client-audit`, `dashboard-test-seed`,
-`create-tasks-from-minutes`) merged and **none of the 7 auto-deployed** —
-confirmed via a real source diff (not just a stale timestamp) 20+ minutes
-post-merge, e.g. `tga-rto-sync`'s deployed `index.ts` still had the
-pre-fix `const norm = (v: any) => ...` line. Carl independently confirmed
-Codex hit the identical failure the same day. Root cause not diagnosed
-(dashboard-side integration, no repo-visible logs); no fix identified —
-just do not trust it.
+**Edge Functions deploy on merge to `main` via `.github/workflows/
+deploy-edge-functions.yml` — a repo-owned CI job, not Supabase's dashboard
+GitHub-sync integration.** That native dashboard integration (Project
+Settings → Integrations → GitHub) was the previous mechanism and **is
+unreliable — it has been observed to fail silently, not just laggy**: it
+worked once (2026-09-07, PR #970: `ask-viv-assistant` merged 05:29 UTC,
+deployed version advanced 147→148 by 05:41 UTC, source verified
+byte-for-byte consistent) but the very same day, PRs #967/#968 (7
+functions) merged and **none of the 7 auto-deployed**, confirmed via a real
+source diff 20+ minutes post-merge. Root cause was never diagnosed
+(dashboard-side, no repo-visible logs). **If that dashboard integration is
+still enabled, it should be turned off** to avoid a redundant/racing
+second deploy attempt alongside the CI workflow below — this is a
+Supabase-dashboard setting, not something fixable from the repo.
 
-**Standing practice until Supabase's sync is proven reliable again:**
-after merging any PR that touches `supabase/functions/**`, check
-`list_edge_functions` for each changed function ~15 min post-merge. If the
-version hasn't advanced, deploy manually via `mcp__supabase__
-deploy_edge_function` — reconstruct the file/`_shared/*.ts` dependency
-closure from `git show origin/main:<path>` for each, matching the
-function's existing `verify_jwt` setting (check via `list_edge_functions`
-first, don't default to `true`). Manual deploys risk transcription errors
-from retyping large files into the tool call's JSON, so verify after:
-extract the deployed source via `get_edge_function` and diff it against
-`git show origin/main:<path>`. When reproducing that comparison by hand
-(rather than scripting the extraction), expect false-positive
-whitespace-only diffs from your own retyping, not the deploy — a
-mismatch limited to trailing spaces or blank-line whitespace is very
-likely your reproduction, not the deployed content; re-check by eye
-against the original tool output before treating it as a real
-discrepancy.
+**How the CI workflow works (added 2026-09-15, after a real incident —
+see `docs/audit-log/entries/2026-09-15-fix-verify-auth-dead-account-status-check.md`
+— required a manual, expensive, hand-reconstructed redeploy sweep across
+15 functions because there was no reliable automatic path):**
+
+1. Triggers on push to `main` when any file under `supabase/functions/**`
+   changed.
+2. `scripts/select-affected-edge-functions.mjs` computes the real set of
+   affected functions — it follows every function's local relative
+   imports **transitively** (the same way Deno's bundler resolves them),
+   so a change to a widely-shared file (`_shared/auth-helpers.ts`,
+   `_shared/requireCaller.ts`, a nested subdirectory module like
+   `_shared/ask-viv-fact-builder/*.ts`, etc.) correctly redeploys every
+   function that imports it, directly or indirectly — not just whichever
+   function's own `index.ts` happened to change. This is exactly the class
+   of gap that caused the 2026-09-15 incident: a hand-built file list for
+   one function missed a subdirectory import and failed to bundle until
+   caught. Test: `scripts/select-affected-edge-functions.test.mjs`.
+3. For each affected function, the workflow runs
+   `supabase functions deploy <name> --project-ref <SUPABASE_PROJECT_ID>`
+   via the Supabase CLI (`supabase/setup-cli@v1`), authenticated with the
+   repo secret `SUPABASE_ACCESS_TOKEN`. The CLI bundles each function's
+   real local import graph directly from the checked-out filesystem — this
+   is the same mechanism that eliminates the old "manually reconstruct the
+   file list and retype every dependency's content into a tool call"
+   problem entirely; there is no hand-typed file list anywhere in this
+   path.
+4. A run with zero affected functions (e.g. a doc-only or `.test.mjs`-only
+   change under `supabase/functions/**`) skips the deploy job entirely
+   rather than deploying nothing meaningfully.
+5. `github.event.before` being the all-zero SHA (new branch, force-push)
+   falls back to `--all` (every deployable function) rather than guessing
+   a diff base that doesn't exist.
+
+**What this means for a session doing Edge Function work:** merging a PR
+that touches `supabase/functions/**` now reliably deploys it — there is no
+longer a standing "check ~15 min post-merge, deploy manually if it didn't
+advance" step to perform by hand. Still worth a post-merge sanity check
+(`list_edge_functions`/`get_edge_function` version bump, or watch the
+`deploy-edge-functions` workflow run itself in the Actions tab) the first
+few times this is relied on for a sensitive change, but this is no longer
+the only signal of whether a function is live, and it is no longer
+something to reconstruct or verify by hand — the workflow's own pass/fail
+status is authoritative. Redeploying an unaffected function is a safe,
+idempotent no-op if the selector's closure computation is ever slightly
+too broad; a *missed* affected function is the failure mode this exists to
+prevent, so when genuinely unsure, prefer including a function over
+excluding it.
 
 Because of this, **do not merge an Edge Function PR into `main` without
 being ready for it to go live** — a merge is a production deployment, not
-just a repo change, whether or not the auto-deploy actually fires. Still
-perform a post-merge check (via Supabase MCP
-`list_edge_functions`/`get_edge_function`, or `query_logs`) that the
-version advanced and the source matches — this is no longer optional
-diligence, it's the only signal you have that the function is actually
-live.
+just a repo change. That has not changed; only the deployment mechanism's
+reliability has.
 
 **Migrations are a separate, MCP-controlled path** — apply hosted
 Supabase migrations through the configured Supabase MCP tools
