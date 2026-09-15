@@ -1,0 +1,116 @@
+# TOM P1.2-c — `activate-ghost-user` retirement decision packet
+
+> **Last updated:** 2026-09-15 · **Status:** planning-only; retirement not authorized
+> **Owner:** TOM, with RBAC and operations review
+> **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
+
+## Purpose and authority boundary
+
+This packet turns the completed P1.2-c evidence into an explicit decision
+record for a possible future retirement of `activate-ghost-user`. It is a
+planning and reconciliation artifact only. It does not disable, delete, or
+redeploy an Edge Function; drain or mutate a job; repair an account; send an
+invitation; change a credential; or authorize any production, migration, RLS,
+grant, or schema operation.
+
+The packet separates evidence that is complete from evidence that remains
+bounded or unavailable. A retirement decision must not be inferred from the
+static caller closure, the QA replacement evidence, or the absence of recent
+requests alone.
+
+## Current decision state
+
+| Gate | Current evidence or disposition | Decision state |
+| --- | --- | --- |
+| Direct and indirect caller closure | The direct staff action is absent; `bulk-account-actions` and `cohort-access-sender-worker` reject activation before sender invocation or item leasing. | Complete; guards remain deployed |
+| Reset compatibility | Both shared orchestrators retain the reset path. | Preserve; no reset change authorized |
+| Cancelled activation jobs | Two cancelled jobs retain two stale pending items whose current profiles are active primary contacts; no retry, close, delete, or repair was performed. | Carl-approved non-destructive hold |
+| Current ghost accounts | Thirty-one never-signed-in current `ghost_activation` accounts remain unchanged. | Carl-approved account-level hold |
+| QA replacement | P1.2-b and P1.2-d evidence passed in allowlisted `unicorn-qa`; no production write followed. | Complete as QA evidence only |
+| Historical invocation review | Eight audited target users fall in the June 3–16 provider-log gap; 56 fall in the retained period. Retained logs show 109 exact-path requests, while durable audit has 64 distinct target users. | Aggregate evidence complete; request-by-request reconstruction incomplete |
+| RBAC/security review | The replacement path's role ceiling blocks internal-role escalation for browser and service-role callers. Disabled-account gaps in `is_tenant_parent_safe` and `has_tenant_admin_safe` are recorded as fixed live; the repository PR for the latter still awaits Carl's merge approval. | Complete for this TOM gate; follow-ups remain separate |
+| Broad legacy profile population | Four hundred eleven public profiles have no matching auth identity. They are not treated as ghost activation rows without individual classification. | Explicitly out of scope for bulk retirement; hold |
+| Edge retirement | No deployment or deletion packet has been approved. | Not authorized |
+
+## Evidence reconciliation
+
+### What the evidence establishes
+
+- The repository has no remaining executable activation caller in `src/`,
+  `supabase/functions/`, or `scripts/` after the bounded fail-closed guards.
+- The guards are active in `bulk-account-actions` version 284 and
+  `cohort-access-sender-worker` version 283, both effective at
+  `2026-09-15T05:07:04.936Z`.
+- The retained provider-log window contains 50 `OPTIONS`/200, 55 `POST`/200,
+  and 4 `POST`/403 requests to the exact legacy path. These are request
+  observations, not proof of 55 distinct successful mutations.
+- The durable audit trail records 8 distinct target users in the pre-retained
+  June 3–16 period and 56 in the retained period through the guard timestamp.
+  It records 52 retained events with `email_sent = true` and 4 with
+  `email_sent = false`, and zero `ghost_user_activated` rows after the guard.
+- The durable audit trail is account-level corroboration. It does not create a
+  one-to-one mapping from provider requests to mutations because the audit
+  insert is best-effort and provider response bodies are unavailable.
+- The QA replacement path has been proven only in the approved QA fixture. It
+  does not authorize production contact insertion, invitation, or retirement.
+
+### What the evidence does not establish
+
+- The provider's missing June 3–16 request rows cannot establish zero caller
+  activity for that period. An alternative retained export is optional for
+  aggregate hold evidence but required if Carl wants complete
+  request-by-request historical reconstruction before a retirement decision.
+- The two stale cancelled-job items have not been closed, deleted, retried, or
+  repaired. A cancelled status is not itself a disposition.
+- The 31 never-signed-in current ghost accounts have not been bulk-repaired,
+  re-invited, or converted. Their hold is intentional and non-destructive.
+- The 411-row public-profile/auth mismatch population is not a ghost set. No
+  bulk classification or conversion is justified by the current evidence.
+
+## Recommended disposition
+
+The recommended decision for the current checkpoint is **keep the guarded
+deployment in place and do not retire the Edge Function yet**.
+
+1. Preserve both fail-closed guards and the reset sender.
+2. Preserve the approved hold for the two stale job items and the 31
+   never-signed-in ghost accounts.
+3. Treat the June 3–16 log gap as an explicit evidence limitation. Obtain an
+   alternative provider export only if Carl requires request-level
+   reconstruction; do not imply that the current aggregate evidence proves
+   zero historical use.
+4. Keep the 411 unmatched public profiles outside the ghost-retirement scope
+   until individually classified through a separately authorized packet.
+5. Treat the RBAC/security review as complete for this gate. Track the two
+   non-escalation invitation-path follow-ups separately; they do not authorize
+   or require an activation retirement change.
+6. Open a separate operational retirement packet only after Carl explicitly
+   approves the exact target, timing, rollback owner, observation window, and
+   audit requirements.
+
+This recommendation preserves reversibility and prevents an old queued job,
+stale UI, or legacy invitation from becoming a broken workflow while the
+remaining evidence limitations are handled.
+
+## Required contents of a future retirement packet
+
+A later packet must be separately approved and must include, at minimum:
+
+- exact Edge Function target and deployment state;
+- confirmation that both indirect activation guards and the reset path remain
+  deployed and verified;
+- explicit treatment of the two cancelled-job pending items and 31 held
+  accounts, with no implied bulk repair;
+- the chosen disposition of the June 3–16 log gap and whether an alternative
+  export is required;
+- the boundary excluding the 411 unmatched public profiles unless a distinct
+  classification packet is approved;
+- rollback owner, rollback mechanism, observation window, and post-action
+  request/audit checks;
+- a dated operational audit entry; and
+- a fresh approval for the actual deployment, disable, or deletion action.
+
+Until that packet exists and its gates are approved, the current guarded
+deployment is the intended safe state.
+
+**Related audit entries:** [caller freeze](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap — pending PR #1366](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1366)

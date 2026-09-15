@@ -209,9 +209,25 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
    with exactly-once behavior, QA no-send, idempotent retry, cleanup, and audit
    preservation. Any production or broader-tenant observation remains a
    separate gate.
-6. **RBAC/security review:** confirm the replacement preserves the capability
-   boundary and that no browser or orchestrator caller can bypass the standard
-   invitation path.
+6. **RBAC/security review: complete 2026-09-15 (Claude/RBAC v6).** Traced the
+   actual replacement-path authorization chain (`swap_tenant_user_to_contact`,
+   `mark_tenant_contact_promoted`, `invite-user`, `user_invitations`' own RLS)
+   and found two related but distinct issues:
+   - **Fixed:** `is_tenant_parent_safe` (behind the swap/promote RPCs) and
+     `has_tenant_admin_safe` (behind `user_invitations`' RLS) never excluded
+     disabled/archived accounts. Both now correctly deny disabled/archived
+     accounts with zero regression for active accounts. The corresponding
+     audit entry is pending in [PR #1366](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1366).
+   - **Confirmed safe, not a gap:** a direct browser `INSERT` into
+     `user_invitations` cannot escalate to an internal Vivacity role because
+     `trg_enforce_invitation_role_ceiling` independently blocks that for every
+     caller, service-role or browser alike.
+   - **Flagged, not fixed (non-escalation, non-blocking):** a direct browser
+     insert can bypass `invite-user`'s capacity, rate-limit, and relationship-
+     role allowlist checks for a same-tenant client-role invitation; the
+     `invite-user` `isTenantAdmin` branch also does not filter a disabled
+     caller profile. These are separate RBAC/TOM follow-ups, not blockers for
+     this activation-retirement gate.
 
 ## Proposed retirement sequence
 
@@ -224,8 +240,8 @@ The safest sequence is additive and reversible:
    accounts and reconcile the expired legacy invitation ledger only through
    individually classified, separately authorized work;
 4. retain the current guarded deployment, optionally obtain an alternative
-   request-log export if request-by-request reconstruction is required, and
-   complete the RBAC/security review; and
+   request-log export if request-by-request reconstruction is required — the
+   RBAC/security review is now complete (see item 6 above); and
 5. only then open a separate retirement/deployment packet for disabling or
    deleting `activate-ghost-user`, with rollback owner and audit entry.
 
@@ -243,8 +259,12 @@ are complete. Durable audit correlation now confirms 64 historical activation
 events across the provider-retention gap and retained window, including 31
 never-signed-in current ghost-flagged accounts in the retained set, with zero
 post-guard activation audit rows. Retirement remains held because the request
-log has a June 3–16 retention gap, the broader legacy profile set is not
-classified, and the RBAC/security review is pending. A separate
-deployment/retirement decision is still required.
+log has a June 3–16 retention gap and the broader legacy profile set is not
+classified. The RBAC/security review is now complete (item 6 above): the
+replacement path's protection against privilege escalation was confirmed
+already correct, disabled-account authorization gaps were fixed, and two
+smaller non-escalation follow-ups were recorded. A separate
+deployment/retirement decision is still required. See the [retirement
+decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md)
+**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 RBAC/security review — pending PR #1366](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1366)
