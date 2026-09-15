@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { VIVACITY_STAFF_ROLES } from "@/lib/roles/vivacityRoles";
+import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, Timer, CheckCircle2, Clock, Building2, Search, ArrowUpDown, Loader2, ExternalLink, MessageSquare, ListTodo } from "lucide-react";
@@ -75,7 +75,7 @@ export default function TenantNotes() {
   const [existingFiles, setExistingFiles] = useState<{ path: string; name: string }[]>([]);
   const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
   const [assignees, setAssignees] = useState<string[]>([]);
-  const [vivacityTeam, setVivacityTeam] = useState<Array<{ user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>>([]);
+  const { data: vivacityTeam = [] } = useVivacityTeamUsers();
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -201,23 +201,6 @@ export default function TenantNotes() {
     }
   };
 
-  const fetchVivacityTeam = async () => {
-    try {
-      const { data, error } = await supabase.from("users")
-        .select("user_uuid, first_name, last_name, avatar_url")
-        .in("unicorn_role", [...VIVACITY_STAFF_ROLES])
-        .eq("disabled", false)
-        .eq("archived", false)
-        .eq("is_system_account", false)
-        .eq("is_qa_persona", false)
-        .order("first_name");
-      if (error) throw error;
-      setVivacityTeam(data || []);
-    } catch (error: unknown) {
-      console.error("Error fetching team:", error);
-    }
-  };
-
   const fetchClickupTasks = useCallback(async () => {
     setClickupLoading(true);
     try {
@@ -266,7 +249,6 @@ export default function TenantNotes() {
     if (parsedTenantId) {
       fetchTenantInfo();
       getCurrentUser();
-      fetchVivacityTeam();
     }
   }, [parsedTenantId, urlPackageId, fetchTenantInfo]);
 

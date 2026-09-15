@@ -14,6 +14,7 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateAudit } from '@/hooks/useClientAudits';
 import { useAuth } from '@/hooks/useAuth';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
@@ -210,11 +211,15 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
 
   // Lookups
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
-  const [auditors, setAuditors] = useState<{ user_uuid: string; name: string }[]>([]);
   const [tenantsLoading, setTenantsLoading] = useState(false);
 
   const createAudit = useCreateAudit();
   const { session } = useAuth();
+  const { data: vivacityTeam = [] } = useVivacityTeamUsers();
+  const auditors = useMemo(
+    () => vivacityTeam.map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })),
+    [vivacityTeam]
+  );
 
   const selectedTenant = useMemo(() => tenants.find(t => t.id === tenantId), [tenants, tenantId]);
   const registrationType = useMemo(() => {
@@ -300,9 +305,6 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       setTenantsLoading(false);
     };
     fetchTenants();
-    supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).eq('is_system_account', false).eq('is_qa_persona', false).then(({ data }) => {
-      setAuditors((data || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
-    });
   }, [open]);
 
   // Default lead auditor to current user

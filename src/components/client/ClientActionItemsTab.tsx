@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useClientActionItems, ActionItem } from '@/hooks/useClientManagementData';
 import { supabase } from '@/integrations/supabase/client';
-import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -113,14 +112,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [itemType, setItemType] = useState<'client' | 'internal'>('client');
 
 
-  // Team members for assignment
-  const [teamMembers, setTeamMembers] = useState<Array<{
-    user_uuid: string;
-    first_name: string;
-    last_name: string;
-    avatar_url: string | null;
-  }>>([]);
-
   // Tenant (client portal) users, for the "notify" tenant-user list
   const [tenantUsers, setTenantUsers] = useState<Array<{
     user_uuid: string;
@@ -130,18 +121,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     avatar_url: string | null;
     relationship_role: string | null;
   }>>([]);
-
-  const fetchTeamMembers = async () => {
-    const { data } = await supabase
-      .from('users')
-      .select('user_uuid, first_name, last_name, avatar_url')
-      .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-      .eq('is_system_account', false)
-      .eq('is_qa_persona', false)
-      .order('first_name');
-
-    setTeamMembers(data || []);
-  };
 
   const fetchTenantUsers = useCallback(async () => {
     if (!tenantId) return;
@@ -166,7 +145,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   }, [tenantId]);
 
   useEffect(() => {
-    fetchTeamMembers();
     fetchTenantUsers();
   }, [tenantId, fetchTenantUsers]);
 
@@ -779,7 +757,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                  {teamMembers.map(member => (
+                  {vivacityTeam.map(member => (
                     <SelectItem key={member.user_uuid} value={member.user_uuid}>
                       <span className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">

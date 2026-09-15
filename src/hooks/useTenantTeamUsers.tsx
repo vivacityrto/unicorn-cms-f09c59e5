@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 /**
@@ -40,19 +39,15 @@ export function useTenantTeamUsers() {
       const isVivacityTenant = tenantId === VIVACITY_TENANT_ID || isSuper;
       
       if (isVivacityTenant) {
-        // Return Vivacity internal team only
-        const { data, error } = await supabase
-          .from('users')
-          .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
-          .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-          .eq('archived', false)
-          .eq('disabled', false)
-          .eq('is_system_account', false)
-          .eq('is_qa_persona', false)
-          .order('first_name', { ascending: true });
+        // Return Vivacity internal team only -- same centralized,
+        // correctly-scoped (archived/disabled/system-account/qa-persona)
+        // directory as useVivacityTeamUsers().
+        const { data, error } = await supabase.rpc('get_vivacity_team_directory_staff');
 
         if (error) throw error;
-        return (data || []) as TenantTeamUser[];
+        return ((data || []) as TenantTeamUser[]).sort((a, b) =>
+          (a.first_name || '').localeCompare(b.first_name || '')
+        );
       }
 
       // For client tenants, return users in that tenant with Admin/User roles

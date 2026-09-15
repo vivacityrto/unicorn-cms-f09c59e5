@@ -105,6 +105,7 @@ export function useAccountabilityChart() {
           .select('user_uuid, first_name, last_name, email, avatar_url')
           .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
           .eq('archived', false)
+          .eq('disabled', false)
           .eq('is_system_account', false)
           .eq('is_qa_persona', false),
         // Fetch linked data from the view

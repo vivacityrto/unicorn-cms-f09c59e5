@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { VIVACITY_STAFF_ROLES } from "@/lib/roles/vivacityRoles";
+import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,14 +58,13 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
   const [existingFiles, setExistingFiles] = useState<{ path: string; name: string }[]>([]);
   const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
   const [assignees, setAssignees] = useState<string[]>([]);
-  const [vivacityTeam, setVivacityTeam] = useState<Array<{ user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>>([]);
+  const { data: vivacityTeam = [] } = useVivacityTeamUsers();
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [accumulatedTime, setAccumulatedTime] = useState(0);
 
   useEffect(() => {
-    fetchVivacityTeam();
     getCurrentUser();
   }, [stageId, tenantId]);
 
@@ -84,16 +83,6 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
     if (user) {
       setCurrentUserId(user.id);
       setAssignees([user.id]);
-    }
-  };
-
-  const fetchVivacityTeam = async () => {
-    try {
-      const { data, error } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("unicorn_role", [...VIVACITY_STAFF_ROLES]).eq("is_system_account", false).eq("is_qa_persona", false).order("first_name");
-      if (error) throw error;
-      setVivacityTeam(data || []);
-    } catch (error: unknown) {
-      console.error("Error fetching team:", error);
     }
   };
 
