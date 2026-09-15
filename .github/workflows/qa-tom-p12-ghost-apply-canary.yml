@@ -30,7 +30,7 @@ jobs:
 
       - name: Validate the non-production QA target and canary contract
         run: |
-          npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq
+          npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
           npm run tenant:ghost-apply -- --help
           node --test scripts/ghost-contact-apply.test.mjs
 
