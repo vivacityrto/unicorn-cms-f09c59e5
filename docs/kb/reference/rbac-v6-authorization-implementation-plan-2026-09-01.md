@@ -916,6 +916,35 @@ without deleting that history.
    active seat because it has no current holders. BGT remains capability-based,
    not a blanket elevated role. Multiple approved profiles per person are
    allowed.
+
+   **Executed 2026-09-15 (PR #1347), catalogue/role-array scope only —
+   still not a capability-row implementation:** `CET` is retired in
+   `dd_unicorn_roles` (`is_active=false`, zero current holders confirmed via
+   live query) and removed from every active-role array
+   (`VIVACITY_STAFF_ROLES`, `ACADEMY_TENANT_ACCESS_ROLES`). `Team Leader` is
+   also marked `is_active=false` in the catalogue, but is deliberately
+   **kept** in `VIVACITY_STAFF_ROLES`/`ACADEMY_BUILDER_ROLES`/
+   `ACADEMY_TENANT_ACCESS_ROLES`/`VIVACITY_TEAM_ROLES` — removing it broke a
+   real, tested behavioral contract (`useRBAC`'s `is_vivacity_team`/
+   `canAccessEOS`, caught by `src/test/eos/access-control.test.tsx`), so it
+   gets the same historical/backward-compat treatment as `Team Member`
+   rather than the full removal CET got. "Multiple approved profiles per
+   person" is confirmed **already live today**, independent of this plan's
+   own implementation timeline: `public.user_roles` (supplemental role
+   grants) + `check_permission()`'s existing union logic (effective roles =
+   primary `unicorn_role` ∪ active `user_roles` grants), proven in
+   production via the `bulk-generate-automation@vivacity.com.au` account's
+   separate supplemental role and used again this same PR for Nova Canto
+   (Integrator + a supplemental CSC grant). This is a distinct mechanism
+   from item 7's still-unbuilt "seat subtype" concept below — multi-role
+   is a person holding more than one full profile; seat subtype is a
+   bounded capability modifier within one profile. A new `is_qa_persona`
+   boolean (pure visibility flag, zero permission effect) was also added in
+   the same PR to replace the legacy `kpi_pod='qa'` marker for test-persona
+   accounts like `carl+csc@vivacity.com.au` — this is neither multi-role
+   nor seat subtype, and is called out here only to head off confusing the
+   three concepts. See
+   [`docs/audit-log/entries/2026-09-15-qa-persona-flag-and-role-retirements.md`](../../audit-log/entries/2026-09-15-qa-persona-flag-and-role-retirements.md).
 3. Super Admin remains the hard control-plane role. Operational subtypes (for
    example developer, executive/integrator, or BGT) describe the seat's work;
    they do not create an additional privilege tier or bypass the hard-SA
@@ -945,6 +974,14 @@ without deleting that history.
    subtype, tenant/resource scope, relationship, temporary-grant, approval,
    effective-access-preview, and audit concepts; the current role-level matrix
    is not itself the future policy model.
+
+   **Narrowed 2026-09-15:** the "profile" half of this (multiple approved
+   profiles per person) is confirmed already solved by existing production
+   infrastructure — see item 2's execution note above. What's still
+   genuinely outstanding here is only the "seat subtype" half: a bounded
+   capability modifier *within* one profile (e.g. CSC assistant gaining
+   approved AI-context breadth without becoming a different role). Not
+   built as of this date.
 8. Person-picker/system-account classification (item 14) and the 72 tenantless
    users (item 15) remain explicitly parked and are not reopened by this
    baseline. Exact capability rows, implementation sequencing, and any future
