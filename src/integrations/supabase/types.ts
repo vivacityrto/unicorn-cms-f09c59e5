@@ -4176,6 +4176,7 @@ export type Database = {
           minutes_copilot_auto_fetch_enabled: boolean
           minutes_copilot_auto_fetch_fallback_to_paste: boolean
           minutes_store_raw_copilot_input: boolean
+          probe_col: boolean
           review_required_before_release: boolean
           sharepoint_client_folders: string | null
           sharepoint_client_folders_template: string | null
@@ -4223,6 +4224,7 @@ export type Database = {
           minutes_copilot_auto_fetch_enabled?: boolean
           minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
+          probe_col?: boolean
           review_required_before_release?: boolean
           sharepoint_client_folders?: string | null
           sharepoint_client_folders_template?: string | null
@@ -4270,6 +4272,7 @@ export type Database = {
           minutes_copilot_auto_fetch_enabled?: boolean
           minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
+          probe_col?: boolean
           review_required_before_release?: boolean
           sharepoint_client_folders?: string | null
           sharepoint_client_folders_template?: string | null
@@ -69611,26 +69614,6 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      create_academy_solo_account: {
-        Args: {
-          p_account_name: string
-          p_expires_at?: string | null
-          p_notes?: string | null
-        }
-        Returns: Json
-      }
-      manage_academy_solo_access: {
-        Args: {
-          p_action: string
-          p_enabled: boolean
-          p_expires_at?: string | null
-          p_is_solo_pilot?: boolean
-          p_max_users?: number | null
-          p_notes?: string | null
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       admin_fix_invitations: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_memberships: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_profile_linkage: { Args: { dry_run?: boolean }; Returns: Json }
@@ -70086,6 +70069,14 @@ export type Database = {
         Returns: undefined
       }
       count_selected_work_days: { Args: { p_schedule: Json }; Returns: number }
+      create_academy_solo_account: {
+        Args: {
+          p_account_name: string
+          p_expires_at?: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
       create_audit: {
         Args: { p_client_id: string; p_created_by: string; p_tenant_id: number }
         Returns: number
@@ -71194,6 +71185,7 @@ export type Database = {
         Args: { p_user_uuid: string }
         Returns: undefined
       }
+      has_academy_access_safe: { Args: { p_user_id: string }; Returns: boolean }
       has_any_eos_role: {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
@@ -71446,6 +71438,18 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      manage_academy_solo_access: {
+        Args: {
+          p_action: string
+          p_enabled: boolean
+          p_expires_at?: string
+          p_is_solo_pilot?: boolean
+          p_max_users?: number
+          p_notes?: string
+          p_tenant_id: number
+        }
+        Returns: Json
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
       mark_tenant_contact_promoted: {
