@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-09-15 — TOM P1.1 hosted QA contact-promotion canary](entries/2026-09-15-tom-p11-contact-promotion-qa-canary.md) — allowlisted `unicorn-qa` positive lifecycle passed through the real contact → invitation → browser acceptance path with QA no-send, run-scoped alias, idempotent `ALREADY_ACCEPTED` retry, complete cleanup, and audit-preserving auth retention; no production change
+
 - [2026-09-14 — Academy Solo MVP server boundary and audited pilot lifecycle](entries/2026-09-14-academy-solo-mvp-boundary.md) — controlled-pilot implementation with tenant-backed Academy-only account provisioning (without RTO/package/payment side effects), server-side Academy access boundary, audited staff lifecycle RPC, explicit Solo-pilot marker/end action, history-preserving access rules, and contract tests; Academy Solo migrations plus the corrective anon-grant migration are applied to allowlisted `unicorn-qa` and production for controlled invite testing, with no pilot account, invitation, learner data, billing, or public launch created by the migration
 
 - [2026-09-13 — TOM QA address contract repair and client Ask Viv history characterization](entries/2026-09-13-tom-address-repair-and-client-ask-viv-history.md) — QA-only `tenant_addresses`/`dd_address_type` shape repaired to match the independently read production contract; protected Client User A history read then returned both owner-scoped relations with HTTP 200 and rendered the synthetic turns in run `34761219013`; no production or policy change

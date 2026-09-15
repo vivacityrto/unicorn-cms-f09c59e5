@@ -1,6 +1,6 @@
 # TOM P0.2/P0.3 — synthetic QA fixture seed record (2026-09-13)
 
-> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; QA address lookup/FK contract repaired and verified; Client User A Ask Viv history characterized in run `34761219013` (broader P0.2/P0.3 coverage remains open)
+> **Status:** synthetic fixture seeded and read-only verified; canonical QA `app_settings` row added; representative query-family expansion added and verified; anonymous plus nine browser-authenticated QA personas characterized, with a separate non-browser service-principal read contract; QA address lookup/FK contract repaired and verified; Client User A Ask Viv history characterized in run `34761219013`; dedicated TOM P1.1 primary-contact inviter added and hosted canary passed in run `34912755544` (broader P0.2/P0.3 coverage remains open)
 > **Target:** `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`, `https://qfpxvumcrnzrjyvqkicq.supabase.co`); production target: false
 > **Run tag:** `tom_qa_20260913_seed_01`
 > **Audit entry:** [2026-09-13 TOM representative QA query-family fixture expansion](../../../../audit-log/entries/2026-09-13-tom-representative-qa-fixture-expansion.md)
@@ -102,6 +102,16 @@ through their protected environment secrets. The service principal is not a
 browser persona and is not included in Playwright storage-state generation; its
 password exists only in the protected QA environment for the narrow read
 contract.
+
+### TOM P1.1 inviter extension — 2026-09-14
+
+The protected seed workflow added a dedicated synthetic primary-contact inviter
+for the first TOM P1.1 canary in run `34829648697`. It has `primary_contact`
+relationship access and the required active tenant membership in representative
+fixture tenant 2; the baseline `Client Admin A` identity was not modified.
+The inviter is used only through protected QA storage state and is not a
+production identity. The corresponding hosted acceptance evidence is recorded
+in the [P1.1 canary audit entry](../../../../audit-log/entries/2026-09-15-tom-p11-contact-promotion-qa-canary.md).
 
 ## Safety and rollback
 

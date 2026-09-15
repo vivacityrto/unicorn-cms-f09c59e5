@@ -1,16 +1,16 @@
 # TOM P1.1 — QA invitation-delivery verification and runbook
 
-> **Status:** preparation-only; no runtime, hosted-QA, credential, invitation,
-> data, or production action is authorized by this document.
+> **Status:** preparation contract plus completed authorized QA evidence;
+> production/runtime rollout and further negative-case execution remain gated.
 >
 > **Parent packet:** [first contact-promotion implementation packet](p1-1-first-contact-promotion-implementation-packet.md)
 >
 > **Related preparation:** [QA negative cases and cleanup/runbook contract](../p0/p0-4-qa-negative-cases-and-cleanup-runbook.md)
 >
-> **Companion runtime proposal:** PR #1281 (`feat: add QA no-send invitation
-> delivery mode`). The values and behavior described below are a proposed
-> verification contract; they are not current `origin/main` behavior until
-> that separately reviewed runtime change is merged and configured.
+> **Runtime evidence:** PR #1304 (`test: enforce QA-only no-send boundary`)
+> merged and deployed to `unicorn-qa` as `invite-user` version 4; the project
+> URL guard is authoritative. The contract below remains QA-only and does not
+> authorize production delivery changes.
 
 ## 1. Purpose and boundary
 
@@ -20,7 +20,8 @@ the existing invitation contract to an explicit QA-only delivery mode and
 defines the evidence, negative cases, and cleanup needed before a future
 authorized run.
 
-The source cutoff for this preparation is `origin/main@e8043bc8b7ba7badc5ebeaab639f83076dbc2b0d`.
+The source cutoff for this preparation/evidence reconciliation is
+`origin/main@eab991c2d8fa9287ce0f65da2dacb24e737dc8d9`.
 The current source evidence is:
 
 ```text
@@ -56,10 +57,10 @@ INVITATION_EMAIL_ENVIRONMENT=qa
 INVITATION_EMAIL_MODE=qa-no-send
 ```
 
-These values are a future operator configuration, not a request to set
-secrets or environment variables in this packet. Production must not use the
-QA mode. A production or otherwise unmarked environment must continue to
-follow the normal email path, even if a mode value is accidentally present.
+These values describe the protected QA configuration used by the canary;
+production must not use the QA mode. A production or otherwise unmarked
+environment must continue to follow the normal email path, even if a mode
+value is accidentally present.
 
 | Contract point | Required QA result | Evidence |
 |---|---|---|
@@ -180,7 +181,47 @@ browser storage, credentials, and provider traces in the approved private
 artifact bundle only. The shared summary should include case IDs, counts,
 statuses, source/mode hashes, and artifact references.
 
-## 6. Preflight, stop, and cleanup runbook
+## 6. Recorded authorized canary — 2026-09-15
+
+Protected workflow run [`34912755544`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34912755544)
+targeted only `unicorn-qa` (`qfpxvumcrnzrjyvqkicq`) at source commit
+`eab991c2d8fa9287ce0f65da2dacb24e737dc8d9`. It used the dedicated synthetic
+primary-contact inviter seeded by run `34829648697`, a generated recipient
+alias, and no mailbox access.
+
+The redacted result was `pass` for the bounded positive lifecycle:
+
+```json
+{
+  "scope": "contact -> invite-user -> accept_invitation_v2",
+  "delivery_status": "not_observed",
+  "browser_flow": true,
+  "url_token_used": true,
+  "email_confirmed_for_retry": true,
+  "retry_code": "ALREADY_ACCEPTED",
+  "invitation_accepted": true,
+  "profile_created": true,
+  "tenant_user_created": true,
+  "tenant_member_created": true,
+  "contact_archived_and_linked": true,
+  "cleanup_complete": true,
+  "auth_user_retained_for_audit": true
+}
+```
+
+The first browser signup created an unconfirmed QA auth user; because the QA
+environment has no mailbox, the protected harness confirmed only that
+run-scoped user and submitted the same form again. The second submission used
+the existing UI sign-in branch and completed the normal acceptance RPC. This
+does not change production email behavior or bypass the acceptance boundary.
+The recipient auth row was retained only because the audit row pins its
+`user_id`; run-scoped application rows were cleaned with zero errors.
+
+The canary does not claim wrong-tenant, expired-token, disabled-actor, or
+outbound Mailgun delivery results. Those remain separate negative/observability
+gates.
+
+## 7. Preflight, stop, and cleanup runbook
 
 ### Preflight gates
 
@@ -216,7 +257,7 @@ record attempted, deleted/expired, residual, unverified, operator, timestamp,
 and artifact reference. Cleanup must not delete audit evidence merely to make
 the residue count appear clean.
 
-## 7. Gates and exclusions
+## 8. Gates and exclusions
 
 This preparation does not authorize:
 
@@ -247,5 +288,6 @@ node scripts/check-kb-doc-size.mjs
 git diff --check
 ```
 
-No frontend, Edge, database, credential, hosted-QA, Mailgun, or live mutation
-verification is applicable to this preparation document.
+The recorded hosted canary and linked audit entry are the live evidence for
+the bounded QA contract. Further runtime, production, migration, Mailgun, and
+negative-case verification remains separately gated.
