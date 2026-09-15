@@ -45,6 +45,12 @@ their lifecycle work to that existing surface. RTO operational actions remain
 inapplicable to Academy accounts, so this change must not be interpreted as a
 new package, compliance, or staff-assignment grant.
 
+The invitation-capacity correction does not restore the removed RPC overload
+or create a caller-supplied identity parameter. It forwards the validated
+tenant-admin session to the existing one-argument capacity RPC, so its
+`auth.uid()` tenant-access check remains the authorization authority. The
+reversible Solo setting likewise changes no RBAC vocabulary or capability.
+
 The named P1-v synthetic read-boundary fixture contract is a documentation-only
 evidence slice for the package-instance and client-stage read candidates. It
 defines the future fixture, denial cases, and approval gates but does not

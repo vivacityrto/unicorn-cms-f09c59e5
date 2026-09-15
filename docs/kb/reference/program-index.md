@@ -38,7 +38,7 @@ initiatives above without becoming new cross-cutting programs.
 
 | Workstream | Status | Current packet | Dependencies/gates |
 |---|---|---|---|
-| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15); invitation compatibility fix verified in allowlisted QA; Manage Clients account-surface separation implemented, authenticated pilot verification pending | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; valid legacy `User` role plus `academy_user`/`academy_only` authority; distinct Academy Customers lifecycle; explicit Academy-vs-RTO directory classification; no RTO/package/Client Health semantics; named-user approval; QA negative cases; separate hosted migration review. |
+| Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15); invitation compatibility, capacity-RPC, reversible-Solo, drawer-close, and RTO-default fixes prepared; authenticated pilot verification pending | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; valid legacy `User` role plus `academy_user`/`academy_only` authority; distinct Academy Customers lifecycle; explicit Academy-vs-RTO directory classification with RTO default; no RTO/package/Client Health semantics; named-user approval; QA negative cases; separate hosted migration review. |
 
 ## Active work
 

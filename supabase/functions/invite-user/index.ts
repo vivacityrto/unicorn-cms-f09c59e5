@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { APP_BASE_URL } from "../_shared/app-base-url.ts";
+import { createUserClient } from "../_shared/supabase-client.ts";
 
 type UnicornRole =
   | "Super Admin" | "Team Leader" | "Team Member"
@@ -159,13 +160,14 @@ serve(async (req) => {
     // Vivacity staff bypass entirely.
     async function assertCapacity(): Promise<Response | null> {
       if (isVivacityStaff || isSuperAdmin) return null;
-      // p_caller_id is required here: this client is service-role
-      // authenticated (no session JWT), so auth.uid() inside the RPC
-      // would resolve to NULL and has_tenant_access_safe would always
-      // fail for a real (non-staff) caller.
-      const { data: capRows, error: capErr } = await supabase.rpc(
+      // The capacity RPC intentionally accepts only p_tenant_id and derives
+      // auth.uid() from the caller's session. The main client is service-role
+      // because this function performs the invitation writes, so use a
+      // caller-scoped client for this authorization-sensitive read.
+      const callerScoped = createUserClient(req.headers.get("Authorization"));
+      const { data: capRows, error: capErr } = await callerScoped.rpc(
         'get_tenant_user_capacity',
-        { p_tenant_id: payload.tenant_id, p_caller_id: callerUser.user.id },
+        { p_tenant_id: payload.tenant_id },
       );
       if (capErr) {
         console.error('[capacity] rpc error:', capErr);

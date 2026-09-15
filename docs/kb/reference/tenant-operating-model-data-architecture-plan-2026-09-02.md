@@ -30,8 +30,9 @@ schema, or production change per the Production rule above.
 ### Cross-initiative implementation note (2026-09-15)
 
 The shared `/manage-tenants` directory now treats Academy Solo as a distinct
-account surface: it remains discoverable for internal staff, exposes an
-account-type filter, and routes lifecycle work to Academy Customers. Academy
+account surface: it defaults to the RTO account view, remains discoverable for
+internal staff through an explicit account-type filter, and routes lifecycle
+work to Academy Customers. Academy
 rows are not RTO tenants for package, invoice, renewal, registration, CSC,
 compliance-stage, or related operational metrics/actions. The temporary
 tenant-backed isolation bridge is therefore not a reason to run RTO contact
@@ -46,6 +47,14 @@ is a planning draft only: it narrows the first runtime boundary to contact →
 invitation → acceptance with an explicit relationship role and preserves
 separate gates for canary evidence, migration, ledger changes, Realtime,
 unmatched rows, and ghost retirement.
+
+The 2026-09-15 Academy regression slice also closes two tenant-boundary
+correctness gaps: tenant-admin invitation capacity now runs under the real
+caller session after the two-argument RPC was retired, and the temporary
+Solo marker no longer permanently overwrites an existing Academy tenant's
+seat cap. The Academy drawer's URL state is cleared on close. These changes
+preserve ordinary RTO invitation and tenant-operating-model behavior and do
+not make Academy rows RTO onboarding subjects.
 
 ---
 

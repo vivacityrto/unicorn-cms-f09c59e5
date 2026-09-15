@@ -153,6 +153,15 @@
       "owner": "Carl",
       "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body binds an accepted invitation to the authenticated identity and is covered by the Academy invitation contract tests and audit entry.",
       "expires": "2026-10-15"
+    },
+    {
+      "id": "academy-solo-reversibility-invite-capacity-fix",
+      "file": "supabase/migrations/20260915040000_academy_solo_reversibility_and_invite_capacity_fix.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed false positives: UPDATE and INSERT statements are inside the existing staff-only SECURITY DEFINER Academy lifecycle RPC. The migration makes Solo marker and seat-cap changes reversible by preserving the prior cap, removes the marker on disable, and keeps the invitation capacity read on the caller-scoped one-argument RPC. Covered by static contract tests and bounded browser verification; no production deployment is performed by this PR.",
+      "expires": "2026-10-15"
     }
   ]
 }

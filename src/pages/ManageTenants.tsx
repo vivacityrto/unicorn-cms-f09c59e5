@@ -109,7 +109,10 @@ export default function ManageTenants() {
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("live");
-  const [accountTypeFilter, setAccountTypeFilter] = useState<TenantAccountType | "all">("all");
+  // Manage Clients is primarily the RTO operating directory. Academy rows
+  // remain discoverable via the explicit account-type options, but should not
+  // appear in the initial operational view.
+  const [accountTypeFilter, setAccountTypeFilter] = useState<TenantAccountType | "all">("rto");
   const [moneyAtRiskOnly, setMoneyAtRiskOnly] = useState(false);
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [cscFilter, setCscFilter] = useState<string>("all");

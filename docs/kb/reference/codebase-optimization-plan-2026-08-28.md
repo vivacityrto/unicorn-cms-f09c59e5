@@ -33,12 +33,20 @@ Phase 5 or Phase 2.6 work needs its own bounded packet and authorization.
 ### Cross-initiative implementation note (2026-09-15)
 
 The Academy Solo delivery workstream now has a bounded Manage Clients
-account-surface change: shared directory discovery is retained, while
+account-surface change: the shared directory defaults to RTOs while retaining
+explicit Academy/All discovery; meanwhile,
 Academy-vs-RTO classification and routing are explicit and RTO-only columns,
 filters, metrics, and actions are suppressed for Academy rows. This is a
 product-boundary change, not a Phase 4 extraction or a Phase 5 authorization;
 the implementation and focused verification are tracked by the Academy Solo
 packet and its reviewable PR.
+
+The 2026-09-15 follow-up regression slice keeps the invitation capacity read
+on the published one-argument RPC contract by forwarding the validated caller
+session, makes the Solo settings mutation reversible, and clears the query
+state when the Academy Customers drawer closes. These are bounded behavior
+fixes with focused edge/source contracts and authenticated browser checks;
+they are not Phase 4 extraction or Phase 5 authorization work.
 
 ## 1. Executive decision
 

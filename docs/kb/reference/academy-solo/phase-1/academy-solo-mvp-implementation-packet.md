@@ -1,6 +1,6 @@
 # Academy Solo MVP — Phase 1 implementation packet
 
-> **Status:** implementation in progress — controlled pilot approved; invitation compatibility fix verified in allowlisted QA; QA and production migrations applied for invite testing; Manage Clients account-surface separation implemented, authenticated pilot verification pending
+> **Status:** implementation in progress — controlled pilot approved; invitation compatibility fix verified in allowlisted QA; invitation-capacity and reversible-Solo fixes prepared with focused contracts; Manage Clients account-surface separation implemented, final authenticated pilot verification pending
 > **Started:** 2026-09-14  
 > **Target:** pilot-ready by 2026-09-15, subject to the approval gates below  
 > **Owner:** Academy Solo delivery workstream  
@@ -81,8 +81,9 @@ and preserves ordinary RTO invitation copy.
 
 The approved operating shape is explicit: Academy Solo accounts remain
 visible to staff as a distinct account type, but Academy Customers remains the
-authoritative lifecycle surface. Manage Clients may provide cross-directory
-visibility, but must not treat Solo as an RTO client or expose package,
+authoritative lifecycle surface. Manage Clients defaults to the RTO account
+view; staff can explicitly choose Academy Solo or All when they need
+cross-directory visibility. It must not treat Solo as an RTO client or expose package,
 invoice, CSC, compliance-stage, or Client Health actions for it. No Sidekick
 package is created; future analytics should consume an explicit Academy
 account/entitlement event rather than infer product identity from a compliance
@@ -96,6 +97,28 @@ limits remain: Supabase Auth email rate limiting blocked repeated fresh-identity
 signups, and the QA Academy catalogue currently contains no published
 courses. These remain environment/data gates and are not silently treated as
 application success.
+
+### Regression truth-sync (2026-09-15)
+
+Two follow-up defects were confirmed from source review. The invitation Edge
+Function was still sending the removed `p_caller_id` argument to the
+one-argument `get_tenant_user_capacity` RPC through a service-role client;
+tenant-admin invitations therefore failed before the invitation write. The
+bounded correction keeps invitation writes service-role-backed but performs
+the capacity read through a caller-scoped client that forwards the validated
+bearer token, preserving the RPC's `auth.uid()` authorization boundary.
+
+The Solo lifecycle RPC also treated the presence of `metadata.academy_solo`
+as a permanent Solo state. The corrective migration records the pre-Solo
+`academy_max_users` value when enabling the marker, removes the marker on
+disable, and restores the recorded cap. The Academy Customers form mirrors
+that behavior when toggling before save, while retaining auto-enrol rules for
+non-Solo Academy access. Closing a drawer now clears its `tenant` query
+parameter so Manage Clients deep-links do not immediately reopen it.
+
+These corrections do not add a package, a global role, a Client Health metric,
+or an RTO onboarding side effect. The migration is included in the reviewable
+PR and has not been applied to production by this change.
 
 ## Cross-initiative decision matrix
 
@@ -132,7 +155,8 @@ application success.
 3. **Manual lifecycle.** Provide staff-only activation/suspension/reactivation/
    end actions for a tenant and named learner, with an audit event containing
    actor, tenant, prior state, new state, and reason. Identity creation uses
-   the existing Academy User invitation flow; no new auth system or payment
+   the existing Academy User invitation flow; Solo enable/disable is
+   reversible for existing Academy RTO tenants; no new auth system or payment
    collection is introduced.
 4. **Named-user and directory guard.** Enforce the one-user pilot
    operationally, surface the Academy-only membership clearly to staff, and
@@ -142,9 +166,10 @@ application success.
    edge tests, typecheck, lint ratchet, build, then complete authenticated
    positive and negative cases against the pilot account before treating the
    controlled pilot as ready. The positive authenticated invite case is now
-   verified in allowlisted QA; the required repository checks also pass. The
-   negative authorization cases and a fresh-identity run remain separate
-   gates.
+   verified in allowlisted QA; the capacity-RPC and Solo-reversibility
+   contracts are now included in the repository checks. The drawer close and
+   toggle behavior require the bounded authenticated browser pass; negative
+   authorization cases and a fresh-identity run remain separate gates.
 
 ## Approval questions consolidated
 
