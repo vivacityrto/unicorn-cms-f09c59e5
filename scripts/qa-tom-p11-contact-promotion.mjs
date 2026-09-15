@@ -317,7 +317,15 @@ async function main() {
       await recipientPage.getByLabel("Password", { exact: true }).fill(recipientPassword);
       await recipientPage.getByLabel("Confirm Password", { exact: true }).fill(recipientPassword);
       await recipientPage.getByRole("button", { name: "Complete Signup", exact: true }).click();
-      await recipientPage.waitForURL((url) => url.pathname === "/post-sign-in", { timeout: 45_000 });
+      try {
+        await recipientPage.waitForURL((url) => url.pathname === "/post-sign-in", {
+          timeout: 45_000,
+          waitUntil: "domcontentloaded",
+        });
+      } catch (error) {
+        await reportBrowserState(recipientPage, "recipient-signup-timeout");
+        throw error;
+      }
       result.acceptance = { browser_flow: true, url_token_used: true };
       await recipientContext.close();
     } finally {
