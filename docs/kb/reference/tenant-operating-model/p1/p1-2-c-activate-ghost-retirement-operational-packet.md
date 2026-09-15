@@ -50,7 +50,7 @@ control plane.
 | Gate | Required decision or evidence | State |
 | --- | --- | --- |
 | Environment | `unicorn-qa` only (`qfpxvumcrnzrjyvqkicq`); production is explicitly out of scope | **Approved by Carl 2026-09-15** |
-| Action | Choose disable-first as the reversible first step, or explicitly approve direct deletion; direct deletion is not recommended | **Carl must specify** |
+| Action | Disable-first in `unicorn-qa`; direct deletion deferred until after a separate clean observation and approval | **Approved by Carl 2026-09-15; execution not authorized** |
 | Timing | Name the execution window and confirm no conflicting release, job, or support activity | **Carl must specify** |
 | Rollback owner | Name the person who can restore the function and approve the rollback trigger | **Carl must specify** |
 | Rollback artifact | Privately verify the version-304 source/digest or an equivalent redeployable artifact is available | **Required preflight** |
@@ -89,11 +89,11 @@ The operator must stop without taking the action if any check fails:
 
 ## Recommended execution shape (not authorized)
 
-If and only if the approvals above are complete, use this sequence:
+If and only if the remaining approvals above are complete, use this sequence:
 
 1. Record the final preflight metadata and current aggregate evidence.
-2. Apply the platform-supported **disable** action to the exact function ID;
-   do not delete the deployment in the first step.
+2. Apply the platform-supported **disable** action to the exact function ID in
+   `unicorn-qa`; do not delete the deployment in the first step.
 3. Verify the control-plane state and record the platform's actual response to
    the exact legacy path. Do not assume a particular HTTP status without
    observing the platform result.
@@ -134,4 +134,4 @@ an issue, or chat. A dated operational audit entry is required for any actual
 disable, rollback, or delete action. Until then, the existing evidence and
 holds remain authoritative.
 
-**Related audit entries:** [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Related audit entries:** [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
