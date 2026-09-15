@@ -25,6 +25,7 @@ export function useTriageStaffOptions() {
         .in("unicorn_role", TRIAGE_ROLES)
         .eq("disabled", false)
         .eq("archived", false)
+        .eq("is_system_account", false)
         .or("kpi_pod.is.null,kpi_pod.neq.qa")
         .order("first_name", { ascending: true });
       if (error) throw error;
