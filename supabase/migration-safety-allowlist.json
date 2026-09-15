@@ -2,6 +2,15 @@
   "version": 1,
   "entries": [
     {
+      "id": "add-email-templates-manage-capability",
+      "file": "supabase/migrations/20260915014755_add_email_templates_manage_capability.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved RBAC v6 capability scoping (2026-09-15): inserts one new permission_features row and 7 role_permissions rows for the new email_templates.manage key, modeled directly on the existing public.email_templates RLS boundary (Super Admin full, other internal Vivacity roles limited/view-only). The ON CONFLICT DO UPDATE is a safe upsert guard, not a destructive operation on existing data -- these are brand-new rows for a brand-new feature key.",
+      "expires": "2026-10-15"
+    },
+    {
       "id": "retire-client-eos-access-user-roles-cleanup",
       "file": "supabase/migrations/20260915004558_retire_client_eos_access.sql",
       "categories": ["destructive-mutation"],
