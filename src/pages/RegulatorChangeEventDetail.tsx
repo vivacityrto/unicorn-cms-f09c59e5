@@ -11,11 +11,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, ClipboardList, ShieldAlert } from "lucide-react";
+import { Loader2, ArrowLeft, ExternalLink, AlertTriangle, CheckCircle2, ClipboardList, ShieldAlert, Quote } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  formatRegulatoryImpactExplanation,
+  getRegulatorySummarySections,
+  humanizeRegulatoryImpactText,
+} from "@/features/regulatory-updates/summaryFormatting";
 
 const IMPACT_COLORS: Record<string, string> = {
   low: "bg-blue-100 text-blue-800",
@@ -138,26 +143,46 @@ export default function RegulatorChangeEventDetail() {
   const finding = findings?.[0];
   const riskFlags = (finding?.risk_flags_json as unknown as unknown[]) || [];
   const citations = (finding?.citations_json as unknown as Citation[]) || [];
+  const summarySections = event.change_summary_md
+    ? getRegulatorySummarySections(event.change_summary_md)
+    : null;
+  const impactExplanation = summarySections?.impactLevel
+    ? formatRegulatoryImpactExplanation(summarySections.impactLevel, event.impact_level)
+    : null;
 
   return (
-      <div className="space-y-4 p-4 max-w-screen-lg mx-auto">
+      <div className="w-full min-w-0 space-y-8 p-4 md:p-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/admin/regulator-watch")} className="gap-1">
+        <div className="flex flex-wrap items-start gap-4 border-b border-border/70 pb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/admin/regulator-watch")} className="-ml-3 gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" /> Back
           </Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-              {wl?.name || "Change Event"}
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${IMPACT_COLORS[event.impact_level] || ""}`}>
-                {event.impact_level}
-              </span>
-            </h1>
-            <p className="text-xs text-muted-foreground">
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Regulatory update</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="break-words text-3xl font-bold leading-tight tracking-tight text-foreground">
+                {wl?.name || "Change Event"}
+              </h1>
+              {event.impact_level && (
+                <span className={`rounded-full px-3 py-1 text-sm font-semibold capitalize ${IMPACT_COLORS[event.impact_level] || ""}`}>
+                  {event.impact_level} impact
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
               Detected {format(new Date(event.detected_at), "dd MMM yyyy HH:mm")}
             </p>
+            {impactExplanation && (
+              <blockquote className="flex max-w-3xl gap-3 rounded-r-xl border-l-4 border-primary/50 bg-primary/[0.04] px-4 py-3 text-sm leading-6 text-muted-foreground">
+                <Quote className="mt-1 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary">Why it matters</p>
+                  <p>{impactExplanation}</p>
+                </div>
+              </blockquote>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {event.review_status === "pending" && (
               <Button size="sm" variant="outline" onClick={() => updateStatus.mutate("reviewed")} className="gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Mark Reviewed
@@ -174,42 +199,16 @@ export default function RegulatorChangeEventDetail() {
           </div>
         </div>
 
-        {/* Source Info */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Source Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20">URL:</span>
-              <a href={wl?.url} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1">
-                {wl?.url} <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20">Category:</span>
-              <Badge variant="outline" className="text-[10px]">{wl?.category}</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20">Hash (old):</span>
-              <code className="text-[10px] bg-muted px-1 rounded">{event.previous_hash?.slice(0, 16)}...</code>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20">Hash (new):</span>
-              <code className="text-[10px] bg-muted px-1 rounded">{event.new_hash?.slice(0, 16)}...</code>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Change Summary */}
-        {event.change_summary_md && (
+        {summarySections?.changeSummary && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Change Analysis</CardTitle>
+            <CardHeader className="space-y-2 pb-4 sm:p-8 sm:pb-4">
+              <CardTitle className="text-xl leading-tight text-secondary">Change Summary</CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">Review what changed before deciding what action, if any, is needed.</p>
             </CardHeader>
-            <CardContent>
-              <div className="prose prose-sm max-w-none text-xs leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.change_summary_md}</ReactMarkdown>
+            <CardContent className="sm:px-8 sm:pb-8">
+              <div className="prose prose-sm max-w-none break-words text-sm leading-7 text-foreground [overflow-wrap:anywhere] prose-headings:mb-3 prose-headings:mt-7 prose-headings:font-semibold prose-headings:leading-tight prose-headings:text-secondary prose-p:my-4 prose-li:my-1.5 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_pre]:[overflow-wrap:anywhere] [&_code]:break-words">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{summarySections.changeSummary}</ReactMarkdown>
               </div>
             </CardContent>
           </Card>
@@ -218,21 +217,24 @@ export default function RegulatorChangeEventDetail() {
         {/* Affected Areas */}
         {affectedAreas.length > 0 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <CardHeader className="space-y-2 pb-4 sm:p-8 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-xl leading-tight text-secondary">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
                 Affected Areas
               </CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">Standards and operational areas that may need attention.</p>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+            <CardContent className="sm:px-8 sm:pb-8">
+              <div className="space-y-3">
                 {affectedAreas.map((area: AffectedArea, i: number) => (
-                  <div key={i} className="flex items-start gap-3 p-2 rounded bg-muted/50 text-xs">
-                    <div className="flex-1">
-                      <p className="font-medium">{area.area || area.risk_category}</p>
-                      <p className="text-muted-foreground">{area.impact_type || area.claim_excerpt}</p>
+                  <div key={i} className="flex items-start gap-4 rounded-lg border border-border/70 bg-muted/30 p-4 text-sm">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <p className="break-words font-semibold leading-6 [overflow-wrap:anywhere]">{area.area || area.risk_category}</p>
+                      <p className="break-words leading-6 text-muted-foreground [overflow-wrap:anywhere]">
+                        {humanizeRegulatoryImpactText(area.impact_type || area.claim_excerpt || "")}
+                      </p>
                     </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">
+                    <Badge variant="outline" className="max-w-[42%] whitespace-normal break-words text-right text-[11px] leading-4 shrink-0">
                       {area.standard_clause || "—"}
                     </Badge>
                   </div>
@@ -245,15 +247,16 @@ export default function RegulatorChangeEventDetail() {
         {/* Citations */}
         {citations.length > 0 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Citations</CardTitle>
+            <CardHeader className="space-y-2 pb-4 sm:p-8 sm:pb-4">
+              <CardTitle className="text-xl leading-tight text-secondary">Citations</CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">Review the original sources for full context.</p>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
+            <CardContent className="sm:px-8 sm:pb-8">
+              <div className="space-y-3">
                 {citations.map((c: Citation, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground w-6">[{c.index || i + 1}]</span>
-                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                  <div key={i} className="flex min-w-0 items-start gap-3 text-sm leading-6">
+                    <span className="mt-0.5 w-6 shrink-0 text-muted-foreground">[{c.index || i + 1}]</span>
+                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="min-w-0 text-primary hover:underline break-all">
                       {c.url}
                     </a>
                   </div>
@@ -262,6 +265,34 @@ export default function RegulatorChangeEventDetail() {
             </CardContent>
           </Card>
         )}
+
+        {/* Source Info */}
+        <Card>
+          <CardHeader className="space-y-2 pb-4 sm:p-7 sm:pb-4">
+            <CardTitle className="text-lg leading-tight text-secondary">Source Details</CardTitle>
+            <p className="text-sm leading-6 text-muted-foreground">Where this update was published.</p>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm sm:px-7 sm:pb-7">
+            <div className="flex items-center gap-2">
+              <span className="w-20 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">URL:</span>
+              <a href={wl?.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex items-center gap-1 text-primary break-all hover:underline">
+                {wl?.url} <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-20 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Category:</span>
+              <Badge variant="outline" className="text-[10px]">{wl?.category}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-20 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hash (old):</span>
+              <code className="break-all rounded bg-muted px-1 text-[10px]">{event.previous_hash?.slice(0, 16)}...</code>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-20 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hash (new):</span>
+              <code className="break-all rounded bg-muted px-1 text-[10px]">{event.new_hash?.slice(0, 16)}...</code>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Disclaimer */}
         <p className="text-[10px] text-muted-foreground text-center italic">
