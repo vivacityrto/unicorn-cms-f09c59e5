@@ -306,7 +306,8 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
     createRock,
     updateRock,
     archiveRock,
-    
+    deleteRock,
+
     // Helpers
     getChildren,
     getParentChain,
