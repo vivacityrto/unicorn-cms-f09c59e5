@@ -81,21 +81,39 @@ there is no cross-tenant relationship left to resolve post-PR #1323:
 
 ## Review checklist and stop boundary
 
-Product review must explicitly confirm before this becomes a golden row:
+Product review must explicitly confirm before this becomes a golden row.
+Proposed dispositions below match already-shipped current behavior (nothing
+here changes a grant or RLS boundary) — recorded as a ready-to-confirm
+recommendation rather than a live decision, since Carl asked to stay focused
+on RBAC progress rather than be pulled into every checkpoint:
 
-- whether `view`/`view history` should be uniform across all Vivacity Team
-  roles or narrowed to a relevant seat/team (the one open scope question
-  that isn't already answered by existing `role_permissions` data);
-- whether `record`'s broader-than-`create` gate is intentional product
-  design or an accidental gap;
-- `archive`/`delete` are now source-backed (traced to `useScorecardMetrics.tsx`,
-  same day) — remaining open item is only whether SA/TL-only is the intended
-  set, matching `create`/`edit`;
-- named review owner, expiry, and rollback owner for the slice.
+- **`view`/`view history` scope — proposed: keep uniform across all
+  Vivacity Team roles**, not narrowed to a seat/team. This matches current
+  `role_permissions`/RLS exactly (no distinction exists today), and EOS
+  scorecards are a whole-team visibility tool by design (every team member
+  sees the same operating metrics) — narrowing it would be a new
+  restriction, not a status-quo codification.
+- **`record`'s broader-than-`create` gate — proposed: intentional, not a
+  gap.** Recording a weekly measurement is routine team activity; changing
+  what a metric *is* (create/edit/delete) is a configuration change. This
+  matches standard EOS scorecard practice (team members record their own
+  numbers; only Admin/facilitator-tier roles configure the scorecard
+  structure) and is already how the system behaves — no change needed to
+  ship this disposition, only to record it as accepted rather than open.
+- **`archive`/`delete` — proposed: SA/TL-only, matching `create`/`edit`.**
+  Source-backed (traced to `useScorecardMetrics.tsx`, 2026-09-15); no
+  evidence found for a different intended set.
+- **Review owner, expiry, rollback owner — proposed: Carl as review owner
+  and final sign-off; 30 days (2026-10-15), matching this session's other
+  RBAC v6 gate expiries; RBAC v6 (Claude) as rollback owner** since this
+  slice has no runtime change yet — rollback here means reverting the
+  golden-matrix doc, not a production action.
 
-Until that review exists, this remains a draft. No role/default/grant
+A one-line "approved" (or specific corrections) from Carl closes this
+checklist. Until then this remains a draft. No role/default/grant
 activation, route change, RLS/RPC/Edge change, or production observation is
-authorized beyond what PR #1323 already shipped (the retirement fix itself).
+authorized beyond what PRs #1323/#1325 already shipped (the retirement fix
+and its follow-up).
 
 ## Verification
 
