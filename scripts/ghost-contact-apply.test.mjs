@@ -7,7 +7,7 @@ import {
   validateReport,
 } from "./ghost-contact-apply.mjs";
 
-const sourceUuid = "11111111-1111-4111-8111-111111111111";
+const sourceUuid = "11111111-1111-7111-8111-111111111111";
 const reportRunId = "22222222-2222-4222-8222-222222222222";
 const sourceCommit = "a".repeat(40);
 

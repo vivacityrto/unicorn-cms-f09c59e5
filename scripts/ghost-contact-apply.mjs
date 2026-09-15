@@ -21,7 +21,9 @@ export const QA_PROJECT_URL = "https://qfpxvumcrnzrjyvqkicq.supabase.co";
 export const QA_PROJECT_REF = "qfpxvumcrnzrjyvqkicq";
 export const APPLY_VERSION = "tom-p1.2-d-canary-v1";
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// PostgreSQL accepts UUID versions beyond v1-v5 (including v7). The apply
+// boundary needs canonical UUID syntax, not an obsolete version allowlist.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
