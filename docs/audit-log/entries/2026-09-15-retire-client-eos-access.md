@@ -32,4 +32,23 @@
 ## Open questions parked
 
 - Whether the two orphaned `eos_vto`/`eos_scorecard` rows (tenant IDs 111, 319, no longer in `public.tenants`) should be cleaned up separately — not part of this retirement, noted for later.
-- No RBAC v6 P1-e classification changes made as a result of this fix; that doc will need a follow-up correction pass now that the EOS rows' real tenant/relationship semantics differ from what was verified immediately prior to this finding.
+
+## Correction (same day, 2026-09-15) — a table was missed in the original pass
+
+While drafting the RBAC v6 P1-w golden-matrix packet for `eos.scorecard.manage`
+(the approved first vertical slice), found that `eos_scorecard_metrics` was
+**not** covered by the original migration above. It has its own independent
+`EXISTS (SELECT 1 FROM eos_scorecard sc WHERE sc.id = eos_scorecard_metrics.scorecard_id
+AND sc.tenant_id = get_current_user_tenant() AND get_current_user_role() = 'Admin')`
+clause on all 4 CRUD policies — the same client-tenant-'Admin' pattern as
+`eos_scorecard` itself, but expressed independently rather than through
+`has_any_eos_role`/`can_facilitate_eos`, so the original function patch did
+not close it. Re-checked `eos_scorecard_entries` at the same time and
+confirmed it has no equivalent raw clause (it only ever routed through the
+already-patched functions) — no further gap found there.
+
+Fixed via migration `20260915012553_retire_client_eos_access_scorecard_metrics_followup`
+(applied via Supabase MCP, same pattern as the original fix): all 4
+`eos_scorecard_metrics` policies rewritten to `is_super_admin() OR
+is_vivacity_team_user(...)` only. Verified post-fix via direct `pg_policies`
+query. No other table re-checked this pass showed a similar miss.
