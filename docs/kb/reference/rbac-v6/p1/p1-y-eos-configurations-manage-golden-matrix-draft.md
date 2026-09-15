@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §7 P1
 > **Inputs:** [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md) (this row was already flagged there as "genuinely safe already, left unchanged"), [P1-w](p1-w-eos-scorecard-golden-matrix-draft.md)/[P1-x](p1-x-eos-rocks-own-manage-golden-matrix-draft.md) (format precedent)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** draft, pending Carl's confirmation — proposed disposition below matches already-shipped current behavior; no code change is anticipated regardless of outcome
+> **Status:** **confirmed 2026-09-15 (Carl)** — all four proposed dispositions in the review checklist below are approved as-is (broad `view`, SA/Integrator-only `edit`/segment-CRUD/`reorder`, dormant configuration create/delete left unchanged, meeting-agenda reuse accepted with a future-cleanup note). This is now a golden row. No code change is required: every disposition matches already-shipped current behavior
 > **Owner:** RBAC v6 with product/security approval
 > **Evidence cutoff:** live `pg_policies`/`pg_proc`/`role_permissions` queried fresh 2026-09-15 (not reused from P1-e's 2026-09-12 pass), plus current `origin/main` source
 > **Audit entry:** none needed — analysis/documentation only; no authorization, schema, credential, hosted QA, or production action
@@ -135,6 +135,11 @@ here changes a grant or RLS boundary):
   (Claude) as rollback owner** — no runtime change is implied by
   confirmation, so rollback here means reverting this doc, not a
   production action.
+
+**Confirmed 2026-09-15 (Carl)** — all four proposed dispositions above are
+approved as-is. `eos.configurations.manage` is now a golden row for R2-a.
+No new role/default/grant, route, RLS/RPC/Edge, or production change is
+implied by this confirmation — enforcement already matches.
 
 ## Verification
 
