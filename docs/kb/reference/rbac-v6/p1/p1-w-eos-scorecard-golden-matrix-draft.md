@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §7 P1
 > **Inputs:** [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md), [P1-l AJ/CSC golden-matrix draft](p1-l-aj-csc-golden-matrix-review-draft.md) (format precedent)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** preparation draft delivered 2026-09-15 — reviewable candidate rows; no golden policy row approved, grant, role, route, RLS, RPC, Edge, credential, or production state changed by this packet
+> **Status:** **confirmed 2026-09-15 (Carl)** — all four proposed dispositions in the review checklist below are approved as-is (uniform view/view-history, record's broader scope intentional, archive/delete SA/TL-only, Carl as review owner/30-day expiry/RBAC v6 as rollback owner). This is now a golden row. No code change is required: every disposition matches already-shipped current behavior (role_permissions + RLS, hardened by PRs #1323/#1325) — confirming this packet formally sanctions the status quo rather than triggering an implementation
 > **Owner:** RBAC v6 with product/security approval
 > **Evidence cutoff:** `origin/main` post-PR #1323 (`retire-client-eos-access` merged) — this row's tenant/resource semantics are internal-Vivacity-only, verified at the RLS layer, not just the page component
 > **Audit entry:** none needed — analysis/documentation only; no authorization, schema, credential, hosted QA, or production action
@@ -109,11 +109,10 @@ on RBAC progress rather than be pulled into every checkpoint:
   slice has no runtime change yet — rollback here means reverting the
   golden-matrix doc, not a production action.
 
-A one-line "approved" (or specific corrections) from Carl closes this
-checklist. Until then this remains a draft. No role/default/grant
-activation, route change, RLS/RPC/Edge change, or production observation is
-authorized beyond what PRs #1323/#1325 already shipped (the retirement fix
-and its follow-up).
+**Confirmed 2026-09-15 (Carl)** — all four proposed dispositions above are
+approved as-is. `eos.scorecard.manage` is now a golden row for R2-a. No new
+role/default/grant, route, RLS/RPC/Edge, or production change is implied by
+this confirmation — enforcement already matches, per PRs #1323/#1325.
 
 ## Verification
 
