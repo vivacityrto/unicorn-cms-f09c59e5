@@ -67,13 +67,15 @@ function RocksHierarchyContent() {
   const [editingRock, setEditingRock] = useState<RockWithHierarchy | null>(null);
   const [cascadeRock, setCascadeRock] = useState<RockWithHierarchy | null>(null);
 
-  const { 
+  const {
     rocks,
-    companyRocks, 
-    teamRocks, 
+    companyRocks,
+    teamRocks,
     individualRocks,
     functions,
     isLoading,
+    archiveRock,
+    deleteRock,
   } = useEosRocksHierarchy({ quarterYear, quarterNumber });
   
   const { data: vivacityUsers } = useVivacityTeamUsers();
@@ -175,6 +177,14 @@ function RocksHierarchyContent() {
   const handleViewCascade = (rock: RockWithHierarchy) => {
     setCascadeRock(rock);
     setActiveTab('cascade');
+  };
+
+  const handleArchiveRock = (rock: RockWithHierarchy) => {
+    archiveRock.mutate(rock.id);
+  };
+
+  const handleDeleteRock = (rock: RockWithHierarchy) => {
+    deleteRock.mutate(rock.id);
   };
 
   if (isLoading) {
@@ -506,6 +516,8 @@ function RocksHierarchyContent() {
                   key={rock.id}
                   rock={rock}
                   onEdit={handleEditRock}
+                  onArchive={handleArchiveRock}
+                  onDelete={handleDeleteRock}
                   onViewCascade={handleViewCascade}
                   getUserName={getUserName}
                   getUserInfo={getUserInfo}
@@ -557,6 +569,8 @@ function RocksHierarchyContent() {
                           key={rock.id}
                           rock={rock}
                           onEdit={handleEditRock}
+                  onArchive={handleArchiveRock}
+                  onDelete={handleDeleteRock}
                           onViewCascade={handleViewCascade}
                           getUserName={getUserName}
                           getUserInfo={getUserInfo}
@@ -599,6 +613,8 @@ function RocksHierarchyContent() {
                   key={rock.id}
                   rock={rock}
                   onEdit={handleEditRock}
+                  onArchive={handleArchiveRock}
+                  onDelete={handleDeleteRock}
                   getUserName={getUserName}
                   getUserInfo={getUserInfo}
                   getSeatName={getSeatName}
