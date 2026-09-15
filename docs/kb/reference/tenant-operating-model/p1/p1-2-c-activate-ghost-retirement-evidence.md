@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-15 · **Status:** static closure and read-only census complete; retirement not authorized
+> **Last updated:** 2026-09-15 · **Status:** static closure, aggregate classification, and read-only census complete; retirement not authorized
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -121,6 +121,47 @@ timestamps). It contained zero requests to
 it is not historical zero-caller proof. A longer owner-approved window or an
 equivalent retained export is still required.
 
+### Aggregate legacy-profile classification and retention-gap sweep (2026-09-15)
+
+The historical review was extended with a bounded, read-only sweep of the
+current provider `logs` endpoint for every UTC day from `2026-06-03` through
+`2026-06-16`. The query checked all available log sources, including
+`function_edge_logs`, `edge_logs`, `function_logs`, `postgres_logs`,
+`auth_logs`, and `realtime_logs`. Every day returned zero retained rows from
+every source. This is a provider-retention gap across the full source set, not
+evidence that no requests occurred on those dates; the durable audit
+correlation above is the only surviving account-level evidence for that
+period.
+
+The same read-only pass classified the broad `public.users`/`auth.users`
+mismatch population in aggregate, without exporting identifiers or changing
+live state:
+
+| Aggregate measure | Count |
+| --- | ---: |
+| Public profiles with no matching `auth.users` row | 411 |
+| Profiles with `tenant_members` evidence | 356 |
+| Profiles with `tenant_users` evidence | 348 |
+| Profiles with either membership evidence (mutually descriptive bucket) | 356 |
+| Membershipless profiles | 55 |
+| Profiles with no `tenant_id` | 54 |
+| Profiles with a matching tenant-contact email | 4 |
+| Profiles with a matching invitation email | 3 |
+| Profiles with an auth-email match elsewhere | 1 |
+| Profiles with an email conflict | 0 |
+| Archived profiles | 369 |
+| Disabled profiles | 378 |
+| Internal profiles | 3 |
+| CSC profiles | 0 |
+
+The counts are overlapping indicators except for the mutually descriptive
+membership-bearing/membershipless buckets; they must not be summed. The
+classification confirms that the 411-row population is predominantly archived
+or disabled legacy data, but it does not establish a ghost-activation set or a
+safe row-level disposition. The 356 membership-bearing profiles and 55
+membershipless profiles therefore remain outside any bulk conversion or
+retirement action. No identifiers, emails, or row-level export were retained.
+
 ### Approved hold and historical invocation review (2026-09-15)
 
 Carl approved a non-destructive hold for the two stale cancelled-job items
@@ -189,12 +230,12 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
 3. **Live invocation history:** the approved provider-log review is complete
    for the retained period, and the durable audit trail supplies aggregate
    account-level corroboration for 8 pre-retained and 56 retained historical
-   activation events. The queried June 3–16 provider-log slices still have no
-   retained rows, so they cannot establish zero-caller proof; the 109 retained
-   HTTP requests and 64 durable activation audit events show historical use,
-   not retirement safety. No alternative export is required to keep the
-   function held, but it would be needed for a complete request-by-request
-   historical reconstruction.
+   activation events. The all-source sweep of every June 3–16 day confirmed a
+   provider-retention gap with no surviving rows from any current log source;
+   it cannot establish zero-caller proof. The 109 retained HTTP requests and
+   64 durable activation audit events show historical use, not retirement
+   safety. No alternative export is required to keep the function held, but it
+   would be needed for a complete request-by-request historical reconstruction.
 4. **Outstanding-account disposition:** the first census found 31
    never-signed-in `ghost_activation` accounts, 35 expired sent/no-token
    legacy invitation rows, and a broad 411-row public-profile/auth mismatch
@@ -202,8 +243,10 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
    historical target users are still present, including the 31 never-signed-in
    current ghost-flagged accounts; Carl approved a non-destructive account-level
    hold, and no row-level completion, invitation, repair, or mutation has been
-   performed. The broad mismatch population remains outside the ghost set until
-   individually classified.
+   performed. The broad mismatch population now has aggregate classification
+   (356 membership-bearing profiles and 55 membershipless profiles), but remains
+   outside the ghost set until each row has an individually authorized
+   disposition.
 5. **Replacement workflow evidence:** the approved QA fixture has now proven
    contact projection plus contact promotion → pending invitation → acceptance
    with exactly-once behavior, QA no-send, idempotent retry, cleanup, and audit
@@ -261,13 +304,15 @@ evidence, non-destructive job/account holds, and retained-window log review
 are complete. Durable audit correlation now confirms 64 historical activation
 events across the provider-retention gap and retained window, including 31
 never-signed-in current ghost-flagged accounts in the retained set, with zero
-post-guard activation audit rows. Retirement remains held because the request
-log has a June 3–16 retention gap and the broader legacy profile set is not
-classified. The RBAC/security review is now complete (item 6 above): the
+post-guard activation audit rows. The all-source June 3–16 sweep and aggregate
+classification are now complete as evidence, but request-level reconstruction
+is unavailable and individual disposition of the 411-row legacy population is
+still held. Retirement therefore remains held. The RBAC/security review is now
+complete (item 6 above): the
 replacement path's protection against privilege escalation was confirmed
 already correct, a real disabled-account gap in its authorization chain was
 found and fixed, and two smaller, non-escalation, non-blocking gaps were
 flagged as follow-ups. A separate deployment/retirement decision is still
-required.
+required. See the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 TOM P1.2-c aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)

@@ -3,7 +3,7 @@
 > **Parent plan:** [RBAC v6 Authorization Implementation and Gate-Streamlining Plan](../../rbac-v6-authorization-implementation-plan-2026-09-01.md) — §7 P1
 > **Inputs:** [P1-e bundled-verb decomposition](p1-e-bundled-verb-decomposition.md) (Carl already decided this row is "**Hard-Super-Admin-locked, no exceptions**" and confirmed global scope on 2026-09-15), [P1-w](p1-w-eos-scorecard-golden-matrix-draft.md)/[P1-x](p1-x-eos-rocks-own-manage-golden-matrix-draft.md)/[P1-y](p1-y-eos-configurations-manage-golden-matrix-draft.md) (format precedent)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** draft, pending Carl's confirmation — proposed disposition below matches an already-recorded decision and already-shipped behavior; no code change is anticipated regardless of outcome
+> **Status:** **confirmed 2026-09-15 (Carl)** — all four proposed dispositions in the review checklist below are approved as-is (broad `inspect` for all staff, Super-Admin-only `edit`/`create`/`revoke`, no action on unbuilt `manage_access`/`break_glass` families, duplicate RLS policies flagged as cleanup only). This is now a golden row. No code change is required: every disposition matches already-shipped current behavior
 > **Owner:** RBAC v6 with product/security approval
 > **Evidence cutoff:** live `pg_policies`/`role_permissions`/Edge Function source queried fresh 2026-09-15
 > **Audit entry:** none needed — analysis/documentation only; no authorization, schema, credential, hosted QA, or production action
@@ -115,6 +115,11 @@ Every disposition below restates an already-made Carl decision (P1-e,
   (Claude) as rollback owner** — no runtime change is implied by
   confirmation, so rollback here means reverting this doc, not a
   production action.
+
+**Confirmed 2026-09-15 (Carl)** — all four proposed dispositions above are
+approved as-is. `admin.permissions.manage` is now a golden row for R2-a.
+No new role/default/grant, route, RLS/RPC/Edge, or production change is
+implied by this confirmation — enforcement already matches.
 
 ## Verification
 
