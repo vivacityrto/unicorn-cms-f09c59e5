@@ -63,6 +63,13 @@ async function findAuthUserByEmail(serviceClient, email) {
   throw new Error("listUsers exceeded the bounded page limit");
 }
 
+async function confirmEmailForQaRetry(serviceClient, userId) {
+  const { error } = await serviceClient.auth.admin.updateUserById(userId, {
+    email_confirm: true,
+  });
+  if (error) throw new Error(`recipient email confirmation: ${error.message}`);
+}
+
 async function requireSingle(query, label) {
   const { data, error } = await query;
   if (error) throw new Error(`${label}: ${error.message}`);
@@ -323,10 +330,32 @@ async function main() {
           waitUntil: "domcontentloaded",
         });
       } catch (error) {
-        await reportBrowserState(recipientPage, "recipient-signup-timeout");
-        throw error;
+        const pendingRecipient = await findAuthUserByEmail(serviceClient, RECIPIENT_EMAIL);
+        if (!pendingRecipient) {
+          await reportBrowserState(recipientPage, "recipient-signup-timeout");
+          throw error;
+        }
+
+        // unicorn-qa requires email confirmation, but this controlled harness
+        // has no mailbox. Confirm only this run-scoped QA user, then retry the
+        // same UI submit so the browser performs sign-in and acceptance.
+        await confirmEmailForQaRetry(serviceClient, pendingRecipient.id);
+        await recipientPage.getByRole("button", { name: "Complete Signup", exact: true }).click();
+        try {
+          await recipientPage.waitForURL((url) => url.pathname === "/post-sign-in", {
+            timeout: 45_000,
+            waitUntil: "domcontentloaded",
+          });
+        } catch (retryError) {
+          await reportBrowserState(recipientPage, "recipient-signup-confirmed-retry-timeout");
+          throw retryError;
+        }
       }
-      result.acceptance = { browser_flow: true, url_token_used: true };
+      result.acceptance = {
+        browser_flow: true,
+        url_token_used: true,
+        email_confirmed_for_retry: Boolean(await findAuthUserByEmail(serviceClient, RECIPIENT_EMAIL)),
+      };
       await recipientContext.close();
     } finally {
       await browser.close();
@@ -336,10 +365,7 @@ async function main() {
     if (!recipient) throw new Error("accepted recipient auth user was not created");
     recipientId = recipient.id;
 
-    const { error: confirmError } = await serviceClient.auth.admin.updateUserById(recipientId, {
-      email_confirm: true,
-    });
-    if (confirmError) throw new Error(`recipient email confirmation: ${confirmError.message}`);
+    await confirmEmailForQaRetry(serviceClient, recipientId);
     result.acceptance.email_confirmed_for_retry = true;
 
     const invitation = await requireSingle(
