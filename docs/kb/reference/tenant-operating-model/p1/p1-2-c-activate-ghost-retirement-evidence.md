@@ -82,7 +82,9 @@ ghost-password cohort: both carry `state_snapshot = 'ghost'` and
 `planned_action = 'activate'`, but both currently resolve to active
 `primary_contact` profiles with no `ghost_activation` flag. Both are
 never-signed-in, have never been locked or attempted, and have no recorded
-reason. Each matches an expired `sent` invitation with no token hash; neither
+reason. The cancelled jobs and their pending items date from 2026-06-03 UTC;
+neither pending item has a `processed_at` timestamp. Each matches an expired
+`sent` invitation with no token hash; neither
 matches a pending, accepted, or revoked invitation. This narrows the required
 decision to stale-job/invitation disposition and does not authorize either.
 
@@ -98,6 +100,13 @@ decision to stale-job/invitation disposition and does not authorize either.
 - `user_invitations`: 35 `sent` rows have no token hash and all 35 are
   expired; 57 `pending` rows remain, of which 2 are currently open by the
   expiry/revocation test.
+
+A correlated aggregate check over the 41 current ghost-flagged auth users
+found 1 with no invitation match, 1 with a currently open pending invitation,
+and 38 with some pending-status invitation history. These status-history
+counts are not additive; they are separate existence checks because one user
+can have multiple invitation records. This is an account-level reconciliation
+signal, not authorization to repair or close any row.
 
 The 31 never-signed-in ghost-flagged accounts and the expired legacy
 invitation ledger need a safe hold or completion plan before any function
