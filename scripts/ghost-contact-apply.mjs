@@ -430,12 +430,26 @@ function executeSql(sqlPath) {
     windowsHide: true,
   });
   if (result.error || result.status !== 0) {
-    const error = result.error?.code === "ENOENT" ? "Supabase CLI is unavailable" : "QA apply SQL execution failed";
+    const error = result.error?.code === "ENOENT"
+      ? "Supabase CLI is unavailable"
+      : `QA apply SQL execution failed: ${safeCliDiagnostic(result.stderr)}`;
     fail(error);
   }
   const parsed = parseCliResult(result.stdout);
   if (!parsed) fail("QA apply returned no safe result sentinel");
   return parsed;
+}
+
+function safeCliDiagnostic(stderr) {
+  const lines = String(stderr ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^(error|detail|hint|warning):/i.test(line));
+  const diagnostic = (lines.join(" ") || "database returned no safe diagnostic")
+    .replace(UUID_PATTERN, "[uuid-redacted]")
+    .replace(EMAIL_PATTERN, "[email-redacted]")
+    .replace(/'[^']{1,200}'/g, "'[value-redacted]'");
+  return diagnostic.slice(0, 500);
 }
 
 export async function main(argv = process.argv.slice(2)) {
