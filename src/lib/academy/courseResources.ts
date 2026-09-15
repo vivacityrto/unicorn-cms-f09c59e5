@@ -13,14 +13,20 @@ export type CourseResourceKind = "pdf" | "word" | "excel" | "markdown" | "link";
 
 /**
  * Client-side equivalent of public.can_manage_academy_resources():
- * is_super_admin() OR unicorn_role IN ('Team Leader', 'Team Member').
+ * is_super_admin() OR unicorn_role IN ('Team Leader', 'Team Member', 'CSC', 'Integrator').
  * Intentionally narrower than academy.builder.edit (which also grants BGT).
  */
 export function canManageAcademyResources(
   unicornRole: string | null | undefined,
   isSuperAdmin: boolean,
 ): boolean {
-  return isSuperAdmin || unicornRole === "Team Leader" || unicornRole === "Team Member";
+  return (
+    isSuperAdmin ||
+    unicornRole === "Team Leader" ||
+    unicornRole === "Team Member" ||
+    unicornRole === "CSC" ||
+    unicornRole === "Integrator"
+  );
 }
 
 export function fileExtension(filename: string): string {

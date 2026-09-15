@@ -319,7 +319,7 @@ export default function AcademyBuilderCourse() {
   // ── RBAC gates ──
   const canEdit = usePermission('academy.builder.edit');
   const canPublishOrDelete = usePermission('academy.builder.publish');
-  // Resources writes are gated by can_manage_academy_resources() (SA/TL/TM),
+  // Resources writes are gated by can_manage_academy_resources() (SA/TL/TM/CSC/Integrator),
   // which is narrower than academy.builder.edit (also grants BGT).
   const { profile, isSuperAdmin } = useAuth();
   const canManageResources = canManageAcademyResources(profile?.unicorn_role, isSuperAdmin());

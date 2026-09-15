@@ -62,9 +62,9 @@ describe("course resource helpers", () => {
     expect(canManageAcademyResources("Super Admin", true)).toBe(true);
     expect(canManageAcademyResources("Team Leader", false)).toBe(true);
     expect(canManageAcademyResources("Team Member", false)).toBe(true);
+    expect(canManageAcademyResources("CSC", false)).toBe(true);
+    expect(canManageAcademyResources("Integrator", false)).toBe(true);
     expect(canManageAcademyResources("BGT", false)).toBe(false);
-    expect(canManageAcademyResources("Integrator", false)).toBe(false);
-    expect(canManageAcademyResources("CSC", false)).toBe(false);
     expect(canManageAcademyResources(null, false)).toBe(false);
     expect(canManageAcademyResources("BGT", true)).toBe(true);
   });

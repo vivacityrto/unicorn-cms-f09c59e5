@@ -1,6 +1,6 @@
 # RBAC v6 — Authorization Implementation and Gate-Streamlining Plan
 
-> **Last updated:** 2026-09-14 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code, live-database, and agreed policy-baseline findings; medium on the target capability catalogue and implementation sequencing; low on delivery estimates until the remaining packet-level review gates are complete.
+> **Last updated:** 2026-09-15 · **Reconsider by:** 2026-12-01 · **Confidence:** high on the current-code, live-database, and agreed policy-baseline findings; medium on the target capability catalogue and implementation sequencing; low on delivery estimates until the remaining packet-level review gates are complete.
 >
 > **Reflects:** the original `origin/main@853c9e18` and read-only production metadata snapshot from 2026-09-01; a fresh operational-regression council review against `origin/main@73a61b2f9` on 2026-09-03; the historical [RBAC v6 gate-closure handoff](../handoffs/rbac-v6-gate-closure-plan.md); the [tenant operating-model architecture plan](tenant-operating-model-data-architecture-plan-2026-09-02.md); and the assumed completed target state of the [codebase optimization plan](codebase-optimization-plan-2026-08-28.md).
 >
@@ -56,6 +56,19 @@ evidence slice for the package-instance and client-stage read candidates. It
 defines the future fixture, denial cases, and approval gates but does not
 authorize a hosted run, credential use, fixture seeding, capability or role
 change, telemetry, implementation, or production state change.
+
+### Bounded Academy Builder resource-management correction (2026-09-15)
+
+The existing Academy Builder resource-library/course-link path already uses a
+single `public.can_manage_academy_resources()` function from both the browser
+helper and the `resource_library`/`academy_course_resources` RLS policies. Its
+live role set was `Super Admin`, `Team Leader`, and `Team Member`, which left
+the approved CSC and Integrator builder workflows unable to see or execute
+Add Resource. The bounded correction adds `CSC` and `Integrator` to that same
+gate and updates the client mirror; it does not add a new RBAC v6 capability
+row, alter Academy Solo or learner access, or broaden unrelated builder
+actions. The migration and evidence are recorded in the
+[Academy Builder resource-management audit entry](../../audit-log/entries/2026-09-15-academy-builder-resource-csc-integrator-access.md).
 
 ## 1. Executive decision
 
