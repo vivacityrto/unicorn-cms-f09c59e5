@@ -28,7 +28,9 @@ session.
 
 | Field | Observed value |
 | --- | --- |
+| Supabase project/environment | `unicorn-qa` only; production explicitly out of scope |
 | Supabase project ref | `qfpxvumcrnzrjyvqkicq` |
+| Supabase project URL | `https://qfpxvumcrnzrjyvqkicq.supabase.co` |
 | Function slug/name | `activate-ghost-user` |
 | Function ID | `28e6a1be-5a06-41e1-a47b-cb5ca6fb68c4` |
 | Current status | `ACTIVE` |
@@ -47,7 +49,7 @@ control plane.
 
 | Gate | Required decision or evidence | State |
 | --- | --- | --- |
-| Environment | Confirm the exact project ref and whether the requested action is QA, production, or another hosted target | **Carl must specify** |
+| Environment | `unicorn-qa` only (`qfpxvumcrnzrjyvqkicq`); production is explicitly out of scope | **Approved by Carl 2026-09-15** |
 | Action | Choose disable-first as the reversible first step, or explicitly approve direct deletion; direct deletion is not recommended | **Carl must specify** |
 | Timing | Name the execution window and confirm no conflicting release, job, or support activity | **Carl must specify** |
 | Rollback owner | Name the person who can restore the function and approve the rollback trigger | **Carl must specify** |
@@ -132,4 +134,4 @@ an issue, or chat. A dated operational audit entry is required for any actual
 disable, rollback, or delete action. Until then, the existing evidence and
 holds remain authoritative.
 
-**Related audit entries:** [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Related audit entries:** [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
