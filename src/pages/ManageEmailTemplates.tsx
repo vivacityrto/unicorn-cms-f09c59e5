@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEmailTemplates, EmailTemplate } from "@/hooks/useEmailTemplates";
 import EmailTemplateEditorDialog from "@/components/email/EmailTemplateEditorDialog";
+import { usePermission } from "@/hooks/usePermission";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected error";
@@ -20,6 +21,7 @@ function errorMessage(error: unknown): string {
 export default function ManageEmailTemplates() {
   const { toast } = useToast();
   const { templates, loading, createTemplate, updateTemplate, duplicateTemplate, archiveTemplate, activateTemplate } = useEmailTemplates();
+  const canEdit = usePermission('email_templates.manage', 'full');
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editorOpen, setEditorOpen] = useState(false);
@@ -27,12 +29,14 @@ export default function ManageEmailTemplates() {
   const [isNewTemplate, setIsNewTemplate] = useState(false);
 
   const handleCreate = () => {
+    if (!canEdit) return;
     setSelectedTemplate(null);
     setIsNewTemplate(true);
     setEditorOpen(true);
   };
 
   const handleEdit = (template: EmailTemplate) => {
+    if (!canEdit) return;
     setSelectedTemplate(template);
     setIsNewTemplate(false);
     setEditorOpen(true);
@@ -54,6 +58,7 @@ export default function ManageEmailTemplates() {
   };
 
   const handleDuplicate = async (template: EmailTemplate) => {
+    if (!canEdit) return;
     try {
       await duplicateTemplate(template.id);
       toast({ title: "Success", description: "Template duplicated successfully" });
@@ -63,6 +68,7 @@ export default function ManageEmailTemplates() {
   };
 
   const handleArchive = async (template: EmailTemplate) => {
+    if (!canEdit) return;
     try {
       await archiveTemplate(template.id);
       toast({ title: "Success", description: "Template archived" });
@@ -72,6 +78,7 @@ export default function ManageEmailTemplates() {
   };
 
   const handleActivate = async (template: EmailTemplate) => {
+    if (!canEdit) return;
     try {
       await activateTemplate(template.id);
       toast({ title: "Success", description: "Template activated" });
@@ -152,10 +159,12 @@ export default function ManageEmailTemplates() {
             <h1 className="text-[28px] font-bold">Email Templates</h1>
             <p className="text-muted-foreground">Manage email templates for stage communications</p>
           </div>
-          <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Template
-          </Button>
+          {canEdit && (
+            <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Template
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -215,11 +224,12 @@ export default function ManageEmailTemplates() {
                   <TableRow
                     key={template.id}
                     className={cn(
-                      "group transition-all duration-200 cursor-pointer",
+                      "group transition-all duration-200",
+                      canEdit && "cursor-pointer",
                       index % 2 === 0 ? "bg-background" : "bg-muted/20",
                       "hover:bg-primary/5"
                     )}
-                    onClick={() => handleEdit(template)}
+                    onClick={canEdit ? () => handleEdit(template) : undefined}
                   >
                     <TableCell className="py-4">
                       <div className="flex flex-col gap-1">
@@ -242,6 +252,9 @@ export default function ManageEmailTemplates() {
                       {formatDate(template.updated_at)}
                     </TableCell>
                     <TableCell className="py-4" onClick={(e) => e.stopPropagation()}>
+                      {!canEdit ? (
+                        <span className="text-xs text-muted-foreground block text-center">View only</span>
+                      ) : (
                       <div className="flex items-center justify-center gap-1">
                         <TooltipProvider>
                           <Tooltip>
@@ -311,6 +324,7 @@ export default function ManageEmailTemplates() {
                           </TooltipProvider>
                         )}
                       </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

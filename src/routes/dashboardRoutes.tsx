@@ -634,7 +634,7 @@ export const dashboardLayoutRoutes = (
     <Route
       element={
         <ProtectedRoute>
-          <PermissionGate featureKey="admin.email_templates.manage">
+          <PermissionGate featureKey="email_templates.manage">
             <DashboardLayoutRoute />
           </PermissionGate>
         </ProtectedRoute>
