@@ -75,6 +75,17 @@ invitations, or memberships were exported or changed.
 The cancelled jobs and their pending items are an explicit disposition gate;
 the census did not close, delete, retry, or mutate them.
 
+### Pending-item reconciliation
+
+The two pending rows are a stale snapshot rather than the outstanding
+ghost-password cohort: both carry `state_snapshot = 'ghost'` and
+`planned_action = 'activate'`, but both currently resolve to active
+`primary_contact` profiles with no `ghost_activation` flag. Both are
+never-signed-in, have never been locked or attempted, and have no recorded
+reason. Each matches an expired `sent` invitation with no token hash; neither
+matches a pending, accepted, or revoked invitation. This narrows the required
+decision to stale-job/invitation disposition and does not authorize either.
+
 ### Accounts and invitations
 
 - `auth.users`: 223 total; 41 carry `ghost_activation = true`, of which 31
@@ -124,9 +135,11 @@ equivalent retained export is still required.
    `c09bcac99`; the final census retains only intentional documentation,
    migration-history, configuration, compatibility, and fail-closed guard
    references.
-2. **Job-state disposition:** the census is complete, but the 2 cancelled
-   activation jobs with 2 pending items still need an explicit hold/close
-   decision. Do not assume the absence of a cron schedule is a disposition.
+2. **Job-state disposition:** the census and aggregate reconciliation are
+   complete. The 2 cancelled activation jobs contain stale ghost snapshots
+   for active primary contacts and match expired sent/no-token invitations;
+   they still need an explicit hold/close decision. Do not assume the absence
+   of a cron schedule is a disposition.
 3. **Live invocation history:** review the provider's function logs over an
    owner-approved window that covers the last possible manual, UI, bulk, and
    worker invocation. A single 24-hour query is insufficient for historical
@@ -171,9 +184,9 @@ The candidate is now **static-zero-caller after the bounded guard**: the direct
 per-row staff UI path is absent, and the two indirect paths reject before any
 legacy sender invocation or cohort-item lease. The approved QA replacement
 evidence and first aggregate-only census are complete, but retirement remains
-held by the 2 cancelled jobs with pending items, 31 never-signed-in
-ghost-flagged accounts, the need to reconcile the broader legacy profile set,
-the missing historical log window, and the pending RBAC/security review. A
-separate deployment/retirement decision is still required.
+held by the 2 stale cancelled-job items, the 31 never-signed-in ghost-flagged
+accounts, the need to reconcile the broader legacy profile set, the missing
+historical log window, and the pending RBAC/security review. A separate
+deployment/retirement decision is still required.
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md)
+**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md)
