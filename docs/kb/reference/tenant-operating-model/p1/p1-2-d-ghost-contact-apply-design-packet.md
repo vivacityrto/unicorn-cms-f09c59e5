@@ -3,13 +3,13 @@
 > **Last updated:** 2026-09-15 · **Reconsider by:** 2026-10-15 · **Confidence:** high — bounded by the accepted QA snapshot and the closed P1.2 lifecycle decisions
 > **Parent plan:** [Tenant Operating Model data-architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** planning
+> **Status:** one-row QA canary complete; remaining QA batch separately gated
 > **Owner:** TOM/Codex, with RBAC and Client Health review
-> **Scope:** design one allowlisted QA-only contact-projection canary that consumes a frozen, separately approved candidate artifact
+> **Scope:** implement and execute one allowlisted QA-only contact-projection canary that consumes a frozen, separately approved candidate artifact
 > **Dependencies:** [P1.2 ghost-user retirement and contact-promotion scope](p1-2-ghost-user-retirement-contact-promotion-scope.md); [P1.2-a evidence contract](p1-2-a-ghost-contact-dry-run-evidence-packet.md); [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md); [P1.1 contact-promotion implementation packet](p1-1-first-contact-promotion-implementation-packet.md)
-> **Exit criteria:** a reviewable apply sequence, frozen-input contract, idempotency/concurrency rules, rollback boundary, and explicit approval table exist without any write-capable implementation being enabled
-> **Evidence:** [P1.2-b QA dry-run audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-dry-run.md)
-> **Audit entry:** none needed — planning-only documentation; no hosted state, schema, credential, or operational schedule changed
+> **Exit criteria:** the reviewed apply sequence, frozen-input contract, idempotency/concurrency rules, rollback boundary, guarded QA-only implementation, one-row canary, and read-only postflight evidence are complete; remaining QA rows and production remain separately gated
+> **Evidence:** [P1.2-b QA dry-run audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-dry-run.md); [P1.2-d one-row canary audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-apply-canary.md)
+> **Audit entry:** [2026-09-15 TOM P1.2-d one-row QA apply canary](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-apply-canary.md)
 
 ## Purpose and hard boundary
 
@@ -56,12 +56,17 @@ The apply must refuse a manifest whose source commit, target URL, candidate
 count, row grain, or report contract does not match the approved packet. It
 must not recompute a broader population during a write.
 
+The approved first canary followed this contract. The fresh snapshot contained
+15 candidate rows, selected row index `0`, and was consumed only by the private
+identifier-bearing manifest and the protected QA runner. The remaining rows
+were not processed.
+
 ## Proposed apply shape
 
-The safest first implementation is a server-side, QA-only operation with a
-small explicit batch, not a browser loop and not reuse of the read-only CLI
-with write flags. The write-capable implementation itself needs its own code
-review, focused tests, and a separate approval before it exists.
+The first implementation is a server-side, QA-only operation with a small
+explicit batch, not a browser loop and not reuse of the read-only CLI with
+write flags. The implementation, focused tests, and approval gates are now
+landed and the one-row canary has completed successfully.
 
 ### Stage 0 — approval and freeze
 
@@ -111,7 +116,7 @@ The first write batch contains exactly one approved `candidate` row. It must:
 - return a redacted result that proves the created-row count and zero changes
   outside `tenant_contacts`/the audit record.
 
-No invitation is sent in this stage. The canary is a contact projection, not
+No invitation was sent in this stage. The canary is a contact projection, not
 a promotion or account-activation test.
 
 ### Stage 3 — bounded QA batch
@@ -214,25 +219,29 @@ table or RPC would require its own schema/RLS/security review.
 
 | Gate | Required evidence | Owner | Current status |
 | --- | --- | --- | --- |
-| Design | This packet reviewed; no hidden write path or scope expansion | Carl/TOM | prepared; review needed |
-| Target | Exact allowlisted `unicorn-qa` URL and no production flag | Carl/environment owner | previously approved for read-only; must be re-confirmed for writes |
-| Identifier-bearing manifest | Fresh snapshot, hash, narrow audience, private retention | Carl/security/operations | not approved; current artifact is redacted |
-| Write boundary | Purpose-built server-side implementation, tests, and target fail-closed guard | TOM/security | not implemented |
-| Canary scope | One row, then bounded chunks, with stop conditions | Carl/operator | proposed; approval needed |
-| Batch/audit storage | Durable batch ID and row-level rollback evidence | TOM/security | open design gate |
+| Design | This packet reviewed; no hidden write path or scope expansion | Carl/TOM | approved and implemented |
+| Target | Exact allowlisted `unicorn-qa` URL and no production flag | Carl/environment owner | approved; hosted canary passed |
+| Identifier-bearing manifest | Fresh snapshot, hash, narrow audience, private retention | Carl/security/operations | approved for one canary; private artifacts cleaned up |
+| Write boundary | Purpose-built server-side implementation, tests, and target fail-closed guard | TOM/security | implemented and verified |
+| Canary scope | One row, then bounded chunks, with stop conditions | Carl/operator | one-row canary complete; remaining rows separately gated |
+| Batch/audit storage | Durable batch ID and row-level rollback evidence | TOM/security | canary batch/audit evidence complete |
 | Manual holds | Owner and disposition for stale, pending, archived, or collision rows | TOM/RBAC | defined; no current holdouts |
-| Postflight | Read-only reconciliation and zero-unexpected-write proof | Codex/QA | defined; not run |
+| Postflight | Read-only reconciliation and zero-unexpected-write proof | Codex/QA | complete |
 | Production | Separate packet and explicit authority | Carl | out of scope |
 
 ## What this packet does and does not close
 
-This packet closes the planning shape for a one-row QA contact-projection
-canary. It does not close the durable batch-storage choice, create a
-write-capable runner, authorize an identifier-bearing export, or authorize
-the canary itself. It also does not provide zero-caller evidence for
+This packet closes the planning and execution gates for the one-row QA
+contact-projection canary. The protected runner created one contact projection
+and one audit row, and the read-only postflight plus repeat classifier
+reconciled the result. It does not authorize processing the remaining 14
+candidate rows, ghost retirement, invitation activity, or production/runtime
+work. The private identifier-bearing manifest and raw row-level details were
+operator-only and were removed after the workflow completed. It also does not
+provide zero-caller evidence for
 `activate-ghost-user`; the P1.2-c retirement packet remains independently
 gated until its UI, job-state, historical invocation, and outstanding-account
 evidence are complete.
 
-The next possible action is therefore a Carl review of this design and the
-identifier-bearing artifact/write-boundary gates—not an apply command.
+The next possible action is a separately approved bounded QA batch for the
+remaining candidates. No such batch was started by this canary.
