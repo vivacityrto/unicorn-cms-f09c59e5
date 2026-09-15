@@ -1,14 +1,21 @@
-name: QA TOM P1.2-d ghost-contact apply canary
+name: QA TOM P1.2-d ghost-contact bounded batch
 
 on:
   workflow_dispatch:
+    inputs:
+      batch_number:
+        description: "Approved bounded batch sequence number"
+        required: true
+        type: choice
+        options: ["1", "2", "3"]
+        default: "1"
 
 concurrency:
   group: unicorn-qa-tom-p12-ghost-apply
   cancel-in-progress: false
 
 jobs:
-  ghost-apply-canary:
+  ghost-apply-batch:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: unicorn-qa
@@ -31,6 +38,12 @@ jobs:
       - name: Validate the non-production QA target and canary contract
         run: |
           npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+          case "${{ inputs.batch_number }}" in
+            1) echo "TOM_BATCH_NUMBER=1" >> "$GITHUB_ENV"; echo "TOM_BATCH_SIZE=5" >> "$GITHUB_ENV"; echo "TOM_EXPECTED_CANDIDATES=14" >> "$GITHUB_ENV" ;;
+            2) echo "TOM_BATCH_NUMBER=2" >> "$GITHUB_ENV"; echo "TOM_BATCH_SIZE=5" >> "$GITHUB_ENV"; echo "TOM_EXPECTED_CANDIDATES=9" >> "$GITHUB_ENV" ;;
+            3) echo "TOM_BATCH_NUMBER=3" >> "$GITHUB_ENV"; echo "TOM_BATCH_SIZE=4" >> "$GITHUB_ENV"; echo "TOM_EXPECTED_CANDIDATES=4" >> "$GITHUB_ENV" ;;
+            *) echo "invalid batch number" >&2; exit 1 ;;
+          esac
           npm run tenant:ghost-apply -- --help
           node --test scripts/ghost-contact-apply.test.mjs
 
@@ -47,17 +60,17 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq "SELECT 1 AS tom_p12_transport_preflight;"
 
-      - name: Run one fresh private identifier-bearing QA snapshot
+      - name: Run a fresh private identifier-bearing QA snapshot
         env:
           SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
           GHOST_CONTACT_SOURCE_COMMIT: ${{ github.sha }}
-          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-report.json
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-batch-report.json
         run: npm run tenant:ghost-dry-run -- --json --include-identifiers --out "$GHOST_CONTACT_REPORT"
 
       - name: Verify the frozen source report before the write boundary
         env:
-          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-report.json
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-batch-report.json
         run: |
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
@@ -66,94 +79,96 @@ jobs:
             if (report.source_commit !== process.env.GITHUB_SHA) throw new Error("snapshot is not from this checkout");
             if (report.read_only !== true || report.writes_performed !== 0) throw new Error("snapshot is not read-only");
             if (!Array.isArray(report.write_operations) || report.write_operations.length !== 0) throw new Error("snapshot reports a write");
-            if (!Number.isInteger(report.counts?.eligible_candidates) || report.counts.eligible_candidates < 1) throw new Error("no eligible candidate for one-row canary");
+            if (!Number.isInteger(report.counts?.eligible_candidates) || report.counts.eligible_candidates !== Number(process.env.TOM_EXPECTED_CANDIDATES)) throw new Error("remaining candidate count does not match the approved batch sequence");
             if (report.rows.filter((row) => row.disposition === "candidate").length !== report.counts.eligible_candidates) throw new Error("candidate count mismatch");
           '
 
-      - name: Apply exactly one frozen candidate through the QA-only boundary
+      - name: Apply exactly one frozen bounded batch through the QA-only boundary
         env:
           GHOST_CONTACT_SOURCE_COMMIT: ${{ github.sha }}
-          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-report.json
-          GHOST_CONTACT_MANIFEST: ${{ runner.temp }}/tom-p12-ghost-manifest.json
-          GHOST_CONTACT_SQL: ${{ runner.temp }}/tom-p12-ghost-apply.sql
-          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-batch-report.json
+          GHOST_CONTACT_MANIFEST: ${{ runner.temp }}/tom-p12-ghost-batch-manifest.json
+          GHOST_CONTACT_SQL: ${{ runner.temp }}/tom-p12-ghost-batch-apply.sql
+          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-batch-apply-summary.json
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           npm run tenant:ghost-apply -- \
             --report "$GHOST_CONTACT_REPORT" \
-            --canary \
-            --row-index 0 \
+            --batch \
+            --batch-number "$TOM_BATCH_NUMBER" \
+            --batch-size "$TOM_BATCH_SIZE" \
             --manifest-out "$GHOST_CONTACT_MANIFEST" \
             --sql-out "$GHOST_CONTACT_SQL" \
             --summary-out "$GHOST_CONTACT_SUMMARY"
 
-      - name: Verify the one-row apply result without exposing identifiers
+      - name: Verify the bounded batch result without exposing identifiers
         env:
-          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
+          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-batch-apply-summary.json
         run: |
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             const summary = JSON.parse(readFileSync(process.env.GHOST_CONTACT_SUMMARY, "utf8"));
             if (summary.target !== "https://qfpxvumcrnzrjyvqkicq.supabase.co") throw new Error("unexpected apply target");
             if (summary.source_commit !== process.env.GITHUB_SHA) throw new Error("apply source commit mismatch");
-            if (summary.status !== "created" || summary.created_contact_count !== 1 || summary.writes_performed !== 1) throw new Error("one-row write contract failed");
+            if (summary.status !== "created" || summary.created_contact_count !== Number(process.env.TOM_BATCH_SIZE) || summary.writes_performed !== Number(process.env.TOM_BATCH_SIZE)) throw new Error("bounded batch write contract failed");
+            if (summary.batch_number !== Number(process.env.TOM_BATCH_NUMBER) || summary.batch_size !== Number(process.env.TOM_BATCH_SIZE)) throw new Error("batch sequence metadata mismatch");
             if (summary.outside_scope_writes !== 0 || summary.contact_id_present !== true) throw new Error("unexpected write scope");
             if (!Array.isArray(summary.forbidden_operations) || summary.forbidden_operations.length !== 0) throw new Error("forbidden operation reported");
           '
 
-      - name: Generate and run a private read-only postflight
+      - name: Generate and run a private read-only batch postflight
         env:
-          GHOST_CONTACT_MANIFEST: ${{ runner.temp }}/tom-p12-ghost-manifest.json
-          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
-          GHOST_CONTACT_POSTFLIGHT_SQL: ${{ runner.temp }}/tom-p12-ghost-postflight.sql
-          GHOST_CONTACT_POSTFLIGHT_OUTPUT: ${{ runner.temp }}/tom-p12-ghost-postflight-output.json
+          GHOST_CONTACT_MANIFEST: ${{ runner.temp }}/tom-p12-ghost-batch-manifest.json
+          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-batch-apply-summary.json
+          GHOST_CONTACT_POSTFLIGHT_SQL: ${{ runner.temp }}/tom-p12-ghost-batch-postflight.sql
+          GHOST_CONTACT_POSTFLIGHT_OUTPUT: ${{ runner.temp }}/tom-p12-ghost-batch-postflight-output.json
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           node --input-type=module -e '
             import { readFileSync, writeFileSync } from "node:fs";
-            import { generatePostflightSql } from "./scripts/ghost-contact-apply.mjs";
+            import { generateBatchPostflightSql } from "./scripts/ghost-contact-apply.mjs";
             const manifest = JSON.parse(readFileSync(process.env.GHOST_CONTACT_MANIFEST, "utf8"));
             const summary = JSON.parse(readFileSync(process.env.GHOST_CONTACT_SUMMARY, "utf8"));
-            writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SQL, generatePostflightSql(manifest, summary.batch_id));
+            writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SQL, generateBatchPostflightSql(manifest, summary.batch_id, { selectedRowIndices: summary.selected_row_indices }));
           '
           supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq --file "$GHOST_CONTACT_POSTFLIGHT_SQL" > "$GHOST_CONTACT_POSTFLIGHT_OUTPUT"
 
       - name: Verify the redacted postflight evidence
         env:
-          GHOST_CONTACT_POSTFLIGHT_OUTPUT: ${{ runner.temp }}/tom-p12-ghost-postflight-output.json
-          GHOST_CONTACT_POSTFLIGHT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-postflight-summary.json
+          GHOST_CONTACT_POSTFLIGHT_OUTPUT: ${{ runner.temp }}/tom-p12-ghost-batch-postflight-output.json
+          GHOST_CONTACT_POSTFLIGHT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-batch-postflight-summary.json
         run: |
           node --input-type=module -e '
             import { readFileSync, writeFileSync } from "node:fs";
             import { parseCliResult } from "./scripts/ghost-contact-apply.mjs";
             const output = readFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_OUTPUT, "utf8");
-            const result = parseCliResult(output, "TOM_POSTFLIGHT_RESULT:");
+            const result = parseCliResult(output, "TOM_POSTFLIGHT_BATCH_RESULT:");
             if (!result) throw new Error("postflight returned no safe result");
-            if (result.contact_rows !== 1 || result.audit_rows !== 1 || result.duplicate_active_contacts !== 1) throw new Error("created contact/audit count mismatch");
-            if (result.source_profile_exists !== true || result.source_is_ghost !== true) throw new Error("source ghost state changed");
+            if (result.contact_rows !== Number(process.env.TOM_BATCH_SIZE) || result.audit_rows !== Number(process.env.TOM_BATCH_SIZE) || result.duplicate_active_contacts !== Number(process.env.TOM_BATCH_SIZE) || result.expected_rows !== Number(process.env.TOM_BATCH_SIZE)) throw new Error("created contact/audit count mismatch");
+            if (result.source_profiles_exist !== true || result.source_ghosts !== true) throw new Error("source ghost state changed");
             if (result.tenant_users_evidence_matches !== true || result.tenant_members_evidence_matches !== true) throw new Error("membership evidence changed");
             if (result.pending_invitation_count !== 0 || result.out_of_scope_writes !== 0) throw new Error("unexpected invitation or out-of-scope write");
-            writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SUMMARY, `${JSON.stringify({ status: "verified", ...result }, null, 2)}\n`);
+            writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SUMMARY, `${JSON.stringify({ status: "verified", batch_number: Number(process.env.TOM_BATCH_NUMBER), batch_size: Number(process.env.TOM_BATCH_SIZE), ...result }, null, 2)}\n`);
           '
 
-      - name: Upload only redacted canary evidence
+      - name: Upload only redacted batch evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tom-p12-ghost-contact-apply-canary-${{ github.run_id }}
+          name: tom-p12-ghost-contact-apply-batch-${{ github.run_id }}
           retention-days: 1
           if-no-files-found: ignore
           path: |
-            ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
-            ${{ runner.temp }}/tom-p12-ghost-postflight-summary.json
+            ${{ runner.temp }}/tom-p12-ghost-batch-apply-summary.json
+            ${{ runner.temp }}/tom-p12-ghost-batch-postflight-summary.json
 
       - name: Remove private manifest, report, SQL, and CLI output
         if: always()
         env:
           RUNNER_TEMP: ${{ runner.temp }}
         run: |
-          rm -f "$RUNNER_TEMP/tom-p12-ghost-report.json" \
-            "$RUNNER_TEMP/tom-p12-ghost-manifest.json" \
-            "$RUNNER_TEMP/tom-p12-ghost-apply.sql" \
-            "$RUNNER_TEMP/tom-p12-ghost-postflight.sql" \
-            "$RUNNER_TEMP/tom-p12-ghost-postflight-output.json"
+          rm -f "$RUNNER_TEMP/tom-p12-ghost-batch-report.json" \
+            "$RUNNER_TEMP/tom-p12-ghost-batch-manifest.json" \
+            "$RUNNER_TEMP/tom-p12-ghost-batch-apply.sql" \
+            "$RUNNER_TEMP/tom-p12-ghost-batch-postflight.sql" \
+            "$RUNNER_TEMP/tom-p12-ghost-batch-postflight-output.json"
