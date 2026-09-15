@@ -1,9 +1,9 @@
 # TOM P1.1 — first contact-promotion implementation packet
 
 > **Status:** draft implementation packet; static characterization refreshed
-> 2026-09-14; planning only; no runtime, schema,
-> data, credential, hosted-QA, invitation, or production action authorized
-> by this document.
+> 2026-09-15 and the authorized QA canary passed; production/runtime rollout,
+> schema, data, credential, invitation, and migration work remain separately
+> gated and are not authorized by this document.
 >
 > **Parent:** [P1.1 membership and ownership compatibility
 > scope](p1-1-membership-ownership-compatibility-scope.md)
@@ -18,9 +18,7 @@
 > denial interpretation), Client Health (provenance if a source is consumed),
 > security (identity, invitation, and privileged-boundary review)
 >
-> **Audit entry:** none needed — this is a documentation-only packet. Any
-> implementation, migration, invitation, Edge, schema, RLS, grant, trigger,
-> or production-data action requires its own audit entry and authorization.
+> **Audit entry:** [2026-09-15 TOM P1.1 hosted QA contact-promotion canary](../../../../audit-log/entries/2026-09-15-tom-p11-contact-promotion-qa-canary.md)
 
 ## 0. Decision record — 2026-09-14
 
@@ -298,7 +296,41 @@ Raw emails, tokens, storage state, identifiers, and response bodies remain in
 the private approved artifact bundle. The published result contains redacted
 case IDs, counts, statuses, and manifest/source hashes only.
 
-## 6. Rollback, reconciliation, and audit gates
+## 6. Hosted QA evidence — 2026-09-15
+
+The approved hosted QA authorization was exercised only against the existing
+allowlisted `unicorn-qa` project (`qfpxvumcrnzrjyvqkicq`) through protected
+workflow run [`34912755544`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/34912755544),
+from source commit `eab991c2d8fa9287ce0f65da2dacb24e737dc8d9`. The dedicated
+synthetic primary-contact inviter was provisioned by the protected seed run
+`34829648697`; the existing `Client Admin A` fixture was not changed.
+
+The run used a generated, run-scoped recipient alias and the normal
+`contact → invite-user → accept_invitation_v2` path. QA no-send returned the
+invitation URL without an outbound delivery observation. Because `unicorn-qa`
+requires email confirmation and has no mailbox, the harness confirmed only the
+new run-scoped QA recipient through the protected service-role admin API, then
+re-submitted the same invitation form. Acceptance therefore remained
+browser-driven: `browser_flow=true`, `url_token_used=true`, and the retry
+returned `ALREADY_ACCEPTED`.
+
+The redacted result recorded all required materialization and cleanup outcomes:
+
+| Assertion | Result |
+| --- | --- |
+| Invitation writer returned a usable invitation identity/URL | pass |
+| Contact archived and linked to the accepted recipient | pass |
+| `public.users`, `tenant_users`, and `tenant_members` materialized once | pass |
+| Relationship role / access scope | `user` / `full` |
+| Idempotent acceptance retry | `ALREADY_ACCEPTED` |
+| Audit evidence retained | pass |
+| Run-scoped cleanup | complete; no errors |
+
+This is a QA characterization result, not production rollout approval. Wrong
+tenant, expired-token, disabled-actor, and broader negative-case execution
+remain named gates before a runtime implementation packet can be closed.
+
+## 7. Rollback, reconciliation, and audit gates
 
 Before execution, name one owner for each gate:
 
@@ -331,7 +363,7 @@ eligible contacts
 
 Every skipped or failed row needs a reason. A missing result is not a success.
 
-## 7. Approval checklist before implementation
+## 8. Approval checklist before implementation
 
 The following are packet gates, not implied approvals:
 
@@ -361,7 +393,7 @@ Until every applicable box is complete, this document remains a draft and the
 only permitted work is review, static source inspection, fixture design, and
 non-credentialed test preparation.
 
-## 8. What this packet does not decide
+## 9. What this packet does not decide
 
 This packet does not decide the final contact table design, the complete
 `tenant_users`/`tenant_members` migration order, the fate of 349 tenant-orphan
@@ -384,5 +416,6 @@ node scripts/check-kb-doc-size.mjs
 git diff --check
 ```
 
-No runtime, frontend, Edge, database, credential, hosted-QA, or production
-verification is applicable before a separately authorized implementation.
+The hosted QA evidence above is separately recorded in the linked audit entry;
+the remaining runtime, frontend, Edge, database, credential, migration, and
+production gates still require their own authorization.
