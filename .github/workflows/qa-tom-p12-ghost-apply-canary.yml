@@ -1,0 +1,154 @@
+name: QA TOM P1.2-d ghost-contact apply canary
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: unicorn-qa-tom-p12-ghost-apply
+  cancel-in-progress: false
+
+jobs:
+  ghost-apply-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - run: npm ci
+
+      - name: Validate the non-production QA target and canary contract
+        run: |
+          npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq
+          npm run tenant:ghost-apply -- --help
+          node --test scripts/ghost-contact-apply.test.mjs
+
+      - name: Require the protected QA and management credentials
+        env:
+          QA_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$QA_SERVICE_ROLE_KEY"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Run one fresh private identifier-bearing QA snapshot
+        env:
+          SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          GHOST_CONTACT_SOURCE_COMMIT: ${{ github.sha }}
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-report.json
+        run: npm run tenant:ghost-dry-run -- --json --include-identifiers --out "$GHOST_CONTACT_REPORT"
+
+      - name: Verify the frozen source report before the write boundary
+        env:
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-report.json
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const report = JSON.parse(readFileSync(process.env.GHOST_CONTACT_REPORT, "utf8"));
+            if (report.target !== "https://qfpxvumcrnzrjyvqkicq.supabase.co") throw new Error("unexpected target");
+            if (report.source_commit !== process.env.GITHUB_SHA) throw new Error("snapshot is not from this checkout");
+            if (report.read_only !== true || report.writes_performed !== 0) throw new Error("snapshot is not read-only");
+            if (!Array.isArray(report.write_operations) || report.write_operations.length !== 0) throw new Error("snapshot reports a write");
+            if (!Number.isInteger(report.counts?.eligible_candidates) || report.counts.eligible_candidates < 1) throw new Error("no eligible candidate for one-row canary");
+            if (report.rows.filter((row) => row.disposition === "candidate").length !== report.counts.eligible_candidates) throw new Error("candidate count mismatch");
+          '
+
+      - name: Apply exactly one frozen candidate through the QA-only boundary
+        env:
+          GHOST_CONTACT_SOURCE_COMMIT: ${{ github.sha }}
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/tom-p12-ghost-report.json
+          GHOST_CONTACT_MANIFEST: ${{ runner.temp }}/tom-p12-ghost-manifest.json
+          GHOST_CONTACT_SQL: ${{ runner.temp }}/tom-p12-ghost-apply.sql
+          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npm run tenant:ghost-apply -- \
+            --report "$GHOST_CONTACT_REPORT" \
+            --canary \
+            --row-index 0 \
+            --manifest-out "$GHOST_CONTACT_MANIFEST" \
+            --sql-out "$GHOST_CONTACT_SQL" \
+            --summary-out "$GHOST_CONTACT_SUMMARY"
+
+      - name: Verify the one-row apply result without exposing identifiers
+        env:
+          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const summary = JSON.parse(readFileSync(process.env.GHOST_CONTACT_SUMMARY, "utf8"));
+            if (summary.target !== "https://qfpxvumcrnzrjyvqkicq.supabase.co") throw new Error("unexpected apply target");
+            if (summary.source_commit !== process.env.GITHUB_SHA) throw new Error("apply source commit mismatch");
+            if (summary.status !== "created" || summary.created_contact_count !== 1 || summary.writes_performed !== 1) throw new Error("one-row write contract failed");
+            if (summary.outside_scope_writes !== 0 || summary.contact_id_present !== true) throw new Error("unexpected write scope");
+            if (!Array.isArray(summary.forbidden_operations) || summary.forbidden_operations.length !== 0) throw new Error("forbidden operation reported");
+          '
+
+      - name: Generate and run a private read-only postflight
+        env:
+          GHOST_CONTACT_MANIFEST: ${{ runner.temp }}/tom-p12-ghost-manifest.json
+          GHOST_CONTACT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
+          GHOST_CONTACT_POSTFLIGHT_SQL: ${{ runner.temp }}/tom-p12-ghost-postflight.sql
+          GHOST_CONTACT_POSTFLIGHT_OUTPUT: ${{ runner.temp }}/tom-p12-ghost-postflight-output.json
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import { generatePostflightSql } from "./scripts/ghost-contact-apply.mjs";
+            const manifest = JSON.parse(readFileSync(process.env.GHOST_CONTACT_MANIFEST, "utf8"));
+            const summary = JSON.parse(readFileSync(process.env.GHOST_CONTACT_SUMMARY, "utf8"));
+            writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SQL, generatePostflightSql(manifest, summary.batch_id));
+          '
+          supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq --file "$GHOST_CONTACT_POSTFLIGHT_SQL" --output-format json > "$GHOST_CONTACT_POSTFLIGHT_OUTPUT"
+
+      - name: Verify the redacted postflight evidence
+        env:
+          GHOST_CONTACT_POSTFLIGHT_OUTPUT: ${{ runner.temp }}/tom-p12-ghost-postflight-output.json
+          GHOST_CONTACT_POSTFLIGHT_SUMMARY: ${{ runner.temp }}/tom-p12-ghost-postflight-summary.json
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import { parseCliResult } from "./scripts/ghost-contact-apply.mjs";
+            const output = readFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_OUTPUT, "utf8");
+            const result = parseCliResult(output, "TOM_POSTFLIGHT_RESULT:");
+            if (!result) throw new Error("postflight returned no safe result");
+            if (result.contact_rows !== 1 || result.audit_rows !== 1 || result.duplicate_active_contacts !== 1) throw new Error("created contact/audit count mismatch");
+            if (result.source_profile_exists !== true || result.source_is_ghost !== true) throw new Error("source ghost state changed");
+            if (result.tenant_users_evidence_matches !== true || result.tenant_members_evidence_matches !== true) throw new Error("membership evidence changed");
+            if (result.pending_invitation_count !== 0 || result.out_of_scope_writes !== 0) throw new Error("unexpected invitation or out-of-scope write");
+            writeFileSync(process.env.GHOST_CONTACT_POSTFLIGHT_SUMMARY, `${JSON.stringify({ status: "verified", ...result }, null, 2)}\n`);
+          '
+
+      - name: Upload only redacted canary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-p12-ghost-contact-apply-canary-${{ github.run_id }}
+          retention-days: 1
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/tom-p12-ghost-apply-summary.json
+            ${{ runner.temp }}/tom-p12-ghost-postflight-summary.json
+
+      - name: Remove private manifest, report, SQL, and CLI output
+        if: always()
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          rm -f "$RUNNER_TEMP/tom-p12-ghost-report.json" \
+            "$RUNNER_TEMP/tom-p12-ghost-manifest.json" \
+            "$RUNNER_TEMP/tom-p12-ghost-apply.sql" \
+            "$RUNNER_TEMP/tom-p12-ghost-postflight.sql" \
+            "$RUNNER_TEMP/tom-p12-ghost-postflight-output.json"
