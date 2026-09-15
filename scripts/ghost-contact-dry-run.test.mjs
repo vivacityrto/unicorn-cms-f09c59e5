@@ -37,6 +37,7 @@ test("classifies a membership-bearing ghost as a candidate", () => {
   assert.equal(report.rows[0].disposition, "candidate");
   assert.equal(report.rows[0].tenant_id, 42);
   assert.equal(report.writes_performed, 0);
+  assert.match(report.run_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
 
 test("emits one candidate row per tenant for a multi-tenant ghost", () => {

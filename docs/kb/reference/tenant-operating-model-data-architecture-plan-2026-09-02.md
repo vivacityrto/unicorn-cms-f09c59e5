@@ -1,7 +1,7 @@
 # Tenant Operating Model, Directory Performance, ERP, and Ask Viv Data Architecture Plan
 
 > **Last updated:** 2026-09-14
-> **Status:** council-reviewed implementation plan; P0.1 evidence and owner-disposition work is complete; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; QA negative-case/runbook preparation and the first P1.1 contact-promotion packet are delivered; broader query-family/cardinality, owner-review, and runtime implementation gates remain open; no implementation or production mutation authorized
+> **Status:** council-reviewed implementation plan; P0.1 evidence and owner-disposition work is complete; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; P1.1 contact-promotion canary and the first P1.2-b guarded ghost-contact QA snapshot completed 2026-09-15; contact insertion, ghost retirement, and runtime/production implementation gates remain open; no production mutation authorized
 > **Prepared:** 2026-09-02
 > **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -37,6 +37,13 @@ rows are not RTO tenants for package, invoice, renewal, registration, CSC,
 compliance-stage, or related operational metrics/actions. The temporary
 tenant-backed isolation bridge is therefore not a reason to run RTO contact
 promotion, onboarding, or tenant-operating-model transitions.
+
+The first P1.2-b guarded ghost-contact snapshot also completed in the
+allowlisted `unicorn-qa` project on 2026-09-15. It classified 15
+membership-bearing ghost profiles with zero membershipless or collision
+holdouts, retained redacted evidence privately, and performed zero writes.
+This is evidence preparation only; it does not authorize contact insertion,
+ghost retirement, invitation sends, or production changes.
 
 The P0.1 source inventory and owner-disposition register are complete. The
 expanded P0.2/P0.3 characterization and representative QA query-family
@@ -1314,4 +1321,4 @@ This program is complete when:
 | P0.1 operating-model inventory | Evidence and owner-disposition directions complete 2026-09-12; implementation separately gated | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Source-of-truth matrix, identity ledger, membership crosswalk, policy/grant and view/RPC security evidence, writer census, and write-path graph are attached in [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). The 2026-09-12 read-only check confirms the #1185 deployed grants/guards; the [owner-disposition register](tenant-operating-model/p0/p0-1-owner-disposition-register.md) records the seven approved interim directions and preserves separate implementation gates for unmatched rows, membership migration, CSC ownership, Realtime, and ghost retirement. |
 | P0.2 disposable verification environment | Expanded bounded characterization and aggregate cardinality comparison complete 2026-09-13; representative fixture expansion and owner review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md), its [cardinality/query-family follow-up](tenant-operating-model/p0/p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md), and [cross-initiative review matrix](tenant-operating-model/p0/p0-2-p0-3-cross-initiative-review-2026-09-13.md) record the allowlisted `unicorn-qa` runs, production comparison, ownership boundaries, and explicit gaps |
 | P0.3 browser/query baseline | Expanded bounded characterization complete 2026-09-13; redacted waterfalls and versioned production cutoff captured; representative query-family coverage and cross-initiative owner review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) plus the [cardinality/query-family follow-up](tenant-operating-model/p0/p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md) and [cross-initiative review matrix](tenant-operating-model/p0/p0-2-p0-3-cross-initiative-review-2026-09-13.md) record route evidence, aggregate production/QA cardinalities, publication membership, initiative boundaries, and remaining gaps without setting product budgets |
-| P1+ implementation | Not started | — | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) drafted for planning only; implementation still requires packet and phase approval |
+| P1+ implementation | Not started; P1.2-b evidence preparation complete | — | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) remains a planning draft; [P1.2-b](tenant-operating-model/p1/p1-2-b-ghost-contact-dry-run-execution-packet.md) records the completed QA snapshot, while contact insertion, ghost retirement, and runtime/production work still require separate packet and phase approval |

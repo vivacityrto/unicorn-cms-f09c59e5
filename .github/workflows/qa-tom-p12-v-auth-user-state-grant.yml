@@ -1,0 +1,37 @@
+name: QA TOM P1.2 v_auth_user_state grant correction
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: unicorn-qa-tom-p12-v-auth-user-state-grant
+  cancel-in-progress: false
+
+jobs:
+  grant-correction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Require the existing management credential
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: test -n "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Apply the narrow QA-only read grant
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq "GRANT USAGE ON SCHEMA public, auth TO service_role; GRANT SELECT ON TABLE public.users, auth.users TO service_role;"
+
+      - name: Verify the QA-only grant and view contract
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase db query --linked --project-ref qfpxvumcrnzrjyvqkicq "SELECT has_schema_privilege('service_role', 'public', 'USAGE') AS public_usage, has_schema_privilege('service_role', 'auth', 'USAGE') AS auth_usage, has_table_privilege('service_role', 'public.users', 'SELECT') AS users_select, has_table_privilege('service_role', 'auth.users', 'SELECT') AS auth_users_select, (SELECT reloptions @> ARRAY['security_invoker=true'] FROM pg_class WHERE oid = 'public.v_auth_user_state'::regclass) AS view_is_security_invoker;"
