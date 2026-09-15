@@ -40,6 +40,24 @@ session.
 | Observed deployment digest | `61e22bd035e5aba3bea946d17a54b6f42d33a34d1299736c87e28f58063f5ec4` |
 | Caller guards | `bulk-account-actions` v284 and `cohort-access-sender-worker` v283, both fail closed before legacy invocation/item lease |
 
+## Latest final preflight (2026-09-15, aborted)
+
+The approved `unicorn-qa` project was re-confirmed through the
+project-specific control plane at `qfpxvumcrnzrjyvqkicq`. Its current Edge
+Function inventory contains only two functions (`tenant-lifecycle` and
+`invite-user`); an exact lookup for `activate-ghost-user` returned
+`Function not found`. The same read-only control plane reported 15 auth users,
+no cohort jobs, and no activation-job rows, which is not the previously
+documented QA state.
+
+A separate Supabase connector pointed at a different project and returned the
+historical target metadata above, but that project is not the approved QA
+target and was not used for action. The final preflight therefore aborted
+before any disable, delete, redeploy, or other hosted change. The historical
+metadata must not be treated as current `unicorn-qa` target evidence until the
+QA deployment identity is reconciled through the approved project control
+plane.
+
 The digest and version are identification evidence, not a rollback guarantee.
 Before execution, the operator must privately capture a verified rollback
 artifact and confirm that it can be restored through the authorized Supabase
@@ -50,6 +68,7 @@ control plane.
 | Gate | Required decision or evidence | State |
 | --- | --- | --- |
 | Environment | `unicorn-qa` only (`qfpxvumcrnzrjyvqkicq`); production is explicitly out of scope | **Approved by Carl 2026-09-15** |
+| Current target presence | The exact `activate-ghost-user` function must be present in the approved `unicorn-qa` project before any action | **Failed final preflight 2026-09-15; abort** |
 | Action | Disable-first in `unicorn-qa`; direct deletion deferred until after a separate clean observation and approval | **Approved by Carl 2026-09-15; execution not authorized** |
 | Timing | Next supervised QA window, immediately after final preflight passes; no unattended or scheduled run | **Approved by Carl 2026-09-15; execution still requires passing preflight** |
 | Rollback owner | Carl, per [ADR-028](../../decision-trail.md#adr-028), can restore the function and approve the rollback trigger; no separate delegation | **Established by Carl's standing TOM decision; run-specific rollback readiness remains required** |
@@ -134,4 +153,4 @@ an issue, or chat. A dated operational audit entry is required for any actual
 disable, rollback, or delete action. Until then, the existing evidence and
 holds remain authoritative.
 
-**Related audit entries:** [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [supervised timing approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-timing-approval.md); [rollback-owner reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-rollback-owner.md); [observation-window approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-observation-window.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Related audit entries:** [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [supervised timing approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-timing-approval.md); [rollback-owner reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-rollback-owner.md); [observation-window approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-observation-window.md); [final preflight abort](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-preflight-abort.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
