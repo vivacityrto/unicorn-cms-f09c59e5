@@ -198,6 +198,15 @@
       "owner": "Carl",
       "reason": "False positive, same shape as prior function-body entries above: all flagged INSERT statements are inside the CREATE OR REPLACE FUNCTION bodies for seed_meeting_attendees_from_roles and sync_l10_meeting_participants (eos_meeting_attendees/eos_meeting_participants inserts) -- unchanged from each function's existing production behavior except swapping the kpi_pod='qa' exclusion for is_qa_persona (sync_l10_meeting_participants previously had no qa-exclusion at all, a separate pre-existing gap closed here), only executed later, per-caller, when a real meeting is scheduled/synced. The migration itself performs no direct data mutation; it only redefines get_vivacity_team_directory, get_vivacity_team_directory_staff, seed_meeting_attendees_from_roles, and sync_l10_meeting_participants. The flagged tenant_id=6372 literal is the pre-existing, unchanged Vivacity-tenant constant already used throughout this function.",
       "expires": "2026-10-15"
+    },
+    {
+      "id": "gate-upsert-rock-with-parenting-security-definer",
+      "file": "supabase/migrations/20260915043200_gate_upsert_rock_with_parenting_vivacity_team_only.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive, same shape as prior function-body entries above: the flagged INSERT/UPDATE statements are the pre-existing, unchanged body of the CREATE OR REPLACE FUNCTION upsert_rock_with_parenting (eos_rocks writes) -- only executed later, per-caller, when a real EOS rock is created or edited. This migration adds exactly one new statement (an is_vivacity_team_safe(auth.uid()) authorization gate as the function's first line) and changes nothing else; applied as an urgent same-day security fix after discovering the function had zero internal authorization check and its SECURITY DEFINER writes bypass eos_rocks RLS entirely (table owned by postgres, relforcerowsecurity=false) while being EXECUTE-granted to `authenticated` -- see the linked audit entry for full detail. Self-directed given severity (live, exploitable-today bypass), matching this session's established same-day-fix precedent for the eos_scorecard/eos_rocks client-tenant RLS gap; pending Carl's review via this PR, same as any other change to this repo.",
+      "expires": "2026-10-15"
     }
   ]
 }
