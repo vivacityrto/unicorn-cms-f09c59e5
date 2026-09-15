@@ -3,21 +3,22 @@
 > **Last updated:** 2026-09-15 · **Reconsider by:** 2026-10-15 · **Confidence:** high — bounded by the accepted QA snapshot and the closed P1.2 lifecycle decisions
 > **Parent plan:** [Tenant Operating Model data-architecture plan](../../tenant-operating-model-data-architecture-plan-2026-09-02.md)
 > **Program index:** [Program Index](../../program-index.md)
-> **Status:** one-row QA canary complete; remaining QA batch separately gated
+> **Status:** bounded QA batch complete; production/runtime separately gated
 > **Owner:** TOM/Codex, with RBAC and Client Health review
-> **Scope:** implement and execute one allowlisted QA-only contact-projection canary that consumes a frozen, separately approved candidate artifact
+> **Scope:** implement and execute allowlisted QA-only contact projection from frozen, separately approved candidate artifacts
 > **Dependencies:** [P1.2 ghost-user retirement and contact-promotion scope](p1-2-ghost-user-retirement-contact-promotion-scope.md); [P1.2-a evidence contract](p1-2-a-ghost-contact-dry-run-evidence-packet.md); [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md); [P1.1 contact-promotion implementation packet](p1-1-first-contact-promotion-implementation-packet.md)
-> **Exit criteria:** the reviewed apply sequence, frozen-input contract, idempotency/concurrency rules, rollback boundary, guarded QA-only implementation, one-row canary, and read-only postflight evidence are complete; remaining QA rows and production remain separately gated
-> **Evidence:** [P1.2-b QA dry-run audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-dry-run.md); [P1.2-d one-row canary audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-apply-canary.md)
-> **Audit entry:** [2026-09-15 TOM P1.2-d one-row QA apply canary](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-apply-canary.md)
+> **Exit criteria:** the reviewed apply sequence, frozen-input contract, idempotency/concurrency rules, rollback boundary, guarded QA-only implementation, one-row canary, 5/5/4 bounded QA batches, and read-only postflight evidence are complete; production/runtime work remains separately gated
+> **Evidence:** [P1.2-b QA dry-run audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-dry-run.md); [P1.2-d one-row canary audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-apply-canary.md); [P1.2-d bounded-batch audit](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-bounded-batch.md)
+> **Audit entry:** [2026-09-15 TOM P1.2-d bounded QA apply batches](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-contact-bounded-batch.md)
 
 ## Purpose and hard boundary
 
 This packet turns the accepted P1.2-b read-only evidence into a safe design
-for a future, separately authorized contact-projection canary. It does not
-authorize a write, migration, invitation, Edge Function deployment,
-`activate-ghost-user` retirement, production observation, or use of the
-accepted redacted artifact as a write input.
+and bounded QA execution record for contact projection. The QA write was
+authorized separately and is evidenced below. The packet does not authorize a
+migration, invitation, Edge Function deployment, `activate-ghost-user`
+retirement, production observation, or use of any redacted artifact as a write
+input.
 
 The operation designed here projects a pre-login ghost profile into
 `tenant_contacts`. It does not create an auth identity, change
@@ -60,6 +61,15 @@ The approved first canary followed this contract. The fresh snapshot contained
 15 candidate rows, selected row index `0`, and was consumed only by the private
 identifier-bearing manifest and the protected QA runner. The remaining rows
 were not processed.
+
+The subsequent approved execution used source commit
+`244abb06369b372fc86e5c9ec999583e79ad7079` and three fresh private snapshots:
+workflow `34928094192` required 14 candidates and created 5, workflow
+`34928192320` required 9 and created 5, and workflow `34928288672` required 4
+and created 4. Each transaction passed its aggregate postflight before the
+next batch started. The final read-only reconciliation workflow
+`34928388148` reported 15 existing-contact matches, 0 eligible candidates,
+and 0 projected future inserts.
 
 ## Proposed apply shape
 
@@ -121,14 +131,13 @@ a promotion or account-activation test.
 
 ### Stage 3 — bounded QA batch
 
-Only after the one-row canary passes its postflight does the operator proceed
-to the remaining approved QA candidates, in small deterministic chunks. The
-default recommendation is a maximum of five rows per transaction, with a
-stop after the first failed or stale row. The operator must not continue past
-a changed count, duplicate, privilege error, unexpected relation, or audit
-write failure.
+Only after the one-row canary passes its postflight did the operator proceed
+to the remaining approved QA candidates, in the authorized deterministic
+5/5/4 sequence. Each transaction enforced the exact remaining-candidate
+count (14, then 9, then 4), used a maximum of five rows, and stopped before
+writing if the count or any row contract differed.
 
-The batch is complete only when every manifest row is classified as
+The bounded execution was complete only when every manifest row was classified as
 `created`, `already_contact`, `pending_invite_hold`, `stale_manifest`, or
 `manual_review`, with no unclassified row and no implicit retry that changes
 the frozen input.
@@ -220,28 +229,28 @@ table or RPC would require its own schema/RLS/security review.
 | Gate | Required evidence | Owner | Current status |
 | --- | --- | --- | --- |
 | Design | This packet reviewed; no hidden write path or scope expansion | Carl/TOM | approved and implemented |
-| Target | Exact allowlisted `unicorn-qa` URL and no production flag | Carl/environment owner | approved; hosted canary passed |
-| Identifier-bearing manifest | Fresh snapshot, hash, narrow audience, private retention | Carl/security/operations | approved for one canary; private artifacts cleaned up |
+| Target | Exact allowlisted `unicorn-qa` URL and no production flag | Carl/environment owner | approved; all hosted batches passed |
+| Identifier-bearing manifest | Fresh snapshot, hash, narrow audience, private retention | Carl/security/operations | approved per batch; private artifacts cleaned up |
 | Write boundary | Purpose-built server-side implementation, tests, and target fail-closed guard | TOM/security | implemented and verified |
-| Canary scope | One row, then bounded chunks, with stop conditions | Carl/operator | one-row canary complete; remaining rows separately gated |
-| Batch/audit storage | Durable batch ID and row-level rollback evidence | TOM/security | canary batch/audit evidence complete |
+| Canary scope | One row, then bounded chunks, with stop conditions | Carl/operator | one-row canary plus 5/5/4 batches complete |
+| Batch/audit storage | Durable batch ID and row-level rollback evidence | TOM/security | complete for all 15 QA projections |
 | Manual holds | Owner and disposition for stale, pending, archived, or collision rows | TOM/RBAC | defined; no current holdouts |
 | Postflight | Read-only reconciliation and zero-unexpected-write proof | Codex/QA | complete |
 | Production | Separate packet and explicit authority | Carl | out of scope |
 
 ## What this packet does and does not close
 
-This packet closes the planning and execution gates for the one-row QA
-contact-projection canary. The protected runner created one contact projection
-and one audit row, and the read-only postflight plus repeat classifier
-reconciled the result. It does not authorize processing the remaining 14
-candidate rows, ghost retirement, invitation activity, or production/runtime
-work. The private identifier-bearing manifest and raw row-level details were
-operator-only and were removed after the workflow completed. It also does not
-provide zero-caller evidence for
+This packet closes the planning and execution gates for the approved QA
+contact projections: one canary plus 5/5/4 bounded batches created 15 contact
+projections and 15 audit rows, with per-batch postflight and a terminal
+read-only classifier reconciliation. The private identifier-bearing manifests
+and raw row-level details were operator-only and were removed after each
+workflow completed. The packet does not authorize ghost retirement,
+invitation activity, or production/runtime work. It also does not provide
+zero-caller evidence for
 `activate-ghost-user`; the P1.2-c retirement packet remains independently
 gated until its UI, job-state, historical invocation, and outstanding-account
 evidence are complete.
 
-The next possible action is a separately approved bounded QA batch for the
-remaining candidates. No such batch was started by this canary.
+The next possible action is a separately scoped retirement or production
+packet. No further QA contact rows remain eligible in the final snapshot.
