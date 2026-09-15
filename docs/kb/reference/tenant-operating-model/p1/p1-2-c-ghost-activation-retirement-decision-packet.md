@@ -138,9 +138,11 @@ production disposition is recorded below.
 
 The production `activate-ghost-user` deployment is absent after the explicit
 Carl-approved deletion. The inventory fell from 193 to 192; exact lookup
-returns `Function not found`; both fail-closed caller guards and the reset-only
-worker path remain deployed; and open, locked, and unprocessed activation-job
-counts are all zero. The four historical activation jobs remain non-open.
+returns `Function not found`; current `bulk-account-actions` v285 and
+`cohort-access-sender-worker` v284 retain both fail-closed caller guards and
+the reset-only worker path; and open, locked, and active-unprocessed
+activation-job counts are all zero. The four historical activation jobs
+remain non-open.
 
 No job, account, invitation, or unrelated function write was performed. The
 approved 60-minute read-only observation is still open at this update. A clean

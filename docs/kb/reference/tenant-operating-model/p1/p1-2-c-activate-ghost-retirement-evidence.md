@@ -31,9 +31,9 @@ recorded:
 - production project ref `yxkgdalkbrriasiyyrwk` remained the confirmed target;
 - the Edge Function inventory decreased from 193 to 192;
 - an exact lookup for `activate-ghost-user` returned `Function not found`;
-- `bulk-account-actions` and `cohort-access-sender-worker` still contain the
-  fail-closed `GHOST_ACTIVATION_RETIRED` guards, and the worker still accepts
-  only the reset action;
+- current `bulk-account-actions` v285 and `cohort-access-sender-worker` v284
+  still contain the fail-closed `GHOST_ACTIVATION_RETIRED` guards, and the
+  worker still accepts only the reset action;
 - open, locked, and unprocessed activation-job counts were all zero; the four
   historical activation jobs remained non-open; and
 - no job, account, invitation, or unrelated function write was performed.

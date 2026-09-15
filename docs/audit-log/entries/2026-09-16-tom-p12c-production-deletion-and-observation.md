@@ -26,8 +26,8 @@ authorized Supabase control plane:
 | --- | --- |
 | Edge Function inventory | 193 before; 192 after |
 | Exact `activate-ghost-user` lookup | `Function not found` |
-| `bulk-account-actions` guard | `GHOST_ACTIVATION_RETIRED` remains deployed |
-| `cohort-access-sender-worker` guard | `GHOST_ACTIVATION_RETIRED` remains deployed; reset action remains supported |
+| `bulk-account-actions` guard | Current v285; `GHOST_ACTIVATION_RETIRED` remains deployed |
+| `cohort-access-sender-worker` guard | Current v284; `GHOST_ACTIVATION_RETIRED` remains deployed; reset action remains supported |
 | Open activation jobs | 0 |
 | Locked activation items | 0 |
 | Unprocessed activation items | 0 |
