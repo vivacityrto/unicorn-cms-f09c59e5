@@ -3,6 +3,7 @@
 > **Last updated:** 2026-09-15 · **Status:** planning-only; retirement not authorized
 > **Owner:** TOM, with RBAC and operations review
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
+> **Operational packet:** [P1.2-c operational retirement packet](p1-2-c-activate-ghost-retirement-operational-packet.md)
 
 ## Purpose and authority boundary
 
@@ -126,4 +127,4 @@ A later packet must be separately approved and must include, at minimum:
 Until that packet exists and its gates are approved, the current guarded
 deployment is the intended safe state.
 
-**Related audit entries:** [caller freeze](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Related audit entries:** [caller freeze](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
