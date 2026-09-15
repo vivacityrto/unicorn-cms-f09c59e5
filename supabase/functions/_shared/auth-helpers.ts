@@ -33,7 +33,20 @@ export interface UserProfile {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
-  state: string | null;
+  /**
+   * Unrelated numeric data (Australian state/territory reference) --
+   * `public.users.state` is `bigint` in the live schema, confirmed via
+   * `information_schema.columns`. It is NOT an account-status field. This
+   * type was previously (wrongly) declared `string | null`, which is what
+   * let `state === "inactive"` / `state === "suspended"` comparisons look
+   * like valid TypeScript in four separate call sites for an unknown
+   * period, none of which ever actually matched -- see
+   * docs/audit-log/entries/2026-09-15-fix-verify-auth-dead-account-status-check.md.
+   * Declaring the real type here doesn't retroactively catch that (Deno
+   * Edge Functions have no CI/local type-check in this repo), but it stops
+   * the same mistake from looking valid to write again.
+   */
+  state: number | null;
   disabled: boolean | null;
   archived: boolean | null;
 }

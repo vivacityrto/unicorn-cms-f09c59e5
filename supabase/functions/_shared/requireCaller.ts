@@ -420,16 +420,21 @@ export async function requireSuperAdmin(
 
   const { data: profile, error: profileError } = await admin
     .from("users")
-    .select("unicorn_role, state")
+    .select("unicorn_role, disabled, archived")
     .eq("user_uuid", callerData.user.id)
     .maybeSingle();
 
+  // `state` is unrelated numeric data (Australian state/territory), not an
+  // account-status field -- disabled/archived are the real flags. Disabling
+  // a user never revokes their Supabase Auth session, so this is the only
+  // place in this gate's auth path that can reject a still-valid session
+  // for an account that has since been disabled or archived.
   if (
     profileError ||
     !profile ||
     profile.unicorn_role !== SUPER_ADMIN_ROLE ||
-    profile.state === "inactive" ||
-    profile.state === "suspended"
+    profile.disabled ||
+    profile.archived
   ) {
     return convenienceJson(req, 403, { error: "Forbidden" });
   }
