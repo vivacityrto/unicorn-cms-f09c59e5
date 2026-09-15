@@ -215,19 +215,22 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
    and found two related but distinct issues:
    - **Fixed:** `is_tenant_parent_safe` (behind the swap/promote RPCs) and
      `has_tenant_admin_safe` (behind `user_invitations`' RLS) never excluded
-     disabled/archived accounts. Both now correctly deny disabled/archived
-     accounts with zero regression for active accounts. The corresponding
-     audit entry is pending in [PR #1366](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1366).
+     disabled/archived accounts — 359 and 338 currently-affected accounts
+     respectively. Both now correctly denied; zero regression for active
+     accounts. See
+     [audit entry](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md).
    - **Confirmed safe, not a gap:** a direct browser `INSERT` into
-     `user_invitations` cannot escalate to an internal Vivacity role because
-     `trg_enforce_invitation_role_ceiling` independently blocks that for every
-     caller, service-role or browser alike.
-   - **Flagged, not fixed (non-escalation, non-blocking):** a direct browser
-     insert can bypass `invite-user`'s capacity, rate-limit, and relationship-
-     role allowlist checks for a same-tenant client-role invitation; the
-     `invite-user` `isTenantAdmin` branch also does not filter a disabled
-     caller profile. These are separate RBAC/TOM follow-ups, not blockers for
-     this activation-retirement gate.
+     `user_invitations` cannot escalate to an internal Vivacity role —
+     `trg_enforce_invitation_role_ceiling` independently blocks that for
+     every caller, service-role or browser alike.
+   - **Flagged, not fixed (non-escalation, doesn't block retirement):** a
+     direct browser insert can still bypass `invite-user`'s own business
+     rules (capacity cap, rate limit, tenant-admin relationship-role
+     allowlist) for a same-tenant client-role invitation; and `invite-user`'s
+     own `isTenantAdmin` branch doesn't filter `disabled` on the caller's
+     profile. Both are pre-existing, orthogonal to ghost-activation
+     retirement specifically, and are follow-up candidates for RBAC v6 or
+     TOM, not blockers for this gate.
 
 ## Proposed retirement sequence
 
@@ -262,9 +265,9 @@ post-guard activation audit rows. Retirement remains held because the request
 log has a June 3–16 retention gap and the broader legacy profile set is not
 classified. The RBAC/security review is now complete (item 6 above): the
 replacement path's protection against privilege escalation was confirmed
-already correct, disabled-account authorization gaps were fixed, and two
-smaller non-escalation follow-ups were recorded. A separate
-deployment/retirement decision is still required. See the [retirement
-decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
+already correct, a real disabled-account gap in its authorization chain was
+found and fixed, and two smaller, non-escalation, non-blocking gaps were
+flagged as follow-ups. A separate deployment/retirement decision is still
+required. See the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
 
-**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 RBAC/security review — pending PR #1366](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1366)
+**Audit entries:** [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
