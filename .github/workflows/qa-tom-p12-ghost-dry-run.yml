@@ -1,0 +1,67 @@
+name: QA TOM P1.2 ghost-contact dry-run
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: unicorn-qa-tom-p12-ghost-dry-run
+  cancel-in-progress: false
+
+jobs:
+  ghost-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+
+      - name: Run non-credentialed CLI preflight
+        run: |
+          npm run tenant:ghost-dry-run -- --help
+          node --test scripts/ghost-contact-dry-run.test.mjs
+
+      - name: Require the protected QA read credential
+        env:
+          QA_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+        run: test -n "$QA_SERVICE_ROLE_KEY"
+
+      - name: Run one redacted QA snapshot
+        env:
+          SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          GHOST_CONTACT_SOURCE_COMMIT: ${{ github.sha }}
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/ghost-contact-dry-run.json
+        run: npm run tenant:ghost-dry-run -- --json --out "$GHOST_CONTACT_REPORT"
+
+      - name: Verify the read-only redacted artifact
+        env:
+          GHOST_CONTACT_REPORT: ${{ runner.temp }}/ghost-contact-dry-run.json
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const report = JSON.parse(readFileSync(process.env.GHOST_CONTACT_REPORT, "utf8"));
+            if (report.target !== "https://qfpxvumcrnzrjyvqkicq.supabase.co") throw new Error(`unexpected target: ${report.target}`);
+            if (report.read_only !== true || report.writes_performed !== 0) throw new Error("read-only contract failed");
+            if (!Array.isArray(report.write_operations) || report.write_operations.length !== 0) throw new Error("write operations were reported");
+            if (report.rows.some((row) => row.normalized_email && !row.normalized_email.startsWith("sha256:"))) throw new Error("unredacted email detected");
+          '
+
+      - name: Upload the redacted evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-p12-ghost-contact-dry-run-${{ github.run_id }}
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/ghost-contact-dry-run.json
