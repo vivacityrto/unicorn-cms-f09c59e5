@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` operational retirement packet
 
-> **Last updated:** 2026-09-16 · **Status:** initial production deletion was observed, but an in-window redeployment invalidated the observation; closeout is blocked pending source reconciliation and a fresh decision
+> **Last updated:** 2026-09-16 · **Status:** repository retirement is committed; hosted deletion and immediate read-only verification remain pending, with the 60-minute observation waived by Carl
 > **Owner:** TOM, with operations and RBAC review
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 > **Decision source:** [P1.2-c retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md)
@@ -37,9 +37,11 @@ authorized control plane initially confirmed:
 No job, account, invitation, or unrelated function write was performed during
 the initial deletion. The final read-only cutoff found inventory back at 193
 and version 1 of `activate-ghost-user` present/ACTIVE again after an
-in-window redeployment. The observation is invalidated; no further hosted
-action is authorized by this packet until the redeployment source is
-reconciled and a fresh decision is obtained.
+in-window redeployment. The repository source and function configuration were
+then retired in `b771e3f7e` (PR #1381), preventing a future Git/Supabase sync
+from recreating the function. Hosted deletion remains the next control-plane
+action; Carl waived the 60-minute observation, so only the immediate
+read-only post-delete checks remain.
 
 ## Observed target state (read-only, 2026-09-15)
 
@@ -148,7 +150,10 @@ If and only if the remaining approvals above are complete, use this sequence:
 The QA disable-first shape was not executed because the approved QA control
 plane did not contain the historical target. Production deletion was instead
 performed only after a fresh target check and explicit action-time approval;
-the later in-window redeployment invalidated the final observation.
+the later in-window redeployment invalidated the final observation. The
+repository retirement is now merged/recorded separately, and the hosted
+deployment will be deleted and verified immediately without the waived
+60-minute wait.
 
 ## Abort and rollback conditions
 

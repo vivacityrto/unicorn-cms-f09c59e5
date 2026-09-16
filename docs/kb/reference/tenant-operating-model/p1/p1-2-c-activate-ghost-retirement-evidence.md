@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-16 · **Status:** initial production deletion was observed, but the final check found an in-window redeployment; retirement reconciliation is blocked pending source reconciliation and a fresh decision
+> **Last updated:** 2026-09-16 · **Status:** repository retirement is committed; hosted deletion and immediate read-only verification remain pending, with the 60-minute observation waived by Carl
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -52,10 +52,13 @@ evidence; no identifiers or credentials are stored here.
 
 The final control-plane check found production inventory back at 193 and
 `activate-ghost-user` present/ACTIVE after the initial inventory had fallen to
-192. P1.2-c is not fully reconciled. The redeployment source is not inferred,
-no further hosted action is authorized by this record, and a fresh deletion
-and observation require a new decision after the source is reconciled. See the
-[append-only observation exception](../../../../audit-log/entries/2026-09-16-tom-p12c-observation-aborted-redeploy.md).
+192. The repository source and function configuration were subsequently
+retired in commit `b771e3f7e` (PR #1381), so a future Git/Supabase sync cannot
+recreate this function from the repository. The hosted deployment still needs
+the separately authorized control-plane deletion; Carl waived the 60-minute
+observation, so the closeout check will be immediate and read-only. See the
+[append-only observation exception](../../../../audit-log/entries/2026-09-16-tom-p12c-observation-aborted-redeploy.md)
+and [repository retirement record](../../../../audit-log/entries/2026-09-16-tom-p12c-repository-retirement.md).
 
 ## Static caller census at current `origin/main`
 
@@ -332,9 +335,10 @@ The approved sequence was completed as follows:
    request-level reconstruction limitation; the RBAC/security review is
    complete (see item 6 above);
 5. confirm the production target and zero queued activation work, then delete
-   `activate-ghost-user` only after Carl's separate action-time approval; and
-6. run the minimum 60-minute read-only observation and reconcile the dated
-   operational audit entry before closing the packet.
+   `activate-ghost-user` only after the repository retirement is merged; and
+6. run the immediate read-only post-delete checks and reconcile the dated
+   operational audit entry before closing the packet. Carl waived the
+   previously planned 60-minute observation on 2026-09-16.
 
 The QA disable-first plan remains historical and was not executed because the
 approved QA control plane did not contain the historical target. Production
@@ -356,8 +360,10 @@ post-guard activation audit rows. The all-source June 3–16 sweep and aggregate
 classification are now complete as evidence, but request-level reconstruction
 is unavailable and individual disposition of the 411-row legacy population is
 still held. Production Edge deletion was initially completed, but the final
-observation check found the target redeployed during the window, so the
-retirement cannot be marked complete. The RBAC/security review is now complete
+observation check found the target redeployed during the window. The
+repository source and configuration are now retired in `b771e3f7e`; hosted
+deletion and immediate read-only verification remain, with Carl's 60-minute
+observation waiver recorded. The RBAC/security review is now complete
 (item 6 above): the
 replacement path's protection against privilege escalation was confirmed
 already correct, a real disabled-account gap in its authorization chain was
