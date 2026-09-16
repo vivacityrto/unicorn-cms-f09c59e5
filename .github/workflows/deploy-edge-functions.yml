@@ -1,0 +1,108 @@
+name: Deploy Edge Functions
+
+# Replaces reliance on Supabase's native GitHub-sync deploy integration,
+# which has been observed to fail silently for changed functions (see
+# AGENTS.md's "Supabase deployment workflow" section -- confirmed empirically
+# 2026-09-07: 7 of 8 changed functions in one merge never auto-deployed).
+#
+# This computes the real set of affected functions via
+# scripts/select-affected-edge-functions.mjs (follows local relative
+# imports transitively, the same way Deno's bundler does), so a change to a
+# widely-shared file like _shared/auth-helpers.ts or _shared/requireCaller.ts
+# redeploys every function that actually imports it -- not just whichever
+# function's own index.ts happened to change. See
+# docs/audit-log/entries/2026-09-15-fix-verify-auth-dead-account-status-check.md
+# for the real incident this replaces a manual, expensive redeploy sweep for.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+
+concurrency:
+  group: deploy-edge-functions
+  cancel-in-progress: false
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      functions: ${{ steps.select.outputs.functions }}
+      count: ${{ steps.select.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Self-check the selector script
+        run: node --test scripts/select-affected-edge-functions.test.mjs
+
+      - name: Select affected functions
+        id: select
+        run: |
+          set -euo pipefail
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "select-affected-edge-functions: no valid 'before' SHA (new branch or force-push) -- falling back to deploying every function"
+            LIST=$(node scripts/select-affected-edge-functions.mjs --all)
+          else
+            LIST=$(node scripts/select-affected-edge-functions.mjs --before "$BEFORE" --after "$AFTER")
+          fi
+          COUNT=$(echo "$LIST" | grep -c . || true)
+          echo "Affected functions ($COUNT):"
+          echo "$LIST"
+          {
+            echo "functions<<EOF"
+            echo "$LIST"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: select
+    if: needs.select.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Require the management credentials
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_ID"
+
+      - name: Deploy each affected function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          FAILED=""
+          while IFS= read -r fn; do
+            [ -z "$fn" ] && continue
+            echo "::group::Deploying $fn"
+            if ! supabase functions deploy "$fn" --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"; then
+              echo "::error::Failed to deploy $fn"
+              FAILED="$FAILED $fn"
+            fi
+            echo "::endgroup::"
+          done <<< "${{ needs.select.outputs.functions }}"
+          if [ -n "$FAILED" ]; then
+            echo "The following functions failed to deploy:$FAILED"
+            exit 1
+          fi
