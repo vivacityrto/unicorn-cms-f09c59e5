@@ -5,7 +5,7 @@
  *
  * Authorization (in-code; gateway verify_jwt alone accepts the public anon key):
  *   - Trusted internal: Authorization bearer === SUPABASE_SERVICE_ROLE_KEY
- *     (invite-user / resend-invite / activate-ghost-user invoke with the
+ *     (invite-user / resend-invite invoke with the
  *     service-role client and no user JWT override)
  *   - Staff: auth.getUser(bearer) + check_permission(..., 'admin.invites.manage', 'full')
  *   - Tenant Admin: primary/secondary contact on the invitation's tenant
@@ -164,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
       auth: { persistSession: false },
     });
 
-    // Trusted internal path: invite-user / resend-invite / activate-ghost-user
+    // Trusted internal path: invite-user / resend-invite
     // invoke with the service-role client (bearer === SERVICE_ROLE_KEY).
     const isTrustedInternalCall = bearer === SERVICE_ROLE_KEY;
 

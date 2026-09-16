@@ -63,8 +63,10 @@ The final candidate references were re-checked at merged `origin/main` commit
 `c09bcac99` from [PR #1356](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1356)
 on 2026-09-15. The direct per-row activation UI is absent, and both indirect
 activation dispatch paths now fail closed before invoking the legacy sender or
-leasing a cohort item. The function deployment/configuration and compatibility
-references remain intentionally unchanged pending the later retirement gates.
+leasing a cohort item. The repository retirement follow-up now removes the
+legacy function source and its `supabase/config.toml` stanza; historical
+compatibility references remain explicitly labelled below, while the hosted
+deployment still requires its separate control-plane deletion.
 
 | Path | Reference | Reachability | Retirement implication |
 | --- | --- | --- | --- |
@@ -72,7 +74,7 @@ references remain intentionally unchanged pending the later retirement gates.
 | `supabase/functions/bulk-account-actions/index.ts` | `action='activate'` returns 410 `GHOST_ACTIVATION_RETIRED` before user lookup or sender invocation; reset remains routed to `send-password-reset` | Fail-closed compatibility guard; no legacy sender invocation | Preserve the guard while completing job/log/account evidence; reset behavior remains supported |
 | `src/pages/admin/CohortAccessSenderJob.tsx` | Invokes `cohort-access-sender-worker` | Live staff job UI path; indirect activation caller | Existing jobs and the activation action need a drain/hold decision |
 | `supabase/functions/cohort-access-sender-worker/index.ts` | `job.action='activate'` returns 410 `GHOST_ACTIVATION_RETIRED` before leasing any item; reset remains routed to `send-password-reset` | Fail-closed compatibility guard; no legacy sender invocation or item lease | Must inspect existing job rows and worker history; the guard does not disposition existing job state |
-| `supabase/config.toml` | `[functions.activate-ghost-user] verify_jwt = false` | Deployment/configuration reference | Keep deployment unchanged until caller and outstanding-account gates are complete |
+| `supabase/config.toml` | The `[functions.activate-ghost-user]` stanza is removed by the repository retirement change | Historical deployment/configuration reference | Prevent future Git sync from redeploying the retired function; hosted deletion remains a separate control-plane action |
 
 The census found no other executable caller of the legacy function under `src/`,
 `supabase/functions/`, or `scripts/`. It did find documentation, migration,
@@ -246,9 +248,10 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
 - `AcceptInvitation.tsx` still contains a compatibility branch for
   ghost-activated accounts. The standard contact invitation path must be
   proven for new promotions before that branch can be considered removable.
-- `send-invitation-email` documents `activate-ghost-user` as a trusted internal
-  sender. Its contract must be reconciled when the sender is retired so the
-  email function does not retain a misleading internal mode.
+- `send-invitation-email` previously documented `activate-ghost-user` as a
+  trusted internal sender; the repository retirement change removes that
+  stale current-mode documentation while preserving the live invite/resend
+  contract.
 - `bulk-account-actions` and `cohort-access-sender-worker` are shared sender
   orchestrators. Their reset behavior must remain intact when activation is
   removed; do not collapse the two actions without a separate characterization
@@ -257,9 +260,10 @@ provider log body is unavailable. See the [durable audit correlation](../../../.
 ## Evidence still required before retirement
 
 1. **Static reachability closure:** complete on merged `origin/main` at
-   `c09bcac99`; the final census retains only intentional documentation,
-   migration-history, configuration, compatibility, and fail-closed guard
-   references.
+   `c09bcac99`; the repository retirement follow-up removes the legacy source
+   and config stanza, while remaining references are limited to intentional
+   historical documentation, migration history, compatibility handling, and
+   fail-closed guard tests.
 2. **Job-state disposition:** the census and aggregate reconciliation are
    complete. The 2 cancelled activation jobs contain stale ghost snapshots
    for active primary contacts and match expired sent/no-token invitations;
