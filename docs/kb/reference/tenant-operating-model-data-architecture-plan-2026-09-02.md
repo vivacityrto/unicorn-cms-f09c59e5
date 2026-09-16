@@ -1264,9 +1264,15 @@ This section exists so a later session can resume without repeating risky discov
 - Ask Viv structured context is another sequential distributed read model and should converge on a versioned exact-fact contract after directory semantics are settled;
 - partitioning, broad index deletion, table splitting, and CDC are not first actions.
 
-### First implementation action after approval
+### Next bounded TOM action
 
-Start **P0.1** only: reproducible inventory, source-of-truth matrix, view/RPC catalogue, and write-path graph. Do not create the directory function in the same PR.
+The original P0.1 inventory action is complete. The next bounded TOM task is
+the P0.2/P0.3 owner-review pass: review the executed QA fixture/query-family
+evidence, confirm the Realtime publication-gap disposition, and keep
+Ask Viv/export coverage separately gated. This review may update the evidence
+crosswalk, but it does not authorize a capability row, fixture mutation,
+Realtime repair, export invocation, or production change. The linked P1.2-c
+retirement observation and documentation closeout continue independently.
 
 ---
 
