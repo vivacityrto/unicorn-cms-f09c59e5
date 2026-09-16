@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` operational retirement packet
 
-> **Last updated:** 2026-09-16 · **Status:** production deletion executed; final 60-minute observation pending
+> **Last updated:** 2026-09-16 · **Status:** initial production deletion was observed, but an in-window redeployment invalidated the observation; closeout is blocked pending source reconciliation and a fresh decision
 > **Owner:** TOM, with operations and RBAC review
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 > **Decision source:** [P1.2-c retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md)
@@ -23,7 +23,7 @@ guards and reset path remain deployed.
 
 After final read-only preflight, Carl gave explicit action-time approval for
 permanent deletion of the production `activate-ghost-user` deployment. The
-authorized control plane then confirmed:
+authorized control plane initially confirmed:
 
 - project ref `yxkgdalkbrriasiyyrwk` was the target;
 - the Edge Function inventory changed from 193 to 192;
@@ -34,9 +34,12 @@ authorized control plane then confirmed:
 - activation-job counts were zero for open, locked, and unprocessed rows,
   with four historical non-open jobs retained.
 
-No job, account, invitation, or unrelated function write was performed. The
-minimum 60-minute read-only observation began after these checks and remains
-pending at this update.
+No job, account, invitation, or unrelated function write was performed during
+the initial deletion. The final read-only cutoff found inventory back at 193
+and version 1 of `activate-ghost-user` present/ACTIVE again after an
+in-window redeployment. The observation is invalidated; no further hosted
+action is authorized by this packet until the redeployment source is
+reconciled and a fresh decision is obtained.
 
 ## Observed target state (read-only, 2026-09-15)
 
@@ -145,7 +148,7 @@ If and only if the remaining approvals above are complete, use this sequence:
 The QA disable-first shape was not executed because the approved QA control
 plane did not contain the historical target. Production deletion was instead
 performed only after a fresh target check and explicit action-time approval;
-the final observation remains the last open gate.
+the later in-window redeployment invalidated the final observation.
 
 ## Abort and rollback conditions
 

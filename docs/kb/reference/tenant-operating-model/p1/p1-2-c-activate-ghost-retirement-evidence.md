@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-16 · **Status:** production Edge deletion executed; final 60-minute observation and documentation reconciliation pending
+> **Last updated:** 2026-09-16 · **Status:** initial production deletion was observed, but the final check found an in-window redeployment; retirement reconciliation is blocked pending source reconciliation and a fresh decision
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -38,10 +38,24 @@ recorded:
   historical activation jobs remained non-open; and
 - no job, account, invitation, or unrelated function write was performed.
 
-The bounded post-delete observation began after those checks. Its final
-read-only request/log/audit check remains pending until the approved minimum
-60-minute window has elapsed. The private operator record contains the
-redacted aggregate evidence; no identifiers or credentials are stored here.
+The bounded post-delete observation began after those checks. At the final
+read-only cutoff, the target was present and ACTIVE again (version 1), with
+metadata updated at `2026-09-16T00:14:42Z`; the current source was the legacy
+implementation rather than the retirement guard. The replacement guards were
+updated at `00:15:27Z` and `00:16:08Z`, indicating an in-window redeployment.
+The exact observation-window request-log and audit checks were both zero, and
+the activation-job/item counts remained safe, but the target drift invalidates
+the observation. The private operator record contains the redacted aggregate
+evidence; no identifiers or credentials are stored here.
+
+## Observation exception (2026-09-16)
+
+The final control-plane check found production inventory back at 193 and
+`activate-ghost-user` present/ACTIVE after the initial inventory had fallen to
+192. P1.2-c is not fully reconciled. The redeployment source is not inferred,
+no further hosted action is authorized by this record, and a fresh deletion
+and observation require a new decision after the source is reconciled. See the
+[append-only observation exception](../../../../audit-log/entries/2026-09-16-tom-p12c-observation-aborted-redeploy.md).
 
 ## Static caller census at current `origin/main`
 
@@ -337,8 +351,9 @@ never-signed-in current ghost-flagged accounts in the retained set, with zero
 post-guard activation audit rows. The all-source June 3–16 sweep and aggregate
 classification are now complete as evidence, but request-level reconstruction
 is unavailable and individual disposition of the 411-row legacy population is
-still held. Production Edge deletion is complete, with the final observation
-window still open at this update. The RBAC/security review is now complete
+still held. Production Edge deletion was initially completed, but the final
+observation check found the target redeployed during the window, so the
+retirement cannot be marked complete. The RBAC/security review is now complete
 (item 6 above): the
 replacement path's protection against privilege escalation was confirmed
 already correct, a real disabled-account gap in its authorization chain was
