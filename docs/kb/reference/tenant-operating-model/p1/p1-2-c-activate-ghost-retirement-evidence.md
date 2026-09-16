@@ -1,6 +1,6 @@
 # TOM P1.2-c — `activate-ghost-user` retirement evidence
 
-> **Last updated:** 2026-09-16 · **Status:** repository retirement is committed; hosted deletion and immediate read-only verification remain pending, with the 60-minute observation waived by Carl
+> **Last updated:** 2026-09-16 · **Status:** complete — repository retirement and hosted deletion were verified 2026-09-16; the 60-minute observation was waived by Carl
 > **Owner:** TOM, with RBAC and operations review
 > **Related scope:** [P1.2 ghost-user retirement and contact promotion](p1-2-ghost-user-retirement-contact-promotion-scope.md)
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
@@ -54,9 +54,9 @@ The final control-plane check found production inventory back at 193 and
 `activate-ghost-user` present/ACTIVE after the initial inventory had fallen to
 192. The repository source and function configuration were subsequently
 retired in commit `b771e3f7e` (PR #1381), so a future Git/Supabase sync cannot
-recreate this function from the repository. The hosted deployment still needs
-the separately authorized control-plane deletion; Carl waived the 60-minute
-observation, so the closeout check will be immediate and read-only. See the
+recreate this function from the repository. After PR #1381 merged, the hosted
+deployment was permanently deleted and the immediate read-only closeout found
+inventory at 192 with the exact target absent. See the
 [append-only observation exception](../../../../audit-log/entries/2026-09-16-tom-p12c-observation-aborted-redeploy.md)
 and [repository retirement record](../../../../audit-log/entries/2026-09-16-tom-p12c-repository-retirement.md).
 
@@ -362,13 +362,15 @@ is unavailable and individual disposition of the 411-row legacy population is
 still held. Production Edge deletion was initially completed, but the final
 observation check found the target redeployed during the window. The
 repository source and configuration are now retired in `b771e3f7e`; hosted
-deletion and immediate read-only verification remain, with Carl's 60-minute
-observation waiver recorded. The RBAC/security review is now complete
+deletion and immediate read-only verification completed, with Carl's
+60-minute observation waiver recorded. The RBAC/security review is now complete
 (item 6 above): the
 replacement path's protection against privilege escalation was confirmed
 already correct, a real disabled-account gap in its authorization chain was
 found and fixed, and two smaller, non-escalation, non-blocking gaps were
-flagged as follow-ups. The final conclusion remains pending the clean
-60-minute observation check. See the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
+flagged as follow-ups. The final conclusion is complete: hosted deletion was
+immediately verified, the replacement guards remained active, activation jobs
+remained safe, and the immediate target request/audit checks were zero. See
+the [retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md).
 
-**Audit entries:** [2026-09-16 TOM P1.2-c production deletion and observation](../../../../audit-log/entries/2026-09-16-tom-p12c-production-deletion-and-observation.md); [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 TOM P1.2-c aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [2026-09-15 TOM P1.2-c operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Audit entries:** [2026-09-16 TOM P1.2-c retirement closeout](../../../../audit-log/entries/2026-09-16-tom-p12c-retirement-closeout.md); [2026-09-16 TOM P1.2-c production deletion and observation](../../../../audit-log/entries/2026-09-16-tom-p12c-production-deletion-and-observation.md); [2026-09-15 TOM P1.2-c freeze indirect ghost activation callers](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [2026-09-15 TOM P1.2-c read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [2026-09-15 TOM P1.2-c pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [2026-09-15 TOM P1.2-c hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [2026-09-15 TOM P1.2-c durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [2026-09-15 TOM P1.2-c aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [2026-09-15 TOM P1.2-c operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [2026-09-15 RBAC/security review — tenant-parent/admin disabled-account gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
