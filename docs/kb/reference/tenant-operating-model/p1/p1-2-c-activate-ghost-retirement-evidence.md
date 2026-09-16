@@ -6,6 +6,8 @@
 > **Related execution gate:** [P1.2-b guarded dry-run execution packet](p1-2-b-ghost-contact-dry-run-execution-packet.md)
 > **Related operational packet:** [P1.2-c operational retirement packet](p1-2-c-activate-ghost-retirement-operational-packet.md)
 
+> **Resume pointer:** [TOM Codex pause/resume handoff](tom-codex-pause-resume-handoff-2026-09-16.md) — P1.2-c is complete; do not repeat this retirement work when returning to the project.
+
 ## Purpose and boundary
 
 This packet records the independent repository caller census and operational

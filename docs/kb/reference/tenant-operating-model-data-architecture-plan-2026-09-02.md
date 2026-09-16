@@ -87,6 +87,19 @@ counts are zero. Carl waived the 60-minute observation, and no contact
 insertion, invitation, migration, or other production data mutation was
 authorized or performed during the final check.
 
+### Pause/resume handoff (2026-09-16)
+
+TOM implementation is paused while Carl temporarily works on ComplyHub. The
+durable restart point is the [Codex pause/resume handoff](tenant-operating-model/p1/tom-codex-pause-resume-handoff-2026-09-16.md).
+The next bounded TOM action is a read-only/documentation owner-review pass
+over the executed P0.2/P0.3 fixture, query-family, production-cutoff, and
+aggregate-cardinality evidence, including confirmation of the current
+Realtime publication-gap disposition. This does not authorize fixture
+mutation, Realtime repair, export invocation, contact insertion, unmatched
+row conversion, membership migration, invitations, schema/RLS work, or
+production activity. The completed P1.2-c retirement must not be reopened or
+repeated without new evidence creating a genuinely new decision.
+
 ---
 
 ## 1. Executive decision
@@ -1318,6 +1331,7 @@ This program is complete when:
 - `docs/audit-log/entries/2026-04-28-manage-tenants-perf-optimisation.md`
 - `docs/audit-log/entries/2026-04-29-manage-tenants-status-filter-fix.md`
 - relevant May–August tenant, CSC, contact, lifecycle, TGA, Xero, timeline, RLS, and Ask Viv entries.
+- [TOM Codex pause/resume handoff](tenant-operating-model/p1/tom-codex-pause-resume-handoff-2026-09-16.md)
 
 ### Primary external guidance
 
@@ -1355,4 +1369,4 @@ This program is complete when:
 | P0.1 operating-model inventory | Evidence and owner-disposition directions complete 2026-09-12; implementation separately gated | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Source-of-truth matrix, identity ledger, membership crosswalk, policy/grant and view/RPC security evidence, writer census, and write-path graph are attached in [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). The 2026-09-12 read-only check confirms the #1185 deployed grants/guards; the [owner-disposition register](tenant-operating-model/p0/p0-1-owner-disposition-register.md) records the seven approved interim directions and preserves separate implementation gates for unmatched rows, membership migration, CSC ownership, Realtime, and ghost retirement. |
 | P0.2 disposable verification environment | Expanded bounded characterization and aggregate cardinality comparison complete 2026-09-13; representative fixture expansion and owner review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md), its [cardinality/query-family follow-up](tenant-operating-model/p0/p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md), and [cross-initiative review matrix](tenant-operating-model/p0/p0-2-p0-3-cross-initiative-review-2026-09-13.md) record the allowlisted `unicorn-qa` runs, production comparison, ownership boundaries, and explicit gaps |
 | P0.3 browser/query baseline | Expanded bounded characterization complete 2026-09-13; redacted waterfalls and versioned production cutoff captured; representative query-family coverage and cross-initiative owner review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) plus the [cardinality/query-family follow-up](tenant-operating-model/p0/p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md) and [cross-initiative review matrix](tenant-operating-model/p0/p0-2-p0-3-cross-initiative-review-2026-09-13.md) record route evidence, aggregate production/QA cardinalities, publication membership, initiative boundaries, and remaining gaps without setting product budgets |
-| P1+ implementation | P1.2-c repository source/configuration retirement and hosted deletion are complete and immediately verified; Carl's 60-minute observation waiver is recorded; contact insertion, migration, and broader runtime implementation remain separately gated | [#1381](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1381) | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) remains a planning draft; [P1.2-b](tenant-operating-model/p1/p1-2-b-ghost-contact-dry-run-execution-packet.md) records the completed QA snapshot; [P1.2-c](tenant-operating-model/p1/p1-2-c-activate-ghost-retirement-evidence.md) records the initial deletion, redeployment exception, repository retirement, and final closeout; and [P1.2-d](tenant-operating-model/p1/p1-2-d-ghost-contact-apply-design-packet.md) records the planning-only apply shape |
+| P1+ implementation | P1.2-c repository source/configuration retirement and hosted deletion are complete and immediately verified; Carl's 60-minute observation waiver is recorded; contact insertion, migration, and broader runtime implementation remain separately gated; TOM is paused at the documented handoff | [#1381](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1381), [#1384](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1384) | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) remains a planning draft; [P1.2-b](tenant-operating-model/p1/p1-2-b-ghost-contact-dry-run-execution-packet.md) records the completed QA snapshot; [P1.2-c](tenant-operating-model/p1/p1-2-c-activate-ghost-retirement-evidence.md) records the initial deletion, redeployment exception, repository retirement, and final closeout; [P1.2-d](tenant-operating-model/p1/p1-2-d-ghost-contact-apply-design-packet.md) records the planning-only apply shape; and the [Codex pause/resume handoff](tenant-operating-model/p1/tom-codex-pause-resume-handoff-2026-09-16.md) names the next bounded owner-review pass |

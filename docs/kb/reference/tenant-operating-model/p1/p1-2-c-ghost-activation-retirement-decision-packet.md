@@ -5,6 +5,8 @@
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 > **Operational packet:** [P1.2-c operational retirement packet](p1-2-c-activate-ghost-retirement-operational-packet.md)
 
+> **Resume pointer:** [TOM Codex pause/resume handoff](tom-codex-pause-resume-handoff-2026-09-16.md) — the retirement decision is executed and closed; it is not an open gate for the next TOM task.
+
 ## Purpose and authority boundary
 
 This packet turns the completed P1.2-c evidence into an explicit decision and

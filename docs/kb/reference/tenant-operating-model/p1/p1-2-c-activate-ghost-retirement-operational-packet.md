@@ -5,6 +5,8 @@
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 > **Decision source:** [P1.2-c retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md)
 
+> **Resume pointer:** [TOM Codex pause/resume handoff](tom-codex-pause-resume-handoff-2026-09-16.md) — this operational packet is closed; future TOM work resumes with the P0.2/P0.3 owner-review pass.
+
 ## Purpose and authority boundary
 
 This packet records the operational runbook and evidence for retiring the
