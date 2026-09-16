@@ -1,0 +1,28 @@
+---
+description: Continue approved bounded work through completion without repeated micro-approvals
+alwaysApply: true
+---
+
+# Continue Through Bounded Work
+
+- At the start of a multi-step task, consolidate the required decisions,
+  assumptions, approval gates, deliverables, and verification evidence into
+  one concise approval set.
+- Once Carl approves that set, continue through all routine, reversible,
+  read-only, implementation, testing, documentation, and coordination steps
+  that remain inside the approved scope. Do not pause for approval after every
+  tiny task or intermediate success.
+- Maintain an active goal for substantial work and keep moving across turns
+  until the goal's completion evidence is satisfied. Give concise progress
+  updates and state the next gate rather than reopening settled decisions.
+- Stop and ask Carl plainly when a genuinely new product, security, scope,
+  credential, destructive-action, external-state, or policy decision appears;
+  when an approval no longer covers the proposed action; or when a blocker
+  cannot be resolved safely with in-scope evidence and alternatives.
+- Never treat this rule as blanket permission for production mutations,
+  irreversible deletion, migrations, invitations, credential changes, or
+  unrelated work. Preserve explicit target, rollback, observation, audit, and
+  verification gates.
+- For parallel-agent work, keep the coordination board current, avoid overlap,
+  and surface genuine Carl-decision items in the conversation as well as in
+  the board. Routine no-decision coordination updates may remain board-only.

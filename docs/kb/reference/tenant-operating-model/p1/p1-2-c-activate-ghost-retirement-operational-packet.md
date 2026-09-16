@@ -1,23 +1,47 @@
 # TOM P1.2-c — `activate-ghost-user` operational retirement packet
 
-> **Last updated:** 2026-09-15 · **Status:** planning-only; no disable or delete action authorized
+> **Last updated:** 2026-09-16 · **Status:** repository retirement is committed; hosted deletion and immediate read-only verification remain pending, with the 60-minute observation waived by Carl
 > **Owner:** TOM, with operations and RBAC review
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 > **Decision source:** [P1.2-c retirement decision packet](p1-2-c-ghost-activation-retirement-decision-packet.md)
 
 ## Purpose and authority boundary
 
-This packet prepares a reversible operational runbook for a possible later
-retirement of the legacy `activate-ghost-user` Edge Function. It is not an
-authorization to disable, delete, redeploy, or change the function. It also
-does not authorize job closure, account repair, invitation, migration, schema,
-RLS, credential, or production work.
+This packet records the operational runbook and evidence for retiring the
+legacy `activate-ghost-user` Edge Function. The earlier QA runbook was not an
+authorization to act; Carl later separately approved the exact production
+deletion. This packet does not authorize any additional deployment, job
+closure, account repair, invitation, migration, schema, RLS, credential, or
+production work.
 
-The current safe state remains the deployed function with the merged
+The pre-action safe state was the deployed function with the merged
 fail-closed guards in `bulk-account-actions` and
-`cohort-access-sender-worker`. Any execution requires a fresh approval of the
-exact target, action, timing, rollback owner, observation window, and post-action
-checks recorded below.
+`cohort-access-sender-worker`. The post-action state is recorded below; the
+guards and reset path remain deployed.
+
+## Production execution reconciliation (2026-09-16)
+
+After final read-only preflight, Carl gave explicit action-time approval for
+permanent deletion of the production `activate-ghost-user` deployment. The
+authorized control plane initially confirmed:
+
+- project ref `yxkgdalkbrriasiyyrwk` was the target;
+- the Edge Function inventory changed from 193 to 192;
+- exact lookup of `activate-ghost-user` returned `Function not found`;
+- current `bulk-account-actions` v285 and `cohort-access-sender-worker` v284
+  still expose the `GHOST_ACTIVATION_RETIRED` fail-closed guards, and the
+  worker remains reset-only; and
+- activation-job counts were zero for open, locked, and unprocessed rows,
+  with four historical non-open jobs retained.
+
+No job, account, invitation, or unrelated function write was performed during
+the initial deletion. The final read-only cutoff found inventory back at 193
+and version 1 of `activate-ghost-user` present/ACTIVE again after an
+in-window redeployment. The repository source and function configuration were
+then retired in `b771e3f7e` (PR #1381), preventing a future Git/Supabase sync
+from recreating the function. Hosted deletion remains the next control-plane
+action; Carl waived the 60-minute observation, so only the immediate
+read-only post-delete checks remain.
 
 ## Observed target state (read-only, 2026-09-15)
 
@@ -40,7 +64,7 @@ session.
 | Observed deployment digest | `61e22bd035e5aba3bea946d17a54b6f42d33a34d1299736c87e28f58063f5ec4` |
 | Caller guards | `bulk-account-actions` v284 and `cohort-access-sender-worker` v283, both fail closed before legacy invocation/item lease |
 
-## Latest final preflight (2026-09-15, aborted)
+## Historical QA preflight (2026-09-15, aborted)
 
 The approved `unicorn-qa` project was re-confirmed through the
 project-specific control plane at `qfpxvumcrnzrjyvqkicq`. Its current Edge
@@ -80,7 +104,7 @@ control plane.
 Until the Carl-owned fields are filled and approved, this packet remains
 planning-only.
 
-## Preflight checklist
+## Preflight checklist (historical QA runbook)
 
 The operator must stop without taking the action if any check fails:
 
@@ -106,7 +130,7 @@ The operator must stop without taking the action if any check fails:
    action match the target environment. Do not proceed on a stale approval, an
    unattended or scheduled run, or an implicit environment assumption.
 
-## Recommended execution shape (not authorized)
+## Historical QA execution shape (not executed)
 
 If and only if the remaining approvals above are complete, use this sequence:
 
@@ -123,9 +147,13 @@ If and only if the remaining approvals above are complete, use this sequence:
    any later deletion. A clean disable observation does not itself authorize
    deletion.
 
-Direct deletion is a separate, harder-to-reverse action. It requires a new
-target check, a verified redeployable rollback artifact, a named rollback
-owner, and explicit approval for deletion after the disable observation.
+The QA disable-first shape was not executed because the approved QA control
+plane did not contain the historical target. Production deletion was instead
+performed only after a fresh target check and explicit action-time approval;
+the later in-window redeployment invalidated the final observation. The
+repository retirement is now merged/recorded separately, and the hosted
+deployment will be deleted and verified immediately without the waived
+60-minute wait.
 
 ## Abort and rollback conditions
 
@@ -153,4 +181,4 @@ an issue, or chat. A dated operational audit entry is required for any actual
 disable, rollback, or delete action. Until then, the existing evidence and
 holds remain authoritative.
 
-**Related audit entries:** [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [supervised timing approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-timing-approval.md); [rollback-owner reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-rollback-owner.md); [observation-window approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-observation-window.md); [final preflight abort](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-preflight-abort.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+**Related audit entries:** [production deletion and observation](../../../../audit-log/entries/2026-09-16-tom-p12c-production-deletion-and-observation.md); [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [supervised timing approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-timing-approval.md); [rollback-owner reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-rollback-owner.md); [observation-window approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-observation-window.md); [final preflight abort](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-preflight-abort.md); [aggregate legacy-profile classification and log-retention gap](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [durable ghost-activation audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -10,6 +11,15 @@ const workerSource = await readFile(
   path.join(here, "../cohort-access-sender-worker/index.ts"),
   "utf8",
 );
+const configSource = await readFile(
+  path.join(here, "../../config.toml"),
+  "utf8",
+);
+
+test("legacy ghost activation function is retired from the repository", () => {
+  assert.equal(existsSync(path.join(here, "../activate-ghost-user")), false);
+  assert.doesNotMatch(configSource, /\[functions\.activate-ghost-user\]/);
+});
 
 test("bulk account actions reject legacy ghost activation before sender invocation", () => {
   assert.match(bulkSource, /body\.action === "activate"/);
