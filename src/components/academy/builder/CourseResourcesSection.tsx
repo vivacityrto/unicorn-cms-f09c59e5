@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { type DragEvent, useRef, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, ChevronUp, GripVertical, Loader2, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FileUp, GripVertical, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,6 +142,7 @@ export default function CourseResourcesSection({
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -201,6 +202,24 @@ export default function CourseResourcesSection({
     }
     setFile(selected);
     setTitle((current) => current.trim() || titleFromFilename(selected.name));
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLLabelElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    handleFileChange(event.dataTransfer.files?.[0] ?? null);
   };
 
   const isPending = addFile.isPending || addLink.isPending;
@@ -340,17 +359,43 @@ export default function CourseResourcesSection({
 
           {mode === "file" ? (
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground" htmlFor="course-resource-file">
+              <span className="text-[11px] font-medium text-muted-foreground">
                 File
+              </span>
+              <label
+                htmlFor="course-resource-file"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed px-3 py-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isDragging
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:border-primary/60 hover:bg-muted/40"
+                }`}
+                data-testid="course-resource-dropzone"
+              >
+                <FileUp className="h-5 w-5" />
+                <span className="text-xs font-medium">
+                  {isDragging ? "Drop file to upload" : "Drag and drop a file here"}
+                </span>
+                <span className="text-[11px]">or click to browse</span>
+                <Input
+                  id="course-resource-file"
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xlsx,.xls,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/markdown"
+                  className="sr-only"
+                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                />
               </label>
-              <Input
-                id="course-resource-file"
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.doc,.docx,.xlsx,.xls,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/markdown"
-                className="h-8 text-xs"
-                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-              />
               {fileError && <p className="text-[11px] text-destructive">{fileError}</p>}
               {file && !fileError && (
                 <p className="text-[11px] text-muted-foreground truncate">{file.name}</p>
