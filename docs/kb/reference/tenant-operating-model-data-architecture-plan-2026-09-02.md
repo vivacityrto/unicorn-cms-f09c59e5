@@ -1,7 +1,7 @@
 # Tenant Operating Model, Directory Performance, ERP, and Ask Viv Data Architecture Plan
 
-> **Last updated:** 2026-09-14
-> **Status:** council-reviewed implementation plan; P0.1 evidence and owner-disposition work is complete; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; P1.1 contact-promotion canary and the first P1.2-b guarded ghost-contact QA snapshot completed 2026-09-15; the P1.2-d apply-design packet is prepared; contact insertion, ghost retirement, and runtime/production implementation gates remain open; no production mutation authorized
+> **Last updated:** 2026-09-16
+> **Status:** council-reviewed implementation plan; P0.1 evidence and owner-disposition work is complete; P0.2/P0.3 expanded bounded read-only characterization and versioned production metadata cutoff completed 2026-09-13; P1.1 contact-promotion canary and the first P1.2-b guarded ghost-contact QA snapshot completed 2026-09-15; the P1.2-d apply-design packet is prepared; the production `activate-ghost-user` Edge deployment was permanently deleted after explicit action-time approval on 2026-09-16 and its final 60-minute read-only observation is in progress; contact insertion, migration, and broader runtime implementation gates remain separate and open
 > **Prepared:** 2026-09-02
 > **Repository baseline:** `origin/main@31083c49`
 > **Planning branch/worktree:** `chore/tenant-data-model-optimization-plan` at `C:\Users\carls\repository\unicorn-workspace\unicorn-db-plan-20260902`
@@ -13,7 +13,7 @@
 > **Scope:** Manage Tenants directory performance, tenant data-model correctness (`tenants`/`tenant_users`/`tenant_members`/`package_instances` and related tables), ERP-readiness principles, and Ask Viv's tenant-context architecture; the Academy Solo workstream is a distinct tenant-backed account surface, not an RTO client onboarding path
 > **Exit criteria:** see §22 "Definition of program completion"
 > **Evidence:** §5 "Live data-model findings" and §23 "Evidence and primary guidance index" within this doc
-> **Audit entry:** none at the program level — implementation PRs record their own per the Production rule above
+> **Audit entry:** non-code production retirement is recorded in [2026-09-16 TOM P1.2-c production deletion and observation](../../audit-log/entries/2026-09-16-tom-p12c-production-deletion-and-observation.md); implementation PRs record their own entries per the Production rule above
 
 ---
 
@@ -68,6 +68,19 @@ Solo marker no longer permanently overwrites an existing Academy tenant's
 seat cap. The Academy drawer's URL state is cleared on close. These changes
 preserve ordinary RTO invitation and tenant-operating-model behavior and do
 not make Academy rows RTO onboarding subjects.
+
+### Production retirement update (2026-09-16)
+
+After the QA-target preflight mismatch was recorded and a separate
+action-time approval was obtained, the production `activate-ghost-user`
+deployment was deleted. The Edge-function inventory fell from 193 to 192;
+an exact function lookup is absent; the replacement `bulk-account-actions`
+and `cohort-access-sender-worker` deployments retain their fail-closed
+`GHOST_ACTIVATION_RETIRED` guards and preserved reset path; and the
+activation-job read-only census shows zero open, running, failed, locked, or
+unprocessed active items. The minimum 60-minute read-only observation remains
+open at this update; no contact insertion, invitation, migration, or other
+production data mutation was authorized or performed.
 
 ---
 
@@ -1236,7 +1249,11 @@ This section exists so a later session can resume without repeating risky discov
 - Branch: `chore/tenant-data-model-optimization-plan`
 - Base after refresh: `origin/main@31083c49`
 - Shared checkout's unrelated untracked file was deliberately left untouched.
-- Live Supabase project was queried read-only; no `apply_migration`, DDL, DML, deploy, extension enablement, or production `EXPLAIN ANALYZE` occurred.
+- Live Supabase was queried read-only for the evidence checks in this plan. The
+  only later production action was the explicitly approved deletion of the
+  retired `activate-ghost-user` Edge deployment, recorded in the linked
+  2026-09-16 audit entry; no `apply_migration`, DDL, DML, extension
+  enablement, or production `EXPLAIN ANALYZE` occurred.
 
 ### Highest-confidence findings
 
@@ -1327,4 +1344,4 @@ This program is complete when:
 | P0.1 operating-model inventory | Evidence and owner-disposition directions complete 2026-09-12; implementation separately gated | [#647](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/647) | Source-of-truth matrix, identity ledger, membership crosswalk, policy/grant and view/RPC security evidence, writer census, and write-path graph are attached in [`tenant-p0-source-inventory.md`](../codebase-state/tenant-p0-source-inventory.md). The 2026-09-12 read-only check confirms the #1185 deployed grants/guards; the [owner-disposition register](tenant-operating-model/p0/p0-1-owner-disposition-register.md) records the seven approved interim directions and preserves separate implementation gates for unmatched rows, membership migration, CSC ownership, Realtime, and ghost retirement. |
 | P0.2 disposable verification environment | Expanded bounded characterization and aggregate cardinality comparison complete 2026-09-13; representative fixture expansion and owner review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md), its [cardinality/query-family follow-up](tenant-operating-model/p0/p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md), and [cross-initiative review matrix](tenant-operating-model/p0/p0-2-p0-3-cross-initiative-review-2026-09-13.md) record the allowlisted `unicorn-qa` runs, production comparison, ownership boundaries, and explicit gaps |
 | P0.3 browser/query baseline | Expanded bounded characterization complete 2026-09-13; redacted waterfalls and versioned production cutoff captured; representative query-family coverage and cross-initiative owner review open | — | [P0.2/P0.3 disposable baseline packet](tenant-operating-model/p0/p0-2-p0-3-disposable-baseline-characterization.md) plus the [cardinality/query-family follow-up](tenant-operating-model/p0/p0-2-p0-3-cardinality-query-family-follow-up-2026-09-13.md) and [cross-initiative review matrix](tenant-operating-model/p0/p0-2-p0-3-cross-initiative-review-2026-09-13.md) record route evidence, aggregate production/QA cardinalities, publication membership, initiative boundaries, and remaining gaps without setting product budgets |
-| P1+ implementation | Not started; P1.2-b evidence and P1.2-d apply design complete | — | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) remains a planning draft; [P1.2-b](tenant-operating-model/p1/p1-2-b-ghost-contact-dry-run-execution-packet.md) records the completed QA snapshot and [P1.2-d](tenant-operating-model/p1/p1-2-d-ghost-contact-apply-design-packet.md) records the planning-only apply shape, while contact insertion, ghost retirement, and runtime/production work still require separate approval |
+| P1+ implementation | P1.2-c production Edge deletion executed 2026-09-16; final observation and documentation closure pending; contact insertion, migration, and broader runtime implementation remain separately gated | [#1381](https://github.com/vivacityrto/unicorn-cms-f09c59e5/pull/1381) | [P1.1 membership/ownership compatibility scope](tenant-operating-model/p1/p1-1-membership-ownership-compatibility-scope.md) remains a planning draft; [P1.2-b](tenant-operating-model/p1/p1-2-b-ghost-contact-dry-run-execution-packet.md) records the completed QA snapshot; [P1.2-c](tenant-operating-model/p1/p1-2-c-activate-ghost-retirement-evidence.md) records the production deletion and bounded observation; and [P1.2-d](tenant-operating-model/p1/p1-2-d-ghost-contact-apply-design-packet.md) records the planning-only apply shape |
