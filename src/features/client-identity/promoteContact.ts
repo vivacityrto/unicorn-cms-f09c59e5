@@ -31,7 +31,7 @@ export async function promoteContactViaInvite(
       // Send a real invitation email rather than creating the account
       // directly — skip_email:true left promoted contacts as unusable
       // "ghost" accounts with no way to set a password (client callers
-      // can't reach the staff-only activate-ghost-user function). The
+      // can't reach the retired legacy ghost-activation function). The
       // matching tenant_contacts row is archived and linked to the new
       // user automatically by accept_invitation_v2 once they accept —
       // not here, since no user exists yet at send time.

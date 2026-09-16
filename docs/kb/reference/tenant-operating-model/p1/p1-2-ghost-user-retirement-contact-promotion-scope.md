@@ -93,9 +93,10 @@ where a pre-login contact is treated as an active member.
 - Remove the activation branch from `bulk-account-actions` and the cohort
   sender worker only after their callers and operational jobs are drained or
   explicitly retired.
-- Keep `activate-ghost-user` deployed until the migration, replacement flow,
-  and zero-caller evidence are complete. Deleting the Edge Function is a
-  separate production action.
+- The replacement flow and zero-caller evidence are complete enough for the
+  repository retirement follow-up: remove the legacy source and config stanza
+  so Git sync cannot recreate it. Deleting the already-deployed Edge Function
+  remains a separate production control-plane action.
 
 ### 2. Make the contact list the pre-user surface
 
@@ -194,7 +195,8 @@ separately gated.
   promotion UI, and current active-contact filter.
 - `src/features/client-identity/promoteContact.ts` — standard invitation
   promotion adapter.
-- `supabase/functions/activate-ghost-user/index.ts` — current legacy flow.
+- `supabase/functions/activate-ghost-user/index.ts` — historical legacy flow;
+  removed from the repository by the retirement follow-up.
 - `supabase/functions/invite-user/index.ts` — standard invitation and direct
   skip-email flows.
 - `supabase/migrations/20260825060000_tenant_contacts_and_groups.sql` —

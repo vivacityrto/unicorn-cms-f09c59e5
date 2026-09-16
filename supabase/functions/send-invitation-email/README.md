@@ -9,7 +9,7 @@ In-code (do not rely on gateway `verify_jwt` alone):
 
 | Caller | Gate |
 |--------|------|
-| Internal invite flow (`invite-user`, `resend-invite`, `activate-ghost-user`) | `Authorization: Bearer <SERVICE_ROLE_KEY>` |
+| Internal invite flow (`invite-user`, `resend-invite`) | `Authorization: Bearer <SERVICE_ROLE_KEY>` |
 | Staff | `auth.getUser` + `check_permission(..., 'admin.invites.manage', 'full')` |
 | Tenant Admin | primary/secondary contact on the invitation's `tenant_id` |
 | Invite creator (Vivacity staff) | `invited_by === caller.id` + `is_vivacity_team_safe` |
@@ -24,7 +24,6 @@ to the stored `token_hash`. Mismatch → **400**.
 
 - `invite-user` → `functions.invoke('send-invitation-email', { body })` via service-role client
 - `resend-invite` → same
-- `activate-ghost-user` → same
 
 These already present the service-role bearer; no caller updates are required
 for the trusted-internal path to keep working.

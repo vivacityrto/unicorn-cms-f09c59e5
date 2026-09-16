@@ -21,7 +21,6 @@ function readFn(name) {
 }
 
 const MUST_CALL_RPC = [
-  "activate-ghost-user",
   "browse-sharepoint-folder",
   "bulk-account-actions",
   "bulk-send-invitations",

@@ -1,17 +1,19 @@
 # TOM P1.2-c — `activate-ghost-user` retirement decision packet
 
-> **Last updated:** 2026-09-15 · **Status:** planning-only; retirement not authorized
+> **Last updated:** 2026-09-16 · **Status:** complete — repository retirement and hosted deletion were verified 2026-09-16; the 60-minute observation was waived by Carl
 > **Owner:** TOM, with RBAC and operations review
 > **Evidence source:** [P1.2-c retirement evidence](p1-2-c-activate-ghost-retirement-evidence.md)
 > **Operational packet:** [P1.2-c operational retirement packet](p1-2-c-activate-ghost-retirement-operational-packet.md)
 
+> **Resume pointer:** [TOM Codex pause/resume handoff](tom-codex-pause-resume-handoff-2026-09-16.md) — the retirement decision is executed and closed; it is not an open gate for the next TOM task.
+
 ## Purpose and authority boundary
 
-This packet turns the completed P1.2-c evidence into an explicit decision
-record for a possible future retirement of `activate-ghost-user`. It is a
-planning and reconciliation artifact only. It does not disable, delete, or
-redeploy an Edge Function; drain or mutate a job; repair an account; send an
-invitation; change a credential; or authorize any production, migration, RLS,
+This packet turns the completed P1.2-c evidence into an explicit decision and
+reconciliation record for retiring `activate-ghost-user`. The original packet
+was planning-only; Carl later separately approved the exact production
+deletion action. This document does not authorize any additional deployment,
+job drain or mutation, account repair, invitation, credential, migration, RLS,
 grant, or schema operation.
 
 The packet separates evidence that is complete from evidence that remains
@@ -37,7 +39,7 @@ requests alone.
 | Historical invocation review | Eight audited target users fall in the June 3–16 provider-log gap; 56 fall in the retained period. An all-source sweep of every day in that gap found no retained rows from any current log source. Retained logs show 109 exact-path requests, while durable audit has 64 distinct target users. | Aggregate evidence complete; request-by-request reconstruction incomplete |
 | RBAC/security review | The replacement path's role ceiling blocks internal-role escalation for browser and service-role callers. Disabled-account gaps in `is_tenant_parent_safe` and `has_tenant_admin_safe` are fixed live and merged; two non-escalation follow-ups remain separate. | Complete for this TOM gate; follow-ups remain separate |
 | Broad legacy profile population | Four hundred eleven public profiles have no matching auth identity. Aggregate classification finds 356 membership-bearing and 55 membershipless profiles, with overlapping archived/disabled/contact/invitation indicators; no identifiers were exported. | Aggregate evidence complete; individual disposition remains explicitly out of scope for bulk retirement; hold |
-| Edge retirement | No deployment or deletion packet has been approved. | Not authorized |
+| Production Edge retirement | Carl separately approved the exact production deletion after the prior QA-target preflight mismatch was recorded; the initial target was absent, but the final check found version 1 present/ACTIVE again after an in-window redeployment. Repository source/configuration retirement is committed in `b771e3f7e` (PR #1381), and the hosted deployment was deleted after that merge. | Complete 2026-09-16: inventory 192, exact target absent, replacement guards active, activation work safe, and immediate request/audit checks zero; 60-minute observation waived |
 
 ## Evidence reconciliation
 
@@ -85,7 +87,7 @@ requests alone.
   aggregate indicators are recorded, but no row-level disposition, bulk
   classification, or conversion is justified by the current evidence.
 
-## Recommended disposition
+## Historical recommended disposition (superseded 2026-09-16)
 
 The recommended decision for the current checkpoint is **keep the guarded
 deployment in place and do not retire the Edge Function yet**.
@@ -130,7 +132,27 @@ A later packet must be separately approved and must include, at minimum:
 - a dated operational audit entry; and
 - a fresh approval for the actual deployment, disable, or deletion action.
 
-Until that packet exists and its gates are approved, the current guarded
-deployment is the intended safe state.
+The QA-target execution packet described above was not used because the
+approved QA control plane did not contain the historical target. The current
+production disposition is recorded below.
 
-**Related audit entries:** [caller freeze](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [supervised timing approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-timing-approval.md); [rollback-owner reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-rollback-owner.md); [observation-window approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-observation-window.md); [final preflight abort](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-preflight-abort.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
+## Current production disposition
+
+The explicit Carl-approved deletion initially reduced the inventory from 193
+to 192 and made the exact lookup absent. At the final read-only cutoff,
+however, inventory was back at 193 and version 1 of
+`activate-ghost-user` was present/ACTIVE again; the source was the legacy
+implementation. The current `bulk-account-actions` v286 and
+`cohort-access-sender-worker` v285 retain both fail-closed caller guards and
+the reset-only worker path; activation-job counts remain safe, with two stale
+pending items held. Exact-window legacy-path request logs and
+`ghost_user_activated` audit events are zero, but the in-window target drift
+invalidates the observation.
+
+No job, account, invitation, or unrelated function write was performed during
+the final check. The repository source/configuration retirement is committed
+in `b771e3f7e`; the hosted deployment was then deleted and immediately
+verified absent. Carl waived the 60-minute observation, so the packet is
+fully reconciled without an additional wait.
+
+**Related audit entries:** [production deletion and observation](../../../../audit-log/entries/2026-09-16-tom-p12c-production-deletion-and-observation.md); [caller freeze](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-activation-caller-freeze.md); [read-only census](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-read-only-census.md); [pending-item reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-pending-item-reconciliation.md); [hold and historical invocation review](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-hold-and-history.md); [durable audit correlation](../../../../audit-log/entries/2026-09-15-tom-p12-ghost-retirement-audit-correlation.md); [aggregate legacy-profile classification](../../../../audit-log/entries/2026-09-15-tom-p12c-aggregate-legacy-profile-classification.md); [operational retirement packet](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-operational-packet.md); [QA target approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-qa-target-approval.md); [action-shape approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-action-shape-approval.md); [supervised timing approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-timing-approval.md); [rollback-owner reconciliation](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-rollback-owner.md); [observation-window approval](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-observation-window.md); [final preflight abort](../../../../audit-log/entries/2026-09-15-tom-p12c-retirement-preflight-abort.md); [disabled tenant-parent/admin authorization gap](../../../../audit-log/entries/2026-09-15-gate-tenant-parent-and-admin-safe-on-disabled.md)
