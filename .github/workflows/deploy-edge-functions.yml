@@ -19,6 +19,12 @@ on:
     branches: [main]
     paths:
       - "supabase/functions/**"
+  workflow_dispatch:
+    inputs:
+      functions:
+        description: "Space/comma/newline-separated function names to deploy. Leave blank to deploy every function (--all) -- use this for an out-of-band catch-up deploy, e.g. after a manual mcp__supabase__deploy_edge_function call left something in an uncertain state."
+        required: false
+        type: string
 
 concurrency:
   group: deploy-edge-functions
@@ -45,15 +51,27 @@ jobs:
 
       - name: Select affected functions
         id: select
+        env:
+          DISPATCH_FUNCTIONS: ${{ inputs.functions }}
         run: |
           set -euo pipefail
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.sha }}"
-          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            echo "select-affected-edge-functions: no valid 'before' SHA (new branch or force-push) -- falling back to deploying every function"
-            LIST=$(node scripts/select-affected-edge-functions.mjs --all)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "$DISPATCH_FUNCTIONS" ]; then
+              echo "Manual dispatch with an explicit function list"
+              LIST=$(echo "$DISPATCH_FUNCTIONS" | tr ',' '\n' | tr -s ' ' '\n' | sed '/^$/d')
+            else
+              echo "Manual dispatch with no function list -- deploying every function"
+              LIST=$(node scripts/select-affected-edge-functions.mjs --all)
+            fi
           else
-            LIST=$(node scripts/select-affected-edge-functions.mjs --before "$BEFORE" --after "$AFTER")
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
+            if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              echo "select-affected-edge-functions: no valid 'before' SHA (new branch or force-push) -- falling back to deploying every function"
+              LIST=$(node scripts/select-affected-edge-functions.mjs --all)
+            else
+              LIST=$(node scripts/select-affected-edge-functions.mjs --before "$BEFORE" --after "$AFTER")
+            fi
           fi
           COUNT=$(echo "$LIST" | grep -c . || true)
           echo "Affected functions ($COUNT):"
