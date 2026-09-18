@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-18
 - **Author:** Codex
-- **Status:** Fix prepared; merge and hosted migration application pending
+- **Status:** Resolved; production migration applied and authenticated RLS verification passed
 - **Scope:** Academy Builder assessment-question visibility
 - **Related workstream:** Academy Solo MVP Phase 1
 
@@ -38,8 +38,12 @@ asserts both the staff and learner paths.
 ## Verification
 
 - Live production inspection confirmed the assessment rows existed and the
-  pre-fix policy set lacked a staff `SELECT` policy.
+  pre-fix policy set lacked a staff `SELECT` policy. After applying the
+  correction, `Questions: Vivacity staff view` exists for `authenticated`.
+- An authenticated internal-staff RLS session can now read all 48 questions
+  for course 210 / assessment 164.
 - The focused Academy Solo RLS contract suite passes with the new staff-path
   assertion.
-- The full repository verification chain and an authenticated staff builder
-  check are recorded in the pull request and post-merge verification.
+- The full repository verification chain passes. The stored browser session
+  was expired, so the hosted check used the database's authenticated role
+  boundary directly rather than claiming a browser-rendered check.
