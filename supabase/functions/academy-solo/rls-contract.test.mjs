@@ -17,10 +17,15 @@ const provisioningMigrationPath = resolve(
   here,
   "../../migrations/20260914064041_academy_solo_account_provisioning.sql",
 );
+const staffQuestionMigrationPath = resolve(
+  here,
+  "../../migrations/20260918053250_academy_assessment_questions_staff_select.sql",
+);
 
 const migration = await readFile(migrationPath, "utf8");
 const staffMigration = await readFile(staffMigrationPath, "utf8");
 const provisioningMigration = await readFile(provisioningMigrationPath, "utf8");
+const staffQuestionMigration = await readFile(staffQuestionMigrationPath, "utf8");
 
 test("Academy Solo migration has a recursion-safe server entitlement gate", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.has_academy_access_safe\(p_user_id uuid\)/);
@@ -50,6 +55,17 @@ test("ended access retains history but blocks progress writes", () => {
   assert.match(migration, /e\.course_id = academy_lesson_progress\.course_id/);
   assert.match(migration, /l\.course_id = e\.course_id/);
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.complete_academy_enrollment\(p_enrollment_id bigint\)[\s\S]*academy_access_required/);
+});
+
+test("assessment question reads preserve the staff builder path", () => {
+  assert.match(
+    staffQuestionMigration,
+    /CREATE POLICY "Questions: Vivacity staff view"[\s\S]*?FOR SELECT[\s\S]*?TO authenticated[\s\S]*?lower\(u\.global_role\)[\s\S]*?superadmin[\s\S]*?admin[\s\S]*?u\.is_vivacity_internal = true/,
+  );
+  assert.match(
+    migration,
+    /CREATE POLICY "Questions: Academy users with enrolment view"[\s\S]*?e\.status IN \('active', 'completed'\)/,
+  );
 });
 
 test("Solo lifecycle writes are staff-only and audited", () => {

@@ -118,7 +118,30 @@ parameter so Manage Clients deep-links do not immediately reopen it.
 
 These corrections do not add a package, a global role, a Client Health metric,
 or an RTO onboarding side effect. The migration is included in the reviewable
-PR and has not been applied to production by this change.
+PR. The staff-read correction and its post-merge hosted verification are
+recorded below.
+
+### Assessment-builder read-policy regression (2026-09-18)
+
+The Academy Solo access-boundary migration introduced a regression in the
+staff course builder. It dropped the former combined
+`Questions: staff or enrolled learners view` policy and recreated only an
+enrolment-gated learner `SELECT` policy. The migration comment assumed that
+existing staff manage policies would preserve the builder read path, but the
+builder reads `academy_assessment_questions` directly and write policies do
+not grant `SELECT`. In production, staff therefore saw `Questions (0)` even
+though the questions remained present; the affected course in the reported
+case had 48 question rows.
+
+The corrective migration restores a separate staff-only `SELECT` policy using
+the existing Super Admin/admin/internal-staff predicate while retaining the
+learner policy's active/completed enrolment requirement. The Academy Solo RLS
+contract now asserts both paths. The gap was not caught before because the
+existing contract tests checked the new entitlement boundary statically but
+did not assert staff question visibility, and no authenticated staff builder
+read test exercised the direct Data API query. RLS filtered the rows to an
+empty result rather than returning an error, so the UI rendered a misleading
+zero count.
 
 ## Cross-initiative decision matrix
 
