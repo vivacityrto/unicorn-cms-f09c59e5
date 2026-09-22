@@ -750,19 +750,33 @@ async function handleBrowse(
   }
   const driveId = masterDrive.driveId;
 
-  // List children of the specified folder (or root)
-  const listPath = folder_id
+  // List children of the specified folder (or root). Graph paginates at
+  // $top=200 regardless of a larger request, so a folder with more than 200
+  // children (e.g. the RTO template folder) silently truncated the listing
+  // to its first 200 items by name — anything sorting after that point (like
+  // a file starting with a later letter) was invisible to the picker even
+  // though it existed. Follow @odata.nextLink until Graph stops returning
+  // one, capped generously to guard against an unbounded loop.
+  const MAX_PAGES = 25;
+  const firstPath = folder_id
     ? `/drives/${driveId}/items/${folder_id}/children?$top=200&$orderby=name`
     : `/drives/${driveId}/root/children?$top=200&$orderby=name`;
 
-  const listResp = await graphGet<{ value: DriveItem[] }>(listPath);
-  if (!listResp.ok) {
-    return new Response(JSON.stringify({ error: 'Failed to list SharePoint folder contents' }), {
-      status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
-    });
+  const driveItems: DriveItem[] = [];
+  let nextPath: string | undefined = firstPath;
+  for (let page = 0; nextPath && page < MAX_PAGES; page++) {
+    const listResp: Awaited<ReturnType<typeof graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>>> =
+      await graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>(nextPath);
+    if (!listResp.ok) {
+      return new Response(JSON.stringify({ error: 'Failed to list SharePoint folder contents' }), {
+        status: 400, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+      });
+    }
+    driveItems.push(...(listResp.data.value || []));
+    nextPath = listResp.data['@odata.nextLink'];
   }
 
-  const items = (listResp.data.value || []).map((item) => ({
+  const items = driveItems.map((item) => ({
     id: item.id,
     name: item.name,
     webUrl: item.webUrl,
