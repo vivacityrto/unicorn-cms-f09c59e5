@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-09-22 — Fix Academy auto-enrol trigger blocking package start on orphaned `tenant_users`](entries/2026-09-22-fix-academy-autoenrol-orphaned-tenant-users.md) — "Start Package" for Wells International College Pty Ltd was failing with a generic "Failed to start package" error; root cause was `fn_academy_autoenrol_on_package_instance` bulk-inserting into `academy_enrollments` off raw `tenant_users` rows with no `auth.users` FK check, so one orphaned tenant_users row (no matching auth account) aborted the whole `start_client_package` transaction for every tenant hitting it. Fixed with the same defensive `join auth.users` pattern already applied to a sibling trigger (`fn_academy_autoenrol_on_all_clients_publish`) on 2026-08-07, which this trigger had never received
 - [2026-09-18 — Academy assessment question staff-read regression](entries/2026-09-18-academy-assessment-question-staff-read-regression.md) — the Academy Solo access-boundary migration removed the staff builder's question `SELECT` path, causing a silent `Questions (0)` result despite existing rows; restored a separate staff policy, retained learner enrolment gating, and added regression coverage
 
 - [2026-09-18 — EduCareer package seat capacity correction](entries/2026-09-18-educareer-package-seat-capacity.md) — includes active child membership entitlements in capacity selection and excludes inactive tenant memberships from occupied-seat counts
