@@ -21,6 +21,20 @@ async function sha256Hex(data: Uint8Array): Promise<string> {
     .join('');
 }
 
+/**
+ * Sanitize a filename for use as a Supabase Storage object key. Storage key
+ * validation rejects several Unicode punctuation characters that are common
+ * in real-world document titles (en dash U+2013, em dash U+2014, curly
+ * quotes, etc.) with a 400 — normalize common dash variants to a plain
+ * hyphen and replace anything else outside a safe ASCII set with `_`, so an
+ * unusual character in a SharePoint filename can't fail the whole import.
+ */
+function sanitizeStorageFileName(name: string): string {
+  return name
+    .replace(/[‐-―−]/g, '-')
+    .replace(/[^A-Za-z0-9._-]/g, '_');
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders(req) });
@@ -215,8 +229,16 @@ async function handleImport(
 
   const nextVersion = (latestVersion?.version_number || 0) + 1;
 
-  // Upload frozen copy to Supabase Storage
-  const storagePath = `governance-templates/${document_id}/v${nextVersion}/${fileName}`;
+  // Upload frozen copy to Supabase Storage. Supabase Storage's key
+  // validation rejects object keys containing characters like an en dash
+  // (U+2013) with a 400 — found 2026-09-23 when "Q4.D3–Monthly Trainer
+  // Report Form.docx" (SharePoint's actual filename, en dash and all)
+  // failed storage upload every time, surfaced to the user only as the
+  // generic "Edge Function returned a non-2xx status code" (supabase-js
+  // doesn't read the function's JSON error body for non-2xx responses).
+  // Sanitize the storage key specifically — document_versions.file_name
+  // below keeps the real, unmodified SharePoint filename for display.
+  const storagePath = `governance-templates/${document_id}/v${nextVersion}/${sanitizeStorageFileName(fileName)}`;
   const { error: uploadError } = await supabase.storage
     .from('document-files')
     .upload(storagePath, fileContent, {

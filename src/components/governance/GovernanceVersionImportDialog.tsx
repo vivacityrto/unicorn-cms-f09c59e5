@@ -112,7 +112,17 @@ export function GovernanceVersionImportDialog({
       onOpenChange(false);
       onSuccess();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Import failed');
+      let message = err instanceof Error ? err.message : 'Import failed';
+      try {
+        const context = (err as { context?: Response })?.context;
+        if (context?.json) {
+          const body = await context.json();
+          if (body?.error) message = body.error;
+        }
+      } catch {
+        // context wasn't JSON — fall back to err.message
+      }
+      toast.error(message);
     } finally {
       setImporting(false);
     }
