@@ -155,11 +155,19 @@ export function useDocumentTemplateSave({
             description: 'Document created and template linked',
           });
         } catch (impErr) {
-          sonnerToast.error(
-            impErr instanceof Error
-              ? impErr.message
-              : 'Template import failed — document created without a linked file. You can retry from the edit dialog.',
-          );
+          let impMessage = impErr instanceof Error
+            ? impErr.message
+            : 'Template import failed — document created without a linked file. You can retry from the edit dialog.';
+          try {
+            const context = (impErr as { context?: Response })?.context;
+            if (context?.json) {
+              const body = await context.json();
+              if (body?.error) impMessage = body.error;
+            }
+          } catch {
+            // context wasn't JSON — fall back to impMessage above
+          }
+          sonnerToast.error(impMessage);
           // Keep dialog closed but preserve document row
         } finally {
           setImportingTemplate(false);
