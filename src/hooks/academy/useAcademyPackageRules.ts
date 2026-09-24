@@ -235,9 +235,9 @@ export function useBackfillRule() {
     },
     onSuccess: (count) => {
       if (count === 0) {
-        toast.info("No new enrollments needed — all affected users were already enrolled.");
+        toast.info("No new entitlements needed — all affected tenants already have access.");
       } else {
-        toast.success(`Backfilled ${count} new enrollments.`);
+        toast.success(`Backfilled ${count} new tenant entitlements.`);
       }
       qc.invalidateQueries({ queryKey: RULE_STATS_KEY });
     },
@@ -258,29 +258,19 @@ export function useBackfillPreview() {
       if (e1) throw e1;
       const tenantIds = Array.from(new Set((instances ?? []).map((r) => r.tenant_id)));
       if (tenantIds.length === 0) {
-        return { tenants: 0, users: 0, new_enrollments: 0 };
+        return { tenants: 0, new_entitlements: 0 };
       }
-      const { data: tu, error: e2 } = await supabase
-        .from("tenant_users")
-        .select("user_id")
+      const { data: existing, error: e2 } = await supabase
+        .from("academy_tenant_course_entitlements")
+        .select("tenant_id")
+        .eq("course_id", vars.courseId)
         .in("tenant_id", tenantIds);
       if (e2) throw e2;
-      const userIds = Array.from(new Set((tu ?? []).map((r) => r.user_id)));
-      if (userIds.length === 0) {
-        return { tenants: tenantIds.length, users: 0, new_enrollments: 0 };
-      }
-      const { data: existing, error: e3 } = await supabase
-        .from("academy_enrollments")
-        .select("user_id")
-        .eq("course_id", vars.courseId)
-        .in("user_id", userIds);
-      if (e3) throw e3;
-      const enrolled = new Set((existing ?? []).map((r) => r.user_id));
-      const newEnrollments = userIds.filter((u) => !enrolled.has(u)).length;
+      const entitled = new Set((existing ?? []).map((r) => r.tenant_id));
+      const newEntitlements = tenantIds.filter((t) => !entitled.has(t)).length;
       return {
         tenants: tenantIds.length,
-        users: userIds.length,
-        new_enrollments: newEnrollments,
+        new_entitlements: newEntitlements,
       };
     },
   });
@@ -320,7 +310,7 @@ export function useCreateRules() {
     },
     onSuccess: (res) => {
       if (res.backfilled > 0) {
-        toast.success(`Created ${res.created} rules. Backfilled ${res.backfilled} enrollments.`);
+        toast.success(`Created ${res.created} rules. Backfilled ${res.backfilled} tenant entitlements.`);
       } else {
         toast.success(`Created ${res.created} rules.`);
       }

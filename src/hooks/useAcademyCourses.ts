@@ -47,14 +47,13 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
   const coursesQuery = useQuery({
     queryKey: ["academy-courses", audienceKey, userId],
     queryFn: async (): Promise<AcademyCourseRow[]> => {
-      // Fetch published courses for this audience
+      // Fetch published courses for this audience, plus any course the
+      // user's tenant is entitled to via a package mapping (see
+      // get_academy_catalog_courses) — a package-entitled course should
+      // still show up here even if its own target_audience tag doesn't
+      // include this user's audience key.
       const { data: courses, error: coursesErr } = await supabase
-        .from("academy_courses")
-        .select("id, title, slug, description, short_description, thumbnail_url, thumbnail_position, thumbnail_fit, thumbnail_zoom, target_audience, estimated_minutes, difficulty_level, status, tags, webinar_series, sort_order, certificate_enabled, delivery_date, facilitator_id, facilitator_display_name")
-        .eq("status", "published")
-        .contains("target_audience", [audienceKey])
-        .order("sort_order", { ascending: true, nullsFirst: false })
-        .order("title");
+        .rpc("get_academy_catalog_courses", { p_audience_key: audienceKey });
 
       if (coursesErr) throw coursesErr;
       if (!courses || courses.length === 0) return [];
