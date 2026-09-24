@@ -20,7 +20,7 @@ import {
   useToggleTenantAccess,
   type TenantRow,
 } from "@/hooks/academy/useTenantAcademyAccess";
-import { useAcademyUserTenantMatches } from "@/hooks/academy/useAcademyUserSearch";
+import { useUserTenantMatches, EMPTY_USER_MATCHES } from "@/hooks/useUserTenantSearch";
 import { isAcademySoloTenant } from "@/lib/tenantAccountSurface";
 import { usePermission } from "@/hooks/usePermission";
 import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
@@ -49,7 +49,7 @@ export default function AcademyTenantAccessPage() {
   // ── Data hooks ──
   const { data: tenants = [], isLoading } = useTenantSummaries();
   const toggleMutation = useToggleTenantAccess();
-  const { data: userMatches = new Map() } = useAcademyUserTenantMatches(search);
+  const { data: userMatches = EMPTY_USER_MATCHES } = useUserTenantMatches(search);
 
   // ── Computed stats ──
   const stats = useMemo(() => {

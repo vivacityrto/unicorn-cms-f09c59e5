@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { getTenantAccountType, type TenantAccountType } from "@/lib/tenantAccountSurface";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
 import { BulkReassignCscDialog } from "@/components/client/BulkReassignCscDialog";
+import { useUserTenantMatches, EMPTY_USER_MATCHES } from "@/hooks/useUserTenantSearch";
 
 interface TenantPackageInfo {
   id: number;
@@ -162,6 +163,7 @@ export default function ManageTenants() {
   const contactsQuery = useTenantContacts(tenantIds);
   const cscQuery = useCscAssignments(tenantIds);
   const notesQuery = useTenantNotes(tenantIds);
+  const { data: userMatches = EMPTY_USER_MATCHES } = useUserTenantMatches(searchQuery);
 
   // These four lookups merge into the table client-side, and none of them
   // surface loading/error state on their own - a failed fetch (e.g. an auth
@@ -466,7 +468,9 @@ export default function ManageTenants() {
       // renewal, registration, or archived-state filtering. Those filters
       // only apply when the user isn't actively searching.
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(q) || tenant.slug.toLowerCase().includes(q));
+      filtered = filtered.filter(tenant =>
+        tenant.name.toLowerCase().includes(q) || tenant.slug.toLowerCase().includes(q) || userMatches.has(tenant.id)
+      );
     } else {
       // Archived tenants are hidden by default regardless of status filter —
       // archived_at is an independent flag (a tenant can be archived while its
@@ -578,7 +582,7 @@ export default function ManageTenants() {
       return 0;
     });
     setFilteredTenants(filtered);
-  }, [tenants, searchQuery, accountTypeFilter, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
+  }, [tenants, searchQuery, userMatches, accountTypeFilter, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter, invoiceStatusFilter, moneyAtRiskOnly]);
 
   useEffect(() => {
     applyFiltersAndSort();
@@ -916,7 +920,7 @@ export default function ManageTenants() {
       <div className="space-y-4">
       <div className="relative w-full">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px] w-full" />
+        <Input placeholder="Search clients by name, slug, or user name/email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px] w-full" />
       </div>
 
       {/* Filter grid — account type is deliberately first so the directory
@@ -1160,6 +1164,7 @@ export default function ManageTenants() {
                 {filteredTenants.map((tenant, index) => {
                   const isAcademyAccount = tenant.accountType === "academy_solo";
                   const surfacePath = tenantSurfacePath(tenant);
+                  const matchedUsers = searchQuery ? userMatches.get(tenant.id) : undefined;
                   const hasKickStart = tenant.all_packages.some(p => p.name.startsWith('KS'));
                   const nonKSPackages = tenant.all_packages.filter(p => !p.name.startsWith('KS'));
                   const primaryPkg = nonKSPackages[0];
@@ -1226,6 +1231,11 @@ export default function ManageTenants() {
                             </span>
                             <span>{tenant.state || ""}</span>
                           </div>
+                          {matchedUsers && matchedUsers.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              ↳ Matched: {matchedUsers.map((u) => `${u.full_name} (${u.email})`).join(", ")}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </TableCell>
