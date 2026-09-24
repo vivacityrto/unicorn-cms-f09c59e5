@@ -1,11 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getValidMicrosoftAccessToken } from "../_shared/outlook-token-refresh.ts";
 
 
-const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
-const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
@@ -15,44 +14,8 @@ interface TokenRecord {
   refresh_token: string;
   expires_at: string;
   scope?: string;
-}
-
-// ── Token refresh (shared with sync-meeting-artifacts) ───────────────
-
-async function refreshTokenIfNeeded(
-  supabaseAdmin: SupabaseClient,
-  userId: string,
-  token: TokenRecord
-): Promise<string> {
-  const expiresAt = new Date(token.expires_at);
-  if (expiresAt.getTime() - Date.now() > 5 * 60 * 1000) {
-    return token.access_token;
-  }
-
-  const resp = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: MICROSOFT_CLIENT_ID,
-      client_secret: MICROSOFT_CLIENT_SECRET,
-      refresh_token: token.refresh_token,
-      grant_type: 'refresh_token',
-      scope: token.scope || 'openid profile email offline_access Calendars.Read Files.Read.All',
-    }),
-  });
-
-  if (!resp.ok) throw new Error('Token refresh failed');
-  const tokens = await resp.json();
-  const newExp = new Date(Date.now() + tokens.expires_in * 1000);
-
-  await supabaseAdmin.from('oauth_tokens').update({
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token || token.refresh_token,
-    expires_at: newExp.toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('user_id', userId).eq('provider', 'microsoft');
-
-  return tokens.access_token;
+  tenant_id?: number | null;
+  updated_at?: string | null;
 }
 
 // ── VTT/TXT parser ──────────────────────────────────────────────────
@@ -358,7 +321,7 @@ serve(async (req) => {
 
       if (!tokenRecord) throw new Error('Microsoft account not connected for meeting owner');
 
-      const accessToken = await refreshTokenIfNeeded(supabaseAdmin, meeting.owner_user_uuid, tokenRecord as TokenRecord);
+      const accessToken = await getValidMicrosoftAccessToken(supabaseAdmin, meeting.owner_user_uuid, tokenRecord as TokenRecord);
 
       // Download transcript content (transient, never stored)
       const driveUrl = `https://graph.microsoft.com/v1.0/drives/${transcript.drive_id}/items/${transcript.item_id}/content`;

@@ -18,6 +18,8 @@ import {
 import { useLinkedEmails, LinkedEmail, EmailAttachment } from "@/hooks/useLinkedEmails";
 import { EmailViewDialog } from "./EmailViewDialog";
 import { ConvertEmailToNoteDialog } from "./ConvertEmailToNoteDialog";
+import { categoryColorClass } from "@/lib/emailCategoryColor";
+import { cn } from "@/lib/utils";
 
 interface LinkedEmailsListProps {
   clientId?: number;
@@ -180,6 +182,15 @@ function EmailCard({ email, onConvertToNote, onUnlink }: EmailCardProps) {
                 </div>
               )}
               {email.has_attachments && <Badge variant="outline">Attachments</Badge>}
+              {email.categories?.map((category) => (
+                <Badge
+                  key={category}
+                  variant="outline"
+                  className={cn("text-xs font-normal", categoryColorClass(category))}
+                >
+                  {category}
+                </Badge>
+              ))}
             </div>
           </div>
 

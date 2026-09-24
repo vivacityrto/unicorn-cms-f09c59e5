@@ -23355,7 +23355,9 @@ export type Database = {
           ai_summary: string | null
           body_html: string | null
           body_preview: string | null
+          categories: string[] | null
           client_id: number | null
+          conversation_id: string | null
           created_at: string
           external_message_id: string
           has_attachments: boolean | null
@@ -23378,7 +23380,9 @@ export type Database = {
           ai_summary?: string | null
           body_html?: string | null
           body_preview?: string | null
+          categories?: string[] | null
           client_id?: number | null
+          conversation_id?: string | null
           created_at?: string
           external_message_id: string
           has_attachments?: boolean | null
@@ -23401,7 +23405,9 @@ export type Database = {
           ai_summary?: string | null
           body_html?: string | null
           body_preview?: string | null
+          categories?: string[] | null
           client_id?: number | null
+          conversation_id?: string | null
           created_at?: string
           external_message_id?: string
           has_attachments?: boolean | null

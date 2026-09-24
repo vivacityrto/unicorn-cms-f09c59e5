@@ -115,6 +115,21 @@ export default function OutlookCallback() {
         // ignore
       }
 
+      // A slow MFA prompt or a popup-window context can mean the app's own
+      // session token needs a refresh right at the moment Microsoft redirects
+      // back — that's a transient session hiccup, not a real disconnect, so
+      // try one explicit refresh before giving up and sending the user
+      // through the whole reconnect flow for nothing.
+      if (!sessionAvailable) {
+        console.log('[OutlookCallback] No session found, attempting one refresh before failing...');
+        try {
+          const { data } = await supabase.auth.refreshSession();
+          sessionAvailable = !!data.session;
+        } catch {
+          // ignore — falls through to the existing failure path below
+        }
+      }
+
       setDiagnostics(prev => ({ ...prev, sessionAvailable }));
 
       console.log('[OutlookCallback] Session available:', sessionAvailable);

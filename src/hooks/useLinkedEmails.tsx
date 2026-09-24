@@ -19,6 +19,8 @@ export interface LinkedEmail {
   created_at: string;
   external_message_id: string | null;
   body_html: string | null;
+  conversation_id: string | null;
+  categories: string[] | null;
 }
 
 export interface EmailAttachment {

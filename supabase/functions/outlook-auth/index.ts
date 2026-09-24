@@ -411,6 +411,10 @@ serve(async (req) => {
           entity_type: "user",
           entity_id: user.id,
           created_by: user.id,
+          // Required for any source:"microsoft" event (see emit-timeline-event.ts
+          // validateEvent) — this was missing, so every disconnect silently
+          // failed to record a timeline event at all.
+          dedupe_key: `ms_disconnected:${user.id}:${new Date().toISOString()}`,
         });
       }
 
