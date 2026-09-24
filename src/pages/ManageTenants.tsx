@@ -100,7 +100,7 @@ interface CSCFilterOption {
 
 function tenantSurfacePath(tenant: Pick<Tenant, "id" | "accountType">): string {
   return tenant.accountType === "academy_solo"
-    ? `/superadmin/academy/tenant-access?tenant=${tenant.id}`
+    ? `/superadmin/academy/tenant/${tenant.id}`
     : `/tenant/${tenant.id}`;
 }
 

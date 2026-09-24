@@ -26,6 +26,7 @@ import { usePermission } from "@/hooks/usePermission";
 import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 
 type StatusTab = "all" | "enabled" | "disabled" | "expiring";
+type AccountTypeTab = "all" | "rto" | "academy_solo";
 
 export default function AcademyTenantAccessPage() {
   const canManage = usePermission('academy.tenant_access.manage');
@@ -33,6 +34,7 @@ export default function AcademyTenantAccessPage() {
 
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
+  const [accountTypeTab, setAccountTypeTab] = useState<AccountTypeTab>("all");
   const [showCreateSolo, setShowCreateSolo] = useState(false);
   const [soloInvite, setSoloInvite] = useState<{
     account: AcademySoloAccountCreation;
@@ -58,12 +60,16 @@ export default function AcademyTenantAccessPage() {
       const exp = new Date(t.academy_subscription_expires_at);
       return isAfter(exp, now) && isBefore(exp, thirtyDaysFromNow);
     }).length;
-    return { withAccess, withoutAccess, expiring };
+    const rtoCount = tenants.filter((t) => !isAcademySoloTenant(t.metadata)).length;
+    const academySoloCount = tenants.length - rtoCount;
+    return { withAccess, withoutAccess, expiring, rtoCount, academySoloCount };
   }, [tenants, now, thirtyDaysFromNow]);
 
   // ── Filter logic ──
   const filtered = useMemo(() => {
     let list = tenants;
+    if (accountTypeTab === "rto") list = list.filter((t) => !isAcademySoloTenant(t.metadata));
+    else if (accountTypeTab === "academy_solo") list = list.filter((t) => isAcademySoloTenant(t.metadata));
     if (search) {
       const q = search.toLowerCase();
       // A tenant matches either by its own name, or because one of its
@@ -87,7 +93,7 @@ export default function AcademyTenantAccessPage() {
       });
     }
     return list;
-  }, [tenants, search, userMatches, statusTab, timelineMonth, now, thirtyDaysFromNow]);
+  }, [tenants, accountTypeTab, search, userMatches, statusTab, timelineMonth, now, thirtyDaysFromNow]);
 
   // ── Expiry timeline (next 6 months) ──
   const expiryTimeline = useMemo(() => {
@@ -150,6 +156,30 @@ export default function AcademyTenantAccessPage() {
           <AcademyStatCard label="Accounts with Access" value={stats.withAccess} icon={<Shield className="h-5 w-5 text-primary" />} loading={isLoading} />
           <AcademyStatCard label="Accounts without Access" value={stats.withoutAccess} icon={<ShieldOff className="h-5 w-5 text-muted-foreground" />} loading={isLoading} />
           <AcademyStatCard label="Expiring This Month" value={stats.expiring} icon={<Clock className="h-5 w-5 text-orange-500" />} loading={isLoading} />
+        </div>
+
+        {/* Account type toggle — RTO clients with Academy access enabled vs
+            standalone Vivacity Academy Solo accounts. Its own row so it
+            doesn't compete for space with the search box and status tabs. */}
+        <div className="flex gap-1 border rounded-lg p-1 bg-muted/30 w-fit">
+          {([
+            { value: "all" as const, label: "All" },
+            { value: "rto" as const, label: `RTO Clients (${stats.rtoCount})` },
+            { value: "academy_solo" as const, label: `Academy Solo (${stats.academySoloCount})` },
+          ]).map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setAccountTypeTab(tab.value)}
+              className={cn(
+                "px-3 py-1.5 text-sm rounded-md transition-colors font-medium",
+                accountTypeTab === tab.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Filter bar */}
