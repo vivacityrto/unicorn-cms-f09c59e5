@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getValidMicrosoftAccessToken } from "../_shared/outlook-token-refresh.ts";
 
-const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID')!;
-const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -44,9 +43,12 @@ interface OutlookEmail {
     };
   }>;
   receivedDateTime: string;
+  sentDateTime?: string;
   hasAttachments: boolean;
   bodyPreview: string;
   isRead: boolean;
+  conversationId?: string;
+  categories?: string[];
 }
 
 interface TokenRecord {
@@ -55,6 +57,7 @@ interface TokenRecord {
   expires_at: string;
   tenant_id: number;
   scope?: string;
+  updated_at?: string;
 }
 
 interface RequestBody {
@@ -76,55 +79,6 @@ interface RequestBody {
   client_id?: number;
   package_id?: number;
   event_id?: string;
-}
-
-async function refreshTokenIfNeeded(
-  supabaseAdmin: SupabaseClient,
-  userId: string,
-  token: TokenRecord
-): Promise<string> {
-  const expiresAt = new Date(token.expires_at);
-  const now = new Date();
-  
-  // Refresh if expires in less than 5 minutes
-  if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
-    console.log('[sync-outlook] Token still valid, expires at:', token.expires_at);
-    return token.access_token;
-  }
-
-  console.log('[sync-outlook] Token expired or expiring soon, refreshing for user:', userId);
-
-  const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: MICROSOFT_CLIENT_ID,
-      client_secret: MICROSOFT_CLIENT_SECRET,
-      refresh_token: token.refresh_token,
-      grant_type: 'refresh_token',
-      scope: token.scope || 'openid profile email offline_access Calendars.ReadWrite'
-    })
-  });
-
-  if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
-    console.error('[sync-outlook] Token refresh failed:', errorText);
-    throw new Error('Failed to refresh token - user may need to reconnect');
-  }
-
-  const tokens = await tokenResponse.json();
-  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-
-  console.log('[sync-outlook] Token refreshed successfully, new expiry:', newExpiresAt.toISOString());
-
-  await supabaseAdmin.from('oauth_tokens').update({
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token || token.refresh_token,
-    expires_at: newExpiresAt.toISOString(),
-    updated_at: new Date().toISOString()
-  }).eq('user_id', userId).eq('provider', 'microsoft');
-
-  return tokens.access_token;
 }
 
 async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]> {
@@ -223,7 +177,7 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
   const url = new URL(`https://graph.microsoft.com/v1.0/me/mailFolders/${folderPath}/messages`);
   const pageSize = filterEmail ? Math.min(Math.max(top * 2, 50), 100) : top;
   const maxMessagesToScan = filterEmail ? 500 : top;
-  url.searchParams.set('$select', 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,sentDateTime,hasAttachments,bodyPreview,isRead,conversationId');
+  url.searchParams.set('$select', 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,sentDateTime,hasAttachments,bodyPreview,isRead,conversationId,categories');
   url.searchParams.set('$orderby', 'receivedDateTime desc');
   url.searchParams.set('$top', String(pageSize));
 
@@ -346,7 +300,7 @@ serve(async (req) => {
     // Refresh token if needed
     let accessToken: string;
     try {
-      accessToken = await refreshTokenIfNeeded(supabaseAdmin, user.id, tokenRecord as TokenRecord);
+      accessToken = await getValidMicrosoftAccessToken(supabaseAdmin, user.id, tokenRecord as TokenRecord);
     } catch (refreshError) {
       console.error('[sync-outlook] Token refresh failed:', refreshError);
       return new Response(

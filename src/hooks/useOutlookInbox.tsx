@@ -1,25 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-
-interface OutlookEmail {
-  id: string;
-  subject: string;
-  from: {
-    emailAddress: {
-      name: string;
-      address: string;
-    };
-  };
-  toRecipients?: Array<{ emailAddress?: { name?: string; address?: string } }>;
-  receivedDateTime: string;
-  sentDateTime?: string;
-  hasAttachments: boolean;
-  bodyPreview: string;
-  isRead: boolean;
-  conversationId?: string;
-}
+import { useOutlookConnectionStatus } from "@/hooks/useOutlookConnectionStatus";
+import type { OutlookEmail } from "@/types/outlookEmail";
 
 interface UseOutlookInboxOptions {
   folder?: string;
@@ -33,33 +16,19 @@ export function useOutlookInbox(options: UseOutlookInboxOptions = {}) {
   const [emails, setEmails] = useState<OutlookEmail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasConnection, setHasConnection] = useState(false);
 
-  // Check if user has Microsoft connection
+  // Single source of truth for "is Outlook connected" (see
+  // useOutlookConnectionStatus) — this hook used to run its own, weaker
+  // check (a raw client-side expires_at comparison) which could report
+  // "not connected" for a token that was merely due for its next 30-min
+  // cron refresh but still had a perfectly good refresh_token, forcing
+  // users through a full reconnect for nothing.
+  const { isConnected, refetch: refetchConnectionStatus } = useOutlookConnectionStatus();
+  const hasConnection = isConnected;
   const checkConnection = useCallback(async () => {
-    if (!user?.id) return false;
-
-    const { data, error } = await supabase
-      .from("oauth_tokens_safe")
-      .select("provider, expires_at")
-      .eq("user_id", user.id)
-      .eq("provider", "microsoft")
-      .single();
-
-    if (error || !data) {
-      setHasConnection(false);
-      return false;
-    }
-
-    // Check if token is expired
-    if (new Date(data.expires_at) < new Date()) {
-      setHasConnection(false);
-      return false;
-    }
-
-    setHasConnection(true);
-    return true;
-  }, [user?.id]);
+    const { data } = await refetchConnectionStatus();
+    return data?.connection_status === "connected";
+  }, [refetchConnectionStatus]);
 
   // Fetch emails from Outlook
   const fetchEmails = useCallback(async () => {
@@ -84,12 +53,15 @@ export function useOutlookInbox(options: UseOutlookInboxOptions = {}) {
       setError(message);
       
       if (message.includes("not connected") || message.includes("expired")) {
-        setHasConnection(false);
+        // The edge function itself refreshes the token proactively, so
+        // reaching this means the connection is genuinely gone (refresh
+        // failed) — refetch the shared status so the UI reflects it.
+        refetchConnectionStatus();
       }
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, folder, top, filterEmail]);
+  }, [user?.id, folder, top, filterEmail, refetchConnectionStatus]);
 
   // Initial load
   useEffect(() => {

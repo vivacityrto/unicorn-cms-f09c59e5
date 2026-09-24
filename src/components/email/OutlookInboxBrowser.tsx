@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Mail,
+  Send,
   Paperclip,
   Search,
   RefreshCw,
@@ -18,15 +19,25 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useOutlookInbox } from "@/hooks/useOutlookInbox";
 import { LinkEmailModal } from "./LinkEmailModal";
 import { useOutlookConnectionStatus } from "@/hooks/useOutlookConnectionStatus";
+import { categoryColorClass } from "@/lib/emailCategoryColor";
+import type { OutlookEmail } from "@/types/outlookEmail";
 
 interface OutlookInboxBrowserProps {
   tenantId?: string;
   defaultClientId?: number;
   onEmailLinked?: () => void;
   filterEmail?: string;
+  /**
+   * When provided, the folder is fixed and no folder switcher is shown —
+   * used by the KPI email-log picker, which needs a specific folder per
+   * wizard step. When omitted, the component manages its own folder state
+   * and renders an Inbox / Sent Items switcher (the normal Linked Emails
+   * browsing experience).
+   */
   folder?: "inbox" | "sent";
   onSelectEmail?: (email: OutlookEmail) => void;
   /**
@@ -42,35 +53,20 @@ interface OutlookInboxBrowserProps {
   description?: string;
 }
 
-interface OutlookEmail {
-  id: string;
-  subject: string;
-  from: {
-    emailAddress: {
-      name: string;
-      address: string;
-    };
-  };
-  toRecipients?: Array<{ emailAddress?: { name?: string; address?: string } }>;
-  receivedDateTime: string;
-  sentDateTime?: string;
-  hasAttachments: boolean;
-  bodyPreview: string;
-  isRead: boolean;
-  conversationId?: string;
-}
-
 export function OutlookInboxBrowser({
   tenantId,
   defaultClientId,
   onEmailLinked,
   filterEmail,
-  folder = "inbox",
+  folder: folderProp,
   onSelectEmail,
   recipientFilter,
   description,
 }: OutlookInboxBrowserProps) {
   const { connect, isConnecting } = useOutlookConnectionStatus();
+  const [internalFolder, setInternalFolder] = useState<"inbox" | "sent">("inbox");
+  const isFolderControlled = folderProp !== undefined;
+  const folder = folderProp ?? internalFolder;
   const { emails, isLoading, error, hasConnection, fetchEmails } = useOutlookInbox({
     filterEmail,
     folder,
@@ -240,6 +236,19 @@ export function OutlookInboxBrowser({
             <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
               {email.bodyPreview}
             </p>
+            {email.categories && email.categories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                {email.categories.map((category) => (
+                  <Badge
+                    key={category}
+                    variant="outline"
+                    className={cn("text-xs font-normal", categoryColorClass(category))}
+                  >
+                    {category}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -275,6 +284,28 @@ export function OutlookInboxBrowser({
           </div>
         </CardHeader>
         <CardContent>
+          {!isFolderControlled && (
+            <div className="flex gap-1 mb-4 border rounded-lg p-1 bg-muted/30 w-fit">
+              {([
+                { value: "inbox" as const, label: "Inbox", icon: Mail },
+                { value: "sent" as const, label: "Sent Items", icon: Send },
+              ]).map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setInternalFolder(f.value)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors font-medium",
+                    internalFolder === f.value
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <f.icon className="h-3.5 w-3.5" />
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
