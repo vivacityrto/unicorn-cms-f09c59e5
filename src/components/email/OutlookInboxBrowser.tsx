@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Mail,
   Send,
+  Folder,
   Paperclip,
   Search,
   RefreshCw,
@@ -21,10 +22,17 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useOutlookInbox } from "@/hooks/useOutlookInbox";
+import { useOutlookFolders } from "@/hooks/useOutlookFolders";
 import { LinkEmailModal } from "./LinkEmailModal";
 import { useOutlookConnectionStatus } from "@/hooks/useOutlookConnectionStatus";
 import { categoryColorClass } from "@/lib/emailCategoryColor";
 import type { OutlookEmail } from "@/types/outlookEmail";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface OutlookInboxBrowserProps {
   tenantId?: string;
@@ -64,14 +72,18 @@ export function OutlookInboxBrowser({
   description,
 }: OutlookInboxBrowserProps) {
   const { connect, isConnecting } = useOutlookConnectionStatus();
-  const [internalFolder, setInternalFolder] = useState<"inbox" | "sent">("inbox");
+  // "inbox" | "sent" | a raw Graph mail folder id (a custom folder picked
+  // from the dropdown below).
+  const [internalFolder, setInternalFolder] = useState<string>("inbox");
+  const [customFolderName, setCustomFolderName] = useState<string | null>(null);
   const isFolderControlled = folderProp !== undefined;
   const folder = folderProp ?? internalFolder;
   const { emails, isLoading, error, hasConnection, fetchEmails } = useOutlookInbox({
     filterEmail,
     folder,
   });
-  const folderLabel = folder === "sent" ? "Sent Items" : "Inbox";
+  const { folders: customFolders, isLoading: isLoadingFolders, hasFetched: hasFetchedFolders, fetchFolders } = useOutlookFolders();
+  const folderLabel = folder === "sent" ? "Sent Items" : folder === "inbox" ? "Inbox" : (customFolderName ?? "Folder");
   const defaultDescription = "Select an email to link it to a client, package, or task";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmail, setSelectedEmail] = useState<OutlookEmail | null>(null);
@@ -285,14 +297,14 @@ export function OutlookInboxBrowser({
         </CardHeader>
         <CardContent>
           {!isFolderControlled && (
-            <div className="flex gap-1 mb-4 border rounded-lg p-1 bg-muted/30 w-fit">
+            <div className="flex items-center gap-1 mb-4 border rounded-lg p-1 bg-muted/30 w-fit">
               {([
-                { value: "inbox" as const, label: "Inbox", icon: Mail },
-                { value: "sent" as const, label: "Sent Items", icon: Send },
+                { value: "inbox", label: "Inbox", icon: Mail },
+                { value: "sent", label: "Sent Items", icon: Send },
               ]).map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setInternalFolder(f.value)}
+                  onClick={() => { setInternalFolder(f.value); setCustomFolderName(null); }}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors font-medium",
                     internalFolder === f.value
@@ -304,6 +316,42 @@ export function OutlookInboxBrowser({
                   {f.label}
                 </button>
               ))}
+              <DropdownMenu onOpenChange={(open) => { if (open && !hasFetchedFolders) fetchFolders(); }}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors font-medium",
+                      customFolderName
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Folder className="h-3.5 w-3.5" />
+                    {customFolderName || "More Folders"}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {isLoadingFolders && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading folders…</div>
+                  )}
+                  {!isLoadingFolders && hasFetchedFolders && customFolders.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No custom folders found</div>
+                  )}
+                  {!isLoadingFolders && customFolders.map((f) => (
+                    <DropdownMenuItem
+                      key={f.id}
+                      onClick={() => { setInternalFolder(f.id); setCustomFolderName(f.displayName); }}
+                      className="justify-between"
+                    >
+                      <span className="truncate">{f.displayName}</span>
+                      {typeof f.totalItemCount === "number" && (
+                        <span className="text-xs text-muted-foreground shrink-0 ml-2">{f.totalItemCount}</span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
           <div className="relative mb-4">

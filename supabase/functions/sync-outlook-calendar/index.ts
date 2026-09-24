@@ -143,6 +143,45 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
   return all;
 }
 
+// Microsoft's own system folders — never useful as a "custom folder" a user
+// deliberately organised mail into, so excluded from the top-level list
+// returned to the folder-switcher UI. Matched case-insensitively since a
+// non-English mailbox locale could use a different display name for these,
+// though the vast majority of tenants this app talks to are English-locale.
+const SYSTEM_FOLDER_NAMES = new Set([
+  'inbox', 'sent items', 'drafts', 'deleted items', 'junk email', 'outbox',
+  'archive', 'conversation history', 'clutter', 'rss feeds', 'rss subscriptions',
+  'scheduled', 'sync issues', 'social activity notifications', 'quick step settings',
+  'yammer root',
+]);
+
+interface OutlookMailFolder {
+  id: string;
+  displayName: string;
+  totalItemCount?: number;
+}
+
+async function fetchCustomMailFolders(accessToken: string): Promise<OutlookMailFolder[]> {
+  const url = new URL('https://graph.microsoft.com/v1.0/me/mailFolders');
+  url.searchParams.set('$select', 'id,displayName,totalItemCount');
+  url.searchParams.set('$top', '100');
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[sync-outlook] Graph API mailFolders error:', errorText);
+    if (response.status === 401) throw new Error('Token expired or invalid - user needs to reconnect');
+    throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const folders = (data.value || []) as OutlookMailFolder[];
+  return folders.filter((f) => !SYSTEM_FOLDER_NAMES.has((f.displayName || '').trim().toLowerCase()));
+}
+
 function normalizeAddress(value?: string | null) {
   return value?.trim().toLowerCase() || null;
 }
@@ -631,6 +670,23 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ error: emailError instanceof Error ? emailError.message : 'Failed to fetch emails' }),
           { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (action === 'list-folders') {
+      try {
+        const folders = await fetchCustomMailFolders(accessToken);
+        return new Response(
+          JSON.stringify({ folders }),
+          { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
+        );
+      } catch (folderError) {
+        console.error('[sync-outlook] List folders error:', folderError);
+        const message = folderError instanceof Error ? folderError.message : 'Failed to list mail folders';
+        return new Response(
+          JSON.stringify({ error: message }),
+          { status: message.includes('reconnect') ? 401 : 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
     }
