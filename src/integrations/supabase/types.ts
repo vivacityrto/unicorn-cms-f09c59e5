@@ -1412,6 +1412,185 @@ export type Database = {
           },
         ]
       }
+      academy_tenant_course_entitlements: {
+        Row: {
+          course_id: number
+          granted_at: string
+          id: number
+          package_id: number | null
+          tenant_id: number
+        }
+        Insert: {
+          course_id: number
+          granted_at?: string
+          id?: never
+          package_id?: number | null
+          tenant_id: number
+        }
+        Update: {
+          course_id?: number
+          granted_at?: string
+          id?: never
+          package_id?: number | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "academy_tenant_course_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       accountability_chart_versions: {
         Row: {
           change_summary: string
@@ -70515,6 +70694,60 @@ export type Database = {
       generate_username: {
         Args: { p_email: string; p_user_id: string }
         Returns: string
+      }
+      get_academy_catalog_courses: {
+        Args: { p_audience_key: string }
+        Returns: {
+          ai_generated: boolean
+          ai_reviewed_at: string | null
+          ai_reviewed_by: string | null
+          archived_at: string | null
+          auto_enrol_all_clients: boolean
+          available_to_all_clients: boolean
+          banner_thumbnail_fit: string
+          banner_thumbnail_position: string
+          banner_thumbnail_url: string | null
+          banner_thumbnail_zoom: number
+          certificate_enabled: boolean | null
+          created_at: string | null
+          created_by: string | null
+          delivery_date: string | null
+          description: string | null
+          difficulty_level: string | null
+          estimated_minutes: number | null
+          facilitator_display_name: string | null
+          facilitator_id: string | null
+          id: number
+          is_free: boolean | null
+          pass_score: number | null
+          published_at: string | null
+          published_by: string | null
+          segment_end_seconds: number | null
+          segment_start_seconds: number | null
+          session_type: string
+          short_description: string | null
+          slug: string
+          sort_order: number | null
+          source_video_id: string | null
+          status: string | null
+          tags: string[] | null
+          target_audience: string[] | null
+          thumbnail_fit: string
+          thumbnail_position: string
+          thumbnail_url: string | null
+          thumbnail_zoom: number
+          title: string
+          trailer_video_id: string | null
+          transcript: string | null
+          updated_at: string | null
+          webinar_series: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "academy_courses"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_academy_course_lesson_outline_safe: {
         Args: { p_course_ids: number[] }

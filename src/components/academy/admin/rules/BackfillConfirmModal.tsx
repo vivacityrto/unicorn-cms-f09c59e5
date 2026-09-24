@@ -33,7 +33,7 @@ export default function BackfillConfirmModal({
 }: Props) {
   const preview = useBackfillPreview();
   const backfill = useBackfillRule();
-  const [stats, setStats] = useState<{ tenants: number; users: number; new_enrollments: number } | null>(null);
+  const [stats, setStats] = useState<{ tenants: number; new_entitlements: number } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -55,10 +55,11 @@ export default function BackfillConfirmModal({
     <AppModal open={open} onOpenChange={onOpenChange}>
       <AppModalContent size="lg">
         <AppModalHeader>
-          <AppModalTitle>Backfill enrollments from this rule?</AppModalTitle>
+          <AppModalTitle>Backfill entitlements from this rule?</AppModalTitle>
           <AppModalDescription>
-            This will enrol every user in tenants that currently have an active instance of{" "}
-            <strong>{packageName}</strong> into <strong>{courseTitle}</strong>.
+            This will grant Academy catalog access to <strong>{courseTitle}</strong> for every
+            tenant that currently has an active instance of <strong>{packageName}</strong> —
+            their users still start the course themselves.
           </AppModalDescription>
         </AppModalHeader>
         <AppModalBody>
@@ -66,26 +67,21 @@ export default function BackfillConfirmModal({
             <div className="space-y-2">
               <Skeleton className="h-6 w-full" />
               <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-full" />
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{stats.tenants}</p>
                 <p className="text-xs text-muted-foreground mt-1">Tenants affected</p>
               </div>
               <div className="rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{stats.users}</p>
-                <p className="text-xs text-muted-foreground mt-1">Users affected</p>
-              </div>
-              <div className="rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold text-primary">{stats.new_enrollments}</p>
-                <p className="text-xs text-muted-foreground mt-1">New enrollments expected</p>
+                <p className="text-2xl font-bold text-primary">{stats.new_entitlements}</p>
+                <p className="text-xs text-muted-foreground mt-1">New entitlements expected</p>
               </div>
             </div>
           )}
           <p className="text-xs text-muted-foreground mt-4">
-            Existing enrollments will not be duplicated.
+            Existing entitlements will not be duplicated.
           </p>
         </AppModalBody>
         <AppModalFooter>
