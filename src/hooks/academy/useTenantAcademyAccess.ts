@@ -90,6 +90,7 @@ export interface TenantRow {
   academy_subscription_expires_at: string | null;
   metadata: Json | null;
   enrolled_count: number;
+  tenant_type: string | null;
 }
 
 export interface AcademySoloAccountCreation {
@@ -122,7 +123,7 @@ export function useTenantSummaries() {
     queryFn: async () => {
       const { data: tenantData, error } = await supabase
         .from("tenants")
-        .select("id, name, academy_access_enabled, academy_max_users, academy_subscription_expires_at, metadata")
+        .select("id, name, academy_access_enabled, academy_max_users, academy_subscription_expires_at, metadata, tenant_type")
         .order("name");
       if (error) throw error;
 
@@ -145,6 +146,7 @@ export function useTenantSummaries() {
         academy_subscription_expires_at: t.academy_subscription_expires_at,
         metadata: t.metadata,
         enrolled_count: countMap.get(t.id) || 0,
+        tenant_type: t.tenant_type ?? null,
       }));
     },
     staleTime: 30_000,
