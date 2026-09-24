@@ -1,92 +1,44 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
-} from "@/components/ui/sheet";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, startOfMonth, endOfMonth, addMonths, isAfter, isBefore } from "date-fns";
-import {
-  Search, Settings, Eye, CalendarIcon, Shield, ShieldOff, Clock, X, Plus, UserPlus,
-} from "lucide-react";
+import { Search, Shield, ShieldOff, Clock, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import { CreateAcademySoloDialog, type AcademySoloLearnerDetails } from "@/components/academy/admin/CreateAcademySoloDialog";
 import {
   type AcademySoloAccountCreation,
   useTenantSummaries,
   useToggleTenantAccess,
-  useUpdateTenantAccess,
-  usePackageCourseRules,
-  useAddPackageCourseRule,
-  useRemovePackageCourseRule,
-  useRuleFormOptions,
   type TenantRow,
 } from "@/hooks/academy/useTenantAcademyAccess";
+import { useAcademyUserTenantMatches } from "@/hooks/academy/useAcademyUserSearch";
+import { isAcademySoloTenant } from "@/lib/tenantAccountSurface";
 import { usePermission } from "@/hooks/usePermission";
 import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 
 type StatusTab = "all" | "enabled" | "disabled" | "expiring";
 
-function isAcademySoloAccount(metadata: TenantRow["metadata"]): boolean {
-  return Boolean(
-    metadata &&
-    typeof metadata === "object" &&
-    !Array.isArray(metadata) &&
-    (metadata as Record<string, unknown>).academy_solo,
-  );
-}
-
-function getPreviousSoloMaxUsers(metadata: TenantRow["metadata"]): number | "" | null {
-  if (!isAcademySoloAccount(metadata)) return null;
-  const solo = (metadata as Record<string, unknown>).academy_solo;
-  if (!solo || typeof solo !== "object" || Array.isArray(solo)) return null;
-  const previous = (solo as Record<string, unknown>).previous_max_users;
-  if (previous === null) return "";
-  return typeof previous === "number" && Number.isInteger(previous) ? previous : null;
-}
-
 export default function AcademyTenantAccessPage() {
   const canManage = usePermission('academy.tenant_access.manage');
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
-  const [drawerTenant, setDrawerTenant] = useState<TenantRow | null>(null);
-  const [showInvite, setShowInvite] = useState(false);
   const [showCreateSolo, setShowCreateSolo] = useState(false);
   const [soloInvite, setSoloInvite] = useState<{
     account: AcademySoloAccountCreation;
     learner: AcademySoloLearnerDetails;
   } | null>(null);
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
-
-  // Drawer form state
-  const [formAccess, setFormAccess] = useState(false);
-  const [formSoloPilot, setFormSoloPilot] = useState(false);
-  const [formMaxUsers, setFormMaxUsers] = useState<number | "">("");
-  const [soloPilotPreviousMaxUsers, setSoloPilotPreviousMaxUsers] = useState<number | "" | null>(null);
-  const [formExpires, setFormExpires] = useState<Date | undefined>();
-  const [formNotes, setFormNotes] = useState("");
-
-  // Auto-enrol rule form
-  const [showAddRule, setShowAddRule] = useState(false);
-  const [rulePackageId, setRulePackageId] = useState<string>("");
-  const [ruleCourseId, setRuleCourseId] = useState<string>("");
 
   // Snapshot once per mount (not per render) so the memos below actually memoize.
   const now = useMemo(() => new Date(), []);
@@ -95,49 +47,7 @@ export default function AcademyTenantAccessPage() {
   // ── Data hooks ──
   const { data: tenants = [], isLoading } = useTenantSummaries();
   const toggleMutation = useToggleTenantAccess();
-  const saveMutation = useUpdateTenantAccess();
-  const persistedSoloPilot = Boolean(
-    drawerTenant?.metadata &&
-    typeof drawerTenant.metadata === "object" &&
-    !Array.isArray(drawerTenant.metadata) &&
-    (drawerTenant.metadata as Record<string, unknown>).academy_solo,
-  );
-  const { data: autoEnrolRules = [] } = usePackageCourseRules(!!drawerTenant && !persistedSoloPilot);
-  const addRuleMutation = useAddPackageCourseRule();
-  const removeRuleMutation = useRemovePackageCourseRule();
-  const { packages: allPackages, courses: allCourses } = useRuleFormOptions(showAddRule && !persistedSoloPilot);
-
-  // ── Open drawer ──
-  const openDrawer = useCallback((t: TenantRow) => {
-    setDrawerTenant(t);
-    setFormAccess(t.academy_access_enabled);
-    setFormSoloPilot(isAcademySoloAccount(t.metadata));
-    setFormMaxUsers(t.academy_max_users ?? "");
-    setSoloPilotPreviousMaxUsers(getPreviousSoloMaxUsers(t.metadata));
-    setFormExpires(t.academy_subscription_expires_at ? new Date(t.academy_subscription_expires_at) : undefined);
-    setFormNotes((t.metadata as { academy_notes?: string } | null)?.academy_notes ?? "");
-    setShowAddRule(false);
-  }, []);
-
-  // Manage Clients links Academy rows here with a tenant query parameter so
-  // staff land on the Academy lifecycle drawer instead of the RTO detail page.
-  useEffect(() => {
-    const tenantId = Number(searchParams.get("tenant"));
-    if (!tenantId || !tenants.length || drawerTenant?.id === tenantId) return;
-    const target = tenants.find((tenant) => tenant.id === tenantId);
-    if (target) openDrawer(target);
-  }, [drawerTenant?.id, openDrawer, searchParams, tenants]);
-
-  const closeDrawer = useCallback(() => {
-    setDrawerTenant(null);
-    setShowInvite(false);
-    setSearchParams((previous) => {
-      if (!previous.has("tenant")) return previous;
-      const next = new URLSearchParams(previous);
-      next.delete("tenant");
-      return next;
-    }, { replace: true });
-  }, [setSearchParams]);
+  const { data: userMatches = new Map() } = useAcademyUserTenantMatches(search);
 
   // ── Computed stats ──
   const stats = useMemo(() => {
@@ -156,7 +66,10 @@ export default function AcademyTenantAccessPage() {
     let list = tenants;
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter((t) => t.name.toLowerCase().includes(q));
+      // A tenant matches either by its own name, or because one of its
+      // users matched the search (see useAcademyUserTenantMatches) — the
+      // latter is what the "↳ Matched:" subtext below explains to staff.
+      list = list.filter((t) => t.name.toLowerCase().includes(q) || userMatches.has(t.id));
     }
     if (statusTab === "enabled") list = list.filter((t) => t.academy_access_enabled);
     if (statusTab === "disabled") list = list.filter((t) => !t.academy_access_enabled);
@@ -174,7 +87,7 @@ export default function AcademyTenantAccessPage() {
       });
     }
     return list;
-  }, [tenants, search, statusTab, timelineMonth, now, thirtyDaysFromNow]);
+  }, [tenants, search, userMatches, statusTab, timelineMonth, now, thirtyDaysFromNow]);
 
   // ── Expiry timeline (next 6 months) ──
   const expiryTimeline = useMemo(() => {
@@ -212,25 +125,6 @@ export default function AcademyTenantAccessPage() {
     { value: "expiring", label: "Expiring Soon" },
   ];
 
-  const handleSaveSettings = () => {
-    if (!drawerTenant) return;
-    const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, unknown>;
-    const newMeta = { ...existingMeta, academy_notes: formNotes || null };
-    saveMutation.mutate(
-      {
-        tenantId: drawerTenant.id,
-        data: {
-          academy_access_enabled: formAccess,
-          academy_solo: formSoloPilot,
-          academy_max_users: formMaxUsers === "" ? null : formMaxUsers as number,
-          academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
-          metadata: newMeta,
-        },
-      },
-      { onSuccess: closeDrawer }
-    );
-  };
-
   return (
     <>
       <div className="space-y-6">
@@ -262,7 +156,7 @@ export default function AcademyTenantAccessPage() {
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search tenant name…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Search tenant or Academy user name/email…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="flex gap-1 border rounded-lg p-1 bg-muted/30">
             {tabs.map((tab) => (
@@ -298,14 +192,13 @@ export default function AcademyTenantAccessPage() {
                   <TableHead className="text-center">Max Users</TableHead>
                   <TableHead className="text-center">Enrolled</TableHead>
                   <TableHead>Subscription Expires</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 5 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -313,23 +206,34 @@ export default function AcademyTenantAccessPage() {
 
                 {!isLoading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                       No tenants found
                     </TableCell>
                   </TableRow>
                 )}
 
-                {!isLoading && filtered.map((t) => (
-                  <TableRow key={t.id}>
+                {!isLoading && filtered.map((t) => {
+                  const matchedUsers = search ? userMatches.get(t.id) : undefined;
+                  return (
+                  <TableRow
+                    key={t.id}
+                    className="cursor-pointer hover:bg-primary/5 transition-colors"
+                    onClick={() => navigate(`/superadmin/academy/tenant/${t.id}`)}
+                  >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <span>{t.name}</span>
-                        {isAcademySoloAccount(t.metadata) && (
+                        {isAcademySoloTenant(t.metadata) && (
                           <Badge variant="outline" className="border-primary/30 text-primary">Academy Solo</Badge>
                         )}
                       </div>
+                      {matchedUsers && matchedUsers.length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          ↳ Matched: {matchedUsers.map((u) => `${u.full_name} (${u.email})`).join(", ")}
+                        </p>
+                      )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={t.academy_access_enabled}
@@ -349,24 +253,9 @@ export default function AcademyTenantAccessPage() {
                         ? format(new Date(t.academy_subscription_expires_at), "dd MMM yyyy")
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {canManage && (
-                          <Button variant="ghost" size="sm" onClick={() => openDrawer(t)}>
-                            <Settings className="h-4 w-4 mr-1" /> Edit
-                          </Button>
-                        )}
-                        {canManage && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/superadmin/academy/enrollments?tenant=${t.id}`}>
-                              <Eye className="h-4 w-4 mr-1" /> Enrolments
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -402,238 +291,6 @@ export default function AcademyTenantAccessPage() {
           </Card>
         )}
       </div>
-
-      {/* ── Settings Drawer ── */}
-      <Sheet open={!!drawerTenant} onOpenChange={(open) => { if (!open) closeDrawer(); }}>
-        <SheetContent className="overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{drawerTenant?.name} — Academy Settings</SheetTitle>
-          </SheetHeader>
-
-          <div className="space-y-6 py-6">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Academy Solo pilot</p>
-              <p className="mt-1">
-                Use an existing named user or invite a new Academy User. This action changes protected Academy access,
-                never creates a package, RTO record, or payment.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-medium">Academy Access</Label>
-              <Switch checked={formAccess} onCheckedChange={setFormAccess} />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-              <div>
-                <Label className="text-base font-medium">Academy Solo pilot</Label>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Explicitly mark this tenant for the one-user manual Solo lifecycle. Leave off for existing RTO Academy access.
-                </p>
-              </div>
-              <Switch
-                checked={formSoloPilot}
-                onCheckedChange={(checked) => {
-                  if (checked && !formSoloPilot) setSoloPilotPreviousMaxUsers(formMaxUsers);
-                  setFormSoloPilot(checked);
-                  setFormMaxUsers(checked ? 1 : (soloPilotPreviousMaxUsers ?? ""));
-                  if (!checked) setSoloPilotPreviousMaxUsers(null);
-                }}
-              />
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={() => setShowInvite(true)}
-              disabled={!formSoloPilot || !formAccess || !persistedSoloPilot}
-            >
-              <UserPlus className="h-4 w-4" />
-              Invite Academy User
-            </Button>
-            {(!formSoloPilot || !formAccess || !persistedSoloPilot) && (
-              <p className="-mt-4 text-xs text-muted-foreground">
-                Save an enabled Academy Solo pilot before inviting its named learner.
-              </p>
-            )}
-
-            <div className="space-y-2">
-              <Label>Maximum Users</Label>
-              <Input
-                type="number"
-                min={0}
-                value={formMaxUsers}
-                onChange={(e) => setFormMaxUsers(e.target.value === "" ? "" : parseInt(e.target.value))}
-                placeholder="Unlimited"
-                disabled={formSoloPilot}
-              />
-              <p className="text-xs text-muted-foreground">
-                {formSoloPilot ? "Academy Solo is limited to one named learner" : "Maximum number of users from this account who can be enrolled simultaneously"}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Subscription Expires</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !formExpires && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formExpires ? format(formExpires, "PPP") : "No expiry set"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={formExpires} onSelect={setFormExpires} initialFocus className={cn("p-3 pointer-events-auto")} />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={formNotes}
-                onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="Internal notes about this tenant's Academy access…"
-                rows={3}
-              />
-            </div>
-
-            {formSoloPilot ? (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">Solo catalogue policy</p>
-                <p className="mt-1">This account receives all published Academy courses through its Academy entitlement. Package mappings and automatic package enrolment do not apply.</p>
-              </div>
-            ) : (
-              /* Auto-Enrol Rules remain available for existing RTO Academy access. */
-              <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Auto-Enrol on Package Assignment</Label>
-                <Button variant="outline" size="sm" onClick={() => setShowAddRule(true)} className="gap-1">
-                  <Plus className="h-3 w-3" /> Add Rule
-                </Button>
-              </div>
-
-              {autoEnrolRules.length === 0 && (
-                <p className="text-sm text-muted-foreground">No auto-enrol rules configured</p>
-              )}
-
-              {autoEnrolRules.map((rule) => (
-                <div key={rule.id} className="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-                  <div>
-                    <span className="font-medium">{rule.package_name}</span>
-                    <span className="text-muted-foreground mx-2">→</span>
-                    <span>{rule.course_title}</span>
-                  </div>
-                  <button
-                    onClick={() => removeRuleMutation.mutate(rule.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-
-              {showAddRule && (
-                <div className="rounded-lg border p-4 space-y-3 bg-muted/30">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Package</Label>
-                    <Select value={rulePackageId} onValueChange={setRulePackageId}>
-                      <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
-                      <SelectContent>
-                        {allPackages.map((p) => (
-                          <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Course</Label>
-                    <Select value={ruleCourseId} onValueChange={setRuleCourseId}>
-                      <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
-                      <SelectContent>
-                        {allCourses.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        addRuleMutation.mutate(
-                          { packageId: parseInt(rulePackageId), courseId: parseInt(ruleCourseId) },
-                          { onSuccess: () => { setShowAddRule(false); setRulePackageId(""); setRuleCourseId(""); } }
-                        );
-                      }}
-                      disabled={!rulePackageId || !ruleCourseId}
-                      style={{ backgroundColor: "hsl(var(--primary))" }}
-                    >
-                      Save Rule
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setShowAddRule(false)}>Cancel</Button>
-                  </div>
-                </div>
-              )}
-              </div>
-            )}
-          </div>
-
-          <SheetFooter className="gap-2">
-            <Button variant="outline" onClick={closeDrawer}>Cancel</Button>
-            {Boolean(
-              drawerTenant?.metadata &&
-              typeof drawerTenant.metadata === "object" &&
-              !Array.isArray(drawerTenant.metadata) &&
-              (drawerTenant.metadata as Record<string, unknown>).academy_solo,
-            ) && (
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (!drawerTenant) return;
-                  const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, unknown>;
-                  const newMeta = { ...existingMeta, academy_notes: formNotes || null };
-                  saveMutation.mutate(
-                    {
-                      tenantId: drawerTenant.id,
-                      data: {
-                        lifecycleAction: "end",
-                        academy_access_enabled: false,
-                        academy_solo: true,
-                        academy_max_users: formMaxUsers === "" ? null : formMaxUsers as number,
-                        academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
-                        metadata: newMeta,
-                      },
-                    },
-                    { onSuccess: closeDrawer },
-                  );
-                }}
-                disabled={saveMutation.isPending}
-              >
-                End Solo Access
-              </Button>
-            )}
-            <Button onClick={handleSaveSettings} disabled={saveMutation.isPending}>
-              Save Settings
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      {drawerTenant && (
-        <TenantInviteDialog
-          open={showInvite}
-          onOpenChange={setShowInvite}
-          tenantId={drawerTenant.id}
-          tenantName={drawerTenant.name}
-          initialRelationshipRole="academy_user"
-          sendInvitationByDefault
-          onSuccess={() => setShowInvite(false)}
-        />
-      )}
 
       <CreateAcademySoloDialog
         open={showCreateSolo}
