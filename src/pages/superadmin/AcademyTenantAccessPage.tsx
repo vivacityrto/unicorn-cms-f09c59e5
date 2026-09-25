@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { Fragment, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +9,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format, addDays, startOfMonth, endOfMonth, addMonths, isAfter, isBefore } from "date-fns";
-import { Search, Shield, ShieldOff, Clock, X, Plus } from "lucide-react";
+import { Search, Shield, ShieldOff, Clock, X, Plus, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
+import { AcademyTenantUsersPanel } from "@/components/academy/admin/AcademyTenantUsersPanel";
 import { CreateAcademySoloDialog, type AcademySoloLearnerDetails } from "@/components/academy/admin/CreateAcademySoloDialog";
 import {
   type AcademySoloAccountCreation,
@@ -41,6 +42,15 @@ export default function AcademyTenantAccessPage() {
     learner: AcademySoloLearnerDetails;
   } | null>(null);
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
+  const [expandedTenantIds, setExpandedTenantIds] = useState<Set<number>>(new Set());
+  const toggleExpanded = (id: number) => {
+    setExpandedTenantIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Snapshot once per mount (not per render) so the memos below actually memoize.
   const now = useMemo(() => new Date(), []);
@@ -217,6 +227,7 @@ export default function AcademyTenantAccessPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8" />
                   <TableHead>Account Name</TableHead>
                   <TableHead>Access Status</TableHead>
                   <TableHead className="text-center">Max Users</TableHead>
@@ -228,7 +239,7 @@ export default function AcademyTenantAccessPage() {
                 {isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 5 }).map((_, j) => (
+                      {Array.from({ length: 6 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -236,7 +247,7 @@ export default function AcademyTenantAccessPage() {
 
                 {!isLoading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                       No tenants found
                     </TableCell>
                   </TableRow>
@@ -244,12 +255,24 @@ export default function AcademyTenantAccessPage() {
 
                 {!isLoading && filtered.map((t) => {
                   const matchedUsers = search ? userMatches.get(t.id) : undefined;
+                  const expanded = expandedTenantIds.has(t.id);
                   return (
+                  <Fragment key={t.id}>
                   <TableRow
-                    key={t.id}
                     className="cursor-pointer hover:bg-primary/5 transition-colors"
                     onClick={() => navigate(`/superadmin/academy/tenant/${t.id}`)}
                   >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        aria-label={expanded ? "Collapse Academy users" : "Expand Academy users"}
+                        onClick={() => toggleExpanded(t.id)}
+                      >
+                        {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <span>{t.name}</span>
@@ -284,6 +307,19 @@ export default function AcademyTenantAccessPage() {
                         : "—"}
                     </TableCell>
                   </TableRow>
+                  {expanded && (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6} className="bg-muted/20 p-4" onClick={(e) => e.stopPropagation()}>
+                        <AcademyTenantUsersPanel
+                          tenantId={t.id}
+                          tenantName={t.name}
+                          canManage={canManage}
+                          variant="compact"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
                   );
                 })}
               </TableBody>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -19,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import {
-  ArrowLeft, CalendarIcon, X, Plus, UserPlus, Settings2, Users, BarChart3,
+  ArrowLeft, CalendarIcon, X, Plus, UserPlus, Settings2, Activity, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,11 +27,11 @@ import {
   useRemovePackageCourseRule,
   useRuleFormOptions,
 } from "@/hooks/academy/useTenantAcademyAccess";
-import { useAdminEnrollments } from "@/hooks/academy/useAcademyEnrollments";
 import { isAcademySoloTenant } from "@/lib/tenantAccountSurface";
 import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
 import { AcademyActivityDashboard } from "@/components/client/AcademyActivityDashboard";
+import { ClientTimelineTab } from "@/components/client/ClientTimelineTab";
 import type { TenantType } from "@/contexts/TenantTypeContext";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -137,28 +134,6 @@ export default function AcademyTenantDetail() {
     });
   };
 
-  // Academy Users tab — filter the shared enrolments query down to this tenant.
-  const { data: allEnrollments = [], isLoading: enrollmentsLoading } = useAdminEnrollments();
-  const tenantEnrollments = useMemo(
-    () => allEnrollments.filter((e) => e.tenant_id === tenantIdNum),
-    [allEnrollments, tenantIdNum],
-  );
-
-  const statusChip = useCallback((status: string | null, expiresAt: string | null) => {
-    const expired = status === "active" && !!expiresAt && new Date(expiresAt).getTime() <= Date.now();
-    const label = expired ? "expired" : status || "—";
-    let tone = "bg-muted text-muted-foreground";
-    if (expired) tone = "bg-red-100 text-red-700";
-    else if (status === "active") tone = "bg-green-100 text-green-700";
-    else if (status === "completed") tone = "bg-blue-100 text-blue-700";
-    else if (status === "revoked") tone = "bg-red-100 text-red-700";
-    return (
-      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize", tone)}>
-        {label}
-      </span>
-    );
-  }, []);
-
   const getAccessBadge = () => {
     if (!tenant) return null;
     if (!tenant.academy_access_enabled)
@@ -221,7 +196,7 @@ export default function AcademyTenantDetail() {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="settings" className="gap-1.5"><Settings2 className="h-4 w-4" /> Settings</TabsTrigger>
-          <TabsTrigger value="users" className="gap-1.5"><Users className="h-4 w-4" /> Academy Users</TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5"><Activity className="h-4 w-4" /> Timeline</TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="h-4 w-4" /> Analytics</TabsTrigger>
         </TabsList>
 
@@ -408,52 +383,11 @@ export default function AcademyTenantDetail() {
         </TabsContent>
 
         <TabsContent value="users" className="py-4">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Learner</TableHead>
-                    <TableHead>Course</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Enrolled</TableHead>
-                    <TableHead>Completed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {enrollmentsLoading &&
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <TableRow key={i}>
-                        {Array.from({ length: 5 }).map((_, j) => (
-                          <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  {!enrollmentsLoading && tenantEnrollments.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                        No Academy users enrolled yet
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {!enrollmentsLoading && tenantEnrollments.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{e.user ? `${e.user.first_name} ${e.user.last_name}` : "—"}</span>
-                          <span className="text-xs text-muted-foreground">{e.user?.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{e.course?.title ?? "—"}</TableCell>
-                      <TableCell>{statusChip(e.status, e.expires_at)}</TableCell>
-                      <TableCell>{e.enrolled_at ? format(new Date(e.enrolled_at), "dd MMM yyyy") : "—"}</TableCell>
-                      <TableCell>{e.completed_at ? format(new Date(e.completed_at), "dd MMM yyyy") : "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <ClientTimelineTab
+            tenantId={tenant.id}
+            clientId={tenant.id.toString()}
+            clientName={tenant.name}
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="py-4">
