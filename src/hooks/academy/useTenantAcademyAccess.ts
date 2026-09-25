@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Json } from "@/integrations/supabase/types";
+import type { VivacityAcademyTier } from "@/lib/tenantAccountSurface";
 
 const TENANT_KEY = "academy-tenant-access";
 
@@ -42,7 +43,7 @@ async function manageAcademySoloAccess(
   requested: {
     lifecycleAction?: AcademySoloAction;
     academy_access_enabled?: boolean;
-    academy_solo?: boolean;
+    academy_tier?: VivacityAcademyTier | null;
     academy_max_users?: number | null;
     academy_subscription_expires_at?: string | null;
     metadata?: Json;
@@ -58,10 +59,9 @@ async function manageAcademySoloAccess(
   const snapshot = current as TenantAccessSnapshot;
   const enabled = requested.academy_access_enabled ?? snapshot.academy_access_enabled ?? false;
   const metadata = requested.metadata ?? snapshot.metadata;
-  const soloPilot = requested.academy_solo ?? Boolean(
-    metadata && typeof metadata === "object" && !Array.isArray(metadata) &&
-    (metadata as Record<string, unknown>).academy_solo,
-  );
+  const tier = requested.academy_tier !== undefined
+    ? requested.academy_tier
+    : academyTierFromMetadata(snapshot.metadata);
   const { error } = await supabase.rpc("manage_academy_solo_access", {
     p_tenant_id: tenantId,
     p_action: requested.lifecycleAction ?? academySoloAction(
@@ -77,9 +77,18 @@ async function manageAcademySoloAccess(
       ? requested.academy_subscription_expires_at
       : snapshot.academy_subscription_expires_at,
     p_notes: academyNotes(metadata),
-    p_is_solo_pilot: soloPilot,
+    p_academy_tier: tier ?? null,
   });
   if (error) throw error;
+}
+
+function academyTierFromMetadata(metadata: Json | null | undefined): VivacityAcademyTier | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const solo = (metadata as Record<string, unknown>).academy_solo;
+  if (!solo || typeof solo !== "object" || Array.isArray(solo)) return null;
+  const tier = (solo as Record<string, unknown>).tier;
+  if (tier === "solo" || tier === "team" || tier === "elite") return tier;
+  return "solo";
 }
 
 export interface TenantRow {
@@ -97,15 +106,17 @@ export interface AcademySoloAccountCreation {
   tenant_id: number;
   account_name: string;
   account_type: "individual";
-  plan_code: "academy_solo";
+  plan_code: `academy_${VivacityAcademyTier}`;
   catalogue_scope: "all_published_courses";
-  max_users: 1;
+  tier: VivacityAcademyTier;
+  max_users: number | null;
 }
 
 export interface AcademySoloAccountInput {
   accountName: string;
   notes?: string;
   expiresAt?: string | null;
+  tier: VivacityAcademyTier;
 }
 
 export interface AutoEnrolRule {
@@ -157,20 +168,21 @@ export function useCreateAcademySoloAccount() {
   const qc = useQueryClient();
 
   return useMutation<AcademySoloAccountCreation, Error, AcademySoloAccountInput>({
-    mutationFn: async ({ accountName, notes, expiresAt }) => {
+    mutationFn: async ({ accountName, notes, expiresAt, tier }) => {
       const { data, error } = await supabase.rpc("create_academy_solo_account", {
         p_account_name: accountName,
         p_notes: notes?.trim() || null,
         p_expires_at: expiresAt ?? null,
+        p_tier: tier,
       });
       if (error) throw error;
       return data as unknown as AcademySoloAccountCreation;
     },
     onSuccess: () => {
-      toast.success("Academy Solo account created");
+      toast.success("Vivacity Academy account created");
       qc.invalidateQueries({ queryKey: [TENANT_KEY] });
     },
-    onError: (error) => toast.error(error.message || "Failed to create Academy Solo account"),
+    onError: (error) => toast.error(error.message || "Failed to create Vivacity Academy account"),
   });
 }
 
@@ -196,7 +208,7 @@ export function useUpdateTenantAccess() {
       data: {
         lifecycleAction?: AcademySoloAction;
         academy_access_enabled?: boolean;
-        academy_solo?: boolean;
+        academy_tier?: VivacityAcademyTier | null;
         academy_max_users?: number | null;
         academy_subscription_expires_at?: string | null;
         metadata?: Json;

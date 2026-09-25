@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -19,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 import {
-  ArrowLeft, CalendarIcon, X, Plus, UserPlus, Settings2, Users, BarChart3,
+  ArrowLeft, CalendarIcon, X, Plus, UserPlus, Settings2, Users, Activity, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,13 +27,28 @@ import {
   useRemovePackageCourseRule,
   useRuleFormOptions,
 } from "@/hooks/academy/useTenantAcademyAccess";
-import { useAdminEnrollments } from "@/hooks/academy/useAcademyEnrollments";
-import { isAcademySoloTenant } from "@/lib/tenantAccountSurface";
+import {
+  isAcademySoloTenant,
+  getAcademyTier,
+  VIVACITY_ACADEMY_TIER_LABELS,
+  VIVACITY_ACADEMY_TIER_SEATS,
+  type VivacityAcademyTier,
+} from "@/lib/tenantAccountSurface";
 import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
 import { AcademyActivityDashboard } from "@/components/client/AcademyActivityDashboard";
+import { ClientTimelineTab } from "@/components/client/ClientTimelineTab";
+import { AcademyTenantUsersPanel } from "@/components/academy/admin/AcademyTenantUsersPanel";
+import { usePermission } from "@/hooks/usePermission";
 import type { TenantType } from "@/contexts/TenantTypeContext";
 import type { Json } from "@/integrations/supabase/types";
+
+const TIER_SELECT_OPTIONS: { value: "none" | VivacityAcademyTier; label: string }[] = [
+  { value: "none", label: "Not a Vivacity Academy tier (regular RTO Academy access)" },
+  { value: "solo", label: `Vivacity Academy Solo — 1 user` },
+  { value: "team", label: `Vivacity Academy Team — up to 10 users` },
+  { value: "elite", label: `Vivacity Academy Elite — unlimited users` },
+];
 
 function getPreviousSoloMaxUsers(metadata: Json | null): number | "" | null {
   if (!isAcademySoloTenant(metadata)) return null;
@@ -69,17 +81,18 @@ export default function AcademyTenantDetail() {
   const thirtyDaysFromNow = useMemo(() => addDays(now, 30), [now]);
 
   const [showInvite, setShowInvite] = useState(false);
+  const canManage = usePermission('academy.tenant_access.manage');
 
   // Settings form state
   const [formAccess, setFormAccess] = useState(false);
-  const [formSoloPilot, setFormSoloPilot] = useState(false);
+  const [formTier, setFormTier] = useState<VivacityAcademyTier | null>(null);
   const [formMaxUsers, setFormMaxUsers] = useState<number | "">("");
-  const [soloPilotPreviousMaxUsers, setSoloPilotPreviousMaxUsers] = useState<number | "" | null>(null);
+  const [tierPreviousMaxUsers, setTierPreviousMaxUsers] = useState<number | "" | null>(null);
   const [formExpires, setFormExpires] = useState<Date | undefined>();
   const [formNotes, setFormNotes] = useState("");
   const [formInitialized, setFormInitialized] = useState(false);
 
-  const persistedSoloPilot = tenant ? isAcademySoloTenant(tenant.metadata) : false;
+  const persistedTier = tenant ? getAcademyTier(tenant.metadata) : null;
 
   // Initialize the form once per tenant load (not on every refetch) —
   // mirrors the old drawer's openDrawer() behaviour, just triggered by data
@@ -87,22 +100,30 @@ export default function AcademyTenantDetail() {
   useEffect(() => {
     if (!tenant || formInitialized) return;
     setFormAccess(tenant.academy_access_enabled);
-    setFormSoloPilot(persistedSoloPilot);
+    setFormTier(persistedTier);
     setFormMaxUsers(tenant.academy_max_users ?? "");
-    setSoloPilotPreviousMaxUsers(getPreviousSoloMaxUsers(tenant.metadata));
+    setTierPreviousMaxUsers(getPreviousSoloMaxUsers(tenant.metadata));
     setFormExpires(tenant.academy_subscription_expires_at ? new Date(tenant.academy_subscription_expires_at) : undefined);
     setFormNotes((tenant.metadata as { academy_notes?: string } | null)?.academy_notes ?? "");
     setFormInitialized(true);
-  }, [tenant, formInitialized, persistedSoloPilot]);
+  }, [tenant, formInitialized, persistedTier]);
 
   const saveMutation = useUpdateTenantAccess();
-  const { data: autoEnrolRules = [] } = usePackageCourseRules(!!tenant && !persistedSoloPilot);
+  const { data: autoEnrolRules = [] } = usePackageCourseRules(!!tenant && !persistedTier);
   const addRuleMutation = useAddPackageCourseRule();
   const removeRuleMutation = useRemovePackageCourseRule();
   const [showAddRule, setShowAddRule] = useState(false);
   const [rulePackageId, setRulePackageId] = useState<string>("");
   const [ruleCourseId, setRuleCourseId] = useState<string>("");
-  const { packages: allPackages, courses: allCourses } = useRuleFormOptions(showAddRule && !persistedSoloPilot);
+  const { packages: allPackages, courses: allCourses } = useRuleFormOptions(showAddRule && !persistedTier);
+
+  const handleTierChange = (value: "none" | VivacityAcademyTier) => {
+    const nextTier = value === "none" ? null : value;
+    if (nextTier && !formTier) setTierPreviousMaxUsers(formMaxUsers);
+    setFormTier(nextTier);
+    setFormMaxUsers(nextTier ? (VIVACITY_ACADEMY_TIER_SEATS[nextTier] ?? "") : (tierPreviousMaxUsers ?? ""));
+    if (!nextTier) setTierPreviousMaxUsers(null);
+  };
 
   const handleSaveSettings = () => {
     if (!tenant) return;
@@ -112,7 +133,7 @@ export default function AcademyTenantDetail() {
       tenantId: tenant.id,
       data: {
         academy_access_enabled: formAccess,
-        academy_solo: formSoloPilot,
+        academy_tier: formTier,
         academy_max_users: formMaxUsers === "" ? null : (formMaxUsers as number),
         academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
         metadata: newMeta,
@@ -120,8 +141,8 @@ export default function AcademyTenantDetail() {
     });
   };
 
-  const handleEndSoloAccess = () => {
-    if (!tenant) return;
+  const handleEndAcademyAccess = () => {
+    if (!tenant || !persistedTier) return;
     const existingMeta = (tenant.metadata ?? {}) as Record<string, unknown>;
     const newMeta = { ...existingMeta, academy_notes: formNotes || null };
     saveMutation.mutate({
@@ -129,35 +150,13 @@ export default function AcademyTenantDetail() {
       data: {
         lifecycleAction: "end",
         academy_access_enabled: false,
-        academy_solo: true,
+        academy_tier: persistedTier,
         academy_max_users: formMaxUsers === "" ? null : (formMaxUsers as number),
         academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
         metadata: newMeta,
       },
     });
   };
-
-  // Academy Users tab — filter the shared enrolments query down to this tenant.
-  const { data: allEnrollments = [], isLoading: enrollmentsLoading } = useAdminEnrollments();
-  const tenantEnrollments = useMemo(
-    () => allEnrollments.filter((e) => e.tenant_id === tenantIdNum),
-    [allEnrollments, tenantIdNum],
-  );
-
-  const statusChip = useCallback((status: string | null, expiresAt: string | null) => {
-    const expired = status === "active" && !!expiresAt && new Date(expiresAt).getTime() <= Date.now();
-    const label = expired ? "expired" : status || "—";
-    let tone = "bg-muted text-muted-foreground";
-    if (expired) tone = "bg-red-100 text-red-700";
-    else if (status === "active") tone = "bg-green-100 text-green-700";
-    else if (status === "completed") tone = "bg-blue-100 text-blue-700";
-    else if (status === "revoked") tone = "bg-red-100 text-red-700";
-    return (
-      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize", tone)}>
-        {label}
-      </span>
-    );
-  }, []);
 
   const getAccessBadge = () => {
     if (!tenant) return null;
@@ -205,8 +204,10 @@ export default function AcademyTenantDetail() {
           </Button>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-foreground">{tenant.name}</h1>
-            {isAcademySoloTenant(tenant.metadata) && (
-              <Badge variant="outline" className="border-primary/30 text-primary">Academy Solo</Badge>
+            {persistedTier && (
+              <Badge variant="outline" className="border-primary/30 text-primary">
+                Vivacity Academy · {VIVACITY_ACADEMY_TIER_LABELS[persistedTier]}
+              </Badge>
             )}
             {getAccessBadge()}
           </div>
@@ -221,16 +222,17 @@ export default function AcademyTenantDetail() {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="settings" className="gap-1.5"><Settings2 className="h-4 w-4" /> Settings</TabsTrigger>
-          <TabsTrigger value="users" className="gap-1.5"><Users className="h-4 w-4" /> Academy Users</TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5"><Users className="h-4 w-4" /> Users</TabsTrigger>
+          <TabsTrigger value="timeline" className="gap-1.5"><Activity className="h-4 w-4" /> Timeline</TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="h-4 w-4" /> Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="settings" className="space-y-6 py-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Academy Solo pilot</p>
+            <p className="font-medium text-foreground">Vivacity Academy tier</p>
             <p className="mt-1">
               Use an existing named user or invite a new Academy User. This action changes protected Academy access,
-              never creates a package, RTO record, or payment.
+              never creates a package, RTO record, or payment. MVP: tier assignment is manual — no Stripe billing yet.
             </p>
           </div>
 
@@ -239,22 +241,19 @@ export default function AcademyTenantDetail() {
             <Switch checked={formAccess} onCheckedChange={setFormAccess} />
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div>
-              <Label className="text-base font-medium">Academy Solo pilot</Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Explicitly mark this tenant for the one-user manual Solo lifecycle. Leave off for existing RTO Academy access.
-              </p>
-            </div>
-            <Switch
-              checked={formSoloPilot}
-              onCheckedChange={(checked) => {
-                if (checked && !formSoloPilot) setSoloPilotPreviousMaxUsers(formMaxUsers);
-                setFormSoloPilot(checked);
-                setFormMaxUsers(checked ? 1 : (soloPilotPreviousMaxUsers ?? ""));
-                if (!checked) setSoloPilotPreviousMaxUsers(null);
-              }}
-            />
+          <div className="space-y-2 rounded-lg border p-3">
+            <Label className="text-base font-medium">Vivacity Academy tier</Label>
+            <p className="text-xs text-muted-foreground">
+              Assign a named tier for the one-account manual Solo/Team/Elite lifecycle. Leave unset for existing RTO Academy access.
+            </p>
+            <Select value={formTier ?? "none"} onValueChange={(v) => handleTierChange(v as "none" | VivacityAcademyTier)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIER_SELECT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Button
@@ -262,14 +261,14 @@ export default function AcademyTenantDetail() {
             variant="outline"
             className="w-full justify-start gap-2"
             onClick={() => setShowInvite(true)}
-            disabled={!formSoloPilot || !formAccess || !persistedSoloPilot}
+            disabled={!formTier || !formAccess || !persistedTier}
           >
             <UserPlus className="h-4 w-4" />
             Invite Academy User
           </Button>
-          {(!formSoloPilot || !formAccess || !persistedSoloPilot) && (
+          {(!formTier || !formAccess || !persistedTier) && (
             <p className="-mt-4 text-xs text-muted-foreground">
-              Save an enabled Academy Solo pilot before inviting its named learner.
+              Save an enabled Vivacity Academy tier before inviting its named learner.
             </p>
           )}
 
@@ -281,10 +280,14 @@ export default function AcademyTenantDetail() {
               value={formMaxUsers}
               onChange={(e) => setFormMaxUsers(e.target.value === "" ? "" : parseInt(e.target.value))}
               placeholder="Unlimited"
-              disabled={formSoloPilot}
+              disabled={!!formTier}
             />
             <p className="text-xs text-muted-foreground">
-              {formSoloPilot ? "Academy Solo is limited to one named learner" : "Maximum number of users from this account who can be enrolled simultaneously"}
+              {formTier
+                ? VIVACITY_ACADEMY_TIER_SEATS[formTier] === null
+                  ? `Vivacity Academy ${VIVACITY_ACADEMY_TIER_LABELS[formTier]} has unlimited users`
+                  : `Vivacity Academy ${VIVACITY_ACADEMY_TIER_LABELS[formTier]} is limited to ${VIVACITY_ACADEMY_TIER_SEATS[formTier]} user${VIVACITY_ACADEMY_TIER_SEATS[formTier] === 1 ? "" : "s"}`
+                : "Maximum number of users from this account who can be enrolled simultaneously"}
             </p>
           </div>
 
@@ -316,9 +319,9 @@ export default function AcademyTenantDetail() {
             />
           </div>
 
-          {formSoloPilot ? (
+          {formTier ? (
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Solo catalogue policy</p>
+              <p className="font-medium text-foreground">Vivacity Academy catalogue policy</p>
               <p className="mt-1">This account receives all published Academy courses through its Academy entitlement. Package mappings and automatic package enrolment do not apply.</p>
             </div>
           ) : (
@@ -396,9 +399,9 @@ export default function AcademyTenantDetail() {
           )}
 
           <div className="flex items-center justify-end gap-2 border-t pt-4">
-            {persistedSoloPilot && (
-              <Button variant="destructive" onClick={handleEndSoloAccess} disabled={saveMutation.isPending}>
-                End Solo Access
+            {persistedTier && (
+              <Button variant="destructive" onClick={handleEndAcademyAccess} disabled={saveMutation.isPending}>
+                End Vivacity Academy Access
               </Button>
             )}
             <Button onClick={handleSaveSettings} disabled={saveMutation.isPending}>
@@ -408,52 +411,19 @@ export default function AcademyTenantDetail() {
         </TabsContent>
 
         <TabsContent value="users" className="py-4">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Learner</TableHead>
-                    <TableHead>Course</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Enrolled</TableHead>
-                    <TableHead>Completed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {enrollmentsLoading &&
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <TableRow key={i}>
-                        {Array.from({ length: 5 }).map((_, j) => (
-                          <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  {!enrollmentsLoading && tenantEnrollments.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                        No Academy users enrolled yet
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {!enrollmentsLoading && tenantEnrollments.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{e.user ? `${e.user.first_name} ${e.user.last_name}` : "—"}</span>
-                          <span className="text-xs text-muted-foreground">{e.user?.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{e.course?.title ?? "—"}</TableCell>
-                      <TableCell>{statusChip(e.status, e.expires_at)}</TableCell>
-                      <TableCell>{e.enrolled_at ? format(new Date(e.enrolled_at), "dd MMM yyyy") : "—"}</TableCell>
-                      <TableCell>{e.completed_at ? format(new Date(e.completed_at), "dd MMM yyyy") : "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <AcademyTenantUsersPanel
+            tenantId={tenant.id}
+            tenantName={tenant.name}
+            canManage={canManage}
+          />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="py-4">
+          <ClientTimelineTab
+            tenantId={tenant.id}
+            clientId={tenant.id.toString()}
+            clientName={tenant.name}
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="py-4">

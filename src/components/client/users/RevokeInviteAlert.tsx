@@ -1,3 +1,4 @@
+import type { UseMutationResult } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,10 +16,18 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   invitationId: string | null;
   email: string | null;
+  /**
+   * Override the revoke mutation used — needed by callers with no
+   * ClientTenantContext (e.g. the superadmin Academy views), which can't
+   * rely on useInviteMutations' activeTenantId-scoped cache invalidation.
+   * Defaults to the client-portal context's own mutation.
+   */
+  revoke?: UseMutationResult<unknown, Error, string>;
 }
 
-export default function RevokeInviteAlert({ open, onOpenChange, invitationId, email }: Props) {
-  const { revoke } = useInviteMutations();
+export default function RevokeInviteAlert({ open, onOpenChange, invitationId, email, revoke: revokeOverride }: Props) {
+  const { revoke: revokeFromContext } = useInviteMutations();
+  const revoke = revokeOverride ?? revokeFromContext;
 
   const handleConfirm = async () => {
     if (!invitationId) return;

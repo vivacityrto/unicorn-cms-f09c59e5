@@ -51,6 +51,7 @@ const AcademyEnrolmentsPage = lazy(() => import("@/pages/superadmin/AcademyEnrol
 const SuperAdminWorkforcePdp = lazy(() => import("@/pages/superadmin/workforce-pdp"));
 const AcademyTenantAccessPage = lazy(() => import("@/pages/superadmin/AcademyTenantAccessPage"));
 const AcademyTenantDetail = lazy(() => import("@/pages/superadmin/AcademyTenantDetail"));
+const AcademyTenantUserDetail = lazy(() => import("@/pages/superadmin/AcademyTenantUserDetail"));
 const AcademyCertificatesAdminPage = lazy(() => import("@/pages/superadmin/AcademyCertificatesPage"));
 const AcademyBuilderLibrary = lazy(() => import("@/pages/superadmin/AcademyBuilderLibrary"));
 const AcademyBuilderCourse = lazy(() => import("@/pages/superadmin/AcademyBuilderCourse"));
@@ -621,6 +622,7 @@ export const dashboardLayoutRoutes = (
     <Route element={<ProtectedRoute allowedRoles={ACADEMY_TENANT_ACCESS_ROLES}><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/superadmin/academy/tenant-access" element={<AcademyTenantAccessPage />} />
       <Route path="/superadmin/academy/tenant/:tenantId" element={<AcademyTenantDetail />} />
+      <Route path="/superadmin/academy/tenant/:tenantId/user/:rowKey" element={<AcademyTenantUserDetail />} />
     </Route>
     <Route
       element={
