@@ -95,7 +95,36 @@ serve(async (req) => {
     });
   }
 
-  const rows = (tokens ?? []).filter((r): r is { user_id: string; account_email: string | null } => !!r.user_id);
+  const allRows = (tokens ?? []).filter((r): r is { user_id: string; account_email: string | null } => !!r.user_id);
+
+  // oauth_tokens.user_id references auth.users, not public.users, so a
+  // disabled/archived staff account still keeps its token row forever.
+  // A disabled/archived user can never trigger a refresh themselves (their
+  // own session is already rejected elsewhere), so this cron is the only
+  // remaining path that can still hit their revoked Microsoft account —
+  // exclude them rather than let every run repeat a doomed refresh and log
+  // a fresh "reconnect required" notification for an offboarded user.
+  let rows = allRows;
+  if (allRows.length > 0) {
+    const { data: activeUsers, error: usersError } = await supabaseAdmin
+      .from("users")
+      .select("user_uuid")
+      .in("user_uuid", allRows.map((r) => r.user_id))
+      .eq("disabled", false)
+      .eq("archived", false);
+
+    if (usersError) {
+      console.error("[sync-cron] Failed to check user status, proceeding without the filter:", usersError);
+    } else {
+      const activeIds = new Set((activeUsers ?? []).map((u) => u.user_uuid));
+      rows = allRows.filter((r) => activeIds.has(r.user_id));
+      const skipped = allRows.length - rows.length;
+      if (skipped > 0) {
+        console.log(`[sync-cron] Skipping ${skipped} disabled/archived user(s)`);
+      }
+    }
+  }
+
   console.log(`[sync-cron] Starting run for ${rows.length} Microsoft-connected users`);
 
   let succeeded = 0;
