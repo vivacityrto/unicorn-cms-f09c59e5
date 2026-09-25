@@ -37,22 +37,42 @@ export async function checkSeatAvailability(
     }
 
     const tenantType = tenant.tenant_type as TenantType;
+    // Vivacity Academy tenants (Solo/Team/Elite) always have academy_max_users
+    // explicitly set by manage_academy_solo_access/create_academy_solo_account
+    // (1 / 10 / null-for-unlimited respectively) — trust it as-is. A `?? 1`
+    // fallback here would wrongly cap an Elite (unlimited) tenant at 1 seat,
+    // since null legitimately means unlimited for that tier.
     const maxUsers = academySolo
-      ? (tenant.academy_max_users ?? 1)
+      ? tenant.academy_max_users
       : (tenant.academy_max_users ?? SEAT_LIMITS[tenantType]);
 
-    // Count current active members
-    const { count, error: countError } = await supabase
-      .from("tenant_members")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .eq("status", "active");
+    // Count active members AND outstanding invitations — an invite that
+    // hasn't been accepted yet still occupies a seat once sent. Counting
+    // only active members let a Solo/Team tenant's single outstanding
+    // invite go unnoticed, allowing staff to send a second invite past the
+    // seat cap before either had been accepted.
+    const [{ count: activeCount, error: activeError }, { count: pendingCount, error: pendingError }] =
+      await Promise.all([
+        supabase
+          .from("tenant_members")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("status", "active"),
+        supabase
+          .from("user_invitations")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("status", "pending")
+          .is("accepted_at", null)
+          .is("revoked_at", null)
+          .gt("expires_at", new Date().toISOString()),
+      ]);
 
-    if (countError) {
+    if (activeError || pendingError) {
       return { canInvite: false, currentUsers: 0, maxUsers, message: "Failed to count users" };
     }
 
-    const currentUsers = count || 0;
+    const currentUsers = (activeCount || 0) + (pendingCount || 0);
 
     // Compliance system has no limit
     if (maxUsers === null) {

@@ -1,4 +1,4 @@
-import { Fragment, useState, useMemo } from "react";
+import { Fragment, useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +9,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format, addDays, startOfMonth, endOfMonth, addMonths, isAfter, isBefore } from "date-fns";
-import { Search, Shield, ShieldOff, Clock, X, Plus, ChevronRight, ChevronDown } from "lucide-react";
+import { Search, Shield, ShieldOff, Clock, X, Plus, ChevronRight, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import { AcademyTenantUsersPanel } from "@/components/academy/admin/AcademyTenantUsersPanel";
-import { CreateAcademySoloDialog, type AcademySoloLearnerDetails } from "@/components/academy/admin/CreateAcademySoloDialog";
+import { CreateVivacityAcademyDialog, type AcademySoloLearnerDetails } from "@/components/academy/admin/CreateVivacityAcademyDialog";
 import {
   type AcademySoloAccountCreation,
   useTenantSummaries,
@@ -22,7 +22,7 @@ import {
   type TenantRow,
 } from "@/hooks/academy/useTenantAcademyAccess";
 import { useUserTenantMatches, EMPTY_USER_MATCHES } from "@/hooks/useUserTenantSearch";
-import { isAcademySoloTenant } from "@/lib/tenantAccountSurface";
+import { isAcademySoloTenant, getAcademyTier, VIVACITY_ACADEMY_TIER_LABELS } from "@/lib/tenantAccountSurface";
 import { usePermission } from "@/hooks/usePermission";
 import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 
@@ -42,10 +42,14 @@ export default function AcademyTenantAccessPage() {
     learner: AcademySoloLearnerDetails;
   } | null>(null);
   const [timelineMonth, setTimelineMonth] = useState<string | null>(null);
-  const [expandedTenantIds, setExpandedTenantIds] = useState<Set<number>>(new Set());
+
+  // Nested Academy-user lists default to expanded. `null` means "not yet
+  // initialized" — once tenants load, every row starts expanded; after
+  // that, expand/collapse state is tracked per-tenant as usual.
+  const [expandedTenantIds, setExpandedTenantIds] = useState<Set<number> | null>(null);
   const toggleExpanded = (id: number) => {
     setExpandedTenantIds((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev ?? []);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
@@ -60,6 +64,12 @@ export default function AcademyTenantAccessPage() {
   const { data: tenants = [], isLoading } = useTenantSummaries();
   const toggleMutation = useToggleTenantAccess();
   const { data: userMatches = EMPTY_USER_MATCHES } = useUserTenantMatches(search);
+
+  useEffect(() => {
+    if (expandedTenantIds === null && tenants.length > 0) {
+      setExpandedTenantIds(new Set(tenants.map((t) => t.id)));
+    }
+  }, [tenants, expandedTenantIds]);
 
   // ── Computed stats ──
   const stats = useMemo(() => {
@@ -134,6 +144,12 @@ export default function AcademyTenantAccessPage() {
     return <Badge className="bg-green-100 text-green-700 border-green-200">Enabled</Badge>;
   };
 
+  const allFilteredExpanded = filtered.length > 0 &&
+    filtered.every((t) => expandedTenantIds?.has(t.id));
+  const toggleAllExpanded = () => {
+    setExpandedTenantIds(allFilteredExpanded ? new Set() : new Set(filtered.map((t) => t.id)));
+  };
+
   const tabs: { value: StatusTab; label: string }[] = [
     { value: "all", label: "All" },
     { value: "enabled", label: "Access Enabled" },
@@ -155,7 +171,7 @@ export default function AcademyTenantAccessPage() {
             </div>
             {canManage && (
               <Button onClick={() => setShowCreateSolo(true)} className="gap-2">
-                <Plus className="h-4 w-4" /> Create Academy Solo
+                <Plus className="h-4 w-4" /> Create Vivacity Academy account
               </Button>
             )}
           </div>
@@ -175,7 +191,7 @@ export default function AcademyTenantAccessPage() {
           {([
             { value: "all" as const, label: "All" },
             { value: "rto" as const, label: `RTO Clients (${stats.rtoCount})` },
-            { value: "academy_solo" as const, label: `Academy Solo (${stats.academySoloCount})` },
+            { value: "academy_solo" as const, label: `Vivacity Academy (${stats.academySoloCount})` },
           ]).map((tab) => (
             <button
               key={tab.value}
@@ -219,6 +235,10 @@ export default function AcademyTenantAccessPage() {
               <X className="h-3 w-3" /> Clear month filter
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={toggleAllExpanded} className="gap-2 sm:ml-auto">
+            <ChevronsUpDown className="h-4 w-4" />
+            {allFilteredExpanded ? "Collapse all" : "Expand all"}
+          </Button>
         </div>
 
         {/* Table */}
@@ -255,7 +275,7 @@ export default function AcademyTenantAccessPage() {
 
                 {!isLoading && filtered.map((t) => {
                   const matchedUsers = search ? userMatches.get(t.id) : undefined;
-                  const expanded = expandedTenantIds.has(t.id);
+                  const expanded = expandedTenantIds?.has(t.id) ?? false;
                   return (
                   <Fragment key={t.id}>
                   <TableRow
@@ -276,9 +296,14 @@ export default function AcademyTenantAccessPage() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <span>{t.name}</span>
-                        {isAcademySoloTenant(t.metadata) && (
-                          <Badge variant="outline" className="border-primary/30 text-primary">Academy Solo</Badge>
-                        )}
+                        {(() => {
+                          const tier = getAcademyTier(t.metadata);
+                          return tier && (
+                            <Badge variant="outline" className="border-primary/30 text-primary">
+                              Vivacity Academy · {VIVACITY_ACADEMY_TIER_LABELS[tier]}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       {matchedUsers && matchedUsers.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -358,7 +383,7 @@ export default function AcademyTenantAccessPage() {
         )}
       </div>
 
-      <CreateAcademySoloDialog
+      <CreateVivacityAcademyDialog
         open={showCreateSolo}
         onOpenChange={setShowCreateSolo}
         onCreated={(account, learner) => setSoloInvite({ account, learner })}

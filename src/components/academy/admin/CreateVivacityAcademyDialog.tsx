@@ -5,10 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   useCreateAcademySoloAccount,
   type AcademySoloAccountCreation,
 } from "@/hooks/academy/useTenantAcademyAccess";
+import {
+  VIVACITY_ACADEMY_TIER_LABELS,
+  VIVACITY_ACADEMY_TIER_SEATS,
+  VIVACITY_ACADEMY_TIER_PRICE,
+  type VivacityAcademyTier,
+} from "@/lib/tenantAccountSurface";
 import { isValidEmail } from "@/lib/roles/relationshipRole";
 
 export interface AcademySoloLearnerDetails {
@@ -17,19 +24,27 @@ export interface AcademySoloLearnerDetails {
   email: string;
 }
 
-interface CreateAcademySoloDialogProps {
+interface CreateVivacityAcademyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (account: AcademySoloAccountCreation, learner: AcademySoloLearnerDetails) => void;
 }
 
-export function CreateAcademySoloDialog({
+const TIER_ORDER: VivacityAcademyTier[] = ["solo", "team", "elite"];
+
+function seatsLabel(tier: VivacityAcademyTier): string {
+  const seats = VIVACITY_ACADEMY_TIER_SEATS[tier];
+  return seats === null ? "Unlimited users" : seats === 1 ? "1 user" : `Up to ${seats} users`;
+}
+
+export function CreateVivacityAcademyDialog({
   open,
   onOpenChange,
   onCreated,
-}: CreateAcademySoloDialogProps) {
+}: CreateVivacityAcademyDialogProps) {
   const createMutation = useCreateAcademySoloAccount();
   const [accountName, setAccountName] = useState("");
+  const [tier, setTier] = useState<VivacityAcademyTier>("solo");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,6 +55,7 @@ export function CreateAcademySoloDialog({
   useEffect(() => {
     if (!open) return;
     setAccountName("");
+    setTier("solo");
     setFirstName("");
     setLastName("");
     setEmail("");
@@ -67,6 +83,7 @@ export function CreateAcademySoloDialog({
         accountName: accountName.trim(),
         notes,
         expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59Z`).toISOString() : null,
+        tier,
       });
 
       onOpenChange(false);
@@ -84,19 +101,36 @@ export function CreateAcademySoloDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create Academy Solo account</DialogTitle>
+          <DialogTitle>Create Vivacity Academy account</DialogTitle>
           <DialogDescription>
             Creates an Academy-only account boundary. This does not create an RTO profile, package, payment, or compliance workflow.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-medium">Commercial offer</span>
-              <Badge variant="secondary">Academy Solo · $45/month</Badge>
-            </div>
-            <p className="mt-1 text-muted-foreground">One named learner with access to all published Vivacity Academy courses.</p>
+          <div className="space-y-2">
+            <Label className="text-base">Tier</Label>
+            <RadioGroup value={tier} onValueChange={(v) => setTier(v as VivacityAcademyTier)} className="space-y-2">
+              {TIER_ORDER.map((t) => (
+                <label
+                  key={t}
+                  htmlFor={`vivacity-academy-tier-${t}`}
+                  className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-muted/40"
+                >
+                  <RadioGroupItem id={`vivacity-academy-tier-${t}`} value={t} className="mt-0.5" />
+                  <div className="flex-1 space-y-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">Vivacity Academy {VIVACITY_ACADEMY_TIER_LABELS[t]}</span>
+                      <Badge variant="secondary">{VIVACITY_ACADEMY_TIER_PRICE[t]}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{seatsLabel(t)}</p>
+                  </div>
+                </label>
+              ))}
+            </RadioGroup>
+            <p className="text-xs text-muted-foreground">
+              MVP: the tier only sets the seat cap here — there's no Stripe billing wired up yet.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -105,7 +139,7 @@ export function CreateAcademySoloDialog({
               id="academySoloAccountName"
               value={accountName}
               onChange={(event) => setAccountName(event.target.value)}
-              placeholder="Academy Solo Demo"
+              placeholder="Vivacity Academy Demo"
               autoFocus
             />
           </div>
