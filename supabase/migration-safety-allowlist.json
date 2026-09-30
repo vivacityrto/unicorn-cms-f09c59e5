@@ -234,6 +234,15 @@
       "owner": "Carl",
       "reason": "False positives, same shape as the other function-body entries above. This migration performs NO migration-time data changes: it creates one trigger function, one trigger, and drops two old triggers and their functions. The flagged 'INSERT' is the INSERT INTO user_notifications inside the body of fn_package_usage_alert_trigger() -- executed later, per package, only when a package's hours_used changes and crosses 75/90/100% -- and the flagged 'UPDATE' is the words AFTER UPDATE OF hours_used in the CREATE TRIGGER definition, not an UPDATE statement. Dry-run against production inside a rolled-back transaction before applying (one alert per threshold crossed, none for packages under 75%, none for the multi-package client that triggered the investigation, no duplicate on repeat, nothing persisted after rollback). See docs/audit-log/entries/2026-09-30-package-usage-alerts-per-package.md. Pending Carl's review via this PR, same as any other change to this repo.",
       "expires": "2026-10-30"
+    },
+    {
+      "id": "package-capacity-config-seed-and-load-function",
+      "file": "supabase/migrations/20260930140000_package_capacity_config_and_client_load.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Two distinct findings. (1) The 3 INSERT statements are a REAL one-time seed of a brand-new table, public.package_capacity_config, created in this same migration (it had no rows to conflict with or damage): step 1 copies the existing tier weekly hours from membership_tier_capacity_config onto every package in a tier (9 rows), step 2 copies each V2 membership package's hours from its V1 package (9 rows), step 3 adds packages.total_hours spread over packages.duration_months for packages that have an open instance (8 rows). All three are ON CONFLICT DO NOTHING, so a re-run never overwrites edits made to the table, and every row records its source. No existing table is written to. (2) The flagged 'UPDATE' is the words BEFORE UPDATE in the CREATE TRIGGER definition for the new table's updated_at trigger, not an UPDATE statement. The migration also replaces compute_client_weekly_required() (no DML). Dry-run against production inside a rolled-back transaction before applying: seeded 26 rows, no client's load went down, 19 of 57 clients' load changed, clients with zero load fell from 17 to 6, total weekly load went 42.25 -> 68.73 h, re-running added 0 rows, nothing persisted after rollback. See docs/audit-log/entries/2026-09-30-capacity-planning-per-package-load.md. Pending Carl's review via this PR, same as any other change to this repo.",
+      "expires": "2026-10-30"
     }
   ]
 }
