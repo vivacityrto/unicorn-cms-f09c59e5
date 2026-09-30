@@ -225,6 +225,15 @@
       "owner": "Carl",
       "reason": "Two distinct findings. (1) 4 of the 5 flagged statements are function-body false positives, same shape as the other entries above: the INSERT/UPDATE statements are inside the CREATE OR REPLACE FUNCTION bodies for manage_academy_solo_access (tenants update, audit_eos_events insert) and create_academy_solo_account (tenants insert, audit_eos_events insert) -- unchanged from each function's existing production behavior, only executed later, per-caller, when an authorized staff member actually calls the RPC. (2) The 5th (the top-level UPDATE public.tenants backfill at the end of the migration) is a real, already-applied one-time data mutation: it stamps metadata.academy_solo.tier='solo' on rows that already have a metadata.academy_solo object but no tier field -- by construction, every existing Academy Solo tenant. Verified live via execute_sql immediately after applying: exactly the 4 known Academy Solo tenants (The Australian Higher Education Academy, Techskill Academy, Kingston State College, Rothwell Early Learning Centre Daycare) were updated, academy_max_users unchanged at 1 for all four, no other tenant rows touched. See docs/audit-log/entries/2026-09-25-vivacity-academy-tiers-and-seat-limit-fix.md.",
       "expires": "2026-10-25"
+    },
+    {
+      "id": "package-usage-alert-function-and-trigger",
+      "file": "supabase/migrations/20260930130000_package_usage_alerts_per_package.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positives, same shape as the other function-body entries above. This migration performs NO migration-time data changes: it creates one trigger function, one trigger, and drops two old triggers and their functions. The flagged 'INSERT' is the INSERT INTO user_notifications inside the body of fn_package_usage_alert_trigger() -- executed later, per package, only when a package's hours_used changes and crosses 75/90/100% -- and the flagged 'UPDATE' is the words AFTER UPDATE OF hours_used in the CREATE TRIGGER definition, not an UPDATE statement. Dry-run against production inside a rolled-back transaction before applying (one alert per threshold crossed, none for packages under 75%, none for the multi-package client that triggered the investigation, no duplicate on repeat, nothing persisted after rollback). See docs/audit-log/entries/2026-09-30-package-usage-alerts-per-package.md. Pending Carl's review via this PR, same as any other change to this repo.",
+      "expires": "2026-10-30"
     }
   ]
 }
