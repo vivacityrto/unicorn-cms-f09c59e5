@@ -7,7 +7,9 @@ import { test, expect, type Page } from "@playwright/test";
 // The read-only tests always run. The round-trip test WRITES to production
 // (it pins then unpins one existing Demo RTO note, restoring it in a finally
 // block), so it only runs when E2E_ALLOW_WRITES=1 and never against any other
-// tenant. Neither test signs out or creates/deletes any note.
+// tenant. Neither test signs out or creates/deletes any note. Each pin/unpin
+// also leaves two internal timeline entries on Demo RTO (they cannot be
+// removed by the test, and are the behaviour under test).
 
 const DEMO_RTO = 7547;
 const tenantUrl = (tab: string) => `/tenant/${DEMO_RTO}?tab=${tab}`;
@@ -86,6 +88,11 @@ test.describe("pin round trip (writes to Demo RTO)", () => {
         });
       }
 
+      // ...and the Timeline recorded the pin as its own entry (DB trigger).
+      await expect(page.getByText(`Note pinned: ${title}`, { exact: false }).first()).toBeVisible({
+        timeout: 15_000,
+      });
+
       // Unpin from the shared card; it disappears immediately (optimistic).
       const card = page.getByTestId("pinned-notes-card");
       await card
@@ -96,6 +103,10 @@ test.describe("pin round trip (writes to Demo RTO)", () => {
       pinned = false;
       await expect(page.getByText("Note unpinned", { exact: true }).first()).toBeVisible();
       await expect(page.getByTestId("pinned-note").filter({ hasText: title })).toHaveCount(0);
+      // The Timeline (still open) reloads and gains the unpin entry.
+      await expect(page.getByText(`Note unpinned: ${title}`, { exact: false }).first()).toBeVisible({
+        timeout: 15_000,
+      });
     } finally {
       // Restore Demo RTO to how we found it, whatever happened above.
       if (pinned) {

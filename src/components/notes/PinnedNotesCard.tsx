@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 interface PinnedNotesCardProps {
   tenantId: number;
   className?: string;
+  /** Called after a pin change succeeds, e.g. so the Timeline can reload the entry it just gained. */
+  onPinChanged?: () => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface PinnedNotesCardProps {
  * package-level pins together (each labelled), and renders nothing when there
  * are none, so it can sit on any tab without leaving an empty card behind.
  */
-export function PinnedNotesCard({ tenantId, className }: PinnedNotesCardProps) {
+export function PinnedNotesCard({ tenantId, className, onPinChanged }: PinnedNotesCardProps) {
   const { data: pinned = [] } = usePinnedNotes(tenantId);
   const setPinned = useSetNotePinned(tenantId);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -89,7 +91,7 @@ export function PinnedNotesCard({ tenantId, className }: PinnedNotesCardProps) {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 text-amber-600 hover:text-amber-700"
-                    onClick={() => setPinned.mutate({ noteId: note.id, pinned: false })}
+                    onClick={() => setPinned.mutate({ noteId: note.id, pinned: false }, { onSuccess: onPinChanged })}
                     title="Unpin note"
                   >
                     <PinOff className="h-3 w-3" />

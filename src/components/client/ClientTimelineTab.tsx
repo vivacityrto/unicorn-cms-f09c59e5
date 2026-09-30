@@ -110,7 +110,9 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
   // package cards (one react-query cache), not tracked per-tab.
   const { data: pinnedNotes = [] } = usePinnedNotes(tenantId);
   const setNotePinned = useSetNotePinned(tenantId);
-  const toggleNotePin = (noteId: string, pinned: boolean) => setNotePinned.mutate({ noteId, pinned });
+  // Pinning/unpinning writes a Timeline entry (DB trigger), so reload the feed once the change lands.
+  const toggleNotePin = (noteId: string, pinned: boolean) =>
+    setNotePinned.mutate({ noteId, pinned }, { onSuccess: () => refresh() });
 
   const [showAddNote, setShowAddNote] = useState(false);
   const [noteTitle, setNoteTitle] = useState('');
@@ -175,7 +177,7 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
   return (
     <div className="space-y-4">
       {/* ===== Pinned Notes (shared with Overview) ===== */}
-      <PinnedNotesCard tenantId={tenantId} />
+      <PinnedNotesCard tenantId={tenantId} onPinChanged={() => refresh()} />
 
       {/* ===== Main Timeline ===== */}
       <Card>

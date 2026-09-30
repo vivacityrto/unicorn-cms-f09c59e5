@@ -30,16 +30,38 @@ Ask Viv, or notification delivery.
   notifications carry `notes` ids, so it always fell to its fallback text.
 - `PackagePinnedNote` ran its own query per package card (N queries per page).
 - A pin write blocked by RLS is a silent 0-row update, not an error.
+- **RLS exposure (pre-existing, not changed here):** `notes_select` allows any
+  user in a tenant's `tenant_users` (via `user_has_tenant_access`) to read every note
+  of that tenant. Simulated in a rolled-back transaction as a plain client "User" on
+  Demo RTO (7547): all 9 of that tenant's notes were readable (including the pinned
+  one), 0 of other tenants'. The staff-side Notes tab is labelled "Internal" but the
+  policy does not enforce it. No client-portal UI reads `notes` (every reader is a
+  staff tenant-management component), so pins are not shown to clients in the app.
+  Client users only see `client_timeline_events` rows with `visibility = 'client'`
+  (same simulation: 414 events visible, 0 internal).
 
 ## KB changes shipped
 - no changes
 
 ## Code changes (if this entry accompanies one)
-- Migration `20260930090000_migrate_client_notes_to_notes.sql`: copies the 22
+- Migration `20260930090000_migrate_client_notes_to_notes.sql` — **applied to
+  production 2026-09-30** via the Supabase MCP (`apply_migration`). Copies the 22
   client_notes rows into `notes`, preserving ids, with `trg_notes_timeline` paused
-  for the copy so no duplicate timeline events are created. `client_notes` and all
-  timeline events are left untouched. No schema change, no new column, no RLS
-  change, no grant change.
+  for the copy so no duplicate timeline events are created. Verified afterwards:
+  22 rows migrated (17 package-level, 5 client-level), content/tenant/creator/
+  timestamps/pin state identical for all 22, 0 duplicate `structured_note_added`
+  events for them, `client_timeline_events` unchanged at 17,554 rows, trigger back
+  to enabled (`O`), `client_notes` still 22 rows. No schema change, no new
+  column, no RLS change, no grant change.
+- Migration `20260930100000_notes_pin_timeline_events.sql`: adds
+  `fn_notes_pin_timeline_trigger` + `trg_notes_pin_timeline` (AFTER UPDATE OF
+  is_pinned on `notes`, only when the value changes). Writes a `note_pinned` /
+  `note_unpinned` event (already allowed by `timeline_valid_event_type`) with
+  entity_type `structured_note`, visibility `internal` (column default, so clients
+  never see it), created_by = `auth.uid()` (the person who pinned). Dry-run in a
+  rolled-back transaction on production: one entry per pin and per unpin, none for an
+  unrelated column update, attributed to the acting user, nothing persisted after
+  rollback. No Edge Function writes `is_pinned`. Additive only.
 - Frontend: single write path `setNotePinned` (`src/lib/notePin.ts`, target-state
   semantics, fails loudly on a 0-row RLS no-op); `usePinnedNotes` /
   `useSetNotePinned` (shared react-query cache, optimistic unpin with rollback,
@@ -53,10 +75,18 @@ Ask Viv, or notification delivery.
 - `notes` is the single source of truth for notes and pins; `client_notes` is
   retired from the app (table retained, unused, not dropped).
 - Frontend-only for the pin model: no `pinned_at`/`pinned_by` columns were added.
-- Pin/unpin no longer produces timeline events (the client_notes RPC was the only
-  writer of those). Historic `note_pinned`/`note_unpinned` events are unchanged.
+- Pin/unpin timeline entries are produced by a database trigger (not client code) so
+  every pin path is covered and the entry commits atomically with the pin. (An
+  earlier draft of this entry said pins would produce no events; that changed when
+  the requirement to log them was added.)
 
 ## Open questions parked
+- **Tighten `notes_select`** (and insert/update/delete) so client users of a tenant
+  cannot read or modify internal notes directly through the API. Needs its own design
+  (staff-only, or a per-note `visibility` column with client-shared notes) and its
+  own audit entry; deliberately not bundled here. Check first whether any client
+  feature (e.g. notify-client-of-note, `NotePreviewDialog` for client notifications)
+  relies on clients reading `notes`.
 - `merge_tenants` still references `client_notes` and does not move `notes` rows;
   since new renewal/quick notes now land in `notes`, confirm whether tenant merges
   are meant to carry `notes` across (they never did for the 11k existing rows).
