@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useClientTimeline, TimelineEvent, PinnedNote } from '@/hooks/useClientManagementData';
+import { useClientTimeline, TimelineEvent } from '@/hooks/useClientManagementData';
+import { usePinnedNotes, useSetNotePinned } from '@/hooks/usePinnedNotes';
+import { PinnedNotesCard } from '@/components/notes/PinnedNotesCard';
 import { useAuth } from '@/hooks/useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,10 +15,10 @@ import { TimelineEventCard, TimelineEventCardSkeleton } from './TimelineEventCar
 import {
   Activity, FileText, Mail, CheckSquare, StickyNote,
   Clock, Loader2, RefreshCw, Calendar, Timer, Search,
-  Plus, X, ChevronDown, ChevronUp, Pin, PinOff, Link2, UserCog, LogIn, MessageSquare,
+  Plus, X, Link2, UserCog, LogIn, MessageSquare,
   GraduationCap, ListChecks, MousePointerClick, ArrowRightLeft, Receipt, Package, Shield,
 } from 'lucide-react';
-import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns';
+import { isToday, isYesterday, isThisWeek } from 'date-fns';
 
 // =============================================
 // Filter chips
@@ -94,7 +95,6 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
 
   const {
     events,
-    pinnedNotes,
     loading,
     hasMore,
     filter,
@@ -104,14 +104,18 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
     refresh,
     loadMore,
     addQuickNote,
-    toggleNotePin,
   } = useClientTimeline(tenantId, clientId);
+
+  // Pin state is shared with the pinned-notes card, the Notes tab and the
+  // package cards (one react-query cache), not tracked per-tab.
+  const { data: pinnedNotes = [] } = usePinnedNotes(tenantId);
+  const setNotePinned = useSetNotePinned(tenantId);
+  const toggleNotePin = (noteId: string, pinned: boolean) => setNotePinned.mutate({ noteId, pinned });
 
   const [showAddNote, setShowAddNote] = useState(false);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [addingNote, setAddingNote] = useState(false);
-  const [expandedPinnedNotes, setExpandedPinnedNotes] = useState<Set<string>>(new Set());
 
   const dateGroups = useMemo(() => groupEventsByDate(events), [events]);
 
@@ -131,20 +135,10 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
     setAddingNote(false);
   };
 
-  const togglePinnedExpand = (noteId: string) => {
-    setExpandedPinnedNotes(prev => {
-      const next = new Set(prev);
-      if (next.has(noteId)) {
-        next.delete(noteId);
-      } else {
-        next.add(noteId);
-      }
-      return next;
-    });
-  };
-
   const getNoteIdFromEvent = (event: TimelineEvent): string | null => {
-    if (event.entity_type === 'note' && event.entity_id) return event.entity_id;
+    if ((event.entity_type === 'note' || event.entity_type === 'structured_note') && event.entity_id) {
+      return event.entity_id;
+    }
     return ((event.metadata as Record<string, unknown>)?.note_id as string) || null;
   };
 
@@ -180,70 +174,8 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
 
   return (
     <div className="space-y-4">
-      {/* ===== Pinned Notes ===== */}
-      {pinnedNotes.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Pin className="h-4 w-4 text-amber-600" />
-              Pinned Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {pinnedNotes.map(note => {
-              const isExpanded = expandedPinnedNotes.has(note.id);
-              return (
-                <div
-                  key={note.id}
-                  className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{note.title || 'Untitled note'}</p>
-                      <p className={`text-sm text-muted-foreground mt-1 ${isExpanded ? '' : 'line-clamp-2'}`}>
-                        {note.content}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {note.content.length > 100 && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => togglePinnedExpand(note.id)}>
-                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-amber-600 hover:text-amber-700"
-                        onClick={() => toggleNotePin(note.id, false)}
-                        title="Unpin note"
-                      >
-                        <PinOff className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}
-                    </span>
-                    {note.creator && (
-                      <span className="flex items-center gap-1">
-                        <Avatar className="h-4 w-4">
-                          <AvatarImage src={note.creator.avatar_url || undefined} />
-                          <AvatarFallback className="text-[8px]">
-                            {note.creator.first_name?.[0]}{note.creator.last_name?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        {note.creator.first_name} {note.creator.last_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
+      {/* ===== Pinned Notes (shared with Overview) ===== */}
+      <PinnedNotesCard tenantId={tenantId} />
 
       {/* ===== Main Timeline ===== */}
       <Card>

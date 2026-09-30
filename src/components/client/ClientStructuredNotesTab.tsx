@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
-  Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
+  Plus, StickyNote, Pin, PinOff, MoreHorizontal, Edit, Trash2,
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
   ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X, Eye
@@ -126,7 +126,7 @@ const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-slate-100 text-slate-7
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
   const membership = useTenantMemberships(tenantId);
   const scopeTag = membership.defaultScope ?? 'rto';
-  const { notes, loading, createNote, updateNote, deleteNote, refresh } = useNotes({
+  const { notes, loading, createNote, updateNote, deleteNote, togglePin, refresh } = useNotes({
     parentType: ['tenant', 'package_instance'],
     parentId: tenantId,
     tenantId
@@ -1578,6 +1578,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                             <DropdownMenuItem onClick={() => handleOpenEdit(note)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => togglePin(note.id, !note.is_pinned)}>
+                              {note.is_pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                              {note.is_pinned ? 'Unpin' : 'Pin'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenConvert(note)}>
                               <ArrowRight className="h-4 w-4 mr-2" />

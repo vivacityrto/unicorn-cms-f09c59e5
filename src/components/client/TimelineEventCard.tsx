@@ -302,7 +302,13 @@ export function TimelineEventCard({
 
   const primaryAction = getPrimaryAction(event);
   const moduleChip = getModuleChip(event.event_type);
-  const isNoteEvent = event.entity_type === 'note' || ['note_added', 'note_created'].includes(event.event_type);
+  // 'structured_note' events come from the notes table (the real notes system);
+  // 'note' events are the legacy client_notes ones, whose rows were migrated
+  // into notes with the same ids, so both resolve to a pinnable note.
+  const isNoteEvent =
+    event.entity_type === 'note' ||
+    event.entity_type === 'structured_note' ||
+    ['note_added', 'note_created', 'structured_note_added'].includes(event.event_type);
   const showRetry = RETRY_EVENT_TYPES.has(event.event_type);
 
   // Package name from metadata

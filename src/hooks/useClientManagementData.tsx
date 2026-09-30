@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { groupPortfolioTimelineEvents } from '@/hooks/portfolioTimelineGrouping';
 import { fetchEnrollmentCourseContext } from '@/hooks/academyEnrollmentActorContext';
+import { plainTextToNoteHtml } from '@/lib/noteHtml';
 
 // =============================================
 // Types
@@ -24,27 +25,6 @@ export interface TimelineEvent {
   metadata: Record<string, unknown>;
   package_id: number | null;
   visibility: 'internal' | 'client';
-  creator?: {
-    first_name: string;
-    last_name: string;
-    avatar_url: string | null;
-  };
-}
-
-export interface ClientNote {
-  id: string;
-  tenant_id: number;
-  client_id: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  note_type: 'meeting' | 'decision' | 'risk' | 'follow_up' | 'escalation' | 'general';
-  title: string | null;
-  content: string;
-  tags: string[];
-  related_entity_type: string | null;
-  related_entity_id: string | null;
-  is_pinned: boolean;
   creator?: {
     first_name: string;
     last_name: string;
@@ -120,22 +100,6 @@ export const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   ],
 };
 
-export interface PinnedNote {
-  id: string;
-  title: string | null;
-  content: string;
-  is_pinned: boolean;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  note_type: string;
-  creator?: {
-    first_name: string;
-    last_name: string;
-    avatar_url: string | null;
-  };
-}
-
 export interface DateRange {
   from: Date | null;
   to: Date | null;
@@ -149,48 +113,12 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
   // and grouping each page in isolation fragments it into one fake
   // cluster per page instead of the one real cluster it actually is.
   const rawEventsRef = useRef<TimelineEvent[]>([]);
-  const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null });
   const { toast } = useToast();
-
-  const fetchPinnedNotes = useCallback(async () => {
-    if (!tenantId || !clientId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('client_notes')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('client_id', clientId)
-        .eq('is_pinned', true)
-        .order('updated_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Fetch creators
-      const creatorIds = [...new Set((data || []).map(n => n.created_by).filter(Boolean))];
-      let creatorsMap = new Map();
-      
-      if (creatorIds.length > 0) {
-        const { data: users } = await supabase
-          .from('users')
-          .select('user_uuid, first_name, last_name, avatar_url')
-          .in('user_uuid', creatorIds);
-        creatorsMap = new Map(users?.map(u => [u.user_uuid, u]) || []);
-      }
-      
-      setPinnedNotes((data || []).map(note => ({
-        ...note,
-        creator: creatorsMap.get(note.created_by)
-      })));
-    } catch (error) {
-      console.error('Error fetching pinned notes:', error);
-    }
-  }, [tenantId, clientId]);
 
   const fetchEvents = useCallback(async (
     limit = 30,
@@ -278,71 +206,45 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
 
   useEffect(() => {
     fetchEvents();
-    fetchPinnedNotes();
-  }, [fetchEvents, fetchPinnedNotes]);
+  }, [fetchEvents]);
 
+  // Quick notes go to the `notes` table (the real notes system) as client-level
+  // notes, so they show up on the Notes tab and can be pinned like any other.
+  // The notes INSERT trigger writes the timeline event.
   const addQuickNote = useCallback(async (title: string, content: string) => {
-    if (!tenantId || !clientId) return false;
+    if (!tenantId) return false;
 
     try {
-      const { error } = await supabase.rpc('rpc_create_client_note', {
-        p_tenant_id: tenantId,
-        p_client_id: clientId,
-        p_note_type: 'general',
-        p_title: title,
-        p_content: content,
-        p_tags: [],
-        p_related_entity_type: null,
-        p_related_entity_id: null,
-        p_is_pinned: false
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not authenticated");
+
+      const { error } = await supabase.from("notes").insert({
+        tenant_id: tenantId,
+        parent_type: "tenant",
+        parent_id: tenantId,
+        title: title || null,
+        note_details: plainTextToNoteHtml(content),
+        note_type: "general",
+        created_by: userData.user.id,
       });
 
       if (error) throw error;
-      
-      toast({ title: 'Note added' });
+
+      toast({ title: "Note added" });
       fetchEvents();
       return true;
     } catch (error: unknown) {
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
+        title: "Error",
+        description: error instanceof Error ? error.message : (error as { message?: string })?.message ?? "Unknown error",
+        variant: "destructive"
       });
       return false;
     }
-  }, [tenantId, clientId, toast, fetchEvents]);
-
-  const toggleNotePin = useCallback(async (noteId: string, isPinned: boolean) => {
-    try {
-      const { data, error } = await supabase.rpc('rpc_toggle_client_note_pin', {
-        p_note_id: noteId,
-        p_is_pinned: isPinned
-      });
-
-      if (error) throw error;
-      
-      const result = data as { success: boolean; error?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update pin status');
-      }
-      
-      toast({ title: isPinned ? 'Note pinned' : 'Note unpinned' });
-      fetchEvents();
-      fetchPinnedNotes();
-      return true;
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
-      });
-      return false;
-    }
-  }, [toast, fetchEvents, fetchPinnedNotes]);
+  }, [tenantId, toast, fetchEvents]);
 
   return {
     events,
-    pinnedNotes,
     loading,
     hasMore,
     filter,
@@ -351,172 +253,13 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     setSearch,
     dateRange,
     setDateRange,
-    refresh: () => { fetchEvents(); fetchPinnedNotes(); },
+    refresh: () => { fetchEvents(); },
     // Always paginate off the raw (ungrouped) accumulator length, not the
     // displayed `events.length` — grouping can collapse many raw rows into
     // one, so the caller's displayed count under-advances the RPC offset
     // and re-fetches rows already seen.
     loadMore: () => fetchEvents(30, rawEventsRef.current.length),
-    addQuickNote,
-    toggleNotePin
-  };
-}
-
-// =============================================
-// Notes Hook
-// =============================================
-
-export function useClientNotes(tenantId: number | null, clientId: string | null) {
-  const [notes, setNotes] = useState<ClientNote[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  const fetchNotes = useCallback(async () => {
-    if (!tenantId || !clientId) return;
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('client_notes')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('client_id', clientId)
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch creator info
-      const creatorIds = [...new Set((data || []).map(n => n.created_by))];
-      let creatorsMap = new Map();
-      
-      if (creatorIds.length > 0) {
-        const { data: users } = await supabase
-          .from('users')
-          .select('user_uuid, first_name, last_name, avatar_url')
-          .in('user_uuid', creatorIds);
-        
-        creatorsMap = new Map(users?.map(u => [u.user_uuid, u]) || []);
-      }
-
-      const notesWithCreators = (data || []).map(note => ({
-        ...note,
-        creator: creatorsMap.get(note.created_by)
-      })) as ClientNote[];
-
-      setNotes(notesWithCreators);
-    } catch (error: unknown) {
-      console.error('Error fetching notes:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load notes',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, clientId, toast]);
-
-  const createNote = useCallback(async (data: {
-    note_type: string;
-    title?: string;
-    content: string;
-    tags?: string[];
-    related_entity_type?: string;
-    related_entity_id?: string;
-    is_pinned?: boolean;
-  }) => {
-    if (!tenantId || !clientId) return null;
-
-    try {
-      const { data: result, error } = await supabase.rpc('rpc_create_client_note', {
-        p_tenant_id: tenantId,
-        p_client_id: clientId,
-        p_note_type: data.note_type,
-        p_title: data.title || null,
-        p_content: data.content,
-        p_tags: data.tags || [],
-        p_related_entity_type: data.related_entity_type || null,
-        p_related_entity_id: data.related_entity_id || null,
-        p_is_pinned: data.is_pinned || false
-      });
-
-      if (error) throw error;
-
-      const res = result as { success: boolean; note_id?: string; error?: string };
-      if (!res.success) {
-        throw new Error(res.error || 'Failed to create note');
-      }
-
-      toast({ title: 'Note created' });
-      fetchNotes();
-      return res.note_id;
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
-      });
-      return null;
-    }
-  }, [tenantId, clientId, toast, fetchNotes]);
-
-  const updateNote = useCallback(async (noteId: string, updates: Partial<ClientNote>) => {
-    try {
-      const { data: result, error } = await supabase.rpc('rpc_update_client_note', {
-        p_note_id: noteId,
-        p_updates: updates
-      });
-
-      if (error) throw error;
-
-      const res = result as { success: boolean; error?: string };
-      if (!res.success) {
-        throw new Error(res.error || 'Failed to update note');
-      }
-
-      toast({ title: 'Note updated' });
-      fetchNotes();
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
-      });
-    }
-  }, [toast, fetchNotes]);
-
-  const deleteNote = useCallback(async (noteId: string) => {
-    try {
-      const { error } = await supabase
-        .from('client_notes')
-        .delete()
-        .eq('id', noteId);
-
-      if (error) throw error;
-
-      toast({ title: 'Note deleted' });
-      fetchNotes();
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
-      });
-    }
-  }, [toast, fetchNotes]);
-
-  useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
-
-  return {
-    notes,
-    loading,
-    refresh: fetchNotes,
-    createNote,
-    updateNote,
-    deleteNote
+    addQuickNote
   };
 }
 

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { pinnedNotesKey, setNotePinned, sortPinnedFirst } from '@/lib/notePin';
 
 export type NoteParentType = 'tenant' | 'package_instance' | 'stage' | 'document';
 
@@ -182,7 +184,15 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  
+  const queryClient = useQueryClient();
+
+  // The tenant-wide pinned list (usePinnedNotes) is cached separately from this
+  // hook's local state, so any write that can change pin state or remove a
+  // pinned note has to refresh it too.
+  const invalidatePinned = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: pinnedNotesKey(tenantId) });
+  }, [queryClient, tenantId]);
+
   // Serialize parentType for stable dependency comparison
   const parentTypeKey = Array.isArray(parentType) ? parentType.join(',') : parentType;
 
@@ -318,6 +328,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
       });
 
       await fetchNotes();
+      invalidatePinned();
       return data.id;
     } catch (error) {
       console.error('Error creating note:', error);
@@ -348,6 +359,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
       });
 
       await fetchNotes();
+      invalidatePinned();
     } catch (error) {
       console.error('Error updating note:', error);
       toast({
@@ -373,6 +385,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
       });
 
       await fetchNotes();
+      invalidatePinned();
     } catch (error) {
       console.error('Error deleting note:', error);
       toast({
@@ -383,8 +396,27 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
     }
   };
 
-  const togglePin = async (id: string, isPinned: boolean): Promise<void> => {
-    await updateNote(id, { is_pinned: !isPinned });
+  /**
+   * `pinned` is the TARGET state (true = pin), the same meaning as everywhere
+   * else pinning happens. The list updates immediately and rolls back if the
+   * write fails, with no full refetch.
+   */
+  const togglePin = async (id: string, pinned: boolean): Promise<void> => {
+    const previous = notes;
+    setNotes(prev => sortPinnedFirst(prev.map(n => (n.id === id ? { ...n, is_pinned: pinned } : n))));
+    try {
+      await setNotePinned(id, pinned);
+      toast({ title: pinned ? 'Note pinned' : 'Note unpinned' });
+      invalidatePinned();
+    } catch (error) {
+      console.error('Error updating note pin:', error);
+      setNotes(previous);
+      toast({
+        title: pinned ? 'Could not pin note' : 'Could not unpin note',
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive'
+      });
+    }
   };
 
   // Memoized derived states

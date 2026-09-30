@@ -13,7 +13,7 @@ export type TenantNotesMap = Record<number, TenantNotesData>;
 const NOTE_BATCH_SIZE = 50;
 
 /**
- * Resolves the most recent note (across notes + client_notes) and
+ * Resolves the most recent note (from the notes table) and
  * the TGA registration end date per tenant.
  */
 export function useTenantNotes(tenantIds: number[]) {
@@ -29,33 +29,18 @@ export function useTenantNotes(tenantIds: number[]) {
 
       for (let i = 0; i < sortedIds.length; i += NOTE_BATCH_SIZE) {
         const batch = sortedIds.slice(i, i + NOTE_BATCH_SIZE);
-        const [notesRes, clientNotesRes] = await Promise.all([
-          supabase
-            .from("notes")
-            .select("tenant_id, created_at, title, note_details")
-            .in("tenant_id", batch)
-            .order("created_at", { ascending: false })
-            .limit(batch.length * 2),
-          supabase
-            .from("client_notes")
-            .select("tenant_id, created_at, title, content")
-            .in("tenant_id", batch)
-            .order("created_at", { ascending: false })
-            .limit(batch.length * 2),
-        ]);
+        const { data: notesData } = await supabase
+          .from("notes")
+          .select("tenant_id, created_at, title, note_details")
+          .in("tenant_id", batch)
+          .order("created_at", { ascending: false })
+          .limit(batch.length * 2);
 
-        const merged = [
-          ...(notesRes.data || []).map((n) => ({
-            tenant_id: n.tenant_id,
-            created_at: n.created_at,
-            snippet: (n.title || n.note_details || "").substring(0, 50),
-          })),
-          ...(clientNotesRes.data || []).map((n) => ({
-            tenant_id: n.tenant_id,
-            created_at: n.created_at,
-            snippet: (n.title || n.content || "").substring(0, 50),
-          })),
-        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const merged = (notesData || []).map((n) => ({
+          tenant_id: n.tenant_id,
+          created_at: n.created_at,
+          snippet: (n.title || n.note_details || "").substring(0, 50),
+        }));
 
         merged.forEach(note => {
           if (!lastNoteMap[note.tenant_id]) {
@@ -93,12 +78,6 @@ export function useTenantNotes(tenantIds: number[]) {
         queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notes" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "client_notes" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "client_notes" }, () => {
         queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
       })
       .subscribe();

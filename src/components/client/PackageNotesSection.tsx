@@ -298,7 +298,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => togglePin(note.id, note.is_pinned)}>
+                            <DropdownMenuItem onClick={() => togglePin(note.id, !note.is_pinned)}>
                               <Pin className="h-4 w-4 mr-2" />
                               {note.is_pinned ? 'Unpin' : 'Pin'}
                             </DropdownMenuItem>
