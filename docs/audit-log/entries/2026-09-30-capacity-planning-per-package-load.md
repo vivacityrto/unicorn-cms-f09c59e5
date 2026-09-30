@@ -93,6 +93,6 @@ usage numbers and labels are listed under open questions.
 - **Phase 2 (not done):** client drawer should list each open package with its real usage from
   `v_package_burndown` and a correct label, and the client card's membership year should come
   from the package's renewal window; then `compute_membership_usage()` /
-  `rpc_get_membership_usage` and the unused parallel structures can be retired.
+  `rpc_get_membership_usage` and the unused parallel structures can be retired. **Update 2026-10-01: paused.** The page that hosts the capacity table (`/membership-dashboard`) has had no menu link since 4 January 2026, and its retirement was decided but deferred on 2026-10-01; see [dead-code investigation §3.5](../../kb/reference/codebase-optimization/cross-cutting/dead-code-feature-consolidation-investigation.md). Do not start phase 2 until that is settled.
 - `membership_tier_capacity_config` hours still disagree with package hours for 40 of 50 tier
   clients; it is only read by `compute_membership_usage()` now.

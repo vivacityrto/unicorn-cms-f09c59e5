@@ -106,6 +106,43 @@ Keep:
 - live replacements: `PackageBuilder.tsx`, `ClientDetail.tsx`, `AuditsAssessments.tsx`, `AuditWorkspaceNew.tsx`, `SuggestionDetail.tsx`, and `useEos.tsx`'s live `useEosIssues` export;
 - legacy redirect routes until bookmark, notification, email, documentation, and external-link evidence supports a deliberate change.
 
+### 3.5 Routed-but-unlinked pages (retirement decided 2026-10-01; execution deferred)
+
+The import-graph method in §2 cannot see this category. A page can be fully reachable from `src/main.tsx` because a `<Route>` mounts it, yet have no menu item, button or link that leads to it. Such a page passes a reachability scan and is only found by reading the menu and link sources. It gets its own register. As everywhere in this document, being listed does not approve deletion; each entry still goes through the §7 gates.
+
+| Page | State | Decision |
+|---|---|---|
+| `/membership-dashboard` (`MembershipDashboard.tsx`, page heading "Clients Dashboard") | Reachable only by typing the URL; unlinked since 4 January 2026 | **Retire, deferred** |
+
+**Decision (Carl, 2026-10-01):** retire this page, but not yet. It is deferred only because Carl is working on ComplyHub at the moment. Nothing in this repository was changed, and the page still works at its URL. Pick it up when Unicorn work resumes, starting from the checks below; the decision should not have to be re-derived.
+
+**Evidence at `origin/main@81145ea8a`:**
+
+- **Route:** `src/App.tsx:221`, a plain `ProtectedRoute` with no role guard (flagged as unguarded in the [2026-05-08 URL access audit](../../../../audit-log/entries/2026-05-08-client-url-access-audit.md)). The data behind it is staff-only at the database layer, so a client user can load the page shell but not the data.
+- **Menu:** a "Memberships" item for this path was added to `DashboardLayout.tsx` and removed again on 4 January 2026 (`f60c4532c`, `226957b67`). Since then nothing in `src/` or `supabase/functions/` (menu, link, `navigate()`, notification or email link) points at it; only its own route entry mentions the path.
+- **History:** the page was added on 4 January 2026; the Consultant Capacity table was added to it on 12 February 2026 (`c13176db4`).
+- **Usage:** no evidence either way in the repository. Nobody has confirmed whether the URL is used or bookmarked.
+
+**Page-only code** (each imported by nothing except this page or by each other, re-checked by import search at the SHA above): `MembershipDashboardWrapper`, `ConsultantCapacityTable`, `MomentumPanel`, `MyWorkWidget`, `ProcessesWidget`, `WeeklyWinTracker`, `WinBanner`, `MembershipActivityFeed`, `MembershipCommandBar`, `MembershipDialogs`, `MembershipGrid` and its only child `MembershipHoverCard`, `MembershipKPITiles`, `useMembershipDashboard`, and `types/membership` (all of its importers are in this group). Within `useCapacityEngine.tsx`, `useConsultantCapacityOverview` and `useConsultantClients` are used only by the capacity table.
+
+**Keep, or handle separately:**
+
+- `TimeInboxWidget` is also used by `DashboardLayout.tsx`.
+- `useMembershipUsage` in `useCapacityEngine.tsx` is used by `ClientTimeSummaryCard` (the client Overview "Membership year" line), so that file cannot be deleted whole, and `rpc_get_membership_usage` is live through it.
+- The consultant-load calculation (`compute_client_weekly_required`, `compute_consultant_current_load`, `compute_consultant_weekly_capacity`, `package_capacity_config`) drives `auto_assign_consultant` and stays whatever happens to the page. See the [capacity planning audit entry](../../../../audit-log/entries/2026-09-30-capacity-planning-per-package-load.md).
+- Server objects are not retirement evidence (§2). `get_stage_progress` has no frontend caller other than `useMembershipDashboard`. `get_membership_rollups` has no caller in `src/` or `supabase/functions/`, and no database function, view or cron job references it: the hook stopped calling it on 5 January 2026 (`0396ad343`, `4018f3ddd`), so the [2026-08-18 security-definer sweep](../../../../audit-log/entries/2026-08-18-security-definer-full-sweep.md)'s statement that this hook is its caller was already out of date. `rpc_get_consultant_capacity_overview` and `rpc_get_consultant_clients` are called only from the capacity hooks. The hook also reads from or writes to `membership_tasks`, `membership_activity`, `membership_entitlements` and `connected_tenants`; do not retire those tables on frontend evidence. Every database object is its own separately authorised decision.
+
+**Before execution (in addition to §7):**
+
+1. Ask the team whether anyone opens or bookmarks `/membership-dashboard`, and what for; record the product-owner disposition.
+2. Decide where consultant capacity should be visible instead, if anywhere: the capacity table is the only screen that shows it.
+3. Proposal, for confirmation: replace the route with a redirect to `/dashboard` for a soak period (in line with the §3.4 rule on legacy routes) before deleting anything; then retire the page-only group in one PR; database objects separately.
+4. Re-run the import and link checks at the branch-cut SHA. The lists above were taken at `81145ea8a`.
+
+**If the decision flips to keep:** add a role-gated sidebar item and a route guard (`allowVivacityTeam` or narrower), then resume capacity planning phase 2 (drawer usage figures, package labels, membership-year dates).
+
+**Interim effect:** capacity planning phase 2 is paused until this is settled, so effort is not spent on a page that is going away.
+
 ## 4. Feature redundancy and consolidation register
 
 ### 4.1 Bounded clone queue for Phase 2.6
