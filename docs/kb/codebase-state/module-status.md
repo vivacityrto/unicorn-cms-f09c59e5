@@ -469,7 +469,7 @@ Why the distinction matters: revenue and renewal hinge on the three flagships. E
 | Documents | 🟡 | + AI analysis, versions, categories, scan pipeline |
 | Tasks | ✅ | Same scope |
 | Campaigns/Email | 🟡 | + Microsoft Graph email; `send-automated-email` and `send-broadcast-campaign` now exist (corrected 2026-09-01, see Module 9) — whether a full builder *UI* sits behind the campaign function isn't confirmed |
-| Subscriptions/Membership | 🔲 | `MembershipDashboard.tsx` manages tenant memberships/roles — NOT Stripe. Stripe is 🔲 Not started. |
+| Subscriptions/Membership | 🔲 | `MembershipDashboard.tsx` manages tenant memberships/roles — NOT Stripe. Stripe is 🔲 Not started. The page is reachable only by typing `/membership-dashboard` (no menu link since 4 Jan 2026); retirement decided 2026-10-01 but deferred, see [dead-code investigation §3.5](../reference/codebase-optimization/cross-cutting/dead-code-feature-consolidation-investigation.md). |
 | Booking | 🟡 | + Outlook calendar sync now live; time capture pages added |
 | AI automation | ✅ | 40+ AI functions; orchestrator, vector layer, research, compliance AI |
 | SharePoint | ✅ | Full SharePoint suite of edge functions |

@@ -183,7 +183,7 @@ Headlines below are ordered with the three flagship surfaces first, then support
 
 ## What's NOT live (don't assume it is)
 
-- Stripe / subscriptions — not wired. `MembershipDashboard` exists but no Stripe. See [module-status.md](../codebase-state/module-status.md).
+- Stripe / subscriptions — not wired. `MembershipDashboard` exists but no Stripe. See [module-status.md](../codebase-state/module-status.md). The page has no menu link and is a deferred retirement candidate ([§3.5](../reference/codebase-optimization/cross-cutting/dead-code-feature-consolidation-investigation.md)).
 - `generate-audit-report` — not found in codebase; confirm with RJ
 - The six named AI agents (Alex, Casey, Morgan, Jordan, Riley, Sam) — not confirmed as named entities (many AI functions exist but agent naming is unclear)
 
