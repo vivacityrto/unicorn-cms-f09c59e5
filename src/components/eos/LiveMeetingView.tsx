@@ -99,7 +99,7 @@ export const LiveMeetingView = () => {
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
   const { segueShares, createSegueShare, deleteSegueShare } = useEosSegueShares(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
-  const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
+  const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId, meeting?.tenant_id);
   const { ratings, saveRating, getUserRating } = useMeetingOutcomes(meetingId);
   const { closes: onePhraseCloses, saveOnePhraseClose, getUserPhrase } = useOnePhraseCloses(meetingId);
   const myExistingPhrase = profile?.user_uuid ? getUserPhrase(profile.user_uuid) : undefined;
@@ -500,6 +500,22 @@ export const LiveMeetingView = () => {
     },
   });
 
+  // Open to-dos first (earliest due date first, so overdue items lead), then completed ones.
+  const sortedTodos = useMemo(() => {
+    const rank = (t: EosTodo) => (t.status === 'Complete' ? 1 : 0);
+    return [...(todos ?? [])].sort((a, b) => {
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
+      const ad = a.due_date ?? '9999-12-31';
+      const bd = b.due_date ?? '9999-12-31';
+      return ad.localeCompare(bd);
+    });
+  }, [todos]);
+
+  const liveSelectedIssue = useMemo(
+    () => issues?.find((i) => i.id === selectedIssue?.id) ?? selectedIssue,
+    [issues, selectedIssue]
+  );
+
   const handleSelectIssue = (issue: EosIssue) => {
     setSelectedIssue(issue);
     setIdsDialogOpen(true);
@@ -839,11 +855,11 @@ export const LiveMeetingView = () => {
               To-Do List ({todos?.length || 0})
             </h3>
             <p className="text-muted-foreground text-sm mb-4">
-              Review last week's to-dos. Did you do it? Yes or No.
+              Review open to-dos from earlier meetings and this one. Did you do it? Yes or No.
             </p>
             
             <div className="space-y-2 mb-4">
-              {todos?.map((todo) => (
+              {sortedTodos.map((todo) => (
                 <div 
                   key={todo.id} 
                   className={`p-3 rounded flex items-center justify-between gap-3 cursor-pointer transition-colors ${
@@ -867,6 +883,11 @@ export const LiveMeetingView = () => {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Due: {todo.due_date ? format(new Date(todo.due_date), 'dd/MM/yyyy') : 'Not set'}
+                        {todo.meeting_id !== meetingId && (
+                          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                            From an earlier meeting
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Assigned to: {todo.owner_id ? (todoOwners?.[todo.owner_id] ?? 'Unassigned') : 'Unassigned'}
@@ -878,9 +899,9 @@ export const LiveMeetingView = () => {
                   </Badge>
                 </div>
               ))}
-              {(!todos || todos.length === 0) && (
+              {sortedTodos.length === 0 && (
                 <p className="text-muted-foreground text-sm text-center py-4">
-                  No to-dos from last week
+                  No open to-dos to review
                 </p>
               )}
             </div>
@@ -1517,10 +1538,10 @@ export const LiveMeetingView = () => {
       <IDSDialog
         open={idsDialogOpen}
         onOpenChange={setIdsDialogOpen}
-        issue={selectedIssue}
-        isFacilitator={isFacilitator}
+        issue={liveSelectedIssue}
         meetingId={meetingId}
         onIssueChanged={() => broadcastChange('issue_change')}
+        onTodosChanged={() => broadcastChange('todo_change')}
       />
 
       <CreateIssueDialog
