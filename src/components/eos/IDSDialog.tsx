@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,11 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { CalendarIcon, Plus, CheckCircle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -23,15 +22,25 @@ import { cn } from '@/lib/utils';
 import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import type { EosIssue } from '@/types/eos';
+import {
+  IssueEditConflictError,
+  createIssueTodos,
+  fetchIssueTextField,
+  mergeConflictingText,
+  saveIssueTextField,
+  shouldAdoptRemoteText,
+  type IssueTextField,
+} from '@/lib/eosIssueEdit';
 
 interface IDSDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issue: EosIssue | null;
-  isFacilitator: boolean;
   meetingId?: string;
-  /** Called after the issue's status changes - used to broadcast the change to other live-meeting attendees */
+  /** Called after the issue changes (status, notes, solution) - used to broadcast the change to other live-meeting attendees */
   onIssueChanged?: () => void;
+  /** Called after to-dos are created from this issue - used to refresh the To-Do List for every attendee */
+  onTodosChanged?: () => void;
 }
 
 interface TodoItem {
@@ -40,13 +49,18 @@ interface TodoItem {
   due_date: string;
 }
 
-export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId, onIssueChanged }: IDSDialogProps) {
+export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged, onTodosChanged }: IDSDialogProps) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('identify');
   const [solution, setSolution] = useState(issue?.solution || '');
   const [discussionNotes, setDiscussionNotes] = useState('');
-  const [todos, setTodos] = useState<TodoItem[]>([]);
+  // To-dos saved from this issue during this session (they are created immediately, not staged).
+  const [addedTodos, setAddedTodos] = useState<TodoItem[]>([]);
+  // Last value of each shared text field as loaded from / saved to the server. Used to tell whether
+  // the local text has unsaved edits, and as the expected value when saving (conflict detection).
+  const notesBaseline = useRef<string | null>(null);
+  const solutionBaseline = useRef<string | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoOwner, setNewTodoOwner] = useState('');
   const [newTodoDueDate, setNewTodoDueDate] = useState<Date>();
@@ -91,31 +105,75 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
     }
   };
 
-  // Auto-advance tab when issue status changes or dialog opens
+  // Opening the dialog (or switching to another issue) loads that issue's text fresh.
   useEffect(() => {
     if (issue && open) {
-      const appropriateTab = getTabFromStatus(issue.status);
-      setActiveTab(appropriateTab);
-      setSolution(issue.solution || '');
-      // Load existing discussion notes from outcome_note field
+      notesBaseline.current = issue.outcome_note ?? null;
+      solutionBaseline.current = issue.solution ?? null;
       setDiscussionNotes(issue.outcome_note || '');
+      setSolution(issue.solution || '');
+      setAddedTodos([]);
     }
-    // Intentionally scoped to id/status, not the whole `issue` object: a background
-    // refetch that returns a new object reference with unchanged id/status must not
-    // reset the solution/notes fields out from under an in-progress edit.
+    // Deliberately keyed on id/open only: a background refetch that returns a new object for the
+    // same issue must not reset a field out from under an in-progress edit. Live changes from
+    // other attendees are folded in by the effect below, which respects unsaved local text.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issue?.id, open]);
+
+  // The tab follows the issue's status (Open -> Identify, Discussing -> Discuss, Solved -> Solve),
+  // so when anyone moves the issue along, everyone's dialog follows.
+  useEffect(() => {
+    if (issue && open) {
+      setActiveTab(getTabFromStatus(issue.status));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue?.id, issue?.status, open]);
 
+  // Live updates: when another attendee saves notes/solution, show their text - but only if this
+  // user has no unsaved edits in that field (otherwise their draft is reconciled when they save).
+  useEffect(() => {
+    if (!issue || !open) return;
+    const remoteNotes = issue.outcome_note ?? '';
+    const remoteSolution = issue.solution ?? '';
+    setDiscussionNotes((local) => {
+      if (!shouldAdoptRemoteText(local, notesBaseline.current ?? '', remoteNotes)) return local;
+      notesBaseline.current = issue.outcome_note ?? null;
+      return remoteNotes;
+    });
+    setSolution((local) => {
+      if (!shouldAdoptRemoteText(local, solutionBaseline.current ?? '', remoteSolution)) return local;
+      solutionBaseline.current = issue.solution ?? null;
+      return remoteSolution;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issue?.outcome_note, issue?.solution]);
+
+  // Saves a shared text field. If someone else changed the same field since this user loaded it,
+  // both versions are merged and kept (never a silent overwrite).
+  const saveSharedField = async (field: IssueTextField, value: string) => {
+    if (!issue) return;
+    const baselineRef = field === 'outcome_note' ? notesBaseline : solutionBaseline;
+    const setLocal = field === 'outcome_note' ? setDiscussionNotes : setSolution;
+    try {
+      await saveIssueTextField(issue.id, field, value, baselineRef.current);
+      baselineRef.current = value;
+    } catch (error) {
+      if (!(error instanceof IssueEditConflictError)) throw error;
+      const latest = await fetchIssueTextField(issue.id, field);
+      const merged = mergeConflictingText(latest ?? '', value);
+      await saveIssueTextField(issue.id, field, merged, latest);
+      baselineRef.current = merged;
+      setLocal(merged);
+      toast({
+        title: 'Someone else edited this at the same time',
+        description: 'Both versions were kept - please check the text.',
+      });
+    }
+  };
+
   // Save discussion notes mutation
   const saveDiscussionNotes = useMutation({
-    mutationFn: async (notes: string) => {
-      const { error } = await supabase
-        .from('eos_issues')
-        .update({ outcome_note: notes })
-        .eq('id', issue!.id);
-      
-      if (error) throw error;
-    },
+    mutationFn: (notes: string) => saveSharedField('outcome_note', notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
       queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
@@ -124,6 +182,19 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
     },
     onError: (error: Error) => {
       toast({ title: 'Error saving notes', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Save the solution draft (shared with everyone; the status change to Solved is separate)
+  const saveSolutionDraft = useMutation({
+    mutationFn: (text: string) => saveSharedField('solution', text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
+      onIssueChanged?.();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error saving solution', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -173,30 +244,23 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
     },
   });
 
-  // Create todos mutation
-  const createTodos = useMutation({
-    mutationFn: async () => {
-      if (todos.length === 0) return;
-
-      // Pass meeting_id explicitly to ensure todos are linked to the meeting
-      const effectiveMeetingId = issue?.meeting_id || meetingId || null;
-      
-      const { error } = await supabase.rpc('create_todos_from_issue', {
-        p_issue_id: issue!.id,
-        p_todos: todos as unknown as Json,
-        p_meeting_id: effectiveMeetingId,
-      });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
+  // Create a to-do from this issue right away (linked to the meeting), so it shows in the To-Do List
+  // for everyone - not held back until the issue is marked solved.
+  const createTodo = useMutation({
+    mutationFn: (todo: TodoItem) =>
+      createIssueTodos(issue!.id, issue?.meeting_id || meetingId || null, [todo]),
+    onSuccess: (_result, todo) => {
       queryClient.invalidateQueries({ queryKey: ['eos-todos'] });
       queryClient.invalidateQueries({ queryKey: ['meeting-todos'] });
-      toast({ title: 'To-dos created successfully' });
-      setTodos([]);
+      setAddedTodos((prev) => [...prev, todo]);
+      setNewTodoTitle('');
+      setNewTodoOwner('');
+      setNewTodoDueDate(undefined);
+      onTodosChanged?.();
+      toast({ title: 'To-do added' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error creating to-dos', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error adding to-do', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -206,28 +270,23 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
       return;
     }
 
-    setTodos([
-      ...todos,
-      {
-        title: newTodoTitle,
-        owner_id: newTodoOwner,
-        due_date: format(newTodoDueDate, 'yyyy-MM-dd'),
-      },
-    ]);
-
-    setNewTodoTitle('');
-    setNewTodoOwner('');
-    setNewTodoDueDate(undefined);
+    createTodo.mutate({
+      title: newTodoTitle.trim(),
+      owner_id: newTodoOwner,
+      due_date: format(newTodoDueDate, 'yyyy-MM-dd'),
+    });
   };
 
-  const handleRemoveTodo = (index: number) => {
-    setTodos(todos.filter((_, i) => i !== index));
-  };
-
-  // Auto-save discussion notes on blur
+  // Auto-save discussion notes / solution when the field loses focus
   const handleDiscussionNotesBlur = () => {
-    if (issue && discussionNotes !== (issue.outcome_note || '')) {
+    if (issue && discussionNotes !== (notesBaseline.current ?? '')) {
       saveDiscussionNotes.mutate(discussionNotes);
+    }
+  };
+
+  const handleSolutionBlur = () => {
+    if (issue && solution !== (solutionBaseline.current ?? '')) {
+      saveSolutionDraft.mutate(solution);
     }
   };
 
@@ -238,37 +297,37 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
     }
 
     try {
-      // Save discussion notes first if changed
-      if (discussionNotes && discussionNotes !== (issue.outcome_note || '')) {
+      // Save shared text first (merging with anyone else's concurrent edit), then solve with the saved text
+      if (discussionNotes !== (notesBaseline.current ?? '')) {
         await saveDiscussionNotes.mutateAsync(discussionNotes);
       }
+      if (solution !== (solutionBaseline.current ?? '')) {
+        await saveSolutionDraft.mutateAsync(solution);
+      }
+      const solutionText = solutionBaseline.current ?? solution;
 
       const currentStatus = issue?.status || 'Open';
-      
+
       // If status is Open, we need to transition through Discussing first
       if (currentStatus === 'Open') {
-        await setStatus.mutateAsync({ 
-          status: 'Discussing', 
+        await setStatus.mutateAsync({
+          status: 'Discussing',
           fromStatus: 'Open',
-          autoAdvanceTab: false 
+          autoAdvanceTab: false
         });
         // Now transition to Solved - use explicit fromStatus since prop hasn't updated yet
-        await setStatus.mutateAsync({ 
-          status: 'Solved', 
+        await setStatus.mutateAsync({
+          status: 'Solved',
           fromStatus: 'Discussing',
-          solutionText: solution 
+          solutionText
         });
       } else {
         // Already in Discussing or another valid state
-        await setStatus.mutateAsync({ 
-          status: 'Solved', 
+        await setStatus.mutateAsync({
+          status: 'Solved',
           fromStatus: currentStatus,
-          solutionText: solution 
+          solutionText
         });
-      }
-      
-      if (todos.length > 0) {
-        await createTodos.mutateAsync();
       }
 
       onOpenChange(false);
@@ -331,7 +390,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
               </div>
             )}
 
-            {isFacilitator && issue.status === 'Open' && (
+            {issue.status === 'Open' && (
               <Button
                 onClick={() => setStatus.mutate({ status: 'Discussing', fromStatus: issue.status })}
                 className="w-full"
@@ -350,18 +409,17 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
                 onChange={(e) => setDiscussionNotes(e.target.value)}
                 onBlur={handleDiscussionNotesBlur}
                 rows={8}
-                disabled={!isFacilitator && issue.status !== 'Discussing'}
               />
               {saveDiscussionNotes.isPending && (
                 <p className="text-xs text-muted-foreground">Saving...</p>
               )}
             </div>
 
-            {isFacilitator && (issue.status === 'Discussing' || issue.status === 'Open') && (
+            {(issue.status === 'Discussing' || issue.status === 'Open') && (
               <Button
                 onClick={() => {
                   // Save notes before moving to solve
-                  if (discussionNotes && discussionNotes !== (issue.outcome_note || '')) {
+                  if (discussionNotes && discussionNotes !== (notesBaseline.current ?? '')) {
                     saveDiscussionNotes.mutate(discussionNotes);
                   }
                   // Transition to Discussing if still Open
@@ -384,13 +442,19 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
                 placeholder="Describe the solution..."
                 value={solution}
                 onChange={(e) => setSolution(e.target.value)}
+                onBlur={handleSolutionBlur}
                 rows={4}
-                disabled={!isFacilitator}
               />
+              {saveSolutionDraft.isPending && (
+                <p className="text-xs text-muted-foreground">Saving...</p>
+              )}
             </div>
 
             <div className="border-t pt-4">
-              <Label className="mb-3 block">Create To-Dos from Solution</Label>
+              <Label className="mb-1 block">To-Dos from this issue</Label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Saved as soon as you add them, and shown in the To-Do List for everyone.
+              </p>
               
               {/* Add todo form */}
               <div className="space-y-3 mb-4">
@@ -437,30 +501,24 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Button onClick={handleAddTodo} size="sm" variant="outline" className="w-full">
+                <Button onClick={handleAddTodo} size="sm" variant="outline" className="w-full" disabled={createTodo.isPending}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Add To-Do
+                  {createTodo.isPending ? 'Adding...' : 'Add To-Do'}
                 </Button>
               </div>
 
-              {/* Todos list */}
-              {todos.length > 0 && (
+              {/* To-dos added from this issue */}
+              {addedTodos.length > 0 && (
                 <div className="space-y-2">
-                  {todos.map((todo, index) => (
-                    <Card key={index} className="p-2 flex items-center justify-between">
+                  {addedTodos.map((todo, index) => (
+                    <Card key={index} className="p-2 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
                       <div className="flex-1">
                         <p className="text-sm font-medium">{todo.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          Due: {format(new Date(todo.due_date), 'PP')}
+                          Due: {format(new Date(todo.due_date), 'PP')} - saved
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveTodo(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </Card>
                   ))}
                 </div>
@@ -469,7 +527,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
           </TabsContent>
         </Tabs>
 
-        {isFacilitator && activeTab === 'solve' && (
+        {activeTab === 'solve' && (
           <DialogFooter className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               Current status: <Badge variant="outline">{issue.status}</Badge>
@@ -480,7 +538,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId,
               </Button>
               <Button
                 onClick={handleSolve}
-                disabled={!solution.trim() || setStatus.isPending || createTodos.isPending}
+                disabled={!solution.trim() || setStatus.isPending || saveSolutionDraft.isPending || saveDiscussionNotes.isPending}
               >
                 {setStatus.isPending ? 'Processing...' : 'Mark as Solved'}
               </Button>
