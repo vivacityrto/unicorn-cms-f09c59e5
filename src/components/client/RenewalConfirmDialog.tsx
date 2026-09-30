@@ -269,26 +269,29 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         ? `${formatMinutes(cappedCarryOver)} carried over to the new period${isCapped ? ` (capped at package inclusion of ${formatMinutes(includedMinutes)})` : ''}.`
         : 'No time carried over (forfeited).';
 
-      // Look up legacy client_id
-      const { data: clientRow } = await supabase
-        .from('v_client_to_tenant')
-        .select('client_id')
-        .eq('tenant_id', tenantId)
+      // Renewal note lives in `notes`, attached to the package instance, so it
+      // shows on the package, the Notes tab and the Timeline like any other note
+      // (it used to go to client_notes, which only the Timeline read).
+      const { data: authData } = await supabase.auth.getUser();
+      const { data: instanceRow } = await supabase
+        .from('package_instances')
+        .select('package_id')
+        .eq('id', parseInt(pkg.id, 10))
         .maybeSingle();
 
-      const legacyClientId = clientRow?.client_id || String(tenantId);
-
-      const { error: noteError } = await supabase.rpc('rpc_create_client_note', {
-        p_tenant_id: tenantId,
-        p_client_id: legacyClientId,
-        p_note_type: 'general',
-        p_title: `Package Renewed: ${pkg.package_name}`,
-        p_content: `<p><strong>${pkg.package_name}</strong> was renewed by ${userName} on ${renewedAt}.</p><p>Previous period: ${format(periodStart, 'dd MMM yyyy')} – ${format(currentRenewal, 'dd MMM yyyy')}.</p><p>New renewal date: ${format(newRenewalDate, 'dd MMM yyyy')}.</p><p>${carryText}</p>`,
-        p_tags: ['renewal'],
-        p_related_entity_type: 'package_instances',
-        p_related_entity_id: pkg.id,
-        p_is_pinned: false,
-      });
+      const { error: noteError } = authData.user
+        ? await supabase.from('notes').insert({
+            tenant_id: tenantId,
+            parent_type: 'package_instance',
+            parent_id: parseInt(pkg.id, 10),
+            package_id: instanceRow?.package_id ?? null,
+            title: `Package Renewed: ${pkg.package_name}`,
+            note_details: `<p><strong>${pkg.package_name}</strong> was renewed by ${userName} on ${renewedAt}.</p><p>Previous period: ${format(periodStart, 'dd MMM yyyy')} – ${format(currentRenewal, 'dd MMM yyyy')}.</p><p>New renewal date: ${format(newRenewalDate, 'dd MMM yyyy')}.</p><p>${carryText}</p>`,
+            note_type: 'general',
+            tags: ['renewal'],
+            created_by: authData.user.id,
+          })
+        : { error: new Error('Not authenticated') };
       if (noteError) {
         console.error('Failed to create renewal note:', noteError);
         toast.error('Renewal succeeded but failed to create the renewal note.');

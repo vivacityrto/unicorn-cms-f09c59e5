@@ -44,8 +44,8 @@ export function NotePreviewDialog({ open, onOpenChange, notification }: NotePrev
       setLoading(true);
       try {
         const { data } = await supabase
-          .from("client_notes")
-          .select("id, title, content, note_type, created_at, created_by, tags")
+          .from("notes")
+          .select("id, title, note_details, note_type, created_at, created_by, tags")
           .eq("id", notification.source_id!)
           .single();
 
@@ -64,7 +64,7 @@ export function NotePreviewDialog({ open, onOpenChange, notification }: NotePrev
           setNote({
             id: data.id,
             title: data.title,
-            content: data.content,
+            content: data.note_details,
             note_type: data.note_type,
             created_at: data.created_at,
             created_by_name: createdByName,

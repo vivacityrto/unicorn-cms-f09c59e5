@@ -8,6 +8,7 @@ import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { ClientTimelineTab } from '@/components/client/ClientTimelineTab';
 import { ClientLoginHistoryTab } from '@/components/client/ClientLoginHistoryTab';
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
+import { PinnedNotesCard } from '@/components/notes/PinnedNotesCard';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
 import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
 import { ClientMessagesTab } from '@/components/client/ClientMessagesTab';
@@ -702,6 +703,9 @@ export default function ClientDetail() {
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview" className="mt-0 space-y-6">
+            {/* Pinned notes (client + package level) */}
+            <PinnedNotesCard tenantId={tenantIdNum!} />
+
             {/* Time Summary & Users Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
