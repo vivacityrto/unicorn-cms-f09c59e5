@@ -44,7 +44,15 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
-import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download } from 'lucide-react';
+import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download, CalendarClock, ChevronDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { usePermission } from '@/hooks/usePermission';
+import { RegisterTeamsEventDialog } from '@/components/contact-directory/RegisterTeamsEventDialog';
 import { toast } from 'sonner';
 import { exportToCSV } from '@/lib/exportCsv';
 import { ExportColumnsDialog, type ExportColumnOption } from '@/components/tenant-users/ExportColumnsDialog';
@@ -136,6 +144,9 @@ export default function ContactDirectory() {
   const [savingGroup, setSavingGroup] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ContactGroup | null>(null);
   const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
+  const [registerTeamsOpen, setRegisterTeamsOpen] = useState(false);
+  // UI gate only: every Teams event Edge Function re-authorises the caller server-side.
+  const canManageTeamsEvents = usePermission('teams_events.manage_registrations', 'full');
 
   const tenantIds = useMemo(() => tenants.map((tenant) => tenant.id), [tenants]);
   const cscQuery = useCscAssignments(tenantIds);
@@ -491,6 +502,24 @@ export default function ContactDirectory() {
           title="Contact Directory"
           description="Every Unicorn user and RTO contact across all tenants — build named groups here for bulk actions like Teams event registration."
           icon={Users2}
+          actions={
+            canManageTeamsEvents ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    Actions
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setRegisterTeamsOpen(true)}>
+                    <CalendarClock className="mr-2 h-4 w-4" />
+                    Register for Teams Event
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : undefined
+          }
         />
 
         <Tabs defaultValue="directory">
@@ -874,6 +903,14 @@ export default function ContactDirectory() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {canManageTeamsEvents && (
+        <RegisterTeamsEventDialog
+          open={registerTeamsOpen}
+          onOpenChange={setRegisterTeamsOpen}
+          groups={groups.map((g) => ({ id: g.id, name: g.name, member_count: g.member_count }))}
+        />
+      )}
     </>
   );
 }
