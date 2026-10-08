@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
@@ -56,6 +56,9 @@ const FALLBACK_DEFAULT_STAGE_BY_FRAMEWORK: Record<string, string> = {
   GTO: '',
   CRICOS: '',
 };
+
+const duplicateKey = (doc: { title?: string | null; format?: string | null; category?: string | null }) =>
+  `${(doc.title || '').toLowerCase().trim()}||${(doc.format || '').toLowerCase().trim()}||${(doc.category || '').toLowerCase().trim()}`;
 
 const getDefaultStageMap = (): Record<string, string> => {
   try {
@@ -607,16 +610,18 @@ export default function ManageDocuments() {
   // documents that share a generic title but cover different categories
   // (e.g. state-specific "gto-vic" vs "gto-nsw" variants) aren't flagged
   // as duplicates.
-  const duplicateKey = (doc: { title?: string | null; format?: string | null; category?: string | null }) =>
-    `${(doc.title || '').toLowerCase().trim()}||${(doc.format || '').toLowerCase().trim()}||${(doc.category || '').toLowerCase().trim()}`;
-  const duplicateTitleCounts = (() => {
+  // Memoized on `documents` so its identity is stable between renders —
+  // it's a dependency of applyNonFileStatusFilters -> applyFiltersAndSort,
+  // whose effect resets currentPage to 1. A fresh object every render made
+  // that effect fire on every render, snapping "Next page" straight back to 1.
+  const duplicateTitleCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     documents.forEach(doc => {
       const key = duplicateKey(doc);
       counts[key] = (counts[key] || 0) + 1;
     });
     return counts;
-  })();
+  }, [documents]);
   const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[duplicateKey(doc)] > 1).length;
 
   // Get current version from document_versions join. Declared above
