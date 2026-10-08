@@ -44,8 +44,10 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
-import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { exportToCSV } from '@/lib/exportCsv';
+import { ExportColumnsDialog, type ExportColumnOption } from '@/components/tenant-users/ExportColumnsDialog';
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
 import { cn } from '@/lib/utils';
 import { TenantFilterDialog, type CscOption, type TenantFilterOption, type TenantStatusOption } from '@/components/tenant-users/TenantFilterDialog';
@@ -72,7 +74,39 @@ interface ContactGroup {
   member_count: number;
 }
 
+interface GroupMember {
+  group_id: number;
+  member_type: string;
+  member_id: string;
+}
+
+type ExportTarget =
+  | { kind: 'directory' }
+  | { kind: 'groups' }
+  | { kind: 'group'; group: ContactGroup };
+
 const ITEMS_PER_PAGE = 25;
+const MEMBER_PAGE_SIZE = 1000;
+
+const DIRECTORY_EXPORT_COLUMNS: ExportColumnOption[] = [
+  { key: 'first_name', label: 'First Name' },
+  { key: 'last_name', label: 'Last Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'tenant', label: 'Client' },
+  { key: 'position_type', label: 'Position Type' },
+  { key: 'source', label: 'Source' },
+  { key: 'status', label: 'Status' },
+  { key: 'groups', label: 'Groups' },
+];
+
+const GROUP_EXPORT_COLUMNS: ExportColumnOption[] = [
+  { key: 'group', label: 'Group' },
+  { key: 'group_description', label: 'Group Description' },
+  ...DIRECTORY_EXPORT_COLUMNS.filter((c) => c.key !== 'groups'),
+];
+
+const slugify = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'group';
 
 export default function ContactDirectory() {
   const [rows, setRows] = useState<DirectoryRow[]>([]);
@@ -93,6 +127,8 @@ export default function ContactDirectory() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [groups, setGroups] = useState<ContactGroup[]>([]);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [targetGroupId, setTargetGroupId] = useState<string>('');
@@ -222,11 +258,25 @@ export default function ContactDirectory() {
       setGroupsLoading(false);
       return;
     }
-    const { data: memberRows } = await supabase
-      .from('tenant_contact_group_members')
-      .select('group_id');
+    // Page through members: PostgREST caps a single response at 1000 rows, which
+    // would silently truncate both the member counts and the CSV export.
+    const memberRows: GroupMember[] = [];
+    for (let from = 0; ; from += MEMBER_PAGE_SIZE) {
+      const { data: page, error: memberError } = await supabase
+        .from('tenant_contact_group_members')
+        .select('group_id, member_type, member_id')
+        .order('id')
+        .range(from, from + MEMBER_PAGE_SIZE - 1);
+      if (memberError) {
+        console.error('tenant_contact_group_members fetch error:', memberError);
+        break;
+      }
+      memberRows.push(...(page || []));
+      if (!page || page.length < MEMBER_PAGE_SIZE) break;
+    }
+    setGroupMembers(memberRows);
     const counts = new Map<number, number>();
-    (memberRows || []).forEach((m: { group_id: number }) => {
+    memberRows.forEach((m) => {
       counts.set(m.group_id, (counts.get(m.group_id) || 0) + 1);
     });
     setGroups(
@@ -345,6 +395,83 @@ export default function ContactDirectory() {
     }
   };
 
+  const rowsByKey = useMemo(() => new Map(rows.map((r) => [r.row_key, r])), [rows]);
+
+  const groupNamesByRowKey = useMemo(() => {
+    const nameById = new Map(groups.map((g) => [g.id, g.name]));
+    const map = new Map<string, string[]>();
+    groupMembers.forEach((m) => {
+      const name = nameById.get(m.group_id);
+      if (!name) return;
+      const key = `${m.member_type}:${m.member_id}`;
+      map.set(key, [...(map.get(key) || []), name]);
+    });
+    return map;
+  }, [groups, groupMembers]);
+
+  const buildMemberFields = (row: DirectoryRow): Record<string, string> => ({
+    first_name: row.first_name,
+    last_name: row.last_name || '',
+    email: row.email,
+    tenant: row.tenant_name,
+    position_type: row.position_type ? positionTypeLabel(row.position_type, positionTypeOptions) : '',
+    source: row.source,
+    status: row.status,
+  });
+
+  const exportColumns = exportTarget?.kind === 'directory' ? DIRECTORY_EXPORT_COLUMNS : GROUP_EXPORT_COLUMNS;
+
+  const exportRowCount = (() => {
+    if (!exportTarget) return 0;
+    if (exportTarget.kind === 'directory') return filteredRows.length;
+    if (exportTarget.kind === 'group') return exportTarget.group.member_count;
+    return groupMembers.length;
+  })();
+
+  const handleConfirmExport = (selectedKeys: string[]) => {
+    if (!exportTarget) return;
+    const pick = (full: Record<string, string>) => {
+      const out: Record<string, string> = {};
+      selectedKeys.forEach((key) => { out[key] = full[key] ?? ''; });
+      return out;
+    };
+
+    if (exportTarget.kind === 'directory') {
+      exportToCSV(
+        filteredRows.map((r) =>
+          pick({ ...buildMemberFields(r), groups: (groupNamesByRowKey.get(r.row_key) || []).join('; ') })
+        ),
+        'contact_directory',
+      );
+      return;
+    }
+
+    const targetGroups = exportTarget.kind === 'group' ? [exportTarget.group] : groups;
+    const groupById = new Map(targetGroups.map((g) => [g.id, g]));
+    const exportRows = groupMembers
+      .filter((m) => groupById.has(m.group_id))
+      .map((m) => {
+        const group = groupById.get(m.group_id)!;
+        const row = rowsByKey.get(`${m.member_type}:${m.member_id}`);
+        return {
+          group: group.name,
+          group_description: group.description || '',
+          // A member no longer returned by the directory RPC keeps its row, with blank details.
+          ...(row ? buildMemberFields(row) : { source: m.member_type }),
+        };
+      })
+      .sort((a, b) => a.group.localeCompare(b.group));
+
+    if (exportRows.length === 0) {
+      toast.error('No group members to export');
+      return;
+    }
+    exportToCSV(
+      exportRows.map((r) => pick(r as Record<string, string>)),
+      exportTarget.kind === 'group' ? `contact_group_${slugify(exportTarget.group.name)}` : 'contact_groups',
+    );
+  };
+
   const handleDeleteGroup = async () => {
     if (!groupToDelete) return;
     const { error } = await supabase.from('tenant_contact_groups').delete().eq('id', groupToDelete.id);
@@ -435,6 +562,14 @@ export default function ContactDirectory() {
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                variant="outline"
+                onClick={() => setExportTarget({ kind: 'directory' })}
+                disabled={filteredRows.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
             </div>
 
             {selected.size > 0 && (
@@ -617,22 +752,45 @@ export default function ContactDirectory() {
                 No groups yet — select rows in the Directory tab and use "Add to group" to create one.
               </p>
             ) : (
-              <div className="divide-y border rounded-md">
-                {groups.map((g) => (
-                  <div key={g.id} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="font-medium">{g.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {g.member_count} member{g.member_count === 1 ? '' : 's'}
-                        {g.description ? ` · ${g.description}` : ''}
-                      </p>
+              <>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setExportTarget({ kind: 'groups' })}
+                    disabled={groupMembers.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export all groups
+                  </Button>
+                </div>
+                <div className="divide-y border rounded-md">
+                  {groups.map((g) => (
+                    <div key={g.id} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="font-medium">{g.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {g.member_count} member{g.member_count === 1 ? '' : 's'}
+                          {g.description ? ` · ${g.description}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Export ${g.name} to CSV`}
+                          disabled={g.member_count === 0}
+                          onClick={() => setExportTarget({ kind: 'group', group: g })}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" aria-label={`Delete ${g.name}`} onClick={() => setGroupToDelete(g)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setGroupToDelete(g)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </TabsContent>
         </Tabs>
@@ -647,6 +805,15 @@ export default function ContactDirectory() {
         cscOptions={cscFilterOptions}
         selected={tenantFilters}
         onApply={setTenantFilters}
+      />
+
+      {/* Export column selection — shared with Tenant Users. */}
+      <ExportColumnsDialog
+        open={exportTarget !== null}
+        onOpenChange={(open) => !open && setExportTarget(null)}
+        columns={exportColumns}
+        rowCount={exportRowCount}
+        onConfirm={handleConfirmExport}
       />
 
       {/* Add to group dialog */}
