@@ -102,3 +102,17 @@ open questions). Nothing here has run against a real webinar yet.
 - No "recent batches" screen yet: a batch can only be reopened from the modal that started it.
 - Teams Meetings (`invite-teams-meeting-group`, `Calendars.Read` / `Calendars.ReadWrite`) is Phase 2
   and needs Exchange-side application scoping before `Calendars.ReadWrite` is granted.
+
+## Update 2026-10-09 — Integrator and BGT can register for Teams events
+- Decision (Carl, 9 October 2026): Beverly and Novea run Teams webinar registration, and they hold the
+  **Integrator** and **BGT** roles. `teams_events.manage_registrations` is therefore seeded `full` for
+  Super Admin, Integrator and BGT; Team Leader, CSC and CET stay `none`. This supersedes the "everyone
+  else none" seed described above.
+- The migration `20261008010000_teams_event_registration_foundation.sql` was edited in place. It had not
+  been applied to any hosted project at the time, so no data migration is involved. If it had already been
+  applied somewhere, those rows would need a follow-up upsert instead.
+- No other access change was needed. The Administration sidebar section is already shown to all Vivacity
+  staff roles (`isVivacityTeam`, which includes Integrator and BGT) and Contact Directory has no extra
+  role flag. The `/administration/contacts` route uses `allowVivacityTeam`. The Contact Directory Groups
+  tables and the Teams batch tables are readable by these roles (`is_vivacity_staff` /
+  `check_permission`), and every Edge Function re-checks the permission through `requireCaller`.

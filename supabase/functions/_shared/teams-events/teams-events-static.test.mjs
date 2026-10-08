@@ -143,10 +143,12 @@ describe("migration 20261008010000_teams_event_registration_foundation", () => {
     "utf8",
   );
 
-  test("seeds the RBAC feature: Super Admin full, everyone else none", () => {
+  test("seeds the RBAC feature: Super Admin, Integrator and BGT full; the other internal roles none", () => {
     assert.match(sql, /'teams_events\.manage_registrations'/);
-    assert.match(sql, /\('teams_events\.manage_registrations', 'Super Admin', 'full'\)/);
-    for (const role of ["Team Leader", "Integrator", "BGT", "CSC", "CET"]) {
+    for (const role of ["Super Admin", "Integrator", "BGT"]) {
+      assert.match(sql, new RegExp(`\\('teams_events\\.manage_registrations', '${role}', 'full'\\)`));
+    }
+    for (const role of ["Team Leader", "CSC", "CET"]) {
       assert.match(sql, new RegExp(`\\('teams_events\\.manage_registrations', '${role}', 'none'\\)`));
     }
   });

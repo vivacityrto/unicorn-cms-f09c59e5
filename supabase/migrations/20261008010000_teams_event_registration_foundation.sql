@@ -45,13 +45,14 @@ VALUES (
 )
 ON CONFLICT (feature_key) DO NOTHING;
 
--- Match admin.broadcast.send: Super Admin full, everyone else none until
--- the business decides who else may bulk-register people.
+-- Super Admin, Integrator and BGT (the roles that run Teams webinar
+-- registration today) get full access; the remaining internal roles none
+-- until the business decides who else may bulk-register people.
 INSERT INTO public.role_permissions (feature_key, role, level) VALUES
   ('teams_events.manage_registrations', 'Super Admin', 'full'),
   ('teams_events.manage_registrations', 'Team Leader', 'none'),
-  ('teams_events.manage_registrations', 'Integrator', 'none'),
-  ('teams_events.manage_registrations', 'BGT', 'none'),
+  ('teams_events.manage_registrations', 'Integrator', 'full'),
+  ('teams_events.manage_registrations', 'BGT', 'full'),
   ('teams_events.manage_registrations', 'CSC', 'none'),
   ('teams_events.manage_registrations', 'CET', 'none')
 ON CONFLICT (role, feature_key) DO NOTHING;
