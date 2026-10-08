@@ -68,6 +68,7 @@ export const FeatureKeys = {
   clientsCreate: "clients.create",
   academyBuilderEdit: "academy.builder.edit",
   auditsReport: "audits.report",
+  teamsEventsManageRegistrations: "teams_events.manage_registrations",
 } as const;
 
 export type FeatureKey = (typeof FeatureKeys)[keyof typeof FeatureKeys] | (string & {});
