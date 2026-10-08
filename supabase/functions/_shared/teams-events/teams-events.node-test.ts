@@ -13,6 +13,7 @@ import { classifyGraphError, sanitiseMessage } from "./graph-errors.ts";
 import { createTeamsGraphClient, encodeGraphId } from "./graph-client.ts";
 import { processItems, type ItemOutcome } from "./processor.ts";
 import { countStatuses, deriveBatchStatus, toBatchTotals } from "./batch-status.ts";
+import { resolveTeamsGraphCredentials } from "./credentials.ts";
 
 // ── emails ───────────────────────────────────────────────────────────────
 describe("normaliseEmail", () => {
@@ -563,6 +564,45 @@ describe("processItems", () => {
     assert.equal(outcomes[0].kind, "failed");
     assert.equal(summary.persistErrors, 1);
     assert.equal(summary.processed, 2);
+  });
+});
+
+// ── credentials ──────────────────────────────────────────────────────────
+describe("resolveTeamsGraphCredentials", () => {
+  const reader = (env: Record<string, string>) => (name: string) => env[name];
+  const shared = { MICROSOFT_TENANT_ID: "t1", MICROSOFT_CLIENT_ID: "c1", MICROSOFT_CLIENT_SECRET: "s1" };
+  const dedicated = {
+    TEAMS_EVENTS_TENANT_ID: "t2",
+    TEAMS_EVENTS_CLIENT_ID: "c2",
+    TEAMS_EVENTS_CLIENT_SECRET: "s2",
+  };
+
+  test("reuses the existing MICROSOFT_* app by default", () => {
+    assert.deepEqual(resolveTeamsGraphCredentials(reader(shared)), {
+      tenantId: "t1",
+      clientId: "c1",
+      clientSecret: "s1",
+      source: "microsoft",
+    });
+  });
+
+  test("a complete TEAMS_EVENTS_* set takes precedence", () => {
+    const result = resolveTeamsGraphCredentials(reader({ ...shared, ...dedicated }));
+    assert.equal(result?.source, "teams_events");
+    assert.equal(result?.clientId, "c2");
+  });
+
+  test("a partly set TEAMS_EVENTS_* trio is not configured — never mixed with the shared app", () => {
+    assert.equal(
+      resolveTeamsGraphCredentials(reader({ ...shared, TEAMS_EVENTS_CLIENT_ID: "c2" })),
+      null,
+    );
+  });
+
+  test("returns null when nothing (or only part of the shared set) is configured", () => {
+    assert.equal(resolveTeamsGraphCredentials(reader({})), null);
+    assert.equal(resolveTeamsGraphCredentials(reader({ MICROSOFT_CLIENT_ID: "c1", MICROSOFT_TENANT_ID: "t1" })), null);
+    assert.equal(resolveTeamsGraphCredentials(reader({ ...shared, MICROSOFT_CLIENT_SECRET: "   " })), null);
   });
 });
 

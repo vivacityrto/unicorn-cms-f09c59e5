@@ -102,3 +102,22 @@ open questions). Nothing here has run against a real webinar yet.
 - No "recent batches" screen yet: a batch can only be reopened from the modal that started it.
 - Teams Meetings (`invite-teams-meeting-group`, `Calendars.Read` / `Calendars.ReadWrite`) is Phase 2
   and needs Exchange-side application scoping before `Calendars.ReadWrite` is granted.
+
+## Update 2026-10-09 — reuse the existing Microsoft app (supersedes the credentials notes above)
+- Decision (Carl, 9 October 2026): the Teams event functions authenticate as the **existing** Entra app
+  Unicorn already uses for SharePoint (`MICROSOFT_TENANT_ID` / `MICROSOFT_CLIENT_ID` /
+  `MICROSOFT_CLIENT_SECRET`) instead of a new dedicated app. The notes above that call for a dedicated
+  app and the three `TEAMS_EVENTS_*` secrets describe the original design and no longer apply by default.
+- Code: `_shared/teams-events/credentials.ts` (`resolveTeamsGraphCredentials`) picks the credentials.
+  Default is the `MICROSOFT_*` set. A complete `TEAMS_EVENTS_*` set, if ever configured, takes precedence so
+  a dedicated app can be swapped in with no code change; a partly set `TEAMS_EVENTS_*` set is treated as not
+  configured rather than mixed with the shared credentials.
+- Administrator work shrinks to: add `VirtualEvent.Read.All` and
+  `VirtualEventRegistration-Anon.ReadWrite.All` (application permissions) to the existing app, grant admin
+  consent, and grant the Teams application access policy to each organiser using the existing app's client
+  ID. No new app, client secret or Supabase secrets.
+- Trade-offs accepted: one credential now powers SharePoint, staff Outlook sign-in and Teams registrations,
+  so its secret expiry or rotation affects all three; `VirtualEvent.Read.All` is tenant-wide read access to
+  webinars on that app; and the application access policy also covers online meetings for that app, which
+  matters when Meetings (Phase 2) are added.
+- Follow-up: check the existing client secret's expiry date before relying on it.
