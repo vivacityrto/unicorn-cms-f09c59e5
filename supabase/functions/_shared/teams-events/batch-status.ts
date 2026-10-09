@@ -11,7 +11,9 @@ export type ItemResultStatus =
   | "already_processed"
   | "excluded"
   | "duplicate"
-  | "failed";
+  | "failed"
+  /** Registered earlier, then cancelled in Teams from Unicorn. Not counted in the batch's run-time totals. */
+  | "cancelled";
 
 export type ItemStatusCounts = Record<ItemResultStatus, number>;
 
@@ -40,6 +42,7 @@ export function emptyStatusCounts(): ItemStatusCounts {
     excluded: 0,
     duplicate: 0,
     failed: 0,
+    cancelled: 0,
   };
 }
 

@@ -183,3 +183,35 @@ open questions). Nothing here has run against a real webinar yet.
   `teams_event_items_inclusion`, **before** this change merged. Verified afterwards: the column is `text NOT NULL
   DEFAULT 'group'` with CHECK `inclusion IN ('group','extra')`, and all 3 pre-existing item rows read `'group'`.
   `src/integrations/supabase/types.ts` carries the column (hand-added in the generator's format).
+
+## Update 2026-10-09 — cancel Teams registrations (PR 3 of 3)
+- Requested by Carl: when someone is removed from a Group (or no longer needs to attend), offer to cancel their
+  Teams registration. Decisions: a checkbox each time (never automatic, unticked by default), and if Microsoft will
+  not let the app cancel, tell the operator to remove the person in Teams themselves.
+- New Edge Function `cancel-teams-event-registrations` (gated by `requireCaller` + `teams_events.manage_registrations`
+  before any work). Input: an event id and 1-50 directory keys (strictly validated, nothing else from the browser).
+  It re-resolves each person from the source tables, lists the webinar's registrations from Graph (one call, paged,
+  capped at 30 pages), matches by normalised email (app-only registration returns no registration id, so email is the
+  only join key), and cancels each active match with `POST .../registrations/{id}/cancel` (3 at a time). One person's
+  failure never stops the others. Rate limited to 20 requests per operator per 10 minutes (counted from the audit
+  trail). The audit entry (`teams_event_registration.cancelled`, entity type `teams_event`) holds counts only.
+- **Unverified against real Microsoft data:** Microsoft's documentation lists only the narrow per-event
+  `VirtualEventRegistration-Anon.ReadWrite.Chat` (resource-specific consent) permission for an app-only cancel, not the
+  tenant-wide `.All` permission this app holds, and it was not confirmed which permission the list-registrations call
+  needs either. A refusal is therefore plausible and is handled: each person comes back `failed` with a fixed safe
+  category (never raw Graph text) and the screen shows "Remove this person in Teams yourself" with the steps.
+- Database: migration `20261009030000_teams_event_items_cancelled_status.sql` widens
+  `teams_event_items_status_check` to allow `'cancelled'`. Only widens: every existing row already satisfies it. A
+  cancelled row falls outside `uq_teams_event_items_event_email_success` (which spans `registered`/`invited` only), so
+  the person can be registered again later. Rollback is in the file (move any cancelled rows back first). **Must be
+  applied before the function deploys**, because the function is the only writer of `'cancelled'`.
+- Local rows: anyone Teams cancels, or no longer holds as registered, has their `registered`/`invited` result rows for
+  that event set to `cancelled`, so previews stay honest. Cancelled rows are reported on their own and never count
+  as a success in a batch's totals.
+- UI: removing a person from a Group (Groups tab and the registration modal) lists the upcoming events they are
+  registered for **through Unicorn** (read with the user's session under the existing results-table RLS) with an unticked
+  checkbox each, then removes them and cancels only what was ticked, showing each result. The preview's "Already
+  registered" list gains "Cancel registration" (confirm first); after a successful cancel that person is left out of
+  the same event (skipped) rather than re-registered by the next preview.
+- Known limits: registrations made directly in Teams are not listed in the removal prompt (Unicorn only knows its own);
+  a person with a registration in Teams but no email on file cannot be matched.

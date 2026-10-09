@@ -45,6 +45,7 @@ import {
   type EventAdjustments,
 } from '@/lib/teamsEvents/adjustments';
 import { AddPeopleToGroupPanel, type ClientOption } from './AddPeopleToGroupPanel';
+import { CancelRegistrationsDialog, type CancelRegistrationsRequest } from './CancelRegistrationsDialog';
 import { EventOnlyPeoplePanel } from './EventOnlyPeoplePanel';
 import { GroupMembersPanel } from './GroupMembersPanel';
 import { RemoveMemberConfirm, type RemoveMemberRequest } from './RemoveMemberConfirm';
@@ -130,6 +131,7 @@ export function RegisterTeamsEventDialog({
   onGroupChanged,
 }: Props) {
   const [removeRequest, setRemoveRequest] = useState<RemoveMemberRequest | null>(null);
+  const [cancelRequest, setCancelRequest] = useState<CancelRegistrationsRequest | null>(null);
   const [step, setStep] = useState<Step>('select');
   const [eventId, setEventId] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -490,7 +492,29 @@ export function RegisterTeamsEventDialog({
             <div className="space-y-2">
               <PersonList title="Excluded" people={otherExcluded} cap={preview.list_cap} showReason />
               <PersonList title="Duplicate emails (processed once)" people={preview.duplicates} cap={preview.list_cap} showReason />
-              <PersonList title="Already registered for this event" people={preview.already_processed} cap={preview.list_cap} />
+              <PersonList
+                title="Already registered for this event"
+                people={preview.already_processed}
+                cap={preview.list_cap}
+                renderAction={(p) => (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    aria-label={`Cancel ${personName(p)}'s registration`}
+                    onClick={() =>
+                      setCancelRequest({
+                        eventId: preview.event.id,
+                        eventName: preview.event.displayName,
+                        startUtc: preview.event.startUtc,
+                        people: [{ key: p.member_key, name: personName(p) }],
+                      })
+                    }
+                  >
+                    Cancel registration
+                  </Button>
+                )}
+              />
               <PersonList
                 title="Skipped for this event only"
                 people={skippedPeople}
@@ -583,6 +607,17 @@ export function RegisterTeamsEventDialog({
         request={removeRequest}
         onClose={() => setRemoveRequest(null)}
         onRemoved={() => onGroupChanged?.()}
+        canCancelRegistrations
+      />
+      <CancelRegistrationsDialog
+        request={cancelRequest}
+        onClose={() => setCancelRequest(null)}
+        onSettled={(keys) => {
+          if (keys.length === 0) return;
+          // They are now off the event, so leave them out of it rather than re-registering them on the next preview.
+          const next = keys.reduce((acc, key) => removeExtra(skipMember(acc, key), key), adjustments);
+          adjustAndPreview(next);
+        }}
       />
     </Dialog>
   );
