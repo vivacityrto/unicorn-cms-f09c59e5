@@ -22,8 +22,21 @@ export interface TeamsEventSummary {
   timeZoneAssumed: boolean;
 }
 
+/** Counts only (no titles or organisers) explaining why a listing may be empty. */
+export interface WebinarListDiagnostics {
+  graph_total: number;
+  status_counts: Record<string, number>;
+  published_in_window: number;
+  published_before_window: number;
+  published_after_window: number;
+  published_without_start: number;
+  earliest_published_start_utc: string | null;
+  latest_published_start_utc: string | null;
+}
+
 export interface ListEventsResponse {
   events: TeamsEventSummary[];
+  diagnostics?: WebinarListDiagnostics;
   window: { from: string; to: string };
   fetched_at: string;
 }

@@ -7,6 +7,7 @@ import {
   computeWindow,
   graphDateTimeToUtc,
   selectUpcomingWebinars,
+  summariseWebinarList,
   type GraphWebinar,
 } from "./event-window.ts";
 import { classifyGraphError, sanitiseMessage } from "./graph-errors.ts";
@@ -224,6 +225,40 @@ describe("event window", () => {
       now,
     );
     assert.deepEqual(events.map((e) => e.id), ["a", "b"]);
+  });
+
+  test("diagnostics explain an empty list without exposing names or organisers", () => {
+    const d = summariseWebinarList(
+      [
+        webinar("early", "2026-10-07T00:00:00Z"),
+        webinar("soon", "2026-10-10T00:00:00Z"),
+        webinar("soon2", "2026-10-15T00:00:00Z"),
+        webinar("later", "2026-11-30T00:00:00Z"),
+        webinar("draft", "2026-10-10T00:00:00Z", { status: "draft" }),
+        webinar("gone", "2026-10-10T00:00:00Z", { status: "canceled" }),
+        webinar("odd", "2026-10-10T00:00:00Z", { status: undefined }),
+        { id: "nostart", status: "published" },
+      ],
+      now,
+    );
+    assert.deepEqual(d, {
+      graph_total: 8,
+      status_counts: { published: 5, draft: 1, canceled: 1, unknown: 1 },
+      published_in_window: 2,
+      published_before_window: 1,
+      published_after_window: 1,
+      published_without_start: 1,
+      earliest_published_start_utc: "2026-10-07T00:00:00.000Z",
+      latest_published_start_utc: "2026-11-30T00:00:00.000Z",
+    });
+    assert.ok(!JSON.stringify(d).includes("soon"), "no webinar titles in diagnostics");
+  });
+
+  test("diagnostics for an empty Graph response say so", () => {
+    const d = summariseWebinarList([], now);
+    assert.equal(d.graph_total, 0);
+    assert.deepEqual(d.status_counts, {});
+    assert.equal(d.earliest_published_start_utc, null);
   });
 
   test("maps organiser details", () => {

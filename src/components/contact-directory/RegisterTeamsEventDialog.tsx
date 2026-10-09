@@ -21,6 +21,7 @@ import {
   useRegisterTeamsEventGroup,
   useTeamsEventsList,
 } from '@/hooks/useTeamsEventRegistration';
+import { explainEmptyList } from '@/lib/teamsEvents/emptyListExplanation';
 import {
   exclusionReasonLabel,
   formatEventDateTime,
@@ -134,6 +135,7 @@ export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) 
   };
 
   const eventList = events.data?.events ?? [];
+  const emptyExplanation = explainEmptyList(events.data?.diagnostics);
   const canPreview = !!eventId && !!groupId && !previewMutation.isPending;
 
   return (
@@ -197,9 +199,10 @@ export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) 
                 </Alert>
               )}
               {!events.isLoading && !events.error && eventList.length === 0 && (
-                <p className="rounded-md border p-4 text-sm text-muted-foreground">
-                  No published webinars start in the next 14 days.
-                </p>
+                <div className="space-y-2 rounded-md border p-4 text-sm text-muted-foreground">
+                  <p>No published webinars start in the next 14 days.</p>
+                  {emptyExplanation && <p className="text-xs">{emptyExplanation}</p>}
+                </div>
               )}
               {eventList.length > 0 && (
                 <RadioGroup value={eventId} onValueChange={setEventId} className="gap-2">

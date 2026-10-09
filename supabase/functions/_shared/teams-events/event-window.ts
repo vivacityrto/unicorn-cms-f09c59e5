@@ -153,3 +153,58 @@ export function selectUpcomingWebinars(webinars: GraphWebinar[], now: Date): Tea
   }
   return events.sort((a, b) => a.startUtc.localeCompare(b.startUtc));
 }
+
+/**
+ * Counts only — no titles, organisers or attendees — explaining why a webinar
+ * listing came back empty: did Microsoft return nothing at all (organiser
+ * access policy / permissions), or did we filter everything out (status or
+ * date window)? Safe to show to staff and to log.
+ */
+export interface WebinarListDiagnostics {
+  graph_total: number;
+  status_counts: Record<string, number>;
+  published_in_window: number;
+  published_before_window: number;
+  published_after_window: number;
+  published_without_start: number;
+  earliest_published_start_utc: string | null;
+  latest_published_start_utc: string | null;
+}
+
+export function summariseWebinarList(webinars: GraphWebinar[], now: Date): WebinarListDiagnostics {
+  const diagnostics: WebinarListDiagnostics = {
+    graph_total: webinars.length,
+    status_counts: {},
+    published_in_window: 0,
+    published_before_window: 0,
+    published_after_window: 0,
+    published_without_start: 0,
+    earliest_published_start_utc: null,
+    latest_published_start_utc: null,
+  };
+  const { from, to } = computeWindow(now);
+
+  for (const webinar of webinars) {
+    const status = typeof webinar.status === "string" && webinar.status ? webinar.status : "unknown";
+    diagnostics.status_counts[status] = (diagnostics.status_counts[status] ?? 0) + 1;
+    if (!isUsableWebinar(webinar)) continue;
+
+    const summary = toEventSummary(webinar);
+    if (!summary) {
+      diagnostics.published_without_start++;
+      continue;
+    }
+    const startMs = new Date(summary.startUtc).getTime();
+    if (startMs < from.getTime()) diagnostics.published_before_window++;
+    else if (startMs > to.getTime()) diagnostics.published_after_window++;
+    else diagnostics.published_in_window++;
+
+    if (!diagnostics.earliest_published_start_utc || summary.startUtc < diagnostics.earliest_published_start_utc) {
+      diagnostics.earliest_published_start_utc = summary.startUtc;
+    }
+    if (!diagnostics.latest_published_start_utc || summary.startUtc > diagnostics.latest_published_start_utc) {
+      diagnostics.latest_published_start_utc = summary.startUtc;
+    }
+  }
+  return diagnostics;
+}
