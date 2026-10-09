@@ -244,3 +244,7 @@ open questions). Nothing here has run against a real webinar yet.
   is extended.
 - Not done, deliberately: events created directly in Teams that were never registered through Unicorn do not appear;
   there is no import of Teams attendance reports yet.
+- Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 9 October 2026 via the Supabase MCP as
+  `teams_event_attendance`, **before** the function and page merge. Verified afterwards: table exists with 0 rows, RLS
+  enabled, a single SELECT policy, `authenticated` holds SELECT only, `service_role` holds full access, and the primary
+  key plus the unique and lookup indexes are present (3 indexes).
