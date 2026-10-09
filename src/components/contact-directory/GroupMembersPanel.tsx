@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
+import { nextSort, sortGroupMembers, type DirectorySort, type DirectorySortKey } from '@/lib/contactDirectory/sortRows';
+import { SortableHead } from './SortableHead';
 import {
   filterGroupMembers,
   resolveGroupMembers,
@@ -35,7 +37,16 @@ function statusVariant(status: string): 'secondary' | 'outline' | 'destructive' 
 export function GroupMembersPanel({ groupName, members, directory, positionTypeOptions, onRemove }: Props) {
   const [query, setQuery] = useState('');
   const resolved = useMemo(() => resolveGroupMembers(members, directory), [members, directory]);
-  const visible = useMemo(() => filterGroupMembers(resolved, query), [resolved, query]);
+  const [sort, setSort] = useState<DirectorySort | null>(null);
+  const visible = useMemo(() => {
+    const sorted = sortGroupMembers(filterGroupMembers(resolved, query), sort, (value) =>
+      positionTypeLabel(value, positionTypeOptions),
+    );
+    // Records that have gone missing stay at the bottom whatever the sort.
+    return [...sorted.filter((m) => !m.missing), ...sorted.filter((m) => m.missing)];
+  }, [resolved, query, sort, positionTypeOptions]);
+
+  const handleSort = (key: DirectorySortKey) => setSort((current) => nextSort(current, key));
 
   if (resolved.length === 0) {
     return <p className="px-4 py-3 text-sm text-muted-foreground">This group has no members yet.</p>;
@@ -60,12 +71,12 @@ export function GroupMembersPanel({ groupName, members, directory, positionTypeO
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Status</TableHead>
+              <SortableHead label="Name" sortKey="name" sort={sort} onSort={handleSort} />
+              <SortableHead label="Email" sortKey="email" sort={sort} onSort={handleSort} />
+              <SortableHead label="Client" sortKey="client" sort={sort} onSort={handleSort} />
+              <SortableHead label="Type" sortKey="source" sort={sort} onSort={handleSort} />
+              <SortableHead label="Position" sortKey="position" sort={sort} onSort={handleSort} />
+              <SortableHead label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               {onRemove && <TableHead className="w-10" aria-label="Remove" />}
             </TableRow>
           </TableHeader>

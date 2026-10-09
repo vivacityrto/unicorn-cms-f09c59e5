@@ -42,6 +42,35 @@ describe('GroupMembersPanel', () => {
     expect(screen.queryByLabelText(/Search members/)).not.toBeInTheDocument();
   });
 
+  it('sorts by a clicked header, flips on a second click, and keeps missing records last', async () => {
+    const user = userEvent.setup();
+    render(
+      <GroupMembersPanel
+        groupName="G"
+        members={refs([1, 2, 3, 99])}
+        directory={[
+          person(1, { tenant_name: 'Charlie RTO' }),
+          person(2, { tenant_name: 'Alpha RTO' }),
+          person(3, { tenant_name: 'Bravo RTO' }),
+        ]}
+        positionTypeOptions={[]}
+      />,
+    );
+    const names = () =>
+      screen.getAllByRole('row').slice(1).map((r) => r.querySelector('td')!.textContent);
+
+    expect(names()).toEqual(['Person01 Test', 'Person02 Test', 'Person03 Test', '(no longer in the directory)']);
+
+    await user.click(screen.getByRole('button', { name: 'Client' }));
+    expect(names()).toEqual(['Person02 Test', 'Person03 Test', 'Person01 Test', '(no longer in the directory)']);
+
+    await user.click(screen.getByRole('button', { name: 'Client' }));
+    expect(names()).toEqual(['Person01 Test', 'Person03 Test', 'Person02 Test', '(no longer in the directory)']);
+
+    await user.click(screen.getByRole('button', { name: 'Client' })); // third click: back to A-Z by name
+    expect(names()).toEqual(['Person01 Test', 'Person02 Test', 'Person03 Test', '(no longer in the directory)']);
+  });
+
   it('says so when the group is empty', () => {
     render(<GroupMembersPanel groupName="Empty" members={[]} directory={[]} positionTypeOptions={[]} />);
     expect(screen.getByText('This group has no members yet.')).toBeInTheDocument();

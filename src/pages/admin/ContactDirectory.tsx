@@ -48,13 +48,9 @@ import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Downloa
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { GroupMembersPanel } from '@/components/contact-directory/GroupMembersPanel';
+import { SortableHead } from '@/components/contact-directory/SortableHead';
+import { nextSort, sortDirectoryRows, type DirectorySort, type DirectorySortKey } from '@/lib/contactDirectory/sortRows';
 import { RemoveMemberConfirm, type RemoveMemberRequest } from '@/components/contact-directory/RemoveMemberConfirm';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
 import { RegisterTeamsEventDialog } from '@/components/contact-directory/RegisterTeamsEventDialog';
 import { toast } from 'sonner';
@@ -136,6 +132,8 @@ export default function ContactDirectory() {
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sort, setSort] = useState<DirectorySort | null>(null);
+  const handleSort = (key: DirectorySortKey) => setSort((current) => nextSort(current, key));
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -344,12 +342,13 @@ export default function ContactDirectory() {
     } else if (positionFilter !== 'all') {
       filtered = filtered.filter((r) => r.position_type === positionFilter);
     }
-    return filtered;
-  }, [rows, searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter]);
+    // Sorting is applied last so the table, its pages and the CSV export agree on order.
+    return sortDirectoryRows(filtered, sort, (value) => positionTypeLabel(value, positionTypeOptions));
+  }, [rows, searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter, sort, positionTypeOptions]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter]);
+  }, [searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter, sort]);
 
   const pagedRows = filteredRows.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
@@ -527,24 +526,16 @@ export default function ContactDirectory() {
           icon={Users2}
           actions={
             canManageTeamsEvents ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    Actions
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setRegisterTeamsOpen(true)}>
-                    <CalendarClock className="mr-2 h-4 w-4" />
-                    Register for Teams Event
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => navigate('/administration/contacts/events')}>
-                    <CalendarCheck className="mr-2 h-4 w-4" />
-                    Events registry
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => navigate('/administration/contacts/events')}>
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+                  Events registry
+                </Button>
+                <Button onClick={() => setRegisterTeamsOpen(true)}>
+                  <CalendarClock className="mr-2 h-4 w-4" />
+                  Register for Teams Event
+                </Button>
+              </div>
             ) : undefined
           }
         />
@@ -700,12 +691,12 @@ export default function ContactDirectory() {
                             onCheckedChange={toggleSelectAllOnPage}
                           />
                         </TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead className={columnVisibility.lg}>Email</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead className={columnVisibility.xl}>Position Type</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Status</TableHead>
+                        <SortableHead label="Name" sortKey="name" sort={sort} onSort={handleSort} />
+                        <SortableHead label="Email" sortKey="email" sort={sort} onSort={handleSort} className={columnVisibility.lg} />
+                        <SortableHead label="Client" sortKey="client" sort={sort} onSort={handleSort} />
+                        <SortableHead label="Position Type" sortKey="position" sort={sort} onSort={handleSort} className={columnVisibility.xl} />
+                        <SortableHead label="Source" sortKey="source" sort={sort} onSort={handleSort} />
+                        <SortableHead label="Status" sortKey="status" sort={sort} onSort={handleSort} />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
