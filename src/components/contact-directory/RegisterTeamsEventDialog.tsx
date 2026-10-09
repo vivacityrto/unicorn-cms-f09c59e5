@@ -143,7 +143,8 @@ export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      {/* The base dialog sizes itself with its `size` prop (32rem by default), so the width is set explicitly here. */}
+      <DialogContent className="w-[min(94vw,72rem)] max-w-none max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarClock className="h-5 w-5" aria-hidden />
