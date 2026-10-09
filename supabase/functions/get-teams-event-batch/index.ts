@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
   let itemQuery = admin
     .from("teams_event_registration_items")
     .select(
-      "id, result_status, normalised_email, first_name, last_name, tenant_id, exclusion_reason, error_code, error_message, attempt_count",
+      "id, result_status, inclusion, normalised_email, first_name, last_name, tenant_id, exclusion_reason, error_code, error_message, attempt_count",
     )
     .eq("batch_id", batchId)
     .order("created_at")

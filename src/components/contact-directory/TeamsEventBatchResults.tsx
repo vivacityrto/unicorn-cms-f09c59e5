@@ -141,7 +141,14 @@ export function TeamsEventBatchResults({ batchId }: Props) {
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{personName(item)}</TableCell>
+                  <TableCell>
+                    {personName(item)}
+                    {item.inclusion === 'extra' && (
+                      <Badge variant="outline" className="ml-2">
+                        This event only
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="break-all">{item.normalised_email ?? '—'}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(item.result_status)}>{resultStatusLabel(item.result_status)}</Badge>

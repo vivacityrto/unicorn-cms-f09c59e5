@@ -1,27 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Loader2, Plus, Search, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  emptyNewContactForm,
-  findPeopleByEmail,
-  searchDirectory,
-  searchTenants,
-  validateNewContact,
-  type NewContactForm,
-} from '@/lib/contactGroups/addPeople';
+import { searchDirectory } from '@/lib/contactGroups/addPeople';
 import type { DirectoryPerson } from '@/lib/contactGroups/resolveGroupMembers';
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
-import { addPeopleToGroup, createTenantContact, parseRowKey } from '@/services/contactGroupsService';
+import { addPeopleToGroup, parseRowKey } from '@/services/contactGroupsService';
+import { NewContactForm, type ClientOption } from './NewContactForm';
 
-export interface ClientOption {
-  id: number;
-  name: string;
-}
+export type { ClientOption } from './NewContactForm';
 
 interface Props {
   group: { id: number; name: string };
@@ -115,183 +103,18 @@ export function AddPeopleToGroupPanel({ group, directory, memberKeys, clients, p
 
       {showForm && (
         <NewContactForm
-          group={group}
           directory={directory}
           clients={clients}
           positionTypeOptions={positionTypeOptions}
-          onCreated={() => {
+          addToGroup={group}
+          submitLabel={`Create and add to ${group.name}`}
+          onCreated={(created) => {
+            if (created.addedToGroup) toast.success(`Created ${created.name} and added them to ${group.name}`);
             setShowForm(false);
             onChanged();
           }}
         />
       )}
-    </div>
-  );
-}
-
-function NewContactForm({
-  group,
-  directory,
-  clients,
-  positionTypeOptions,
-  onCreated,
-}: {
-  group: { id: number; name: string };
-  directory: DirectoryPerson[];
-  clients: ClientOption[];
-  positionTypeOptions: PositionTypeOption[];
-  onCreated: () => void;
-}) {
-  const [form, setForm] = useState<NewContactForm>(emptyNewContactForm);
-  const [clientQuery, setClientQuery] = useState('');
-  const [chosenClient, setChosenClient] = useState<ClientOption | null>(null);
-  const [errors, setErrors] = useState<ReturnType<typeof validateNewContact>>({});
-  const [saving, setSaving] = useState(false);
-
-  const clientResults = useMemo(() => (chosenClient ? [] : searchTenants(clients, clientQuery)), [chosenClient, clients, clientQuery]);
-  const sameEmail = useMemo(() => findPeopleByEmail(directory, form.email), [directory, form.email]);
-  const sameEmailInClient = form.tenantId ? sameEmail.filter((p) => p.tenant_id === form.tenantId) : [];
-
-  const set = <K extends keyof NewContactForm>(key: K, value: NewContactForm[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
-
-  const save = async () => {
-    const found = validateNewContact(form);
-    setErrors(found);
-    if (Object.keys(found).length > 0) return;
-    if (sameEmailInClient.length > 0) return;
-
-    setSaving(true);
-    const created = await createTenantContact({
-      tenantId: form.tenantId as number,
-      firstName: form.firstName,
-      lastName: form.lastName,
-      email: form.email,
-      positionType: form.positionType || null,
-    });
-    if (created.ok === false) {
-      setSaving(false);
-      toast.error(created.message);
-      return;
-    }
-    const added = await addPeopleToGroup(group.id, [{ source: 'contact', id: created.id, tenantId: form.tenantId as number }]);
-    setSaving(false);
-    if (!added.ok) {
-      toast.error('The contact was created, but adding them to the group failed. Add them from the search above.');
-      onCreated();
-      return;
-    }
-    toast.success(`Created ${form.firstName.trim()} ${form.lastName.trim()} and added them to ${group.name}`);
-    onCreated();
-  };
-
-  return (
-    <div className="space-y-3 rounded-md border bg-muted/30 p-3">
-      <div className="space-y-1">
-        <Label htmlFor="new-contact-client">Client</Label>
-        {chosenClient ? (
-          <div className="flex items-center justify-between rounded-md border bg-background px-3 py-2 text-sm">
-            <span>{chosenClient.name}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setChosenClient(null);
-                set('tenantId', null);
-              }}
-            >
-              Change
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Input
-              id="new-contact-client"
-              value={clientQuery}
-              onChange={(e) => setClientQuery(e.target.value)}
-              placeholder="Search for the client this contact belongs to…"
-            />
-            {clientResults.length > 0 && (
-              <ul className="max-h-40 overflow-auto rounded-md border bg-background text-sm">
-                {clientResults.map((c) => (
-                  <li key={c.id}>
-                    <button
-                      type="button"
-                      className="w-full px-3 py-1.5 text-left hover:bg-muted"
-                      onClick={() => {
-                        setChosenClient(c);
-                        set('tenantId', c.id);
-                        setClientQuery('');
-                      }}
-                    >
-                      {c.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-        {errors.tenant && <p className="text-xs text-destructive">{errors.tenant}</p>}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor="new-contact-first">First name</Label>
-          <Input id="new-contact-first" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} />
-          {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="new-contact-last">Last name</Label>
-          <Input id="new-contact-last" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} />
-          {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="new-contact-email">Email</Label>
-          <Input id="new-contact-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
-          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="new-contact-position">Position type (optional)</Label>
-          <Select value={form.positionType || '__none__'} onValueChange={(v) => set('positionType', v === '__none__' ? '' : v)}>
-            <SelectTrigger id="new-contact-position">
-              <SelectValue placeholder="Position type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">None</SelectItem>
-              {positionTypeOptions.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {sameEmailInClient.length > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {sameEmailInClient[0].first_name} {sameEmailInClient[0].last_name ?? ''} at this client already has this
-            email. Search for them above and add them instead.
-          </AlertDescription>
-        </Alert>
-      )}
-      {sameEmailInClient.length === 0 && sameEmail.length > 0 && (
-        <Alert variant="warning">
-          <AlertDescription>
-            This email already exists in the directory ({sameEmail[0].first_name} {sameEmail[0].last_name ?? ''} at{' '}
-            {sameEmail[0].tenant_name}). If that is the same person, add them from the search instead. If not, carry on.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="flex justify-end">
-        <Button onClick={save} disabled={saving || sameEmailInClient.length > 0}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create and add to {group.name}
-        </Button>
-      </div>
     </div>
   );
 }

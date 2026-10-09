@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AlertTriangle, CalendarClock, Loader2, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +34,18 @@ import {
 import { TeamsEventsError, type PreviewPerson, type PreviewResponse } from '@/services/teamsEventsService';
 import type { DirectoryPerson, GroupMemberRef } from '@/lib/contactGroups/resolveGroupMembers';
 import type { PositionTypeOption } from '@/lib/roles/positionType';
+import {
+  addExtra,
+  adjustmentsSummary,
+  noAdjustments,
+  removeExtra,
+  skipMember,
+  toRequestKeys,
+  unskipMember,
+  type EventAdjustments,
+} from '@/lib/teamsEvents/adjustments';
 import { AddPeopleToGroupPanel, type ClientOption } from './AddPeopleToGroupPanel';
+import { EventOnlyPeoplePanel } from './EventOnlyPeoplePanel';
 import { GroupMembersPanel } from './GroupMembersPanel';
 import { RemoveMemberConfirm, type RemoveMemberRequest } from './RemoveMemberConfirm';
 import { TeamsEventBatchResults } from './TeamsEventBatchResults';
@@ -68,28 +79,39 @@ function errorText(error: unknown): string {
   return error instanceof TeamsEventsError ? error.message : 'Something went wrong. Please try again.';
 }
 
-function PersonList({ title, people, cap, showReason }: {
+function PersonList({ title, people, cap, showReason, renderAction, defaultOpen }: {
   title: string;
   people: PreviewPerson[];
   cap: number;
   showReason?: boolean;
+  /** An action shown at the end of each row, e.g. "Skip for this event". */
+  renderAction?: (person: PreviewPerson) => ReactNode;
+  defaultOpen?: boolean;
 }) {
   if (people.length === 0) return null;
   return (
-    <details className="rounded-md border px-3 py-2 text-sm">
+    <details className="rounded-md border px-3 py-2 text-sm" open={defaultOpen}>
       <summary className="cursor-pointer font-medium">
         {title} ({people.length}
         {people.length >= cap ? '+' : ''})
       </summary>
-      <ul className="mt-2 max-h-40 space-y-1 overflow-auto">
+      <ul className="mt-2 max-h-48 space-y-1 overflow-auto">
         {people.map((p) => (
-          <li key={p.member_key} className="flex flex-wrap justify-between gap-x-3">
+          <li key={p.member_key} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <span>
               {personName(p)} <span className="text-muted-foreground">{p.email ?? ''}</span>
+              {p.inclusion === 'extra' && (
+                <Badge variant="secondary" className="ml-2">
+                  This event only
+                </Badge>
+              )}
             </span>
-            {showReason && (
-              <span className="text-muted-foreground">{exclusionReasonLabel(p.reason ?? p.duplicate_of ?? '')}</span>
-            )}
+            <span className="flex items-center gap-2">
+              {showReason && (
+                <span className="text-muted-foreground">{exclusionReasonLabel(p.reason ?? p.duplicate_of ?? '')}</span>
+              )}
+              {renderAction?.(p)}
+            </span>
           </li>
         ))}
       </ul>
@@ -113,6 +135,8 @@ export function RegisterTeamsEventDialog({
   const [groupId, setGroupId] = useState('');
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
+  // People added for / skipped from THIS event only. Never changes the group.
+  const [adjustments, setAdjustments] = useState<EventAdjustments>(noAdjustments);
 
   const events = useTeamsEventsList(open && step === 'select');
   const previewMutation = usePreviewTeamsEventGroup();
@@ -126,21 +150,38 @@ export function RegisterTeamsEventDialog({
       setGroupId('');
       setPreview(null);
       setBatchId(null);
+      setAdjustments(noAdjustments);
       previewMutation.reset();
       registerMutation.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const runPreview = async () => {
+  const runPreview = async (changes: EventAdjustments = adjustments) => {
     registerMutation.reset();
     try {
-      const result = await previewMutation.mutateAsync({ eventId, groupId: Number(groupId) });
+      const result = await previewMutation.mutateAsync({
+        eventId,
+        groupId: Number(groupId),
+        changes: toRequestKeys(changes),
+      });
       setPreview(result);
       setStep('preview');
     } catch {
       // surfaced via previewMutation.error
     }
+  };
+
+  /** Change who is registered for this event only, then refresh the preview (and its signed token). */
+  const adjustAndPreview = (next: EventAdjustments) => {
+    setAdjustments(next);
+    void runPreview(next);
+  };
+
+  const chooseGroup = (value: string) => {
+    setGroupId(value);
+    // Event-only changes belong to one group; start clean when it changes.
+    setAdjustments(noAdjustments);
   };
 
   const confirm = async () => {
@@ -150,6 +191,7 @@ export function RegisterTeamsEventDialog({
         eventId: preview.event.id,
         groupId: preview.group.id,
         previewToken: preview.preview_token,
+        changes: toRequestKeys(adjustments),
       });
       setBatchId(result.batch_id);
       setStep('results');
@@ -172,6 +214,9 @@ export function RegisterTeamsEventDialog({
     () => new Set(selectedGroupMembers.map((m) => `${m.member_type === 'user' ? 'user' : 'contact'}:${m.member_id}`)),
     [selectedGroupMembers],
   );
+  const skippedPeople = preview?.excluded.filter((p) => p.reason === 'skipped_for_event') ?? [];
+  const otherExcluded = preview?.excluded.filter((p) => p.reason !== 'skipped_for_event') ?? [];
+  const busy = previewMutation.isPending || registerMutation.isPending;
   const emptyExplanation = explainEmptyList(events.data?.diagnostics);
   const notListed = events.data?.diagnostics?.not_listed ?? [];
   const canPreview = !!eventId && !!groupId && !previewMutation.isPending;
@@ -299,7 +344,7 @@ export function RegisterTeamsEventDialog({
 
             <section className="space-y-2">
               <Label htmlFor="teams-event-group">Contact Directory Group</Label>
-              <Select value={groupId} onValueChange={setGroupId}>
+              <Select value={groupId} onValueChange={chooseGroup}>
                 <SelectTrigger id="teams-event-group">
                   <SelectValue placeholder={groups.length === 0 ? 'No groups yet' : 'Choose a group'} />
                 </SelectTrigger>
@@ -345,6 +390,25 @@ export function RegisterTeamsEventDialog({
                   </div>
                 </details>
               )}
+              {directory && selectedGroup && (
+                <details className="rounded-md border px-3 py-2 text-sm" open={adjustments.extras.length > 0}>
+                  <summary className="cursor-pointer font-medium">
+                    Include others in this event only ({adjustments.extras.length})
+                  </summary>
+                  <div className="mt-3">
+                    <EventOnlyPeoplePanel
+                      directory={directory}
+                      groupMemberKeys={selectedMemberKeys}
+                      extras={adjustments.extras}
+                      clients={clients}
+                      positionTypeOptions={positionTypeOptions}
+                      onAdd={(extra) => setAdjustments((prev) => addExtra(prev, extra))}
+                      onRemove={(key) => setAdjustments((prev) => removeExtra(prev, key))}
+                      onDirectoryChanged={() => onGroupChanged?.()}
+                    />
+                  </div>
+                </details>
+              )}
             </section>
 
             {previewMutation.error && (
@@ -359,7 +423,7 @@ export function RegisterTeamsEventDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={runPreview} disabled={!canPreview}>
+              <Button onClick={() => runPreview()} disabled={!canPreview}>
                 {previewMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Preview
               </Button>
@@ -405,11 +469,74 @@ export function RegisterTeamsEventDialog({
               </Alert>
             )}
 
+            {preview.counts.extras_missing ? (
+              <Alert variant="warning">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {preview.counts.extras_missing} person{preview.counts.extras_missing === 1 ? ' you added' : 's you added'} for
+                  this event no longer exist in the directory and were left out.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {previewMutation.error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Could not update the preview</AlertTitle>
+                <AlertDescription>{errorText(previewMutation.error)}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
-              <PersonList title="Excluded" people={preview.excluded} cap={preview.list_cap} showReason />
+              <PersonList title="Excluded" people={otherExcluded} cap={preview.list_cap} showReason />
               <PersonList title="Duplicate emails (processed once)" people={preview.duplicates} cap={preview.list_cap} showReason />
               <PersonList title="Already registered for this event" people={preview.already_processed} cap={preview.list_cap} />
-              <PersonList title="Will be registered" people={preview.to_register} cap={preview.list_cap} />
+              <PersonList
+                title="Skipped for this event only"
+                people={skippedPeople}
+                cap={preview.list_cap}
+                defaultOpen
+                renderAction={(p) => (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    aria-label={`Undo skip for ${personName(p)}`}
+                    onClick={() => adjustAndPreview(unskipMember(adjustments, p.member_key))}
+                  >
+                    Undo
+                  </Button>
+                )}
+              />
+              <PersonList
+                title="Will be registered"
+                people={preview.to_register}
+                cap={preview.list_cap}
+                defaultOpen
+                renderAction={(p) =>
+                  p.inclusion === 'extra' ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      aria-label={`Remove ${personName(p)} from this event`}
+                      onClick={() => adjustAndPreview(removeExtra(adjustments, p.member_key))}
+                    >
+                      Remove
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      aria-label={`Skip ${personName(p)} for this event`}
+                      onClick={() => adjustAndPreview(skipMember(adjustments, p.member_key))}
+                    >
+                      Skip for this event
+                    </Button>
+                  )
+                }
+              />
             </div>
 
             {registerMutation.error && (
@@ -422,16 +549,19 @@ export function RegisterTeamsEventDialog({
 
             <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm font-medium" role="status">
               {webinarConfirmationMessage(preview.counts.to_register, preview.event.displayName, preview.event.startUtc)}
-              <span className="mt-1 block font-normal text-muted-foreground">Group: {preview.group.name}</span>
+              <span className="mt-1 block font-normal text-muted-foreground">
+                Group: {preview.group.name}
+                {adjustmentsSummary(preview.counts) ? ` · ${adjustmentsSummary(preview.counts)}` : ''}
+              </span>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep('select')} disabled={registerMutation.isPending}>
+              <Button variant="outline" onClick={() => setStep('select')} disabled={busy}>
                 Back
               </Button>
               <Button
                 onClick={confirm}
-                disabled={registerMutation.isPending || preview.blocked || preview.counts.to_register === 0}
+                disabled={busy || preview.blocked || preview.counts.to_register === 0}
               >
                 {registerMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm and register

@@ -69,6 +69,7 @@ const EXCLUSION_LABELS: Record<string, string> = {
   missing_record: 'Record no longer exists',
   invalid_email: 'Missing or invalid email',
   missing_name: 'Missing first or last name',
+  skipped_for_event: 'Skipped for this event',
 };
 
 export function exclusionReasonLabel(reason: string | null | undefined): string {

@@ -25,7 +25,12 @@ import {
 import { isUsableWebinar, isWithinWindow, toEventSummary } from "../_shared/teams-events/event-window.ts";
 import { resolveGroupForEvent } from "../_shared/teams-events/group-resolution.ts";
 import { PREVIEW_TOKEN_TTL_SECONDS, signPreviewToken } from "../_shared/teams-events/preview-token.ts";
-import type { ClassifiedMember } from "../_shared/teams-events/membership.ts";
+import {
+  type ClassifiedMember,
+  MAX_EVENT_EXTRAS,
+  MAX_EVENT_SKIPS,
+  parseMemberKeys,
+} from "../_shared/teams-events/membership.ts";
 
 const LIST_CAP = 300;
 
@@ -37,6 +42,7 @@ function displayRow(m: ClassifiedMember) {
     first_name: m.member.firstName,
     last_name: m.member.lastName,
     email: m.member.email,
+    inclusion: m.member.inclusion ?? "group",
   };
 }
 
@@ -61,6 +67,18 @@ Deno.serve(async (req) => {
     return errorResponse(req, 400, "invalid_request", "event_type, event_id and group_id are required");
   }
 
+  // Event-only changes: people added for / skipped from THIS event, as keys only.
+  const extras = parseMemberKeys(body?.extra_member_keys, MAX_EVENT_EXTRAS);
+  const skips = parseMemberKeys(body?.skipped_member_keys, MAX_EVENT_SKIPS);
+  if (!extras.ok || !skips.ok) {
+    return errorResponse(
+      req,
+      400,
+      "invalid_request",
+      "extra_member_keys and skipped_member_keys must be lists of user:<id> / contact:<id> keys",
+    );
+  }
+
   const graph = createGraphFromEnv();
   if (!graph.ok) return notConfiguredResponse(req);
 
@@ -75,19 +93,26 @@ Deno.serve(async (req) => {
     return errorResponse(req, 409, "event_out_of_window", "This event is outside the next 14 days.");
   }
 
-  const result = await resolveGroupForEvent(admin, { eventType: "webinar", eventId, groupId });
+  const result = await resolveGroupForEvent(admin, {
+    eventType: "webinar",
+    eventId,
+    groupId,
+    extraKeys: extras.keys,
+    skippedKeys: skips.keys,
+  });
   if (!result.ok) {
     return result.reason === "not_found"
       ? errorResponse(req, 404, "group_not_found", "That Contact Directory Group no longer exists.")
       : errorResponse(req, 500, "group_resolution_failed", "Could not load the group's members.");
   }
-  const { group, classification, fingerprint, memberCount, alreadyProcessed } = result.resolved;
+  const { group, classification, fingerprint, memberCount, alreadyProcessed, extrasMissing } = result.resolved;
 
   const eligible = classification.members.filter((m) => m.kind === "eligible");
   const toRegister = eligible.filter((m) => m.kind === "eligible" && !alreadyProcessed.has(m.normalisedEmail));
   const alreadyDone = eligible.filter((m) => m.kind === "eligible" && alreadyProcessed.has(m.normalisedEmail));
   const excluded = classification.members.filter((m) => m.kind === "excluded");
   const duplicates = classification.members.filter((m) => m.kind === "duplicate");
+  const skipped = excluded.filter((m) => m.kind === "excluded" && m.reason === "skipped_for_event");
 
   // Mandatory registration questions: Unicorn never invents answers, so stop
   // before processing. If the check itself fails we warn instead of blocking;
@@ -117,8 +142,12 @@ Deno.serve(async (req) => {
       eligible: eligible.length,
       to_register: toRegister.length,
       already_processed: alreadyDone.length,
-      excluded: excluded.length,
+      // "excluded" counts people left out for a reason of their own; skips are counted separately.
+      excluded: excluded.length - skipped.length,
       duplicate: duplicates.length,
+      extras: toRegister.filter((m) => m.member.inclusion === "extra").length,
+      skipped: skipped.length,
+      extras_missing: extrasMissing,
     },
     to_register: toRegister.slice(0, LIST_CAP).map(displayRow),
     already_processed: alreadyDone.slice(0, LIST_CAP).map(displayRow),
