@@ -179,3 +179,7 @@ open questions). Nothing here has run against a real webinar yet.
   and its signed token. Changing the Group clears the event-only changes.
 - Deliberately not in this change: cancelling a Teams registration when someone is removed or skipped after they
   registered (PR 3). A skip applies to who is registered by this run; it does not touch an existing registration.
+- Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 9 October 2026 via the Supabase MCP, as
+  `teams_event_items_inclusion`, **before** this change merged. Verified afterwards: the column is `text NOT NULL
+  DEFAULT 'group'` with CHECK `inclusion IN ('group','extra')`, and all 3 pre-existing item rows read `'group'`.
+  `src/integrations/supabase/types.ts` carries the column (hand-added in the generator's format).
