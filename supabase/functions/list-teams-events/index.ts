@@ -6,7 +6,7 @@
  * is cached or stored here. Meetings are a later phase.
  *
  * POST { event_type?: "webinar" }
- * 200  { events, window: { from, to }, fetched_at }
+ * 200  { events, diagnostics, window: { from, to }, fetched_at }
  */
 import { corsHeadersFor, requireCaller } from "../_shared/requireCaller.ts";
 import {
@@ -18,7 +18,7 @@ import {
   notConfiguredResponse,
   teamsEventsCallerOptions,
 } from "../_shared/teams-events/server.ts";
-import { computeWindow, selectUpcomingWebinars } from "../_shared/teams-events/event-window.ts";
+import { computeWindow, selectUpcomingWebinars, summariseWebinarList } from "../_shared/teams-events/event-window.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersFor(req) });
@@ -47,6 +47,8 @@ Deno.serve(async (req) => {
   const window = computeWindow(now);
   return jsonResponse(req, 200, {
     events: selectUpcomingWebinars(listed.webinars, now),
+    // Counts only (no titles/organisers): explains an empty list.
+    diagnostics: summariseWebinarList(listed.webinars, now),
     window: { from: window.from.toISOString(), to: window.to.toISOString() },
     fetched_at: now.toISOString(),
   });
