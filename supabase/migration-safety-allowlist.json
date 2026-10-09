@@ -2,6 +2,15 @@
   "version": 1,
   "entries": [
     {
+      "id": "teams-events-grant-integrator-bgt",
+      "file": "supabase/migrations/20261009010000_teams_events_grant_integrator_bgt.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Requested by Carl (2026-10-09), pending his review in this PR: lifts exactly two role_permissions rows (teams_events.manage_registrations for Integrator and BGT) from 'none' to 'full', guarded with level = 'none' so it never overrides a hand-set level, so Beverly and Novea can register people for Teams webinars. Touches only rows seeded by the foundation migration for this brand-new feature key; no other data. Remove this entry once the migration is applied.",
+      "expires": "2026-10-22"
+    },
+    {
       "id": "teams-event-registration-foundation",
       "file": "supabase/migrations/20261008010000_teams_event_registration_foundation.sql",
       "categories": ["data-mutation"],

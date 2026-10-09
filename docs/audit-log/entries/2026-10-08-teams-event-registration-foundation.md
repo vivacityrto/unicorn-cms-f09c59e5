@@ -121,3 +121,19 @@ open questions). Nothing here has run against a real webinar yet.
   webinars on that app; and the application access policy also covers online meetings for that app, which
   matters when Meetings (Phase 2) are added.
 - Follow-up: check the existing client secret's expiry date before relying on it.
+
+## Update 2026-10-09 — Integrator and BGT can register for Teams events
+- Decision (Carl, 9 October 2026): Beverly and Novea run Teams webinar registration, and they hold the
+  **Integrator** and **BGT** roles. `teams_events.manage_registrations` is therefore seeded `full` for
+  Super Admin, Integrator and BGT; Team Leader, CSC and CET stay `none`. This supersedes the "everyone
+  else none" seed described above.
+- Implemented as a new corrective migration, `20261009010000_teams_events_grant_integrator_bgt.sql`, because the
+  migration guardrail rejects edits to an existing migration file. It runs `UPDATE ... SET level = 'full'` for
+  exactly the Integrator and BGT rows the foundation migration seeds as `none`, guarded with `level = 'none'` so
+  it never overrides a level set by hand. It must be applied after the foundation migration (timestamp order
+  guarantees this). A short-lived allowlist entry covers the data mutation; remove it once applied.
+- No other access change was needed. The Administration sidebar section is already shown to all Vivacity
+  staff roles (`isVivacityTeam`, which includes Integrator and BGT) and Contact Directory has no extra
+  role flag. The `/administration/contacts` route uses `allowVivacityTeam`. The Contact Directory Groups
+  tables and the Teams batch tables are readable by these roles (`is_vivacity_staff` /
+  `check_permission`), and every Edge Function re-checks the permission through `requireCaller`.

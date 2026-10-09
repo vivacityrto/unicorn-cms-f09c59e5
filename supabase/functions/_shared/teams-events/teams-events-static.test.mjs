@@ -182,3 +182,26 @@ describe("migration 20261008010000_teams_event_registration_foundation", () => {
     assert.match(sql, /ROLLBACK:/);
   });
 });
+
+describe("migration 20261009010000_teams_events_grant_integrator_bgt", () => {
+  const sql = readFileSync(
+    join(functionsDir, "..", "migrations", "20261009010000_teams_events_grant_integrator_bgt.sql"),
+    "utf8",
+  );
+
+  test("lifts only Integrator and BGT, only from 'none', only for the Teams events feature", () => {
+    assert.match(sql, /UPDATE public\.role_permissions\s+SET level = 'full'/);
+    assert.match(sql, /feature_key = 'teams_events\.manage_registrations'/);
+    assert.match(sql, /role IN \('Integrator', 'BGT'\)/);
+    assert.match(sql, /AND level = 'none'/);
+    for (const untouched of ["Super Admin", "Team Leader", "CSC", "CET"]) {
+      assert.doesNotMatch(sql.replace(/--.*$/gm, ""), new RegExp(untouched));
+    }
+  });
+
+  test("never inserts or deletes and documents rollback", () => {
+    const code = sql.replace(/--.*$/gm, "");
+    assert.doesNotMatch(code, /\b(INSERT|DELETE|DROP|ALTER)\b/i);
+    assert.match(sql, /ROLLBACK:/);
+  });
+});
