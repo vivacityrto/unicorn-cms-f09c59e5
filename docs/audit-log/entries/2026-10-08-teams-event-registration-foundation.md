@@ -215,3 +215,8 @@ open questions). Nothing here has run against a real webinar yet.
   the same event (skipped) rather than re-registered by the next preview.
 - Known limits: registrations made directly in Teams are not listed in the removal prompt (Unicorn only knows its own);
   a person with a registration in Teams but no email on file cannot be matched.
+- Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 9 October 2026 via the Supabase MCP as
+  `teams_event_items_cancelled_status`, **before** the cancel function merged. Verified afterwards: exactly one
+  `teams_event_items_status_check` constraint, now allowing `cancelled`; the 3 existing rows (all `registered`) are
+  untouched; and `uq_teams_event_items_event_email_success` still spans only `registered`/`invited`, so a cancelled
+  person can be registered again.
