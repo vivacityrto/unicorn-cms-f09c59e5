@@ -53,20 +53,57 @@ const collator = new Intl.Collator('en-AU', { sensitivity: 'base', numeric: true
  * Returns a sorted copy. Blank values always sort last, whichever direction
  * is chosen, and ties fall back to name so the order is stable and predictable.
  */
+function sortWith<T>(rows: T[], sort: DirectorySort | null, valueOf: (row: T, key: DirectorySortKey) => string): T[] {
+  if (!sort) return rows;
+  const factor = sort.direction === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const av = valueOf(a, sort.key);
+    const bv = valueOf(b, sort.key);
+    if (!av && bv) return 1;
+    if (av && !bv) return -1;
+    const primary = collator.compare(av, bv) * factor;
+    if (primary !== 0) return primary;
+    return collator.compare(valueOf(a, 'name'), valueOf(b, 'name'));
+  });
+}
+
 export function sortDirectoryRows<T extends SortableRow>(
   rows: T[],
   sort: DirectorySort | null,
   positionLabel: (value: string | null) => string = (v) => v ?? '',
 ): T[] {
-  if (!sort) return rows;
-  const factor = sort.direction === 'asc' ? 1 : -1;
-  return [...rows].sort((a, b) => {
-    const av = valueFor(a, sort.key, positionLabel);
-    const bv = valueFor(b, sort.key, positionLabel);
-    if (!av && bv) return 1;
-    if (av && !bv) return -1;
-    const primary = collator.compare(av, bv) * factor;
-    if (primary !== 0) return primary;
-    return collator.compare(valueFor(a, 'name', positionLabel), valueFor(b, 'name', positionLabel));
+  return sortWith(rows, sort, (row, key) => valueFor(row, key, positionLabel));
+}
+
+interface SortableGroupMember {
+  name: string;
+  email: string;
+  tenantName: string;
+  source: string;
+  positionType: string | null;
+  status: string;
+}
+
+/** Same ordering rules for the people listed inside one Group (display only). */
+export function sortGroupMembers<T extends SortableGroupMember>(
+  members: T[],
+  sort: DirectorySort | null,
+  positionLabel: (value: string | null) => string = (v) => v ?? '',
+): T[] {
+  return sortWith(members, sort, (m, key) => {
+    switch (key) {
+      case 'name':
+        return m.name;
+      case 'email':
+        return m.email;
+      case 'client':
+        return m.tenantName;
+      case 'position':
+        return m.positionType ? positionLabel(m.positionType) : '';
+      case 'source':
+        return m.source;
+      case 'status':
+        return m.status;
+    }
   });
 }
