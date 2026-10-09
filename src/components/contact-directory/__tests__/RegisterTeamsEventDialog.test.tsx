@@ -199,6 +199,43 @@ describe('RegisterTeamsEventDialog', () => {
     expect(screen.getByText(/Starts more than 14 days from now/)).toBeInTheDocument();
   });
 
+  it('offers to manage the chosen group (members, remove, add) without leaving the modal', async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <RegisterTeamsEventDialog
+          open
+          onOpenChange={vi.fn()}
+          groups={[{ id: 7, name: 'Leadership Team', member_count: 1 }]}
+          directory={[
+            {
+              row_key: 'user:1',
+              source: 'user',
+              tenant_id: 10,
+              tenant_name: 'Acme RTO',
+              first_name: 'Amanda',
+              last_name: 'Hardy',
+              email: 'amanda@example.com',
+              position_type: null,
+              status: 'active',
+            },
+          ]}
+          groupMembers={[{ group_id: 7, member_type: 'user', member_id: '1' }]}
+          clients={[{ id: 10, name: 'Acme RTO' }]}
+          positionTypeOptions={[]}
+          onGroupChanged={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/Manage this group/)).not.toBeInTheDocument();
+    await user.selectOptions(await screen.findByLabelText('Contact Directory Group'), '7');
+    expect(await screen.findByText('Manage this group (1)')).toBeInTheDocument();
+    expect(screen.getByText('Amanda Hardy')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Amanda Hardy from Leadership Team' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Search the directory to add people')).toBeInTheDocument();
+  });
+
   it('needs both an event and a group before Preview is enabled', async () => {
     const user = userEvent.setup();
     renderDialog();

@@ -47,6 +47,7 @@ import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVi
 import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download, CalendarClock, ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { GroupMembersPanel } from '@/components/contact-directory/GroupMembersPanel';
+import { RemoveMemberConfirm, type RemoveMemberRequest } from '@/components/contact-directory/RemoveMemberConfirm';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,6 +146,7 @@ export default function ContactDirectory() {
   const [newGroupName, setNewGroupName] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<ContactGroup | null>(null);
+  const [removeRequest, setRemoveRequest] = useState<RemoveMemberRequest | null>(null);
   const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
   const [registerTeamsOpen, setRegisterTeamsOpen] = useState(false);
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(new Set());
@@ -858,6 +860,9 @@ export default function ContactDirectory() {
                             members={membersByGroup.get(g.id) ?? []}
                             directory={rows}
                             positionTypeOptions={positionTypeOptions}
+                            onRemove={(m) =>
+                              setRemoveRequest({ groupId: g.id, groupName: g.name, memberKey: m.key, memberName: m.name })
+                            }
                           />
                         </CollapsibleContent>
                       </Collapsible>
@@ -954,8 +959,22 @@ export default function ContactDirectory() {
           open={registerTeamsOpen}
           onOpenChange={setRegisterTeamsOpen}
           groups={groups.map((g) => ({ id: g.id, name: g.name, member_count: g.member_count }))}
+          directory={rows}
+          groupMembers={groupMembers}
+          clients={tenants.map((t) => ({ id: t.id, name: t.name }))}
+          positionTypeOptions={positionTypeOptions}
+          onGroupChanged={() => {
+            fetchGroups();
+            fetchDirectory();
+          }}
         />
       )}
+
+      <RemoveMemberConfirm
+        request={removeRequest}
+        onClose={() => setRemoveRequest(null)}
+        onRemoved={() => fetchGroups()}
+      />
     </>
   );
 }

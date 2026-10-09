@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarClock, Loader2, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,11 @@ import {
   webinarConfirmationMessage,
 } from '@/lib/teamsEvents/format';
 import { TeamsEventsError, type PreviewPerson, type PreviewResponse } from '@/services/teamsEventsService';
+import type { DirectoryPerson, GroupMemberRef } from '@/lib/contactGroups/resolveGroupMembers';
+import type { PositionTypeOption } from '@/lib/roles/positionType';
+import { AddPeopleToGroupPanel, type ClientOption } from './AddPeopleToGroupPanel';
+import { GroupMembersPanel } from './GroupMembersPanel';
+import { RemoveMemberConfirm, type RemoveMemberRequest } from './RemoveMemberConfirm';
 import { TeamsEventBatchResults } from './TeamsEventBatchResults';
 
 export interface TeamsEventGroupOption {
@@ -44,6 +49,17 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   groups: TeamsEventGroupOption[];
+  /**
+   * Optional group-management data. When `directory` is given, choosing a group
+   * also offers "Manage this group": see its members, remove people, and add
+   * people (or create a new contact) without leaving the modal.
+   */
+  directory?: DirectoryPerson[];
+  groupMembers?: GroupMemberRef[];
+  clients?: ClientOption[];
+  positionTypeOptions?: PositionTypeOption[];
+  /** Called after the group's membership or the directory changed. */
+  onGroupChanged?: () => void;
 }
 
 type Step = 'select' | 'preview' | 'results';
@@ -81,7 +97,17 @@ function PersonList({ title, people, cap, showReason }: {
   );
 }
 
-export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) {
+export function RegisterTeamsEventDialog({
+  open,
+  onOpenChange,
+  groups,
+  directory,
+  groupMembers = [],
+  clients = [],
+  positionTypeOptions = [],
+  onGroupChanged,
+}: Props) {
+  const [removeRequest, setRemoveRequest] = useState<RemoveMemberRequest | null>(null);
   const [step, setStep] = useState<Step>('select');
   const [eventId, setEventId] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -137,6 +163,15 @@ export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) 
   };
 
   const eventList = events.data?.events ?? [];
+  const selectedGroup = groups.find((g) => String(g.id) === groupId) ?? null;
+  const selectedGroupMembers = useMemo(
+    () => (selectedGroup ? groupMembers.filter((m) => m.group_id === selectedGroup.id) : []),
+    [groupMembers, selectedGroup],
+  );
+  const selectedMemberKeys = useMemo(
+    () => new Set(selectedGroupMembers.map((m) => `${m.member_type === 'user' ? 'user' : 'contact'}:${m.member_id}`)),
+    [selectedGroupMembers],
+  );
   const emptyExplanation = explainEmptyList(events.data?.diagnostics);
   const notListed = events.data?.diagnostics?.not_listed ?? [];
   const canPreview = !!eventId && !!groupId && !previewMutation.isPending;
@@ -279,6 +314,37 @@ export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) 
               <p className="text-xs text-muted-foreground">
                 Membership is loaded fresh from the group when you confirm — not from this page.
               </p>
+              {directory && selectedGroup && (
+                <details className="rounded-md border px-3 py-2 text-sm">
+                  <summary className="cursor-pointer font-medium">
+                    Manage this group ({selectedGroupMembers.length})
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    <GroupMembersPanel
+                      groupName={selectedGroup.name}
+                      members={selectedGroupMembers}
+                      directory={directory}
+                      positionTypeOptions={positionTypeOptions}
+                      onRemove={(m) =>
+                        setRemoveRequest({
+                          groupId: selectedGroup.id,
+                          groupName: selectedGroup.name,
+                          memberKey: m.key,
+                          memberName: m.name,
+                        })
+                      }
+                    />
+                    <AddPeopleToGroupPanel
+                      group={selectedGroup}
+                      directory={directory}
+                      memberKeys={selectedMemberKeys}
+                      clients={clients}
+                      positionTypeOptions={positionTypeOptions}
+                      onChanged={() => onGroupChanged?.()}
+                    />
+                  </div>
+                </details>
+              )}
             </section>
 
             {previewMutation.error && (
@@ -383,6 +449,11 @@ export function RegisterTeamsEventDialog({ open, onOpenChange, groups }: Props) 
           </div>
         )}
       </DialogContent>
+      <RemoveMemberConfirm
+        request={removeRequest}
+        onClose={() => setRemoveRequest(null)}
+        onRemoved={() => onGroupChanged?.()}
+      />
     </Dialog>
   );
 }

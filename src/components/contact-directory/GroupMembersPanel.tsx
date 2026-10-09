@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
@@ -9,6 +10,7 @@ import {
   resolveGroupMembers,
   type DirectoryPerson,
   type GroupMemberRef,
+  type ResolvedGroupMember,
 } from '@/lib/contactGroups/resolveGroupMembers';
 
 /** Show the search box once a list is long enough to need one. */
@@ -19,6 +21,8 @@ interface Props {
   members: GroupMemberRef[];
   directory: DirectoryPerson[];
   positionTypeOptions: PositionTypeOption[];
+  /** When given, each row gets a "remove from group" button. */
+  onRemove?: (member: ResolvedGroupMember) => void;
 }
 
 function statusVariant(status: string): 'secondary' | 'outline' | 'destructive' {
@@ -28,7 +32,7 @@ function statusVariant(status: string): 'secondary' | 'outline' | 'destructive' 
 }
 
 /** Read-only list of the people currently in one Contact Directory Group. */
-export function GroupMembersPanel({ groupName, members, directory, positionTypeOptions }: Props) {
+export function GroupMembersPanel({ groupName, members, directory, positionTypeOptions, onRemove }: Props) {
   const [query, setQuery] = useState('');
   const resolved = useMemo(() => resolveGroupMembers(members, directory), [members, directory]);
   const visible = useMemo(() => filterGroupMembers(resolved, query), [resolved, query]);
@@ -62,12 +66,13 @@ export function GroupMembersPanel({ groupName, members, directory, positionTypeO
               <TableHead>Type</TableHead>
               <TableHead>Position</TableHead>
               <TableHead>Status</TableHead>
+              {onRemove && <TableHead className="w-10" aria-label="Remove" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                <TableCell colSpan={onRemove ? 7 : 6} className="text-center text-sm text-muted-foreground">
                   No members match "{query}".
                 </TableCell>
               </TableRow>
@@ -82,6 +87,18 @@ export function GroupMembersPanel({ groupName, members, directory, positionTypeO
                   <TableCell>
                     <Badge variant={statusVariant(m.status)}>{m.status}</Badge>
                   </TableCell>
+                  {onRemove && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Remove ${m.name} from ${groupName}`}
+                        onClick={() => onRemove(m)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
