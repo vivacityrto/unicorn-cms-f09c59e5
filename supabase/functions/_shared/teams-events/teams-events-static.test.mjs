@@ -23,6 +23,7 @@ const FUNCTIONS = [
   "get-teams-event-batch",
   "retry-teams-event-failures",
   "cancel-teams-event-registrations",
+  "set-teams-event-attendance",
 ];
 
 describe("every Teams event function is gated server-side", () => {
@@ -280,5 +281,29 @@ describe("migration 20261009010000_teams_events_grant_integrator_bgt", () => {
     const code = sql.replace(/--.*$/gm, "");
     assert.doesNotMatch(code, /\b(INSERT|DELETE|DROP|ALTER)\b/i);
     assert.match(sql, /ROLLBACK:/);
+  });
+});
+
+describe("set-teams-event-attendance", () => {
+  const src = read("set-teams-event-attendance", "index.ts");
+
+  test("takes only an event id, one validated directory key and a strict boolean", () => {
+    assert.match(src, /parseEventId\(body\?\.event_id\)/);
+    assert.match(src, /parseMemberKey\(memberKey\)/);
+    assert.match(src, /typeof body\?\.attended !== "boolean"/);
+    assert.doesNotMatch(src, /body\??\.(walk_in|email|emails|first_name|last_name)/);
+  });
+
+  test("only events registered through Unicorn, and walk-in is decided server-side", () => {
+    assert.match(src, /teams_event_registration_batches/);
+    assert.match(src, /event_not_found/);
+    assert.match(src, /const walkIn = \(liveCount \?\? 0\) === 0;/);
+    assert.match(src, /\.in\("result_status", \["registered", "invited"\]\)/);
+  });
+
+  test("upserts one row per event and person, and audits ids and flags only", () => {
+    assert.match(src, /onConflict: "event_type,graph_event_id,normalised_email"/);
+    assert.match(src, /teams_event_attendance\.marked/);
+    assert.doesNotMatch(src, /details: \{[^}]*(email|first_name|last_name)/);
   });
 });

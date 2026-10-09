@@ -220,3 +220,27 @@ open questions). Nothing here has run against a real webinar yet.
   `teams_event_items_status_check` constraint, now allowing `cancelled`; the 3 existing rows (all `registered`) are
   untouched; and `uq_teams_event_items_event_email_success` still spans only `registered`/`invited`, so a cancelled
   person can be registered again.
+
+## Update 2026-10-09 — Events registry and manual attendance
+- Requested by Carl (for Dave): a sub-page of the Contact Directory (`/administration/contacts/events`, reached from the
+  Actions menu) listing every Teams webinar registered through Unicorn, who was registered, and a manual "attended"
+  tick per participant. Decisions: only events registered through Unicorn; attendance is ticked by hand now (a Teams
+  attendance report can pre-fill it later); same access as registering (Super Admin, Integrator, BGT); walk-ins
+  (attended but not registered), cancelled people greyed out, counts at the top (registered / attended / no-show /
+  walk-ins / cancelled) and a CSV export.
+- New table `teams_event_attendance` (migration `20261009040000_teams_event_attendance.sql`): one row per event +
+  normalised email (unique), with `attended` and a server-decided `walk_in` flag. Same security shape as the batch and
+  item tables: RLS SELECT only for `teams_events.manage_registrations` (Super Admin always passes), browser roles
+  revoked from writing, service role only. No new RBAC feature. Purely additive; rollback is `DROP TABLE`.
+- New Edge Function `set-teams-event-attendance` (`requireCaller` + `teams_events.manage_registrations` before any
+  work). Input: an event id, one directory key and a boolean. The event must already have a registration batch. The
+  person keeps the identity stored on their registration row; otherwise they are resolved from the directory and need a
+  valid email. `walk_in` is true when they hold no live registration for the event under that email — never taken
+  from the browser. Audit action `teams_event_attendance.marked` holds ids and flags only.
+- **"When the webinar was created in Teams" is not available.** The Graph v1.0 webinar resource has no created-date
+  property (only `createdBy`), and Unicorn's Outlook calendar sync cannot be reliably linked to a webinar (the organiser
+  address GUID is not the webinar id). The registry therefore shows the event date and the date the first registration
+  batch was run in Unicorn ("First registered in Unicorn"). Revisit if Microsoft adds the property or the calendar sync
+  is extended.
+- Not done, deliberately: events created directly in Teams that were never registered through Unicorn do not appear;
+  there is no import of Teams attendance reports yet.

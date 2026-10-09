@@ -49753,6 +49753,65 @@ export type Database = {
           },
         ]
       }
+      teams_event_attendance: {
+        Row: {
+          attended: boolean
+          created_at: string
+          event_type: string
+          first_name: string | null
+          graph_event_id: string
+          id: string
+          last_name: string | null
+          marked_by_user_id: string
+          normalised_email: string
+          tenant_contact_id: number | null
+          tenant_id: number | null
+          tenant_user_id: number | null
+          updated_at: string
+          walk_in: boolean
+        }
+        Insert: {
+          attended?: boolean
+          created_at?: string
+          event_type: string
+          first_name?: string | null
+          graph_event_id: string
+          id?: string
+          last_name?: string | null
+          marked_by_user_id: string
+          normalised_email: string
+          tenant_contact_id?: number | null
+          tenant_id?: number | null
+          tenant_user_id?: number | null
+          updated_at?: string
+          walk_in?: boolean
+        }
+        Update: {
+          attended?: boolean
+          created_at?: string
+          event_type?: string
+          first_name?: string | null
+          graph_event_id?: string
+          id?: string
+          last_name?: string | null
+          marked_by_user_id?: string
+          normalised_email?: string
+          tenant_contact_id?: number | null
+          tenant_id?: number | null
+          tenant_user_id?: number | null
+          updated_at?: string
+          walk_in?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_event_attendance_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams_event_registration_batches: {
         Row: {
           completed_at: string | null

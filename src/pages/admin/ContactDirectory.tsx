@@ -44,7 +44,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
-import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download, CalendarClock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download, CalendarCheck, CalendarClock, ChevronDown, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { GroupMembersPanel } from '@/components/contact-directory/GroupMembersPanel';
 import { RemoveMemberConfirm, type RemoveMemberRequest } from '@/components/contact-directory/RemoveMemberConfirm';
@@ -120,6 +121,7 @@ const slugify = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'group';
 
 export default function ContactDirectory() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<DirectoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
@@ -536,6 +538,10 @@ export default function ContactDirectory() {
                   <DropdownMenuItem onSelect={() => setRegisterTeamsOpen(true)}>
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Register for Teams Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => navigate('/administration/contacts/events')}>
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Events registry
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
