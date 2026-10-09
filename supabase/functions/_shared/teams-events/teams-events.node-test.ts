@@ -8,6 +8,8 @@ import {
   graphDateTimeToUtc,
   selectUpcomingWebinars,
   summariseWebinarList,
+  plainDescription,
+  mapWithLimit,
   type GraphWebinar,
 } from "./event-window.ts";
 import { classifyGraphError, sanitiseMessage } from "./graph-errors.ts";
@@ -227,38 +229,94 @@ describe("event window", () => {
     assert.deepEqual(events.map((e) => e.id), ["a", "b"]);
   });
 
-  test("diagnostics explain an empty list without exposing names or organisers", () => {
+  test("diagnostics explain why webinars are not listed, naming the upcoming ones", () => {
+    const named = (id: string, startUtc: string, over: Partial<GraphWebinar> = {}) =>
+      webinar(id, startUtc, { displayName: `Title ${id}`, ...over });
     const d = summariseWebinarList(
       [
-        webinar("early", "2026-10-07T00:00:00Z"),
-        webinar("soon", "2026-10-10T00:00:00Z"),
-        webinar("soon2", "2026-10-15T00:00:00Z"),
-        webinar("later", "2026-11-30T00:00:00Z"),
-        webinar("draft", "2026-10-10T00:00:00Z", { status: "draft" }),
-        webinar("gone", "2026-10-10T00:00:00Z", { status: "canceled" }),
-        webinar("odd", "2026-10-10T00:00:00Z", { status: undefined }),
-        { id: "nostart", status: "published" },
+        named("early", "2026-10-07T00:00:00Z"),
+        named("soon", "2026-10-10T00:00:00Z"),
+        named("soon2", "2026-10-15T00:00:00Z"),
+        named("later", "2026-11-30T00:00:00Z"),
+        named("draft", "2026-10-10T00:00:00Z", { status: "draft" }),
+        named("olddraft", "2026-09-01T00:00:00Z", { status: "draft" }),
+        named("gone", "2026-10-11T00:00:00Z", { status: "canceled" }),
+        named("odd", "2026-10-12T00:00:00Z", { status: undefined }),
+        { id: "nostart", status: "published", displayName: "Title nostart" },
       ],
       now,
     );
-    assert.deepEqual(d, {
-      graph_total: 8,
-      status_counts: { published: 5, draft: 1, canceled: 1, unknown: 1 },
-      published_in_window: 2,
-      published_before_window: 1,
-      published_after_window: 1,
-      published_without_start: 1,
-      earliest_published_start_utc: "2026-10-07T00:00:00.000Z",
-      latest_published_start_utc: "2026-11-30T00:00:00.000Z",
-    });
-    assert.ok(!JSON.stringify(d).includes("soon"), "no webinar titles in diagnostics");
+    assert.equal(d.graph_total, 9);
+    assert.deepEqual(d.status_counts, { published: 5, draft: 2, canceled: 1, unknown: 1 });
+    assert.equal(d.published_in_window, 2);
+    assert.equal(d.published_before_window, 1);
+    assert.equal(d.published_after_window, 1);
+    assert.equal(d.published_without_start, 1);
+    assert.equal(d.earliest_published_start_utc, "2026-10-07T00:00:00.000Z");
+    assert.equal(d.latest_published_start_utc, "2026-11-30T00:00:00.000Z");
+    // Soonest first; past drafts and already-started webinars are noise and are left out.
+    assert.deepEqual(d.not_listed, [
+      { display_name: "Title draft", status: "draft", start_utc: "2026-10-10T00:00:00.000Z", reason: "not_published" },
+      { display_name: "Title gone", status: "canceled", start_utc: "2026-10-11T00:00:00.000Z", reason: "not_published" },
+      { display_name: "Title odd", status: "unknown", start_utc: "2026-10-12T00:00:00.000Z", reason: "not_published" },
+      { display_name: "Title later", status: "published", start_utc: "2026-11-30T00:00:00.000Z", reason: "starts_after_window" },
+      { display_name: "Title nostart", status: "published", start_utc: null, reason: "no_start_time" },
+    ]);
+  });
+
+  test("diagnostics cap the not-listed list and label untitled webinars", () => {
+    const many = Array.from({ length: 40 }, (_, i) =>
+      webinar(`w${i}`, `2027-01-${String((i % 28) + 1).padStart(2, "0")}T00:00:00Z`, { displayName: i === 0 ? "   " : `Far ${i}` })
+    );
+    const d = summariseWebinarList(many, now);
+    assert.equal(d.not_listed.length, 25);
+    assert.ok(d.not_listed.every((n) => n.reason === "starts_after_window"));
+    assert.ok(d.not_listed.some((n) => n.display_name === "(Untitled webinar)"));
   });
 
   test("diagnostics for an empty Graph response say so", () => {
     const d = summariseWebinarList([], now);
     assert.equal(d.graph_total, 0);
     assert.deepEqual(d.status_counts, {});
+    assert.deepEqual(d.not_listed, []);
     assert.equal(d.earliest_published_start_utc, null);
+  });
+
+  test("plainDescription strips markup, decodes entities and truncates on a word", () => {
+    assert.equal(plainDescription("Learn <b>AI</b> governance &amp; risk<br>for RTOs"), "Learn AI governance & risk for RTOs");
+    assert.equal(plainDescription({ content: "<p>Hello</p><p>world</p>", contentType: "html" }), "Hello world");
+    assert.equal(plainDescription("<script>alert(1)</script>Visible"), "Visible");
+    assert.equal(plainDescription(""), null);
+    assert.equal(plainDescription("   <p> </p>  "), null);
+    assert.equal(plainDescription(undefined), null);
+    assert.equal(plainDescription(42), null);
+    const long = plainDescription("word ".repeat(100), 50) ?? "";
+    assert.ok(long.length <= 51 && long.endsWith("…") && !long.includes("  "));
+  });
+
+  test("event summaries carry the description", () => {
+    const [event] = selectUpcomingWebinars(
+      [webinar("a", "2026-10-09T00:00:00Z", { description: "<p>About this webinar</p>" })],
+      now,
+    );
+    assert.equal(event.description, "About this webinar");
+    const [bare] = selectUpcomingWebinars([webinar("b", "2026-10-09T00:00:00Z")], now);
+    assert.equal(bare.description, null);
+  });
+
+  test("mapWithLimit keeps order and respects the concurrency limit", async () => {
+    let active = 0;
+    let peak = 0;
+    const result = await mapWithLimit([1, 2, 3, 4, 5, 6, 7], 3, async (n) => {
+      active++;
+      peak = Math.max(peak, active);
+      await new Promise((r) => setTimeout(r, 3 * (8 - n)));
+      active--;
+      return n * 10;
+    });
+    assert.deepEqual(result, [10, 20, 30, 40, 50, 60, 70]);
+    assert.ok(peak <= 3, `peak ${peak}`);
+    assert.deepEqual(await mapWithLimit([], 3, async (n: number) => n), []);
   });
 
   test("maps organiser details", () => {
@@ -481,6 +539,49 @@ describe("createTeamsGraphClient", () => {
     const result = await client.listRegistrationQuestions("evt@t");
     assert.deepEqual(result.ok && result.questions.map((q) => q.isRequired), [true, false]);
     assert.ok(calls.some((c) => c.url.endsWith("/webinars/evt@t/registrationConfiguration/questions")));
+  });
+
+  test("countRegistrations counts registered and pending across pages", async () => {
+    const rows = (...statuses: string[]) => statuses.map((status) => ({ status }));
+    const { fetchImpl, calls } = mockGraph((c) => {
+      if (isToken(c)) return tokenResponse();
+      if (c.url.includes("page=2")) return json(200, { value: rows("registered", "canceled", "rejected") });
+      return json(200, {
+        value: rows("registered", "registered", "pendingApproval", "waitlisted"),
+        "@odata.nextLink": "https://graph.microsoft.com/v1.0/solutions/virtualEvents/webinars/e@t/registrations?page=2",
+      });
+    });
+    const client = createTeamsGraphClient(config, { fetch: fetchImpl, sleep: async () => {} });
+    const result = await client.countRegistrations("e@t");
+    assert.deepEqual(result, { ok: true, registered: 3, pending: 2, capped: false });
+    assert.ok(calls.some((c) => c.url.includes("/webinars/e@t/registrations?$top=100")));
+  });
+
+  test("countRegistrations is best effort: a refusal is a classified error, never a throw", async () => {
+    const { fetchImpl } = mockGraph((c) =>
+      isToken(c) ? tokenResponse() : json(403, { error: { code: "Forbidden", message: "Insufficient privileges" } })
+    );
+    const client = createTeamsGraphClient(config, { fetch: fetchImpl, sleep: async () => {} });
+    const result = await client.countRegistrations("e");
+    assert.equal(result.ok, false);
+    assert.equal(!result.ok && result.error.category, "auth_or_consent");
+  });
+
+  test("countRegistrations stops paging at the cap and says so", async () => {
+    let pages = 0;
+    const { fetchImpl } = mockGraph((c) => {
+      if (isToken(c)) return tokenResponse();
+      pages++;
+      return json(200, {
+        value: [{ status: "registered" }],
+        "@odata.nextLink": `https://graph.microsoft.com/v1.0/x?page=${pages + 1}`,
+      });
+    });
+    const client = createTeamsGraphClient(config, { fetch: fetchImpl, sleep: async () => {} });
+    const result = await client.countRegistrations("e");
+    assert.equal(result.ok && result.capped, true);
+    assert.equal(pages, 10);
+    assert.equal(result.ok && result.registered, 10);
   });
 
   test("encodeGraphId keeps @ literal", () => {

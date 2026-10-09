@@ -5,7 +5,9 @@ import {
   formatEventDateTime,
   formatEventZone,
   isBatchRunning,
+  notListedReasonLabel,
   personName,
+  registrantsLabel,
   resultStatusLabel,
   webinarConfirmationMessage,
 } from './format';
@@ -40,6 +42,23 @@ describe('teams event formatting', () => {
     expect(batchStatusLabel('completed_with_errors')).toBe('Completed with errors');
     expect(personName({ first_name: 'Amanda', last_name: 'Hardy' })).toBe('Amanda Hardy');
     expect(personName({ first_name: null, last_name: null })).toBe('(no name)');
+  });
+
+  it('summarises registrant counts for an event card', () => {
+    expect(registrantsLabel({ registered: 12, pending: 0, capped: false })).toBe('12 registered');
+    expect(registrantsLabel({ registered: 12, pending: 2, capped: false })).toBe('12 registered · 2 pending');
+    expect(registrantsLabel({ registered: 1000, pending: 0, capped: true })).toBe('1000+ registered');
+    expect(registrantsLabel(null)).toBe('Registrants not available');
+    expect(registrantsLabel(undefined)).toBeNull();
+  });
+
+  it('explains why an upcoming webinar is not listed', () => {
+    expect(notListedReasonLabel({ reason: 'starts_after_window', status: 'published' })).toBe(
+      'Starts more than 14 days from now',
+    );
+    expect(notListedReasonLabel({ reason: 'no_start_time', status: 'published' })).toBe('No start time');
+    expect(notListedReasonLabel({ reason: 'not_published', status: 'draft' })).toBe('Not published (draft)');
+    expect(notListedReasonLabel({ reason: 'not_published', status: 'unknown' })).toBe('Not published');
   });
 
   it('knows which batch states are still running', () => {

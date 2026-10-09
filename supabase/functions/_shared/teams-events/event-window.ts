@@ -20,7 +20,8 @@ export interface GraphWebinar {
   id: string;
   status?: string;
   displayName?: string;
-  description?: string;
+  /** Graph sends a plain string or an itemBody ({ content, contentType }). */
+  description?: unknown;
   startDateTime?: GraphDateTimeTimeZone;
   endDateTime?: GraphDateTimeTimeZone;
   createdBy?: {
@@ -37,8 +38,42 @@ export interface TeamsEventSummary {
   endUtc: string | null;
   organiserId: string | null;
   organiserName: string | null;
+  /** Plain-text description, trimmed for display; null when there is none. */
+  description: string | null;
   /** True when Graph sent a zone we could not map and we assumed UTC. */
   timeZoneAssumed: boolean;
+}
+
+const DESCRIPTION_MAX = 220;
+
+/**
+ * Plain-text, display-sized description. Accepts a string or an itemBody,
+ * strips any HTML (it is shown as text, never rendered as markup), decodes the
+ * few common entities and truncates on a word boundary.
+ */
+export function plainDescription(value: unknown, max = DESCRIPTION_MAX): string | null {
+  const raw = typeof value === "string"
+    ? value
+    : value && typeof value === "object" && typeof (value as { content?: unknown }).content === "string"
+    ? (value as { content: string }).content
+    : "";
+  const text = raw
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return null;
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 /** Windows zone names Graph is known to send, mapped to IANA ids. */
@@ -133,6 +168,7 @@ export function toEventSummary(webinar: GraphWebinar): TeamsEventSummary | null 
     endUtc: end ? end.utc.toISOString() : null,
     organiserId: organiser?.id ?? null,
     organiserName: organiser?.displayName ?? null,
+    description: plainDescription(webinar.description),
     timeZoneAssumed: start.assumed || (end?.assumed ?? false),
   };
 }
@@ -154,11 +190,24 @@ export function selectUpcomingWebinars(webinars: GraphWebinar[], now: Date): Tea
   return events.sort((a, b) => a.startUtc.localeCompare(b.startUtc));
 }
 
+export type NotListedReason = "not_published" | "starts_after_window" | "no_start_time";
+
+/** An upcoming webinar Microsoft returned that we deliberately did not list. */
+export interface NotListedWebinar {
+  display_name: string;
+  status: string;
+  start_utc: string | null;
+  reason: NotListedReason;
+}
+
+const NOT_LISTED_CAP = 25;
+
 /**
- * Counts only — no titles, organisers or attendees — explaining why a webinar
- * listing came back empty: did Microsoft return nothing at all (organiser
- * access policy / permissions), or did we filter everything out (status or
- * date window)? Safe to show to staff and to log.
+ * Explains why a webinar listing is empty or shorter than expected: did
+ * Microsoft return nothing at all (organiser access policy / permissions), or
+ * did we filter webinars out (status or date window)? Counts, plus the title,
+ * status and start of upcoming webinars we did not list. Staff-only endpoint;
+ * never logged.
  */
 export interface WebinarListDiagnostics {
   graph_total: number;
@@ -169,6 +218,8 @@ export interface WebinarListDiagnostics {
   published_without_start: number;
   earliest_published_start_utc: string | null;
   latest_published_start_utc: string | null;
+  /** Upcoming webinars not listed, soonest first (capped). */
+  not_listed: NotListedWebinar[];
 }
 
 export function summariseWebinarList(webinars: GraphWebinar[], now: Date): WebinarListDiagnostics {
@@ -181,23 +232,46 @@ export function summariseWebinarList(webinars: GraphWebinar[], now: Date): Webin
     published_without_start: 0,
     earliest_published_start_utc: null,
     latest_published_start_utc: null,
+    not_listed: [],
   };
   const { from, to } = computeWindow(now);
+  const notListed: NotListedWebinar[] = [];
+  const nameOf = (w: GraphWebinar) => (typeof w.displayName === "string" && w.displayName.trim()) || "(Untitled webinar)";
 
   for (const webinar of webinars) {
     const status = typeof webinar.status === "string" && webinar.status ? webinar.status : "unknown";
     diagnostics.status_counts[status] = (diagnostics.status_counts[status] ?? 0) + 1;
-    if (!isUsableWebinar(webinar)) continue;
 
     const summary = toEventSummary(webinar);
+    if (!isUsableWebinar(webinar)) {
+      // Past drafts / cancelled events are noise; only report ones that could still matter.
+      if (!summary || new Date(summary.startUtc).getTime() >= from.getTime()) {
+        notListed.push({
+          display_name: nameOf(webinar),
+          status,
+          start_utc: summary?.startUtc ?? null,
+          reason: "not_published",
+        });
+      }
+      continue;
+    }
+
     if (!summary) {
       diagnostics.published_without_start++;
+      notListed.push({ display_name: nameOf(webinar), status, start_utc: null, reason: "no_start_time" });
       continue;
     }
     const startMs = new Date(summary.startUtc).getTime();
     if (startMs < from.getTime()) diagnostics.published_before_window++;
-    else if (startMs > to.getTime()) diagnostics.published_after_window++;
-    else diagnostics.published_in_window++;
+    else if (startMs > to.getTime()) {
+      diagnostics.published_after_window++;
+      notListed.push({
+        display_name: nameOf(webinar),
+        status,
+        start_utc: summary.startUtc,
+        reason: "starts_after_window",
+      });
+    } else diagnostics.published_in_window++;
 
     if (!diagnostics.earliest_published_start_utc || summary.startUtc < diagnostics.earliest_published_start_utc) {
       diagnostics.earliest_published_start_utc = summary.startUtc;
@@ -206,5 +280,27 @@ export function summariseWebinarList(webinars: GraphWebinar[], now: Date): Webin
       diagnostics.latest_published_start_utc = summary.startUtc;
     }
   }
+
+  // Soonest first; entries with no start time last.
+  notListed.sort((a, b) => (a.start_utc ?? "9999").localeCompare(b.start_utc ?? "9999"));
+  diagnostics.not_listed = notListed.slice(0, NOT_LISTED_CAP);
   return diagnostics;
+}
+
+/**
+ * Run `worker` over `items` with at most `limit` in flight, keeping input
+ * order. Used to fetch per-event registrant counts without a request burst.
+ */
+export async function mapWithLimit<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  async function run(): Promise<void> {
+    for (;;) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length || 1)) }, run));
+  return results;
 }

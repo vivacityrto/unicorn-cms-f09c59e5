@@ -69,6 +69,15 @@ export type RegisterResult =
   | { ok: false; error: ClassifiedGraphError; attempts: number };
 
 const MAX_PAGES = 20;
+const MAX_REGISTRATION_PAGES = 10;
+
+export interface RegistrationCounts {
+  registered: number;
+  /** Waiting for approval or on the waitlist. */
+  pending: number;
+  /** True when the webinar has more registrations than we are willing to page through. */
+  capped: boolean;
+}
 const TRANSIENT_STATUSES = new Set([0, 423, 429, 500, 502, 503, 504]);
 
 /** Keep `@` literal in Graph ids ("guid@tenantId"), encode everything else. */
@@ -269,7 +278,41 @@ export function createTeamsGraphClient(config: TeamsGraphConfig, deps: TeamsGrap
     return { ok: false, error: classifyGraphError(result.status, result.json), attempts: result.attempts };
   }
 
-  return { getToken, listWebinars, getWebinar, listRegistrationQuestions, registerWebinarAttendee };
+  /**
+   * Registrant counts for one webinar, for display only. Best effort: Microsoft
+   * may refuse this call for the app (permission / policy), in which case the
+   * caller shows "not available" and nothing else is affected. Pages are capped
+   * so a very large webinar cannot hold the listing up.
+   */
+  async function countRegistrations(webinarId: string): Promise<GraphResult<RegistrationCounts>> {
+    const counts: RegistrationCounts = { registered: 0, pending: 0, capped: false };
+    let url: string | null =
+      `${GRAPH_BASE}/solutions/virtualEvents/webinars/${encodeGraphId(webinarId)}/registrations?$top=100`;
+    for (let page = 0; url; page++) {
+      if (page >= MAX_REGISTRATION_PAGES) {
+        counts.capped = true;
+        break;
+      }
+      const result = await graphCall("GET", url);
+      if (result.tokenError) return { ok: false, error: result.tokenError };
+      if (result.status < 200 || result.status >= 300) {
+        return { ok: false, error: classifyGraphError(result.status, result.json) };
+      }
+      const payload = (result.json ?? {}) as { value?: unknown; "@odata.nextLink"?: unknown };
+      if (Array.isArray(payload.value)) {
+        for (const row of payload.value as Array<{ status?: unknown }>) {
+          const status = typeof row?.status === "string" ? row.status : "";
+          if (status === "registered") counts.registered++;
+          else if (status === "pendingApproval" || status === "waitlisted") counts.pending++;
+        }
+      }
+      const next = payload["@odata.nextLink"];
+      url = typeof next === "string" && next.startsWith("https://graph.microsoft.com/") ? next : null;
+    }
+    return { ok: true, ...counts };
+  }
+
+  return { getToken, listWebinars, getWebinar, listRegistrationQuestions, countRegistrations, registerWebinarAttendee };
 }
 
 export type TeamsGraphClient = ReturnType<typeof createTeamsGraphClient>;
