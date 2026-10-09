@@ -19,10 +19,24 @@ export interface TeamsEventSummary {
   endUtc: string | null;
   organiserId: string | null;
   organiserName: string | null;
+  /** Plain-text description from Teams; null when there is none. */
+  description?: string | null;
+  /** Registrant counts from Teams; null when Microsoft would not provide them. */
+  registrants?: { registered: number; pending: number; capped: boolean } | null;
   timeZoneAssumed: boolean;
 }
 
-/** Counts only (no titles or organisers) explaining why a listing may be empty. */
+export type NotListedReason = 'not_published' | 'starts_after_window' | 'no_start_time';
+
+/** An upcoming webinar Microsoft returned that Unicorn deliberately did not list. */
+export interface NotListedWebinar {
+  display_name: string;
+  status: string;
+  start_utc: string | null;
+  reason: NotListedReason;
+}
+
+/** Why a listing may be empty or shorter than expected. */
 export interface WebinarListDiagnostics {
   graph_total: number;
   status_counts: Record<string, number>;
@@ -32,6 +46,7 @@ export interface WebinarListDiagnostics {
   published_without_start: number;
   earliest_published_start_utc: string | null;
   latest_published_start_utc: string | null;
+  not_listed?: NotListedWebinar[];
 }
 
 export interface ListEventsResponse {

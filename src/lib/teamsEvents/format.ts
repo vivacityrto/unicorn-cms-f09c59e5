@@ -104,6 +104,28 @@ export function batchStatusLabel(status: string): string {
   return BATCH_STATUS_LABELS[status] ?? status;
 }
 
+/**
+ * "12 registered · 2 pending" for an event card. null (Microsoft would not give
+ * a count) reads as "Registrants not available"; undefined (an older server
+ * that does not send the field) shows nothing at all.
+ */
+export function registrantsLabel(
+  registrants: { registered: number; pending: number; capped: boolean } | null | undefined,
+): string | null {
+  if (registrants === undefined) return null;
+  if (registrants === null) return 'Registrants not available';
+  const plus = registrants.capped ? '+' : '';
+  const parts = [`${registrants.registered}${plus} registered`];
+  if (registrants.pending > 0) parts.push(`${registrants.pending} pending`);
+  return parts.join(' · ');
+}
+
+export function notListedReasonLabel(item: { reason: string; status: string }): string {
+  if (item.reason === 'starts_after_window') return 'Starts more than 14 days from now';
+  if (item.reason === 'no_start_time') return 'No start time';
+  return item.status === 'unknown' ? 'Not published' : `Not published (${item.status})`;
+}
+
 export function isBatchRunning(status: string | undefined): boolean {
   return status === 'processing' || status === 'queued';
 }

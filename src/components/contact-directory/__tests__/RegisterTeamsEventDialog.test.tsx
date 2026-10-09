@@ -146,6 +146,59 @@ describe('RegisterTeamsEventDialog', () => {
     expect(service.listEvents).toHaveBeenCalledWith('webinar');
   });
 
+  it('shows each webinar’s description and registrant count, and says when counts are unavailable', async () => {
+    const second: TeamsEventSummary = {
+      ...EVENT,
+      id: 'evt-2@tenant',
+      displayName: 'Strengthening Industry Partnerships',
+      description: null,
+      registrants: null,
+    };
+    service.listEvents.mockResolvedValue({
+      events: [
+        {
+          ...EVENT,
+          description: 'How to govern AI use across your RTO.',
+          registrants: { registered: 12, pending: 2, capped: false },
+        },
+        second,
+      ],
+      window: { from: '2026-10-08T00:00:00Z', to: '2026-10-22T00:00:00Z' },
+      fetched_at: '2026-10-08T00:00:00Z',
+    });
+    renderDialog();
+    expect(await screen.findByText('How to govern AI use across your RTO.')).toBeInTheDocument();
+    expect(screen.getByText('12 registered · 2 pending')).toBeInTheDocument();
+    expect(screen.getByText('Registrants not available')).toBeInTheDocument();
+  });
+
+  it('lists upcoming webinars that were not listed, with the reason', async () => {
+    service.listEvents.mockResolvedValue({
+      events: [EVENT],
+      diagnostics: {
+        graph_total: 3,
+        status_counts: { published: 2, draft: 1 },
+        published_in_window: 1,
+        published_before_window: 0,
+        published_after_window: 1,
+        published_without_start: 0,
+        earliest_published_start_utc: null,
+        latest_published_start_utc: null,
+        not_listed: [
+          { display_name: 'Dave’s draft webinar', status: 'draft', start_utc: '2026-10-20T00:00:00Z', reason: 'not_published' },
+          { display_name: 'December webinar', status: 'published', start_utc: '2026-12-07T04:00:00Z', reason: 'starts_after_window' },
+        ],
+      },
+      window: { from: '2026-10-08T00:00:00Z', to: '2026-10-22T00:00:00Z' },
+      fetched_at: '2026-10-08T00:00:00Z',
+    });
+    renderDialog();
+    expect(await screen.findByText('Upcoming webinars not listed (2)')).toBeInTheDocument();
+    expect(screen.getByText('Dave’s draft webinar')).toBeInTheDocument();
+    expect(screen.getByText(/Not published \(draft\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Starts more than 14 days from now/)).toBeInTheDocument();
+  });
+
   it('needs both an event and a group before Preview is enabled', async () => {
     const user = userEvent.setup();
     renderDialog();
