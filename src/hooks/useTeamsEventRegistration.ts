@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isBatchRunning } from '@/lib/teamsEvents/format';
-import { teamsEventsService, type TeamsEventType } from '@/services/teamsEventsService';
+import { teamsEventsService, type EventChangeKeys, type TeamsEventType } from '@/services/teamsEventsService';
 
 const POLL_MS = 2000;
 
@@ -22,15 +22,24 @@ export function useTeamsEventsList(enabled: boolean, eventType: TeamsEventType =
 
 export function usePreviewTeamsEventGroup() {
   return useMutation({
-    mutationFn: ({ eventId, groupId }: { eventId: string; groupId: number }) =>
-      teamsEventsService.previewGroup(eventId, groupId),
+    mutationFn: ({ eventId, groupId, changes }: { eventId: string; groupId: number; changes?: EventChangeKeys }) =>
+      teamsEventsService.previewGroup(eventId, groupId, changes),
   });
 }
 
 export function useRegisterTeamsEventGroup() {
   return useMutation({
-    mutationFn: ({ eventId, groupId, previewToken }: { eventId: string; groupId: number; previewToken: string }) =>
-      teamsEventsService.registerGroup(eventId, groupId, previewToken),
+    mutationFn: ({
+      eventId,
+      groupId,
+      previewToken,
+      changes,
+    }: {
+      eventId: string;
+      groupId: number;
+      previewToken: string;
+      changes?: EventChangeKeys;
+    }) => teamsEventsService.registerGroup(eventId, groupId, previewToken, changes),
   });
 }
 

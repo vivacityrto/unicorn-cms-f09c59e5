@@ -28,6 +28,7 @@ import {
 } from "../_shared/teams-events/server.ts";
 import { isUsableWebinar, isWithinWindow, toEventSummary } from "../_shared/teams-events/event-window.ts";
 import { resolveGroupForEvent } from "../_shared/teams-events/group-resolution.ts";
+import { MAX_EVENT_EXTRAS, MAX_EVENT_SKIPS, parseMemberKeys } from "../_shared/teams-events/membership.ts";
 import { verifyPreviewToken } from "../_shared/teams-events/preview-token.ts";
 import {
   auditDetails,
@@ -58,6 +59,18 @@ Deno.serve(async (req) => {
   const groupId = parsePositiveInt(body?.group_id);
   if (!eventId || !groupId || typeof body?.preview_token !== "string") {
     return errorResponse(req, 400, "invalid_request", "event_id, group_id and preview_token are required");
+  }
+
+  // Event-only changes, as keys only. The server re-resolves every one of them.
+  const extras = parseMemberKeys(body?.extra_member_keys, MAX_EVENT_EXTRAS);
+  const skips = parseMemberKeys(body?.skipped_member_keys, MAX_EVENT_SKIPS);
+  if (!extras.ok || !skips.ok) {
+    return errorResponse(
+      req,
+      400,
+      "invalid_request",
+      "extra_member_keys and skipped_member_keys must be lists of user:<id> / contact:<id> keys",
+    );
   }
 
   if (await isRateLimited(admin, caller.user.id)) {
@@ -95,19 +108,27 @@ Deno.serve(async (req) => {
   }
 
   // Never trust the browser: reload the group and compare to what was previewed.
-  const result = await resolveGroupForEvent(admin, { eventType: "webinar", eventId, groupId });
+  const result = await resolveGroupForEvent(admin, {
+    eventType: "webinar",
+    eventId,
+    groupId,
+    extraKeys: extras.keys,
+    skippedKeys: skips.keys,
+  });
   if (!result.ok) {
     return result.reason === "not_found"
       ? errorResponse(req, 404, "group_not_found", "That Contact Directory Group no longer exists.")
       : errorResponse(req, 500, "group_resolution_failed", "Could not load the group's members.");
   }
   const { group, classification, fingerprint, memberCount, alreadyProcessed } = result.resolved;
+  // The fingerprint covers the Group's members AND the event-only additions and skips,
+  // so changing any of them after the preview is rejected rather than silently processed.
   if (fingerprint !== verified.claims.membershipHash || memberCount !== verified.claims.memberCount) {
     return errorResponse(
       req,
       409,
       "membership_changed",
-      "The group's members changed since the preview. Preview again to confirm the updated list.",
+      "The people for this event changed since the preview. Preview again to confirm the updated list.",
     );
   }
 
@@ -173,6 +194,8 @@ Deno.serve(async (req) => {
       normalised_email: m.normalisedEmail,
       first_name: m.member.firstName?.trim() || null,
       last_name: m.member.lastName?.trim() || null,
+      // "extra" = added for this event only; everyone else came from the Group.
+      inclusion: m.member.inclusion ?? "group",
       created_at: nowIso,
       updated_at: nowIso,
     };
@@ -211,16 +234,21 @@ Deno.serve(async (req) => {
     action: "teams_event_registration.batch_started",
     actorUserId: caller.user.id,
     batchId,
-    details: auditDetails(batch, {
-      status: "processing",
-      totals: totals?.totals ?? {
-        eligible_count: 0,
-        submitted_count: 0,
-        success_count: 0,
-        skipped_count: 0,
-        failure_count: 0,
-      },
-    }),
+    details: {
+      ...auditDetails(batch, {
+        status: "processing",
+        totals: totals?.totals ?? {
+          eligible_count: 0,
+          submitted_count: 0,
+          success_count: 0,
+          skipped_count: 0,
+          failure_count: 0,
+        },
+      }),
+      // Counts only; who they are lives in the secured items table.
+      added_for_event_count: itemRows.filter((r) => r.inclusion === "extra").length,
+      skipped_for_event_count: itemRows.filter((r) => r.exclusion_reason === "skipped_for_event").length,
+    },
   });
 
   runInBackground(runBatch(admin, graph.client, batch));

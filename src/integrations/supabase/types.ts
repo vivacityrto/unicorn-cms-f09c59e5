@@ -49844,6 +49844,7 @@ export type Database = {
           graph_join_url_encrypted: string | null
           graph_registration_id: string | null
           id: string
+          inclusion: string
           last_name: string | null
           normalised_email: string | null
           processed_at: string | null
@@ -49866,6 +49867,7 @@ export type Database = {
           graph_join_url_encrypted?: string | null
           graph_registration_id?: string | null
           id?: string
+          inclusion?: string
           last_name?: string | null
           normalised_email?: string | null
           processed_at?: string | null
@@ -49888,6 +49890,7 @@ export type Database = {
           graph_join_url_encrypted?: string | null
           graph_registration_id?: string | null
           id?: string
+          inclusion?: string
           last_name?: string | null
           normalised_email?: string | null
           processed_at?: string | null

@@ -56,6 +56,16 @@ export interface ListEventsResponse {
   fetched_at: string;
 }
 
+/** Event-only changes, as directory keys (`user:12`, `contact:5`) — never names, emails or counts. */
+export interface EventChangeKeys {
+  /** People added for this event without joining the Group. */
+  extraKeys: string[];
+  /** Group members left out of this event only. */
+  skippedKeys: string[];
+}
+
+const noChangeKeys: EventChangeKeys = { extraKeys: [], skippedKeys: [] };
+
 export interface PreviewPerson {
   member_key: string;
   source: 'user' | 'contact';
@@ -63,6 +73,8 @@ export interface PreviewPerson {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  /** "extra" = added for this event only; otherwise they came from the Group. */
+  inclusion?: 'group' | 'extra';
   reason?: string | null;
   duplicate_of?: string | null;
 }
@@ -77,6 +89,12 @@ export interface PreviewResponse {
     already_processed: number;
     excluded: number;
     duplicate: number;
+    /** Added for this event only (included in to_register). */
+    extras?: number;
+    /** Group members skipped for this event only. */
+    skipped?: number;
+    /** Extras whose record no longer exists. */
+    extras_missing?: number;
   };
   to_register: PreviewPerson[];
   already_processed: PreviewPerson[];
@@ -115,6 +133,7 @@ export interface BatchItem {
   last_name: string | null;
   tenant_id: number;
   exclusion_reason: string | null;
+  inclusion?: 'group' | 'extra';
   error_code: string | null;
   error_message: string | null;
   attempt_count: number;
@@ -197,18 +216,22 @@ export const teamsEventsService = {
   listEvents: (eventType: TeamsEventType = 'webinar') =>
     invoke<ListEventsResponse>('list-teams-events', { event_type: eventType }),
 
-  previewGroup: (eventId: string, groupId: number) =>
+  previewGroup: (eventId: string, groupId: number, changes: EventChangeKeys = noChangeKeys) =>
     invoke<PreviewResponse>('preview-teams-event-group', {
       event_type: 'webinar',
       event_id: eventId,
       group_id: groupId,
+      extra_member_keys: changes.extraKeys,
+      skipped_member_keys: changes.skippedKeys,
     }),
 
-  registerGroup: (eventId: string, groupId: number, previewToken: string) =>
+  registerGroup: (eventId: string, groupId: number, previewToken: string, changes: EventChangeKeys = noChangeKeys) =>
     invoke<StartBatchResponse>('register-teams-webinar-group', {
       event_id: eventId,
       group_id: groupId,
       preview_token: previewToken,
+      extra_member_keys: changes.extraKeys,
+      skipped_member_keys: changes.skippedKeys,
     }),
 
   getBatch: (batchId: string, include: 'problems' | 'all' = 'problems') =>

@@ -73,6 +73,20 @@ describe("register-teams-webinar-group", () => {
     assert.match(src, /body\?\.group_id/);
   });
 
+  test("event-only additions and skips arrive as validated keys only and are re-resolved server-side", () => {
+    assert.match(src, /parseMemberKeys\(body\?\.extra_member_keys, MAX_EVENT_EXTRAS\)/);
+    assert.match(src, /parseMemberKeys\(body\?\.skipped_member_keys, MAX_EVENT_SKIPS\)/);
+    assert.match(src, /extraKeys: extras\.keys/);
+    assert.match(src, /skippedKeys: skips\.keys/);
+    assert.doesNotMatch(src, /body\??\.(extras|skipped|extra_members|skipped_members)\b/);
+  });
+
+  test("records where each person came from and audits counts only", () => {
+    assert.match(src, /inclusion: m\.member\.inclusion \?\? "group"/);
+    assert.match(src, /added_for_event_count/);
+    assert.match(src, /skipped_for_event_count/);
+  });
+
   test("stops before processing when the event has required registration questions", () => {
     assert.match(src, /listRegistrationQuestions\(/);
     assert.match(src, /required_questions/);
@@ -116,6 +130,11 @@ describe("preview-teams-event-group", () => {
   const src = read("preview-teams-event-group", "index.ts");
   test("writes nothing — preview is read-only", () => {
     assert.doesNotMatch(src, /\.(insert|update|upsert|delete)\(/);
+  });
+  test("validates event-only keys the same way as register and reports skips separately", () => {
+    assert.match(src, /parseMemberKeys\(body\?\.extra_member_keys, MAX_EVENT_EXTRAS\)/);
+    assert.match(src, /parseMemberKeys\(body\?\.skipped_member_keys, MAX_EVENT_SKIPS\)/);
+    assert.match(src, /skipped: skipped\.length/);
   });
   test("blocks on mandatory questions and mints a signed token", () => {
     assert.match(src, /questionsCheck/);

@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { normaliseEmail } from "./emails.ts";
-import { classifyMembers, membershipFingerprint, type ResolvedMember } from "./membership.ts";
+import {
+  classifyEventMembers,
+  classifyMembers,
+  fingerprintKeys,
+  membershipFingerprint,
+  parseMemberKey,
+  parseMemberKeys,
+  type ResolvedMember,
+} from "./membership.ts";
 import { signPreviewToken, verifyPreviewToken, type PreviewClaims } from "./preview-token.ts";
 import {
   computeWindow,
@@ -104,6 +112,104 @@ describe("classifyMembers", () => {
     const c = await membershipFingerprint([{ memberType: "user", memberId: 1 }]);
     assert.equal(a, b);
     assert.notEqual(a, c);
+  });
+});
+
+// ── event-only changes ───────────────────────────────────────────────────
+describe("event-only changes", () => {
+  test("parseMemberKeys accepts well-formed keys, sorts and de-duplicates them", () => {
+    assert.deepEqual(parseMemberKeys(undefined, 10), { ok: true, keys: [] });
+    assert.deepEqual(parseMemberKeys(null, 10), { ok: true, keys: [] });
+    assert.deepEqual(parseMemberKeys(["user:2", "contact:1", "user:2"], 10), { ok: true, keys: ["contact:1", "user:2"] });
+  });
+
+  test("parseMemberKeys rejects the whole list on anything malformed or over the cap", () => {
+    for (const bad of [
+      "user:1",
+      {},
+      [1],
+      ["user:"],
+      ["user:0"],
+      ["user:-1"],
+      ["user:01"],
+      ["admin:1"],
+      ["user:1; drop table x"],
+      ["user:1234567890123456"],
+      ["user:1", null],
+    ]) {
+      assert.deepEqual(parseMemberKeys(bad, 10), { ok: false }, JSON.stringify(bad));
+    }
+    assert.deepEqual(parseMemberKeys(["user:1", "user:2", "user:3"], 2), { ok: false });
+  });
+
+  test("parseMemberKey splits a key", () => {
+    assert.deepEqual(parseMemberKey("contact:42"), { memberType: "contact", memberId: 42 });
+    assert.equal(parseMemberKey("nope"), null);
+  });
+
+  const m = (over: Partial<ResolvedMember>): ResolvedMember => ({
+    memberType: "user",
+    memberId: 1,
+    tenantId: 10,
+    firstName: "Amanda",
+    lastName: "Hardy",
+    email: "amanda@example.com",
+    sourceStatus: "active",
+    ...over,
+  });
+
+  test("skipped Group members are reported as skipped and never eligible", () => {
+    const result = classifyEventMembers({
+      groupMembers: [m({ memberId: 1 }), m({ memberId: 2, email: "b@example.com" }), m({ memberId: 3, email: "c@example.com" })],
+      extras: [],
+      skippedKeys: ["user:2"],
+    });
+    const byId = (id: number) => result.members.find((x) => x.member.memberId === id)!;
+    assert.equal(byId(1).kind, "eligible");
+    assert.equal(byId(2).kind === "excluded" && byId(2).reason, "skipped_for_event");
+    assert.equal(byId(3).kind, "eligible");
+    assert.deepEqual(result.counts, { total: 3, eligible: 2, excluded: 1, duplicate: 0 });
+  });
+
+  test("extras are eligible like anyone else, marked as added for this event, and follow the same rules", () => {
+    const result = classifyEventMembers({
+      groupMembers: [m({ memberId: 1 })],
+      extras: [
+        m({ memberType: "contact", memberId: 7, email: "new@example.com" }),
+        m({ memberType: "contact", memberId: 8, email: "no-last@example.com", lastName: null }),
+        m({ memberType: "contact", memberId: 9, email: "AMANDA@example.com" }), // same email as a Group member
+        m({ memberType: "user", memberId: 10, email: "off@example.com", sourceStatus: "disabled" }),
+      ],
+      skippedKeys: [],
+    });
+    const byKey = (key: string) => result.members.find((x) => `${x.member.memberType}:${x.member.memberId}` === key)!;
+    assert.equal(byKey("contact:7").kind, "eligible");
+    assert.equal(byKey("contact:7").member.inclusion, "extra");
+    assert.equal(byKey("user:1").member.inclusion, "group");
+    const noLast = byKey("contact:8");
+    assert.equal(noLast.kind === "excluded" && noLast.reason, "missing_name");
+    assert.equal(byKey("contact:9").kind, "duplicate");
+    const disabled = byKey("user:10");
+    assert.equal(disabled.kind === "excluded" && disabled.reason, "inactive");
+  });
+
+  test("an extra who is already a Group member is not added twice, and extras cannot be skipped into the Group list", () => {
+    const result = classifyEventMembers({
+      groupMembers: [m({ memberId: 1 })],
+      extras: [m({ memberId: 1 }), m({ memberType: "contact", memberId: 5, email: "x@example.com" }), m({ memberType: "contact", memberId: 5, email: "x@example.com" })],
+      skippedKeys: ["contact:5"], // a skip only applies to Group members
+    });
+    assert.equal(result.members.filter((x) => x.member.memberId === 1).length, 1);
+    assert.equal(result.members.filter((x) => x.member.memberId === 5).length, 1);
+    assert.equal(result.members.find((x) => x.member.memberId === 5)!.kind, "eligible");
+  });
+
+  test("fingerprintKeys changes when an extra or a skip is added, and ignores order and repeats", async () => {
+    const base = await fingerprintKeys(["user:1", "user:2"]);
+    assert.equal(await fingerprintKeys(["user:2", "user:1", "user:1"]), base);
+    assert.notEqual(await fingerprintKeys(["user:1", "user:2", "+contact:9"]), base);
+    assert.notEqual(await fingerprintKeys(["user:1", "user:2", "-user:2"]), base);
+    assert.notEqual(await fingerprintKeys(["user:1", "user:2", "+contact:9"]), await fingerprintKeys(["user:1", "user:2", "-contact:9"]));
   });
 });
 

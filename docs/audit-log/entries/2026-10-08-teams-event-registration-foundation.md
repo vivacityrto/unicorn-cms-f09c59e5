@@ -154,3 +154,32 @@ open questions). Nothing here has run against a real webinar yet.
   generator's format rather than regenerated, to avoid pulling the whole 50k-line file through a tool call), and
   the two temporary migration-safety allowlist entries for these migrations were removed as planned.
 - Still outstanding: the Microsoft 365 administrator work, and live verification against a real webinar.
+
+## Update 2026-10-09 — event-only additions and skips (PR 2 of 3)
+- Requested by Carl: add a person to ONE event without adding them to the Contact Directory Group, and skip a
+  Group member for ONE event while they stay in the Group. New people are created through the same flow as a
+  client's own contact list (a client is required).
+- Database: migration `20261009020000_teams_event_items_inclusion.sql` adds `teams_event_registration_items.inclusion`
+  (`'group'` default, or `'extra'`, CHECK-constrained). Additive and backwards compatible: existing rows read
+  `'group'`, and the previously deployed functions (which never write the column) keep working, so it can be applied
+  before the new functions deploy. Rollback: `ALTER TABLE ... DROP COLUMN inclusion`. A skipped Group member is
+  stored as an excluded row with `exclusion_reason = 'skipped_for_event'` (no schema change).
+- Server (preview, register): the browser sends only lists of directory keys (`extra_member_keys`,
+  `skipped_member_keys`, e.g. `user:12`, `contact:5`). Both lists are strictly validated (key format, caps of 200
+  extras / 5,000 skips; a malformed list rejects the whole request). Every extra is re-resolved from the source
+  tables and goes through exactly the same eligibility rules as a Group member (active, valid email, both names,
+  duplicates by email). A skip applies only to a Group member. An extra who is already in the Group is not added
+  twice. A record that no longer exists is dropped and counted.
+- The signed preview token now binds the Group's membership fingerprint AND the extras and skips (extras prefixed
+  `+`, skips `-`, and the count covers Group members plus extras), so changing either after the preview is a 409
+  `membership_changed`. The audit `batch_started` entry gains `added_for_event_count` and
+  `skipped_for_event_count` (counts only). The people themselves stay in the secured items table.
+- UI: the modal gains "Include others in this event only" (directory search or a new contact, not added to the
+  Group), and the preview gains "Skip for this event" / "Remove" and an "Undo" list; each change re-runs the preview
+  and its signed token. Changing the Group clears the event-only changes.
+- Deliberately not in this change: cancelling a Teams registration when someone is removed or skipped after they
+  registered (PR 3). A skip applies to who is registered by this run; it does not touch an existing registration.
+- Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 9 October 2026 via the Supabase MCP, as
+  `teams_event_items_inclusion`, **before** this change merged. Verified afterwards: the column is `text NOT NULL
+  DEFAULT 'group'` with CHECK `inclusion IN ('group','extra')`, and all 3 pre-existing item rows read `'group'`.
+  `src/integrations/supabase/types.ts` carries the column (hand-added in the generator's format).

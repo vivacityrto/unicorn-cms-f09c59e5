@@ -35,6 +35,7 @@ describe('teams event formatting', () => {
 
   it('labels exclusions, statuses and names', () => {
     expect(exclusionReasonLabel('invalid_email')).toBe('Missing or invalid email');
+    expect(exclusionReasonLabel('skipped_for_event')).toBe('Skipped for this event');
     expect(exclusionReasonLabel('duplicate_of:user:12')).toBe('Same email as another member');
     expect(exclusionReasonLabel('something_new')).toBe('something_new');
     expect(exclusionReasonLabel(null)).toBe('');

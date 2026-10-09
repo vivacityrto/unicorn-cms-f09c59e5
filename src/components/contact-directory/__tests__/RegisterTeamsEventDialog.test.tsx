@@ -236,6 +236,149 @@ describe('RegisterTeamsEventDialog', () => {
     expect(screen.getByLabelText('Search the directory to add people')).toBeInTheDocument();
   });
 
+  it('skips a group member for this event only, re-previews, and registers with the skip', async () => {
+    const user = userEvent.setup();
+    const amanda = { member_key: 'user:1', source: 'user' as const, tenant_id: 1, first_name: 'Amanda', last_name: 'Hardy', email: 'amanda@example.com', inclusion: 'group' as const };
+    const ben = { member_key: 'contact:2', source: 'contact' as const, tenant_id: 1, first_name: 'Ben', last_name: 'Carter', email: 'ben@beta.com', inclusion: 'group' as const };
+    service.previewGroup.mockImplementation((_event: string, _group: number, changes?: { skippedKeys: string[] }) => {
+      const skipped = changes?.skippedKeys?.includes('user:1');
+      return Promise.resolve(
+        preview({
+          counts: { members: 2, eligible: 2, to_register: skipped ? 1 : 2, already_processed: 0, excluded: 0, duplicate: 0, extras: 0, skipped: skipped ? 1 : 0 },
+          to_register: skipped ? [ben] : [amanda, ben],
+          excluded: skipped ? [{ ...amanda, reason: 'skipped_for_event' }] : [],
+        }),
+      );
+    });
+    service.registerGroup.mockResolvedValue({ batch_id: 'b-1', status: 'processing' });
+    service.getBatch.mockResolvedValue(batch());
+    renderDialog();
+
+    await chooseEventAndGroup(user);
+    await user.click(screen.getByRole('button', { name: 'Preview' }));
+    await user.click(await screen.findByRole('button', { name: 'Skip Amanda Hardy for this event' }));
+
+    await waitFor(() =>
+      expect(service.previewGroup).toHaveBeenLastCalledWith('evt-1@tenant', 7, { extraKeys: [], skippedKeys: ['user:1'] }),
+    );
+    expect(await screen.findByText('Skipped for this event only (1)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo skip for Amanda Hardy' })).toBeInTheDocument();
+    expect(screen.getByText(/1 skipped for this event/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Excluded \(/)).not.toBeInTheDocument(); // a skip is not an "exclusion"
+
+    await user.click(screen.getByRole('button', { name: 'Confirm and register' }));
+    expect(service.registerGroup).toHaveBeenCalledWith('evt-1@tenant', 7, 'signed-token', {
+      extraKeys: [],
+      skippedKeys: ['user:1'],
+    });
+  });
+
+  it('undoing a skip previews again without it', async () => {
+    const user = userEvent.setup();
+    const amanda = { member_key: 'user:1', source: 'user' as const, tenant_id: 1, first_name: 'Amanda', last_name: 'Hardy', email: 'amanda@example.com', inclusion: 'group' as const };
+    service.previewGroup.mockImplementation((_e: string, _g: number, changes?: { skippedKeys: string[] }) => {
+      const skipped = changes?.skippedKeys?.includes('user:1');
+      return Promise.resolve(
+        preview({
+          counts: { members: 1, eligible: 1, to_register: skipped ? 0 : 1, already_processed: 0, excluded: 0, duplicate: 0, extras: 0, skipped: skipped ? 1 : 0 },
+          to_register: skipped ? [] : [amanda],
+          excluded: skipped ? [{ ...amanda, reason: 'skipped_for_event' }] : [],
+        }),
+      );
+    });
+    renderDialog();
+    await chooseEventAndGroup(user);
+    await user.click(screen.getByRole('button', { name: 'Preview' }));
+    await user.click(await screen.findByRole('button', { name: 'Skip Amanda Hardy for this event' }));
+    await user.click(await screen.findByRole('button', { name: 'Undo skip for Amanda Hardy' }));
+    await waitFor(() =>
+      expect(service.previewGroup).toHaveBeenLastCalledWith('evt-1@tenant', 7, { extraKeys: [], skippedKeys: [] }),
+    );
+    expect(await screen.findByRole('button', { name: 'Skip Amanda Hardy for this event' })).toBeInTheDocument();
+  });
+
+  it('includes someone in this event only: not in the group, sent as a key, and removable', async () => {
+    const user = userEvent.setup();
+    service.previewGroup.mockResolvedValue(
+      preview({
+        counts: { members: 1, eligible: 2, to_register: 2, already_processed: 0, excluded: 0, duplicate: 0, extras: 1, skipped: 0 },
+        to_register: [
+          { member_key: 'contact:2', source: 'contact', tenant_id: 11, first_name: 'Ben', last_name: 'Carter', email: 'ben@beta.com', inclusion: 'extra' },
+        ],
+      }),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <RegisterTeamsEventDialog
+          open
+          onOpenChange={vi.fn()}
+          groups={[{ id: 7, name: 'Leadership Team', member_count: 1 }]}
+          directory={[
+            { row_key: 'user:1', source: 'user', tenant_id: 10, tenant_name: 'Acme RTO', first_name: 'Amanda', last_name: 'Hardy', email: 'amanda@example.com', position_type: null, status: 'active' },
+            { row_key: 'contact:2', source: 'contact', tenant_id: 11, tenant_name: 'Beta College', first_name: 'Ben', last_name: 'Carter', email: 'ben@beta.com', position_type: null, status: 'active' },
+          ]}
+          groupMembers={[{ group_id: 7, member_type: 'user', member_id: '1' }]}
+          clients={[{ id: 10, name: 'Acme RTO' }]}
+          positionTypeOptions={[]}
+          onGroupChanged={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole('radio', { name: /Compliance Update Webinar/ }));
+    await user.selectOptions(screen.getByLabelText('Contact Directory Group'), '7');
+    expect(await screen.findByText('Include others in this event only (0)')).toBeInTheDocument();
+
+    // A group member is already included, so is never offered as an extra.
+    await user.type(screen.getByLabelText('Search the directory to include in this event'), 'amanda');
+    expect(await screen.findByText(/Nobody active matches, or they are already included/)).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Search the directory to include in this event'));
+
+    await user.type(screen.getByLabelText('Search the directory to include in this event'), 'ben');
+    await user.click(await screen.findByRole('button', { name: 'Include Ben Carter in this event' }));
+    expect(screen.getByText('Include others in this event only (1)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Ben Carter from this event' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Preview' }));
+    await waitFor(() =>
+      expect(service.previewGroup).toHaveBeenCalledWith('evt-1@tenant', 7, { extraKeys: ['contact:2'], skippedKeys: [] }),
+    );
+    expect(await screen.findByText('This event only')).toBeInTheDocument();
+    expect(screen.getByText(/1 added for this event/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Ben Carter from this event' })).toBeInTheDocument();
+  });
+
+  it('changing the group clears event-only changes', async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <RegisterTeamsEventDialog
+          open
+          onOpenChange={vi.fn()}
+          groups={[
+            { id: 7, name: 'Leadership Team', member_count: 0 },
+            { id: 8, name: 'Everyone', member_count: 0 },
+          ]}
+          directory={[
+            { row_key: 'contact:2', source: 'contact', tenant_id: 11, tenant_name: 'Beta College', first_name: 'Ben', last_name: 'Carter', email: 'ben@beta.com', position_type: null, status: 'active' },
+          ]}
+          groupMembers={[]}
+          clients={[]}
+          positionTypeOptions={[]}
+          onGroupChanged={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+    await user.selectOptions(await screen.findByLabelText('Contact Directory Group'), '7');
+    await user.type(screen.getByLabelText('Search the directory to include in this event'), 'ben');
+    await user.click(await screen.findByRole('button', { name: 'Include Ben Carter in this event' }));
+    expect(screen.getByText('Include others in this event only (1)')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Contact Directory Group'), '8');
+    expect(await screen.findByText('Include others in this event only (0)')).toBeInTheDocument();
+  });
+
   it('needs both an event and a group before Preview is enabled', async () => {
     const user = userEvent.setup();
     renderDialog();
@@ -257,7 +400,7 @@ describe('RegisterTeamsEventDialog', () => {
     await chooseEventAndGroup(user);
     await user.click(screen.getByRole('button', { name: 'Preview' }));
 
-    expect(service.previewGroup).toHaveBeenCalledWith('evt-1@tenant', 7);
+    expect(service.previewGroup).toHaveBeenCalledWith('evt-1@tenant', 7, { extraKeys: [], skippedKeys: [] });
     expect(
       await screen.findByText('Register 3 people for “Compliance Update Webinar” on 20 October 2026 at 10:00 am?'),
     ).toBeInTheDocument();
@@ -265,7 +408,10 @@ describe('RegisterTeamsEventDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Confirm and register' }));
     // Only ids and the signed token cross the wire — never member lists or counts.
-    expect(service.registerGroup).toHaveBeenCalledWith('evt-1@tenant', 7, 'signed-token');
+    expect(service.registerGroup).toHaveBeenCalledWith('evt-1@tenant', 7, 'signed-token', {
+      extraKeys: [],
+      skippedKeys: [],
+    });
     expect(await screen.findByText('Completed')).toBeInTheDocument();
     expect(screen.getByText('3 of 3 processed')).toBeInTheDocument();
   });

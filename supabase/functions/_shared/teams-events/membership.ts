@@ -15,6 +15,9 @@ export type MemberType = "user" | "contact";
 /** State of the underlying source record, resolved server-side. */
 export type MemberSourceStatus = "active" | "disabled" | "archived" | "missing";
 
+/** Where a person came from for this event: the Group, or added for this event only. */
+export type MemberInclusion = "group" | "extra";
+
 export interface ResolvedMember {
   memberType: MemberType;
   /** tenant_users.id (user) or tenant_contacts.id (contact). */
@@ -24,13 +27,16 @@ export interface ResolvedMember {
   lastName: string | null;
   email: string | null;
   sourceStatus: MemberSourceStatus;
+  /** Defaults to "group". */
+  inclusion?: MemberInclusion;
 }
 
 export type ExclusionReason =
   | "inactive"
   | "missing_record"
   | "invalid_email"
-  | "missing_name";
+  | "missing_name"
+  | "skipped_for_event";
 
 export type ClassifiedMember =
   | { kind: "eligible"; member: ResolvedMember; normalisedEmail: string }
@@ -134,10 +140,91 @@ export function classifyMembers(input: ResolvedMember[]): MembershipClassificati
 export async function membershipFingerprint(
   members: Pick<ResolvedMember, "memberType" | "memberId">[],
 ): Promise<string> {
-  const keys = members.map(memberKey).sort();
-  const bytes = new TextEncoder().encode(keys.join("|"));
+  return fingerprintKeys(members.map(memberKey));
+}
+
+/** SHA-256 over the sorted, de-duplicated keys. */
+export async function fingerprintKeys(keys: string[]): Promise<string> {
+  const bytes = new TextEncoder().encode([...new Set(keys)].sort().join("|"));
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+// ── Event-only changes ────────────────────────────────────────────────────
+
+const MEMBER_KEY = /^(user|contact):([1-9]\d{0,14})$/;
+
+export function parseMemberKey(key: string): { memberType: MemberType; memberId: number } | null {
+  const match = MEMBER_KEY.exec(key);
+  if (!match) return null;
+  return { memberType: match[1] as MemberType, memberId: Number(match[2]) };
+}
+
+export const MAX_EVENT_EXTRAS = 200;
+export const MAX_EVENT_SKIPS = 5000;
+
+/**
+ * Validates a browser-supplied list of member keys (`user:12`, `contact:5`).
+ * Anything malformed, non-array or over the cap rejects the whole list — it is
+ * never partly trusted. Returns sorted, de-duplicated keys.
+ */
+export function parseMemberKeys(value: unknown, max: number): { ok: true; keys: string[] } | { ok: false } {
+  if (value === undefined || value === null) return { ok: true, keys: [] };
+  if (!Array.isArray(value) || value.length > max) return { ok: false };
+  const keys = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string" || !MEMBER_KEY.test(item)) return { ok: false };
+    keys.add(item);
+  }
+  return { ok: true, keys: [...keys].sort() };
+}
+
+export interface EventMemberInput {
+  /** Current Group members, resolved on the server. */
+  groupMembers: ResolvedMember[];
+  /** People added for this event only, resolved on the server (records that no longer exist already dropped). */
+  extras: ResolvedMember[];
+  /** Keys of Group members left out of THIS event only. */
+  skippedKeys: string[];
+}
+
+/**
+ * Applies the event-only changes before classifying:
+ *   - skipped Group members are reported as excluded ("skipped_for_event") and never sent to Graph
+ *   - extras already in the Group are ignored (they are included anyway)
+ *   - extras go through exactly the same eligibility rules as Group members
+ * A skip can only ever apply to a Group member; skipping an extra just means not adding it.
+ */
+export function classifyEventMembers(input: EventMemberInput): MembershipClassification {
+  const skip = new Set(input.skippedKeys);
+  const groupKeys = new Set(input.groupMembers.map(memberKey));
+
+  const kept: ResolvedMember[] = [];
+  const skipped: ResolvedMember[] = [];
+  for (const member of input.groupMembers) {
+    (skip.has(memberKey(member)) ? skipped : kept).push({ ...member, inclusion: "group" });
+  }
+
+  const seenExtras = new Set<string>();
+  for (const extra of input.extras) {
+    const key = memberKey(extra);
+    if (groupKeys.has(key) || seenExtras.has(key)) continue;
+    seenExtras.add(key);
+    kept.push({ ...extra, inclusion: "extra" });
+  }
+
+  const classification = classifyMembers(kept);
+  for (const member of skipped) {
+    classification.members.push({
+      kind: "excluded",
+      member,
+      normalisedEmail: normaliseEmail(member.email),
+      reason: "skipped_for_event",
+    });
+  }
+  classification.counts.total = classification.members.length;
+  classification.counts.excluded = classification.members.filter((m) => m.kind === "excluded").length;
+  return classification;
 }
