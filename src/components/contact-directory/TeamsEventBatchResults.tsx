@@ -95,13 +95,14 @@ export function TeamsEventBatchResults({ batchId }: Props) {
         </p>
       </div>
 
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5 text-sm">
+      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 text-sm">
         {[
           ['Registered', counts.registered + counts.invited],
           ['Already registered', counts.already_processed],
           ['Excluded', counts.excluded],
           ['Duplicate email', counts.duplicate],
           ['Failed', counts.failed],
+          ...(counts.cancelled ? [['Cancelled later', counts.cancelled]] : []),
         ].map(([label, value]) => (
           <div key={label} className="rounded-md border p-2">
             <dt className="text-xs text-muted-foreground">{label}</dt>

@@ -86,6 +86,7 @@ const STATUS_LABELS: Record<ItemResultStatus, string> = {
   excluded: 'Excluded',
   duplicate: 'Duplicate email',
   failed: 'Failed',
+  cancelled: 'Cancelled',
 };
 
 export function resultStatusLabel(status: ItemResultStatus): string {

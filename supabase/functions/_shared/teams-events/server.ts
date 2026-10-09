@@ -87,7 +87,10 @@ export function graphErrorResponse(req: Request, error: ClassifiedGraphError): R
 export interface AuditEntry {
   action: string;
   actorUserId: string;
+  /** The entity the entry is about: a batch id by default, or (for a cancellation) the event id. */
   batchId: string;
+  /** Defaults to "teams_event_registration_batch". */
+  entityType?: string;
   details: Record<string, unknown>;
 }
 
@@ -101,7 +104,7 @@ export async function writeAudit(admin: AdminClient, entry: AuditEntry): Promise
     tenant_id: null,
     actor_user_id: entry.actorUserId,
     action: entry.action,
-    entity_type: "teams_event_registration_batch",
+    entity_type: entry.entityType ?? "teams_event_registration_batch",
     entity_id: entry.batchId,
     details: entry.details,
   });

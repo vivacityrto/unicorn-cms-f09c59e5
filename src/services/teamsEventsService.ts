@@ -115,7 +115,8 @@ export type ItemResultStatus =
   | 'already_processed'
   | 'excluded'
   | 'duplicate'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
 
 export type BatchStatus =
   | 'previewed'
@@ -158,7 +159,8 @@ export interface BatchDetail {
     updated_at: string;
     completed_at: string | null;
   };
-  counts: Record<ItemResultStatus, number>;
+  /** `cancelled` is absent from responses by an older server. */
+  counts: Record<Exclude<ItemResultStatus, 'cancelled'>, number> & { cancelled?: number };
   items: BatchItem[];
   items_truncated: boolean;
   stalled: boolean;
@@ -173,6 +175,62 @@ export interface StartBatchResponse {
 export interface RetryResponse extends StartBatchResponse {
   retried: number;
   message?: string;
+}
+
+export type CancelOutcomeStatus = 'cancelled' | 'not_registered' | 'failed';
+
+export interface CancelOutcome {
+  member_key: string;
+  status: CancelOutcomeStatus;
+  /** A safe, fixed category when status is 'failed'. */
+  error_code?: string;
+  message?: string;
+}
+
+export interface CancelRegistrationsResponse {
+  event: { id: string; displayName?: string; startUtc?: string };
+  outcomes: CancelOutcome[];
+  counts: Record<CancelOutcomeStatus, number>;
+}
+
+/** An upcoming event a person is registered for through Unicorn. */
+export interface UpcomingRegistration {
+  eventId: string;
+  eventName: string;
+  startUtc: string;
+}
+
+/**
+ * Upcoming events this person holds a registration for **through Unicorn**
+ * (our own result rows; registrations made directly in Teams are not listed).
+ * Read with the signed-in user's session, so the results table's row-level
+ * security applies: only people holding the Teams permission see anything.
+ */
+export async function findUpcomingRegistrations(memberKey: string): Promise<UpcomingRegistration[]> {
+  const [source, idText] = memberKey.split(':');
+  const id = Number(idText);
+  if ((source !== 'user' && source !== 'contact') || !Number.isInteger(id) || id <= 0) return [];
+
+  const column = source === 'user' ? 'tenant_user_id' : 'tenant_contact_id';
+  const { data, error } = await supabase
+    .from('teams_event_registration_items')
+    .select('graph_event_id, teams_event_registration_batches(event_display_name, event_start_datetime)')
+    .eq(column, id)
+    .in('result_status', ['registered', 'invited']);
+  if (error || !data) return [];
+
+  const now = Date.now();
+  const byEvent = new Map<string, UpcomingRegistration>();
+  for (const row of data) {
+    const batch = row.teams_event_registration_batches;
+    if (!batch || new Date(batch.event_start_datetime).getTime() < now) continue;
+    byEvent.set(row.graph_event_id, {
+      eventId: row.graph_event_id,
+      eventName: batch.event_display_name,
+      startUtc: batch.event_start_datetime,
+    });
+  }
+  return [...byEvent.values()].sort((a, b) => a.startUtc.localeCompare(b.startUtc));
 }
 
 /** A failure from an Edge Function, with the server's stable error code. */
@@ -232,6 +290,13 @@ export const teamsEventsService = {
       preview_token: previewToken,
       extra_member_keys: changes.extraKeys,
       skipped_member_keys: changes.skippedKeys,
+    }),
+
+  /** Cancel people's Teams registrations for one event. Per-person results; one refusal never stops the rest. */
+  cancelRegistrations: (eventId: string, memberKeys: string[]) =>
+    invoke<CancelRegistrationsResponse>('cancel-teams-event-registrations', {
+      event_id: eventId,
+      member_keys: memberKeys,
     }),
 
   getBatch: (batchId: string, include: 'problems' | 'all' = 'problems') =>

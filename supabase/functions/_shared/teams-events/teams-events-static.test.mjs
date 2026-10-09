@@ -22,6 +22,7 @@ const FUNCTIONS = [
   "register-teams-webinar-group",
   "get-teams-event-batch",
   "retry-teams-event-failures",
+  "cancel-teams-event-registrations",
 ];
 
 describe("every Teams event function is gated server-side", () => {
@@ -123,6 +124,63 @@ describe("retry-teams-event-failures", () => {
     assert.match(src, /\.in\("status", SETTLED_STATUSES\)/);
     assert.match(src, /BATCH_STALE_MS/);
     assert.match(src, /batch_in_progress/);
+  });
+});
+
+describe("cancel-teams-event-registrations", () => {
+  const src = read("cancel-teams-event-registrations", "index.ts");
+
+  test("takes only an event id and validated directory keys, and caps the batch", () => {
+    assert.match(src, /parseEventId\(body\?\.event_id\)/);
+    assert.match(src, /parseMemberKeys\(body\?\.member_keys, MAX_CANCEL_PEOPLE\)/);
+    assert.match(src, /MAX_CANCEL_PEOPLE = 50/);
+    assert.doesNotMatch(src, /body\??\.(emails?|registration_ids?|registrations)\b/);
+  });
+
+  test("resolves people from the database, then matches and cancels by email", () => {
+    assert.match(src, /loadMembersByKeys\(admin, people\.keys\)/);
+    assert.match(src, /planCancellations\(/);
+    assert.match(src, /cancelRegistration\(eventId, registrationId\)/);
+  });
+
+  test("one refusal never stops the others, and local rows are only marked cancelled for settled people", () => {
+    assert.match(src, /mapWithLimit\(plan, CANCEL_CONCURRENCY/);
+    assert.match(src, /result_status: "cancelled"/);
+    assert.match(src, /\.in\("result_status", \["registered", "invited"\]\)/);
+    assert.match(src, /o\.status === "cancelled" \|\| o\.status === "not_registered"/);
+  });
+
+  test("is rate limited and audits counts only", () => {
+    assert.match(src, /RATE_LIMIT_REQUESTS/);
+    assert.match(src, /rate_limited/);
+    assert.match(src, /cancelled_count: counts\.cancelled/);
+    assert.doesNotMatch(src, /details:[^}]*email/);
+  });
+});
+
+describe("migration 20261009030000_teams_event_items_cancelled_status", () => {
+  const sql = readFileSync(
+    join(functionsDir, "..", "migrations", "20261009030000_teams_event_items_cancelled_status.sql"),
+    "utf8",
+  );
+
+  test("only widens the status check to add 'cancelled'", () => {
+    const code = sql.replace(/--.*$/gm, "");
+    assert.match(code, /DROP CONSTRAINT teams_event_items_status_check/);
+    assert.match(code, /'excluded', 'duplicate', 'failed', 'cancelled'/);
+    assert.doesNotMatch(code, /\b(INSERT|UPDATE|DELETE|DROP TABLE|TRUNCATE)\b/i);
+  });
+
+  test("keeps cancelled rows out of the success-uniqueness index so people can register again", () => {
+    const base = readFileSync(
+      join(functionsDir, "..", "migrations", "20261008010000_teams_event_registration_foundation.sql"),
+      "utf8",
+    );
+    assert.match(base, /uq_teams_event_items_event_email_success[\s\S]*WHERE result_status IN \('registered', 'invited'\)/);
+  });
+
+  test("documents rollback", () => {
+    assert.match(sql, /ROLLBACK/);
   });
 });
 

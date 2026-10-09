@@ -55,6 +55,13 @@ export function useTeamsEventBatch(batchId: string | null) {
   });
 }
 
+export function useCancelTeamsRegistrations() {
+  return useMutation({
+    mutationFn: ({ eventId, memberKeys }: { eventId: string; memberKeys: string[] }) =>
+      teamsEventsService.cancelRegistrations(eventId, memberKeys),
+  });
+}
+
 export function useRetryTeamsEventFailures() {
   const queryClient = useQueryClient();
   return useMutation({

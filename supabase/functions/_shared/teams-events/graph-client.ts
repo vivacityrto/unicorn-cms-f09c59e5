@@ -70,6 +70,13 @@ export type RegisterResult =
 
 const MAX_PAGES = 20;
 const MAX_REGISTRATION_PAGES = 10;
+const MAX_LIST_REGISTRATION_PAGES = 30;
+
+export interface GraphRegistrationRow {
+  id: string;
+  email: string | null;
+  status: string;
+}
 
 export interface RegistrationCounts {
   registered: number;
@@ -312,7 +319,74 @@ export function createTeamsGraphClient(config: TeamsGraphConfig, deps: TeamsGrap
     return { ok: true, ...counts };
   }
 
-  return { getToken, listWebinars, getWebinar, listRegistrationQuestions, countRegistrations, registerWebinarAttendee };
+  /**
+   * Every registration of a webinar (id, email, status), for matching people to
+   * cancel. Capped so a very large webinar cannot run away; `capped` says so,
+   * and the caller treats anyone not found in a capped list as "unknown".
+   */
+  async function listRegistrations(
+    webinarId: string,
+  ): Promise<GraphResult<{ registrations: GraphRegistrationRow[]; capped: boolean }>> {
+    const registrations: GraphRegistrationRow[] = [];
+    let capped = false;
+    let url: string | null =
+      `${GRAPH_BASE}/solutions/virtualEvents/webinars/${encodeGraphId(webinarId)}/registrations?$top=100`;
+    for (let page = 0; url; page++) {
+      if (page >= MAX_LIST_REGISTRATION_PAGES) {
+        capped = true;
+        break;
+      }
+      const result = await graphCall("GET", url);
+      if (result.tokenError) return { ok: false, error: result.tokenError };
+      if (result.status < 200 || result.status >= 300) {
+        return { ok: false, error: classifyGraphError(result.status, result.json) };
+      }
+      const payload = (result.json ?? {}) as { value?: unknown; "@odata.nextLink"?: unknown };
+      if (Array.isArray(payload.value)) {
+        for (const row of payload.value as Array<{ id?: unknown; email?: unknown; status?: unknown }>) {
+          if (typeof row?.id !== "string") continue;
+          registrations.push({
+            id: row.id,
+            email: typeof row.email === "string" ? row.email : null,
+            status: typeof row.status === "string" ? row.status : "",
+          });
+        }
+      }
+      const next = payload["@odata.nextLink"];
+      url = typeof next === "string" && next.startsWith("https://graph.microsoft.com/") ? next : null;
+    }
+    return { ok: true, registrations, capped };
+  }
+
+  /**
+   * Cancel one registration. Microsoft documents only a narrow per-event
+   * permission for an app-only cancel, so a refusal here is plausible; it comes
+   * back as a classified error and the caller tells the operator to remove the
+   * person in Teams instead.
+   */
+  async function cancelRegistration(
+    webinarId: string,
+    registrationId: string,
+  ): Promise<{ ok: true; attempts: number } | { ok: false; error: ClassifiedGraphError; attempts: number }> {
+    const result = await graphCall(
+      "POST",
+      `${GRAPH_BASE}/solutions/virtualEvents/webinars/${encodeGraphId(webinarId)}/registrations/${encodeGraphId(registrationId)}/cancel`,
+    );
+    if (result.tokenError) return { ok: false, error: result.tokenError, attempts: result.attempts };
+    if (result.status >= 200 && result.status < 300) return { ok: true, attempts: result.attempts };
+    return { ok: false, error: classifyGraphError(result.status, result.json), attempts: result.attempts };
+  }
+
+  return {
+    getToken,
+    listWebinars,
+    getWebinar,
+    listRegistrationQuestions,
+    countRegistrations,
+    listRegistrations,
+    cancelRegistration,
+    registerWebinarAttendee,
+  };
 }
 
 export type TeamsGraphClient = ReturnType<typeof createTeamsGraphClient>;

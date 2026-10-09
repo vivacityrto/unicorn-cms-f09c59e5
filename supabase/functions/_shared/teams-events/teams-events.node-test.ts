@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { normaliseEmail } from "./emails.ts";
+import { planCancellations, summariseCancelOutcomes } from "./cancel.ts";
 import {
   classifyEventMembers,
   classifyMembers,
@@ -210,6 +211,116 @@ describe("event-only changes", () => {
     assert.notEqual(await fingerprintKeys(["user:1", "user:2", "+contact:9"]), base);
     assert.notEqual(await fingerprintKeys(["user:1", "user:2", "-user:2"]), base);
     assert.notEqual(await fingerprintKeys(["user:1", "user:2", "+contact:9"]), await fingerprintKeys(["user:1", "user:2", "-contact:9"]));
+  });
+});
+
+// ── cancelling registrations ─────────────────────────────────────────────
+describe("cancelling registrations", () => {
+  const registrations = [
+    { id: "r1", email: "Amanda@Example.com ", status: "registered" },
+    { id: "r2", email: "ben@beta.com", status: "canceled" },
+    { id: "r3", email: "cara@beta.com", status: "pendingApproval" },
+    { id: "r4", email: "dan@beta.com", status: "waitlisted" },
+    { id: "r5", email: "eve@beta.com", status: "rejected" },
+    { id: "r6", email: null, status: "registered" },
+    { id: "r7", email: "amanda@example.com", status: "registered" }, // duplicate registration for one person
+  ];
+
+  test("matches people to active registrations by normalised email", () => {
+    const plan = planCancellations(
+      [
+        { key: "user:1", email: "AMANDA@example.com" },
+        { key: "user:2", email: "ben@beta.com" }, // only a cancelled registration
+        { key: "user:3", email: "cara@beta.com" },
+        { key: "user:4", email: "dan@beta.com" },
+        { key: "user:5", email: "eve@beta.com" }, // rejected: not cancellable
+        { key: "user:6", email: "nobody@x.com" },
+        { key: "user:7", email: "not-an-email" },
+        { key: "user:8", email: null },
+      ],
+      registrations,
+    );
+    const byKey = Object.fromEntries(plan.map((p) => [p.key, p]));
+    assert.deepEqual(byKey["user:1"], { key: "user:1", kind: "cancel", registrationIds: ["r1", "r7"] });
+    assert.equal(byKey["user:2"].kind, "not_registered");
+    assert.deepEqual(byKey["user:3"], { key: "user:3", kind: "cancel", registrationIds: ["r3"] });
+    assert.deepEqual(byKey["user:4"], { key: "user:4", kind: "cancel", registrationIds: ["r4"] });
+    assert.equal(byKey["user:5"].kind, "not_registered");
+    assert.equal(byKey["user:6"].kind, "not_registered");
+    assert.equal(byKey["user:7"].kind, "invalid_email");
+    assert.equal(byKey["user:8"].kind, "invalid_email");
+  });
+
+  test("summariseCancelOutcomes counts each status", () => {
+    assert.deepEqual(
+      summariseCancelOutcomes([
+        { member_key: "a", status: "cancelled" },
+        { member_key: "b", status: "cancelled" },
+        { member_key: "c", status: "not_registered" },
+        { member_key: "d", status: "failed", error_code: "auth_or_consent" },
+      ]),
+      { cancelled: 2, not_registered: 1, failed: 1 },
+    );
+  });
+
+  test("listRegistrations pages, keeps only rows with an id, and refuses off-Graph nextLinks", async () => {
+    const { fetchImpl, calls } = mockGraph((c) => {
+      if (isToken(c)) return tokenResponse();
+      if (c.url.includes("page=2")) return json(200, { value: [{ id: "b", email: "b@x.com", status: "registered" }] });
+      return json(200, {
+        value: [{ id: "a", email: "a@x.com", status: "registered" }, { email: "noid@x.com" }, { id: 7 }],
+        "@odata.nextLink": "https://graph.microsoft.com/v1.0/solutions/virtualEvents/webinars/e@t/registrations?page=2",
+      });
+    });
+    const client = createTeamsGraphClient(config, { fetch: fetchImpl, sleep: async () => {} });
+    const result = await client.listRegistrations("e@t");
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.ok && result.registrations.map((r) => r.id), ["a", "b"]);
+    assert.equal(result.ok && result.capped, false);
+    assert.ok(calls.some((c) => c.url.includes("/webinars/e@t/registrations?$top=100")));
+  });
+
+  test("listRegistrations reports a refusal as a classified error and stops at the page cap", async () => {
+    const refused = mockGraph((c) => (isToken(c) ? tokenResponse() : json(403, { error: { code: "Forbidden", message: "no" } })));
+    const refusedClient = createTeamsGraphClient(config, { fetch: refused.fetchImpl, sleep: async () => {} });
+    const denied = await refusedClient.listRegistrations("e");
+    assert.equal(denied.ok, false);
+    assert.equal(!denied.ok && denied.error.category, "auth_or_consent");
+
+    let pages = 0;
+    const endless = mockGraph((c) => {
+      if (isToken(c)) return tokenResponse();
+      pages++;
+      return json(200, { value: [{ id: `r${pages}`, email: "a@x.com", status: "registered" }], "@odata.nextLink": `https://graph.microsoft.com/v1.0/x?page=${pages + 1}` });
+    });
+    const endlessClient = createTeamsGraphClient(config, { fetch: endless.fetchImpl, sleep: async () => {} });
+    const capped = await endlessClient.listRegistrations("e");
+    assert.equal(capped.ok && capped.capped, true);
+    assert.equal(pages, 30);
+  });
+
+  test("cancelRegistration POSTs to the cancel endpoint; 204 is success, a refusal is classified", async () => {
+    const ok = mockGraph((c) => (isToken(c) ? tokenResponse() : json(204, null)));
+    const okClient = createTeamsGraphClient(config, { fetch: ok.fetchImpl, sleep: async () => {} });
+    assert.deepEqual(await okClient.cancelRegistration("evt@t", "reg 1"), { ok: true, attempts: 1 });
+    const post = ok.calls.find((c) => c.method === "POST" && !isToken(c))!;
+    assert.ok(post.url.endsWith("/webinars/evt@t/registrations/reg%201/cancel"));
+
+    const refused = mockGraph((c) => (isToken(c) ? tokenResponse() : json(403, { error: { code: "Forbidden", message: "Insufficient privileges" } })));
+    const refusedClient = createTeamsGraphClient(config, { fetch: refused.fetchImpl, sleep: async () => {} });
+    const result = await refusedClient.cancelRegistration("e", "r");
+    assert.equal(result.ok, false);
+    assert.equal(!result.ok && result.error.category, "auth_or_consent");
+    assert.equal(refused.calls.filter((c) => c.method === "POST" && !isToken(c)).length, 1); // permanent: not retried
+  });
+
+  test("a cancelled result row is counted on its own and never as a success", () => {
+    const counts = countStatuses(["registered", "cancelled", "cancelled", "failed"]);
+    assert.equal(counts.cancelled, 2);
+    const totals = toBatchTotals(counts);
+    assert.equal(totals.success_count, 1);
+    assert.equal(totals.failure_count, 1);
+    assert.equal(deriveBatchStatus(counts), "completed_with_errors");
   });
 });
 

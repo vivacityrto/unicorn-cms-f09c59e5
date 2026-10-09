@@ -10,6 +10,7 @@ const service = vi.hoisted(() => ({
   registerGroup: vi.fn(),
   getBatch: vi.fn(),
   retryFailures: vi.fn(),
+  cancelRegistrations: vi.fn(),
 }));
 
 vi.mock('@/services/teamsEventsService', async () => {
@@ -271,6 +272,60 @@ describe('RegisterTeamsEventDialog', () => {
       extraKeys: [],
       skippedKeys: ['user:1'],
     });
+  });
+
+  it('cancels someone’s existing registration from the preview, then leaves them out of this event', async () => {
+    const user = userEvent.setup();
+    const amanda = { member_key: 'user:1', source: 'user' as const, tenant_id: 1, first_name: 'Amanda', last_name: 'Hardy', email: 'amanda@example.com', inclusion: 'group' as const };
+    service.previewGroup.mockImplementation((_e: string, _g: number, changes?: { skippedKeys: string[] }) => {
+      const skipped = changes?.skippedKeys?.includes('user:1');
+      return Promise.resolve(
+        preview({
+          counts: { members: 1, eligible: 1, to_register: 0, already_processed: skipped ? 0 : 1, excluded: 0, duplicate: 0, extras: 0, skipped: skipped ? 1 : 0 },
+          already_processed: skipped ? [] : [amanda],
+          excluded: skipped ? [{ ...amanda, reason: 'skipped_for_event' }] : [],
+        }),
+      );
+    });
+    service.cancelRegistrations.mockResolvedValue({
+      event: { id: 'evt-1@tenant' },
+      outcomes: [{ member_key: 'user:1', status: 'cancelled' }],
+      counts: { cancelled: 1, not_registered: 0, failed: 0 },
+    });
+    renderDialog();
+    await chooseEventAndGroup(user);
+    await user.click(screen.getByRole('button', { name: 'Preview' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Cancel Amanda Hardy’s registration'.replace('’', "'") }));
+    expect(await screen.findByText(/Teams will treat them as no longer registered/)).toBeInTheDocument();
+    expect(service.cancelRegistrations).not.toHaveBeenCalled(); // confirms first
+
+    await user.click(screen.getByRole('button', { name: 'Cancel registration' }));
+    await waitFor(() => expect(service.cancelRegistrations).toHaveBeenCalledWith('evt-1@tenant', ['user:1']));
+    expect(await screen.findByText('Amanda Hardy: registration cancelled')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    // They are now off the event, so the new preview skips them instead of registering them again.
+    await waitFor(() =>
+      expect(service.previewGroup).toHaveBeenLastCalledWith('evt-1@tenant', 7, { extraKeys: [], skippedKeys: ['user:1'] }),
+    );
+  });
+
+  it('keeps someone registered when you choose Keep registered', async () => {
+    const user = userEvent.setup();
+    const amanda = { member_key: 'user:1', source: 'user' as const, tenant_id: 1, first_name: 'Amanda', last_name: 'Hardy', email: 'amanda@example.com', inclusion: 'group' as const };
+    service.previewGroup.mockResolvedValue(
+      preview({
+        counts: { members: 1, eligible: 1, to_register: 0, already_processed: 1, excluded: 0, duplicate: 0 },
+        already_processed: [amanda],
+      }),
+    );
+    renderDialog();
+    await chooseEventAndGroup(user);
+    await user.click(screen.getByRole('button', { name: 'Preview' }));
+    await user.click(await screen.findByRole('button', { name: "Cancel Amanda Hardy's registration" }));
+    await user.click(await screen.findByRole('button', { name: 'Keep registered' }));
+    expect(service.cancelRegistrations).not.toHaveBeenCalled();
   });
 
   it('undoing a skip previews again without it', async () => {

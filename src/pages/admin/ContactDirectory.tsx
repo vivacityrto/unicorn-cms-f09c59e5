@@ -974,6 +974,7 @@ export default function ContactDirectory() {
         request={removeRequest}
         onClose={() => setRemoveRequest(null)}
         onRemoved={() => fetchGroups()}
+        canCancelRegistrations={canManageTeamsEvents}
       />
     </>
   );
