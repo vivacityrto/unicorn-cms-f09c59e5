@@ -108,9 +108,11 @@ open questions). Nothing here has run against a real webinar yet.
   **Integrator** and **BGT** roles. `teams_events.manage_registrations` is therefore seeded `full` for
   Super Admin, Integrator and BGT; Team Leader, CSC and CET stay `none`. This supersedes the "everyone
   else none" seed described above.
-- The migration `20261008010000_teams_event_registration_foundation.sql` was edited in place. It had not
-  been applied to any hosted project at the time, so no data migration is involved. If it had already been
-  applied somewhere, those rows would need a follow-up upsert instead.
+- Implemented as a new corrective migration, `20261009010000_teams_events_grant_integrator_bgt.sql`, because the
+  migration guardrail rejects edits to an existing migration file. It runs `UPDATE ... SET level = 'full'` for
+  exactly the Integrator and BGT rows the foundation migration seeds as `none`, guarded with `level = 'none'` so
+  it never overrides a level set by hand. It must be applied after the foundation migration (timestamp order
+  guarantees this). A short-lived allowlist entry covers the data mutation; remove it once applied.
 - No other access change was needed. The Administration sidebar section is already shown to all Vivacity
   staff roles (`isVivacityTeam`, which includes Integrator and BGT) and Contact Directory has no extra
   role flag. The `/administration/contacts` route uses `allowVivacityTeam`. The Contact Directory Groups

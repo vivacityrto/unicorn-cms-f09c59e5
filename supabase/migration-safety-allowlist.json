@@ -7,7 +7,7 @@
       "categories": ["data-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Seeds the new teams_events.manage_registrations feature: one permission_features row and 6 role_permissions rows (Super Admin, Integrator and BGT full; Team Leader/CSC/CET none), modeled on admin.broadcast.send. Brand-new rows for a brand-new feature key with ON CONFLICT DO NOTHING; no existing data is touched. Added with PR #1410 and pending Carl's review there. Remove this entry once the migration is applied.",
+      "reason": "Seeds the new teams_events.manage_registrations feature: one permission_features row and 6 role_permissions rows (Super Admin full, Team Leader/Integrator/BGT/CSC/CET none), modeled on admin.broadcast.send. Brand-new rows for a brand-new feature key with ON CONFLICT DO NOTHING; no existing data is touched. Added with PR #1410 and pending Carl's review there. Remove this entry once the migration is applied.",
       "expires": "2026-10-22"
     },
     {
