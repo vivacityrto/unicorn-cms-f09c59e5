@@ -137,3 +137,20 @@ open questions). Nothing here has run against a real webinar yet.
   role flag. The `/administration/contacts` route uses `allowVivacityTeam`. The Contact Directory Groups
   tables and the Teams batch tables are readable by these roles (`is_vivacity_staff` /
   `check_permission`), and every Edge Function re-checks the permission through `requireCaller`.
+
+## Update 2026-10-09 — migrations applied
+- Both migrations (`20261008010000_teams_event_registration_foundation` and
+  `20261009010000_teams_events_grant_integrator_bgt`) were applied to the Unicorn project
+  (`yxkgdalkbrriasiyyrwk`) on 9 October 2026 via the Supabase MCP, foundation first. Pre-checks confirmed the
+  target columns, the `(role, feature_key)` unique constraint, the `full`/`none` levels, the six roles, the
+  helper functions and the bigint key types; neither table nor the feature existed beforehand.
+- Verified afterwards: `teams_events.manage_registrations` is Super Admin / Integrator / BGT `full` and Team
+  Leader / CSC / CET `none`; both tables have RLS enabled with a single SELECT policy each; browser roles hold
+  only SELECT (no write grants); all three idempotency indexes exist. The permission tables'
+  `log_permission_change` triggers recorded the seed rows.
+- Recorded under the applied names `teams_event_registration_foundation` and `teams_events_grant_integrator_bgt`
+  (the Supabase MCP assigns its own version timestamps).
+- Follow-up PR: the two new tables were added to `src/integrations/supabase/types.ts` (written in the
+  generator's format rather than regenerated, to avoid pulling the whole 50k-line file through a tool call), and
+  the two temporary migration-safety allowlist entries for these migrations were removed as planned.
+- Still outstanding: the Microsoft 365 administrator work, and live verification against a real webinar.

@@ -49753,6 +49753,167 @@ export type Database = {
           },
         ]
       }
+      teams_event_registration_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          eligible_count: number
+          event_display_name: string
+          event_start_datetime: string
+          event_timezone: string
+          event_type: string
+          failure_count: number
+          graph_event_id: string
+          graph_organiser_id: string | null
+          group_id: number | null
+          group_name: string
+          id: string
+          initiated_by_user_id: string
+          skipped_count: number
+          started_at: string | null
+          status: string
+          submitted_count: number
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          eligible_count?: number
+          event_display_name: string
+          event_start_datetime: string
+          event_timezone?: string
+          event_type: string
+          failure_count?: number
+          graph_event_id: string
+          graph_organiser_id?: string | null
+          group_id?: number | null
+          group_name: string
+          id?: string
+          initiated_by_user_id: string
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          submitted_count?: number
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          eligible_count?: number
+          event_display_name?: string
+          event_start_datetime?: string
+          event_timezone?: string
+          event_type?: string
+          failure_count?: number
+          graph_event_id?: string
+          graph_organiser_id?: string | null
+          group_id?: number | null
+          group_name?: string
+          id?: string
+          initiated_by_user_id?: string
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          submitted_count?: number
+          success_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_event_registration_batches_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_contact_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams_event_registration_items: {
+        Row: {
+          attempt_count: number
+          batch_id: string
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          event_type: string
+          exclusion_reason: string | null
+          first_name: string | null
+          graph_event_id: string
+          graph_join_url_encrypted: string | null
+          graph_registration_id: string | null
+          id: string
+          last_name: string | null
+          normalised_email: string | null
+          processed_at: string | null
+          result_status: string
+          tenant_contact_id: number | null
+          tenant_id: number
+          tenant_user_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          batch_id: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          event_type: string
+          exclusion_reason?: string | null
+          first_name?: string | null
+          graph_event_id: string
+          graph_join_url_encrypted?: string | null
+          graph_registration_id?: string | null
+          id?: string
+          last_name?: string | null
+          normalised_email?: string | null
+          processed_at?: string | null
+          result_status?: string
+          tenant_contact_id?: number | null
+          tenant_id: number
+          tenant_user_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          batch_id?: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          event_type?: string
+          exclusion_reason?: string | null
+          first_name?: string | null
+          graph_event_id?: string
+          graph_join_url_encrypted?: string | null
+          graph_registration_id?: string | null
+          id?: string
+          last_name?: string | null
+          normalised_email?: string | null
+          processed_at?: string | null
+          result_status?: string
+          tenant_contact_id?: number | null
+          tenant_id?: number
+          tenant_user_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_event_registration_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "teams_event_registration_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_event_registration_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_analysis_jobs: {
         Row: {
           created_at: string
