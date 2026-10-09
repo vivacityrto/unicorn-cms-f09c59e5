@@ -1,15 +1,13 @@
 /**
- * Microsoft Graph client for Teams webinars, using a DEDICATED Entra app
- * registration (client-credentials grant) — deliberately separate from the
- * SharePoint client in `_shared/graph-app-client.ts` so the two apps keep
- * independent consent, secrets and organiser policies.
+ * Microsoft Graph client for Teams webinars (client-credentials grant).
  *
- * Required Supabase secrets (names only — values live in Supabase):
- *   TEAMS_EVENTS_TENANT_ID
- *   TEAMS_EVENTS_CLIENT_ID
- *   TEAMS_EVENTS_CLIENT_SECRET
+ * It authenticates as whichever Entra app `credentials.ts` selects: by default
+ * the existing SharePoint app (MICROSOFT_* secrets, the same app
+ * `_shared/graph-app-client.ts` uses), or a dedicated app when all three
+ * TEAMS_EVENTS_* secrets are set. Token caching here is separate from
+ * graph-app-client's, so the two never share state.
  *
- * Graph application permissions: VirtualEvent.Read.All,
+ * Graph application permissions the app needs: VirtualEvent.Read.All,
  * VirtualEventRegistration-Anon.ReadWrite.All, plus a Teams application
  * access policy granted to each organiser (list/get return only webinars
  * whose organiser has been assigned the policy).

@@ -44,7 +44,9 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
-import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download, CalendarClock, ChevronDown } from 'lucide-react';
+import { Users2, Building2, Search, FolderPlus, Trash2, Pencil, Loader2, Download, CalendarClock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { GroupMembersPanel } from '@/components/contact-directory/GroupMembersPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,6 +147,23 @@ export default function ContactDirectory() {
   const [groupToDelete, setGroupToDelete] = useState<ContactGroup | null>(null);
   const [updatingPositionType, setUpdatingPositionType] = useState<string | null>(null);
   const [registerTeamsOpen, setRegisterTeamsOpen] = useState(false);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(new Set());
+  const toggleGroupExpanded = (groupId: number) =>
+    setExpandedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  const membersByGroup = useMemo(() => {
+    const map = new Map<number, GroupMember[]>();
+    for (const member of groupMembers) {
+      const list = map.get(member.group_id);
+      if (list) list.push(member);
+      else map.set(member.group_id, [member]);
+    }
+    return map;
+  }, [groupMembers]);
   // UI gate only: every Teams event Edge Function re-authorises the caller server-side.
   const canManageTeamsEvents = usePermission('teams_events.manage_registrations', 'full');
 
@@ -793,31 +812,57 @@ export default function ContactDirectory() {
                   </Button>
                 </div>
                 <div className="divide-y border rounded-md">
-                  {groups.map((g) => (
-                    <div key={g.id} className="flex items-center justify-between px-4 py-3">
-                      <div>
-                        <p className="font-medium">{g.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {g.member_count} member{g.member_count === 1 ? '' : 's'}
-                          {g.description ? ` · ${g.description}` : ''}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Export ${g.name} to CSV`}
-                          disabled={g.member_count === 0}
-                          onClick={() => setExportTarget({ kind: 'group', group: g })}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" aria-label={`Delete ${g.name}`} onClick={() => setGroupToDelete(g)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {groups.map((g) => {
+                    const expanded = expandedGroupIds.has(g.id);
+                    return (
+                      <Collapsible key={g.id} open={expanded} onOpenChange={() => toggleGroupExpanded(g.id)}>
+                        <div className="flex items-center justify-between px-4 py-3">
+                          <CollapsibleTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              aria-label={`${expanded ? 'Hide' : 'Show'} members of ${g.name}`}
+                            >
+                              {expanded ? (
+                                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                              )}
+                              <span className="min-w-0">
+                                <span className="block font-medium">{g.name}</span>
+                                <span className="block text-sm text-muted-foreground">
+                                  {g.member_count} member{g.member_count === 1 ? '' : 's'}
+                                  {g.description ? ` · ${g.description}` : ''}
+                                </span>
+                              </span>
+                            </button>
+                          </CollapsibleTrigger>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Export ${g.name} to CSV`}
+                              disabled={g.member_count === 0}
+                              onClick={() => setExportTarget({ kind: 'group', group: g })}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" aria-label={`Delete ${g.name}`} onClick={() => setGroupToDelete(g)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                        <CollapsibleContent>
+                          <GroupMembersPanel
+                            groupName={g.name}
+                            members={membersByGroup.get(g.id) ?? []}
+                            directory={rows}
+                            positionTypeOptions={positionTypeOptions}
+                          />
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
                 </div>
               </>
             )}

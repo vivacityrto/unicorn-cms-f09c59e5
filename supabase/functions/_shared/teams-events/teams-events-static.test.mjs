@@ -125,12 +125,13 @@ describe("preview-teams-event-group", () => {
 
 describe("Graph client hygiene", () => {
   const client = read("_shared", "teams-events", "graph-client.ts");
-  test("uses the dedicated TEAMS_EVENTS_* secrets, not the SharePoint app's", () => {
+  test("credentials come only from credentials.ts (reused MICROSOFT_* app, optional TEAMS_EVENTS_* override)", () => {
     const server = read("_shared", "teams-events", "server.ts");
-    assert.match(server, /TEAMS_EVENTS_TENANT_ID/);
-    assert.match(server, /TEAMS_EVENTS_CLIENT_ID/);
-    assert.match(server, /TEAMS_EVENTS_CLIENT_SECRET/);
-    assert.doesNotMatch(client + server, /MICROSOFT_CLIENT_(ID|SECRET)|MICROSOFT_TENANT_ID/);
+    const credentials = read("_shared", "teams-events", "credentials.ts");
+    assert.match(server, /resolveTeamsGraphCredentials\(/);
+    assert.doesNotMatch(client + server, /MICROSOFT_(CLIENT_ID|CLIENT_SECRET|TENANT_ID)|TEAMS_EVENTS_(CLIENT|TENANT)/);
+    assert.match(credentials, /MICROSOFT_TENANT_ID/);
+    assert.match(credentials, /TEAMS_EVENTS_CLIENT_SECRET/);
   });
   test("never logs", () => {
     assert.doesNotMatch(client, /console\./);
