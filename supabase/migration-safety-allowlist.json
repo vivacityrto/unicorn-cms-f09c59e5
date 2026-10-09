@@ -2,24 +2,6 @@
   "version": 1,
   "entries": [
     {
-      "id": "teams-events-grant-integrator-bgt",
-      "file": "supabase/migrations/20261009010000_teams_events_grant_integrator_bgt.sql",
-      "categories": ["destructive-mutation"],
-      "targetProject": "yxkgdalkbrriasiyyrwk",
-      "owner": "Carl",
-      "reason": "Requested by Carl (2026-10-09), pending his review in this PR: lifts exactly two role_permissions rows (teams_events.manage_registrations for Integrator and BGT) from 'none' to 'full', guarded with level = 'none' so it never overrides a hand-set level, so Beverly and Novea can register people for Teams webinars. Touches only rows seeded by the foundation migration for this brand-new feature key; no other data. Remove this entry once the migration is applied.",
-      "expires": "2026-10-22"
-    },
-    {
-      "id": "teams-event-registration-foundation",
-      "file": "supabase/migrations/20261008010000_teams_event_registration_foundation.sql",
-      "categories": ["data-mutation"],
-      "targetProject": "yxkgdalkbrriasiyyrwk",
-      "owner": "Carl",
-      "reason": "Seeds the new teams_events.manage_registrations feature: one permission_features row and 6 role_permissions rows (Super Admin full, Team Leader/Integrator/BGT/CSC/CET none), modeled on admin.broadcast.send. Brand-new rows for a brand-new feature key with ON CONFLICT DO NOTHING; no existing data is touched. Added with PR #1410 and pending Carl's review there. Remove this entry once the migration is applied.",
-      "expires": "2026-10-22"
-    },
-    {
       "id": "add-system-account-role-and-reclassify",
       "file": "supabase/migrations/20260915025352_add_system_account_role_and_reclassify.sql",
       "categories": ["data-mutation", "destructive-mutation"],
