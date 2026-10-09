@@ -171,6 +171,15 @@
       "owner": "Carl",
       "reason": "Two distinct findings. (1) The 3 INSERT statements are a REAL one-time seed of a brand-new table, public.package_capacity_config, created in this same migration (it had no rows to conflict with or damage): step 1 copies the existing tier weekly hours from membership_tier_capacity_config onto every package in a tier (9 rows), step 2 copies each V2 membership package's hours from its V1 package (9 rows), step 3 adds packages.total_hours spread over packages.duration_months for packages that have an open instance (8 rows). All three are ON CONFLICT DO NOTHING, so a re-run never overwrites edits made to the table, and every row records its source. No existing table is written to. (2) The flagged 'UPDATE' is the words BEFORE UPDATE in the CREATE TRIGGER definition for the new table's updated_at trigger, not an UPDATE statement. The migration also replaces compute_client_weekly_required() (no DML). Dry-run against production inside a rolled-back transaction before applying: seeded 26 rows, no client's load went down, 19 of 57 clients' load changed, clients with zero load fell from 17 to 6, total weekly load went 42.25 -> 68.73 h, re-running added 0 rows, nothing persisted after rollback. See docs/audit-log/entries/2026-09-30-capacity-planning-per-package-load.md. Pending Carl's review via this PR, same as any other change to this repo.",
       "expires": "2026-10-30"
+    },
+    {
+      "id": "add-aat-asqa-support-work-sub-types",
+      "file": "supabase/migrations/20261009020000_add_aat_asqa_support_work_sub_types.sql",
+      "categories": ["data-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Requested by Angela. Inserts exactly 2 lookup rows (aat_support, asqa_support) into public.dd_work_sub_type under the consultation category so they appear in the Add Note / Add Time Sub Type dropdown. ON CONFLICT (code) DO NOTHING, so a re-run never changes existing rows; no existing row is updated or deleted, and no schema, RLS, grant or trigger change. Pending Carl's review via this PR.",
+      "expires": "2026-10-30"
     }
   ]
 }
