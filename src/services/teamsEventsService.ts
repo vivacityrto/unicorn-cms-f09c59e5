@@ -299,6 +299,14 @@ export const teamsEventsService = {
       member_keys: memberKeys,
     }),
 
+  /** Record by hand whether one person attended. The server decides whether they are a walk-in. */
+  setAttendance: (eventId: string, memberKey: string, attended: boolean) =>
+    invoke<{ attendance: { member_key: string; attended: boolean; walk_in: boolean } }>('set-teams-event-attendance', {
+      event_id: eventId,
+      member_key: memberKey,
+      attended,
+    }),
+
   getBatch: (batchId: string, include: 'problems' | 'all' = 'problems') =>
     invoke<BatchDetail>('get-teams-event-batch', { batch_id: batchId, include }),
 

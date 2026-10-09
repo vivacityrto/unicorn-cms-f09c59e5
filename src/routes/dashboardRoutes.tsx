@@ -81,6 +81,7 @@ const ResourceMostUsed = lazy(() => import("@/pages/ResourceMostUsed"));
 const ResourceFavourites = lazy(() => import("@/pages/ResourceFavourites"));
 const ResourceUpdatesLog = lazy(() => import("@/pages/ResourceUpdatesLog"));
 const ContactDirectory = lazy(() => import("@/pages/admin/ContactDirectory"));
+const TeamsEventsRegistry = lazy(() => import("@/pages/admin/TeamsEventsRegistry"));
 const RegulatorWatchDashboard = lazy(() => import("@/pages/RegulatorWatchDashboard"));
 const RegulatorChangeEventDetail = lazy(() => import("@/pages/RegulatorChangeEventDetail"));
 const NewStarterWizard = lazy(() => import("@/pages/admin/NewStarterWizard"));
@@ -752,6 +753,7 @@ export const dashboardLayoutRoutes = (
     </Route>
     <Route element={<ProtectedRoute allowVivacityTeam><DashboardLayoutRoute /></ProtectedRoute>}>
       <Route path="/administration/contacts" element={<ContactDirectory />} />
+      <Route path="/administration/contacts/events" element={<TeamsEventsRegistry />} />
       <Route path="/admin/regulator-watch" element={<RegulatorWatchDashboard />} />
       <Route path="/admin/regulator-watch/:eventId" element={<RegulatorChangeEventDetail />} />
     </Route>
