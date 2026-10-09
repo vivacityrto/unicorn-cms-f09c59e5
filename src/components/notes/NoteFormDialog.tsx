@@ -17,7 +17,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
-  Calendar as CalendarIcon, Play, Square, Upload, X, Loader2,
+  Calendar as CalendarIcon, Play, Square, Upload, X, Loader2, Paperclip,
   Package, Mail, Mic, MicOff, StickyNote, ArrowRight,
   MessageSquare, Users, CheckCircle, FileText, AlertTriangle
 } from 'lucide-react';
@@ -26,6 +26,11 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from '@/components/client/NotifyClientCheckbox';
 import { formatDuration, formatElapsedTime } from '@/hooks/useNotes';
 import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
+import {
+  checkNoteAttachments,
+  NOTE_ATTACHMENT_ACCEPT,
+  NOTE_ATTACHMENT_HINT,
+} from '@/lib/noteAttachments';
 
 // ── Note type style map ──
 const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string }> = {
@@ -197,6 +202,7 @@ export function NoteFormDialog({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [existingFiles, setExistingFiles] = useState<{ path: string; name: string }[]>([]);
   const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Team / notify
   const [assignees, setAssignees] = useState<string[]>([]);
@@ -565,7 +571,14 @@ export function NoteFormDialog({
   // ── File handling ──
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) setUploadedFiles(prev => [...prev, ...Array.from(files)]);
+    if (!files) return;
+    const keptExisting = existingFiles.filter(f => !filesToRemove.includes(f.path)).length;
+    const { accepted, errors } = checkNoteAttachments(Array.from(files), keptExisting + uploadedFiles.length);
+    if (accepted.length > 0) setUploadedFiles(prev => [...prev, ...accepted]);
+    if (errors.length > 0) {
+      toast({ title: 'Some files were not attached', description: errors.join('\n'), variant: 'destructive' });
+    }
+    e.target.value = ''; // allow re-picking the same file after removing it
   };
 
   // ── Save ──
@@ -909,6 +922,48 @@ export function NoteFormDialog({
                 className={speech.isRecording ? 'border-destructive' : ''}
                 tenantId={tenantId}
               />
+            </div>
+
+            {/* Attachments */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-xs">
+                  <Paperclip className="h-3 w-3" />
+                  Attachments (optional)
+                </Label>
+                <Button type="button" variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5" /> Add files
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={NOTE_ATTACHMENT_ACCEPT}
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">{NOTE_ATTACHMENT_HINT}</p>
+              {(existingFiles.some(f => !filesToRemove.includes(f.path)) || uploadedFiles.length > 0) && (
+                <ul className="space-y-1">
+                  {existingFiles.filter(f => !filesToRemove.includes(f.path)).map((f) => (
+                    <li key={f.path} className="flex items-center justify-between rounded-md border bg-muted/30 px-2 py-1 text-xs">
+                      <span className="flex items-center gap-1.5 truncate"><FileText className="h-3.5 w-3.5 shrink-0" />{f.name}</span>
+                      <Button type="button" variant="ghost" size="icon" className="h-5 w-5" aria-label={`Remove ${f.name}`} onClick={() => setFilesToRemove(prev => [...prev, f.path])}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </li>
+                  ))}
+                  {uploadedFiles.map((f, i) => (
+                    <li key={`${f.name}-${i}`} className="flex items-center justify-between rounded-md border bg-muted/30 px-2 py-1 text-xs">
+                      <span className="flex items-center gap-1.5 truncate"><FileText className="h-3.5 w-3.5 shrink-0" />{f.name}<span className="text-muted-foreground">({(f.size / 1024 / 1024).toFixed(1)} MB)</span></span>
+                      <Button type="button" variant="ghost" size="icon" className="h-5 w-5" aria-label={`Remove ${f.name}`} onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
 

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { NoteFormDialog, NoteFormData } from './NoteFormDialog';
 import { format } from 'date-fns';
+import { mergeNoteAttachments, uploadNoteAttachments } from '@/lib/noteAttachments';
 
 interface EditNoteDialogProps {
   noteId: string;
@@ -18,15 +19,7 @@ export function EditNoteDialog({ noteId, tenantId, open, onOpenChange, onSaved }
   const handleSave = useCallback(async (data: NoteFormData) => {
     try {
       // Upload new files
-      const fileUrls: string[] = [];
-      const fileNames: string[] = [];
-      for (const file of data.uploadedFiles) {
-        const fileName = `${Date.now()}-${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('tenant-note-files').upload(fileName, file);
-        if (uploadError) throw uploadError;
-        fileUrls.push(uploadData.path);
-        fileNames.push(file.name);
-      }
+      const uploaded = await uploadNoteAttachments(tenantId, data.uploadedFiles);
 
       const convert12To24 = (t: { hour: string; minute: string; period: string }) => {
         let h = parseInt(t.hour);
@@ -35,9 +28,7 @@ export function EditNoteDialog({ noteId, tenantId, open, onOpenChange, onSaved }
         return `${h.toString().padStart(2, '0')}:${t.minute}`;
       };
 
-      const remainingExisting = data.existingFiles.filter(f => !data.filesToRemove.includes(f.path));
-      const allPaths = [...remainingExisting.map(f => f.path), ...fileUrls];
-      const allNames = [...remainingExisting.map(f => f.name), ...fileNames];
+      const { paths: allPaths, names: allNames } = mergeNoteAttachments(data.existingFiles, data.filesToRemove, uploaded);
 
       const updateData: Record<string, unknown> = {
         title: data.title.trim() || null,
@@ -72,7 +63,7 @@ export function EditNoteDialog({ noteId, tenantId, open, onOpenChange, onSaved }
     } catch (error) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
     }
-  }, [noteId, toast, onSaved, onOpenChange]);
+  }, [noteId, tenantId, toast, onSaved, onOpenChange]);
 
   return (
     <NoteFormDialog
