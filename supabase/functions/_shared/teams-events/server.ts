@@ -9,6 +9,7 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeadersFor, FeatureKeys, type RequireCallerOptions } from "../requireCaller.ts";
 import { createTeamsGraphClient, type TeamsGraphClient } from "./graph-client.ts";
+import { resolveTeamsGraphCredentials } from "./credentials.ts";
 import type { ClassifiedGraphError } from "./graph-errors.ts";
 import { sanitiseMessage } from "./graph-errors.ts";
 
@@ -52,16 +53,16 @@ export function previewSigningSecret(): string {
 }
 
 export function createGraphFromEnv(): { ok: true; client: TeamsGraphClient } | { ok: false; reason: "not_configured" } {
-  const tenantId = Deno.env.get("TEAMS_EVENTS_TENANT_ID");
-  const clientId = Deno.env.get("TEAMS_EVENTS_CLIENT_ID");
-  const clientSecret = Deno.env.get("TEAMS_EVENTS_CLIENT_SECRET");
-  if (!tenantId || !clientId || !clientSecret) return { ok: false, reason: "not_configured" };
+  // Reuses the existing SharePoint app's MICROSOFT_* credentials unless a
+  // dedicated TEAMS_EVENTS_* set is configured (see credentials.ts).
+  const credentials = resolveTeamsGraphCredentials((name) => Deno.env.get(name));
+  if (!credentials) return { ok: false, reason: "not_configured" };
   return {
     ok: true,
     client: createTeamsGraphClient({
-      tenantId,
-      clientId,
-      clientSecret,
+      tenantId: credentials.tenantId,
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret,
       preferredTimezone: Deno.env.get("TEAMS_EVENTS_PREFERRED_TIMEZONE") || undefined,
       preferredLanguage: Deno.env.get("TEAMS_EVENTS_PREFERRED_LANGUAGE") || undefined,
     }),
