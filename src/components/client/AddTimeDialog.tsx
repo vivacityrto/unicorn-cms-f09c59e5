@@ -9,6 +9,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { NoteFormDialog } from '@/components/notes/NoteFormDialog';
+import { uploadNoteAttachments } from '@/lib/noteAttachments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -923,6 +924,7 @@ export function AddTimeDialog({
             // for the same package-instance-vs-tenant distinction.
             const hasPackageInstance = data.packageInstanceId !== 'none';
             const parentId = hasPackageInstance ? Number(data.packageInstanceId) : tenantId;
+            const attachments = await uploadNoteAttachments(tenantId, data.uploadedFiles);
             const { data: inserted, error } = await supabase
               .from('notes')
               .insert({
@@ -938,6 +940,8 @@ export function AddTimeDialog({
                 status: data.status,
                 is_pinned: data.isPinned,
                 timeentry_id: pendingTimeEntryId,
+                uploaded_files: attachments.paths.length > 0 ? attachments.paths : null,
+                file_names: attachments.names.length > 0 ? attachments.names : null,
               })
               .select('id')
               .single();

@@ -3,6 +3,7 @@ import { sendNoteNotifications } from '@/lib/noteNotifications';
 import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { NoteFormDialog, NoteFormData } from '@/components/notes/NoteFormDialog';
+import { mergeNoteAttachments, openNoteAttachment, uploadNoteAttachments } from '@/lib/noteAttachments';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useNoteTags } from '@/hooks/useNoteTags';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
@@ -702,12 +703,16 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       const parsedDuration = data.duration ? parseInt(data.duration, 10) : 0;
       const DURATION_NOTE_TYPES = ['phone-call', 'meeting', 'action'];
       let createdNoteId: string | null = null;
+      const uploadedAttachments = await uploadNoteAttachments(tenantId, data.uploadedFiles);
 
       if (selectedNote) {
         const parentUpdate = selectedPkg
           ? { parent_type: 'package_instance' as const, parent_id: selectedPkg.instance_id }
           : { parent_type: 'tenant' as const, parent_id: tenantId };
+        const attachments = mergeNoteAttachments(data.existingFiles, data.filesToRemove, uploadedAttachments);
         await updateNote(selectedNote.id, {
+          uploaded_files: attachments.paths,
+          file_names: attachments.names,
           note_type: data.noteType,
           title: data.title || null,
           note_details: data.content,
@@ -727,6 +732,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           priority: data.priority || undefined,
           status: data.status || undefined,
           duration: parsedDuration || undefined,
+          uploaded_files: uploadedAttachments.paths,
+          file_names: uploadedAttachments.names,
           tags,
           is_pinned: data.isPinned,
           package_id: selectedPkg?.package_id || undefined,
@@ -1667,6 +1674,31 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 
                 {/* Full note content */}
                 <NoteContentRenderer content={selectedNote.note_details} />
+
+                {selectedNote.uploaded_files?.length > 0 && (
+                  <div className="mt-4 space-y-1.5 border-t pt-3">
+                    <p className="text-xs font-medium text-muted-foreground">Attachments</p>
+                    <ul className="space-y-1">
+                      {selectedNote.uploaded_files.map((path, idx) => {
+                        const name = selectedNote.file_names?.[idx] || path.split('/').pop() || path;
+                        return (
+                          <li key={path}>
+                            <button
+                              type="button"
+                              className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                              onClick={() => openNoteAttachment(path).catch((err) =>
+                                toast({ title: 'Could not open file', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' })
+                              )}
+                            >
+                              <FileText className="h-3.5 w-3.5 shrink-0" />
+                              {name}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           )}
