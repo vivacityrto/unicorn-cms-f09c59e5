@@ -1,0 +1,11 @@
+-- Drop the legacy 2-argument overload of create_todos_from_issue.
+--
+-- Production has two overloads:
+--   create_todos_from_issue(p_issue_id uuid, p_todos jsonb)                         -- legacy, no tenant fallback
+--   create_todos_from_issue(p_issue_id uuid, p_todos jsonb, p_meeting_id uuid DEFAULT NULL)
+-- The 3-argument version is a strict superset (same behaviour, plus tenant 6372
+-- fallback and an explicit meeting id). The only caller (src/lib/eosIssueEdit.ts)
+-- passes all three arguments, and no other function, trigger or view references
+-- the 2-argument overload. Leaving both in place risks an ambiguous-overload
+-- error for any future two-argument call.
+DROP FUNCTION IF EXISTS public.create_todos_from_issue(uuid, jsonb);
