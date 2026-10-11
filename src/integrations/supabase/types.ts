@@ -70637,12 +70637,10 @@ export type Database = {
         Args: { p_admin_email?: string; p_name: string; p_slug: string }
         Returns: string
       }
-      create_todos_from_issue:
-        | { Args: { p_issue_id: string; p_todos: Json }; Returns: string[] }
-        | {
-            Args: { p_issue_id: string; p_meeting_id?: string; p_todos: Json }
-            Returns: string[]
-          }
+      create_todos_from_issue: {
+        Args: { p_issue_id: string; p_meeting_id?: string; p_todos: Json }
+        Returns: string[]
+      }
       cron_presented_secret_matches: {
         Args: { p_kind: string; p_presented: string }
         Returns: boolean
