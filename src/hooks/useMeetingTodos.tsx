@@ -57,6 +57,7 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-todos', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['eos-issue-todos'] });
       toast({ title: 'To-do created successfully' });
     },
     onError: (error: Error) => {
@@ -85,6 +86,7 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-todos', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['eos-issue-todos'] });
       toast({ title: 'To-do updated successfully' });
     },
     onError: (error: Error) => {

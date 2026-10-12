@@ -28836,6 +28836,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          issue_id: string | null
           meeting_id: string | null
           owner_id: string | null
           status: string | null
@@ -28854,6 +28855,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          issue_id?: string | null
           meeting_id?: string | null
           owner_id?: string | null
           status?: string | null
@@ -28872,6 +28874,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          issue_id?: string | null
           meeting_id?: string | null
           owner_id?: string | null
           status?: string | null
@@ -28950,6 +28953,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "eos_issues"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "eos_todos_meeting_id_fkey"

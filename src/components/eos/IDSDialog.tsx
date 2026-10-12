@@ -12,7 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Plus, CheckCircle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
@@ -55,8 +55,6 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
   const [activeTab, setActiveTab] = useState('identify');
   const [solution, setSolution] = useState(issue?.solution || '');
   const [discussionNotes, setDiscussionNotes] = useState('');
-  // To-dos saved from this issue during this session (they are created immediately, not staged).
-  const [addedTodos, setAddedTodos] = useState<TodoItem[]>([]);
   // Last value of each shared text field as loaded from / saved to the server. Used to tell whether
   // the local text has unsaved edits, and as the expected value when saving (conflict detection).
   const notesBaseline = useRef<string | null>(null);
@@ -76,6 +74,22 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
     last_name: u.last_name,
     email: u.email,
   }));
+
+  // To-dos created from this issue (linked by eos_todos.issue_id), so they stay visible every
+  // time the issue is opened - not just in the session that added them.
+  const { data: issueTodos } = useQuery({
+    queryKey: ['eos-issue-todos', issue?.id],
+    enabled: !!issue?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_todos')
+        .select('id, title, owner_id, due_date, status')
+        .eq('issue_id', issue!.id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch linked rock details (title) when present
   const { data: linkedRock } = useQuery({
@@ -112,7 +126,6 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
       solutionBaseline.current = issue.solution ?? null;
       setDiscussionNotes(issue.outcome_note || '');
       setSolution(issue.solution || '');
-      setAddedTodos([]);
     }
     // Deliberately keyed on id/open only: a background refetch that returns a new object for the
     // same issue must not reset a field out from under an in-progress edit. Live changes from
@@ -252,7 +265,7 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
     onSuccess: (_result, todo) => {
       queryClient.invalidateQueries({ queryKey: ['eos-todos'] });
       queryClient.invalidateQueries({ queryKey: ['meeting-todos'] });
-      setAddedTodos((prev) => [...prev, todo]);
+      queryClient.invalidateQueries({ queryKey: ['eos-issue-todos'] });
       setNewTodoTitle('');
       setNewTodoOwner('');
       setNewTodoDueDate(undefined);
@@ -507,20 +520,26 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
                 </Button>
               </div>
 
-              {/* To-dos added from this issue */}
-              {addedTodos.length > 0 && (
-                <div className="space-y-2">
-                  {addedTodos.map((todo, index) => (
-                    <Card key={index} className="p-2 flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{todo.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Due: {format(new Date(todo.due_date), 'PP')} - saved
-                        </p>
-                      </div>
-                    </Card>
-                  ))}
+              {/* To-dos created from this issue */}
+              {issueTodos && issueTodos.length > 0 && (
+                <div className="space-y-2" data-testid="issue-todos">
+                  {issueTodos.map((todo) => {
+                    const done = todo.status === 'Complete';
+                    const owner = users?.find((u) => u.user_uuid === todo.owner_id);
+                    return (
+                      <Card key={todo.id} className="p-2 flex items-center gap-2">
+                        <CheckCircle className={cn('h-4 w-4 shrink-0', done ? 'text-green-600' : 'text-muted-foreground')} />
+                        <div className="flex-1">
+                          <p className={cn('text-sm font-medium', done && 'line-through opacity-70')}>{todo.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {owner ? `${owner.first_name} ${owner.last_name} · ` : ''}
+                            Due: {todo.due_date ? format(parseISO(todo.due_date), 'dd/MM/yyyy') : 'Not set'}
+                          </p>
+                        </div>
+                        <Badge variant={done ? 'default' : 'secondary'}>{done ? 'Done' : 'Open'}</Badge>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
