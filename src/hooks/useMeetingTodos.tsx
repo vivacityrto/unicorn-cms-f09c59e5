@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import type { EosTodo } from '@/types/eos';
+import type { EosTodo, EosTodoWithIssue } from '@/types/eos';
 
 /**
  * To-dos for the live To-Do List segment.
@@ -19,7 +19,8 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
   const { data: todos, isLoading } = useQuery({
     queryKey: ['meeting-todos', meetingId, tenantId],
     queryFn: async () => {
-      let query = supabase.from('eos_todos').select('*');
+      // `issue` is the IDS issue a to-do was created from (eos_todos.issue_id), for the row tag.
+      let query = supabase.from('eos_todos').select('*, issue:eos_issues!eos_todos_issue_id_fkey(title)');
       query = tenantId
         ? query.or(`meeting_id.eq.${meetingId},and(status.eq.Open,tenant_id.eq.${tenantId})`)
         : query.eq('meeting_id', meetingId!);
@@ -27,7 +28,7 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as EosTodo[];
+      return data as unknown as EosTodoWithIssue[];
     },
     enabled: !!meetingId,
   });

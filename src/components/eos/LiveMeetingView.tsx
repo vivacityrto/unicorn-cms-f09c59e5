@@ -40,6 +40,7 @@ import { IssuesQueue } from '@/components/eos/IssuesQueue';
 import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
 import { TodoDueDateButton } from '@/components/eos/TodoDueDateButton';
+import { TodoIssueTag } from '@/components/eos/TodoIssueTag';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
@@ -57,7 +58,7 @@ import {
   QuorumWarningPrompt,
 } from '@/components/eos/facilitator/FacilitatorPrompts';
 import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
-import type { EosMeetingSegment, MeetingType, ConfigMeetingType, EosIssue, EosRock, EosTodo } from '@/types/eos';
+import type { EosMeetingSegment, MeetingType, ConfigMeetingType, EosIssue, EosRock, EosTodo, EosTodoWithIssue } from '@/types/eos';
 
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
@@ -504,7 +505,7 @@ export const LiveMeetingView = () => {
 
   // Open to-dos first (earliest due date first, so overdue items lead), then completed ones.
   const sortedTodos = useMemo(() => {
-    const rank = (t: EosTodo) => (t.status === 'Complete' ? 1 : 0);
+    const rank = (t: EosTodoWithIssue) => (t.status === 'Complete' ? 1 : 0);
     return [...(todos ?? [])].sort((a, b) => {
       if (rank(a) !== rank(b)) return rank(a) - rank(b);
       const ad = a.due_date ?? '9999-12-31';
@@ -902,6 +903,7 @@ export const LiveMeetingView = () => {
                             From an earlier meeting
                           </span>
                         )}
+                        <TodoIssueTag issueTitle={todo.issue?.title} />
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Assigned to: {todo.owner_id ? (todoOwners?.[todo.owner_id] ?? 'Unassigned') : 'Unassigned'}

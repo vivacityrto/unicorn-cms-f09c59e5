@@ -217,6 +217,9 @@ export interface EosTodo {
   created_by?: string;
 }
 
+/** A to-do together with the title of the IDS issue it came from (embedded by useMeetingTodos). */
+export type EosTodoWithIssue = EosTodo & { issue?: { title: string } | null };
+
 export interface EosAgendaSegment {
   name: string;
   duration_minutes: number;
