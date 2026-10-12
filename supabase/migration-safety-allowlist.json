@@ -162,6 +162,15 @@
       "owner": "Carl",
       "reason": "False positive. The flagged UPDATE is the words BEFORE DELETE OR UPDATE in the CREATE TRIGGER definition, not an UPDATE or DELETE statement. This migration performs NO data changes: it creates one trigger function (protect_todos_in_completed_meeting) and re-points the existing trg_protect_todos_in_completed_meeting trigger at it, so to-dos of a closed meeting can have status/completed_at/due_date changed (carried-over to-dos reviewed and re-dated in the live To-Do List) while every other edit, DELETE, and moving a to-do into a closed meeting stay blocked. Dry-run against production inside a rolled-back transaction before applying (9 cases incl. re-date, all as intended, nothing persisted). See docs/audit-log/entries/2026-10-12-allow-status-change-on-carried-over-eos-todos.md. Pending Carl's review via this PR.",
       "expires": "2026-10-30"
+    },
+    {
+      "id": "link-eos-todos-to-issue",
+      "file": "supabase/migrations/20261012030000_link_eos_todos_to_issue.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Adds nullable eos_todos.issue_id (FK to eos_issues, ON DELETE SET NULL), updates create_todos_from_issue to set it and the completed-meeting guard to let issue_id through. The only data change is a one-off backfill UPDATE that sets issue_id on to-dos NOT already linked, matched to their issue by the create_todos_from_issue bulk_create audit row (same created_at / created_by / tenant_id): 19 rows, each matched exactly once, 0 cross-tenant, no other column touched, idempotent (re-run touches 0 rows). The flagged INSERT/UPDATE inside the function body is the existing create_todos_from_issue logic, executed per call and not at migration time. Dry-run against production inside a rolled-back transaction before applying. See docs/audit-log/entries/2026-10-12-link-eos-todos-to-ids-issue.md. Pending Carl's review via this PR.",
+      "expires": "2026-10-30"
     }
   ]
 }

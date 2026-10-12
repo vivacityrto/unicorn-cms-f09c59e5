@@ -210,6 +210,8 @@ export interface EosTodo {
   completed_date?: string;
   completed_at?: string;
   meeting_id?: string;
+  /** IDS issue this to-do was created from, when it was created in IDS. */
+  issue_id?: string | null;
   created_at: string;
   updated_at: string;
   created_by?: string;

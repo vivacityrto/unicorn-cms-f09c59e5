@@ -234,6 +234,7 @@ export const LiveMeetingView = () => {
     },
     onTodoChange: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-todos', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['eos-issue-todos'] });
     },
     onSegueChange: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-segue-shares', meetingId] });
