@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
-import { appendDictation } from '@/lib/dictation';
+import { appendDictation, appendLabelledDictation } from '@/lib/dictation';
 
 export type DictationField = 'notes' | 'solution';
 
 const AUTOSAVE_AFTER_MS = 3000;
 const AUTOSTART_KEY = 'eos-ids-dictation-autostart';
+const LABEL_KEY = 'eos-ids-dictation-label-name';
 
 const TAB_FOR_FIELD: Record<DictationField, string> = { notes: 'discuss', solution: 'solve' };
+
+/** On unless the user has switched it off. */
+function readLabelWithName(): boolean {
+  try {
+    return localStorage.getItem(LABEL_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 
 function readAutoStart(): boolean {
   try {
@@ -22,6 +32,8 @@ interface Options {
   activeTab: string;
   issueId?: string;
   issueStatus?: string;
+  /** Name put in front of dictated discussion notes ("Nova: ..."); no label when empty. */
+  speakerName?: string;
   /** Current text of each dictatable field (used to autosave while dictating). */
   notes: string;
   solution: string;
@@ -37,10 +49,25 @@ interface Options {
  * stops (saving first) when the dialog closes or the user leaves the tab. It hears the user's
  * own microphone only - on a remote call each person dictates their own part.
  */
-export function useIssueDictation({ open, activeTab, issueId, issueStatus, notes, solution, addText, save }: Options) {
+export function useIssueDictation({
+  open,
+  activeTab,
+  issueId,
+  issueStatus,
+  speakerName,
+  notes,
+  solution,
+  addText,
+  save,
+}: Options) {
   const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
   const [field, setField] = useState<DictationField | null>(null);
   const [autoStart, setAutoStartState] = useState(readAutoStart);
+  const [labelWithName, setLabelWithNameState] = useState(readLabelWithName);
+  const labelWithNameRef = useRef(labelWithName);
+  labelWithNameRef.current = labelWithName;
+  const speakerNameRef = useRef(speakerName);
+  speakerNameRef.current = speakerName;
   const saveRef = useRef(save);
   saveRef.current = save;
   const inFlightSave = useRef<Promise<void> | null>(null);
@@ -65,9 +92,17 @@ export function useIssueDictation({ open, activeTab, issueId, issueStatus, notes
   const start = useCallback(
     (target: DictationField) => {
       if (field && field !== target) void runSave(field).catch(() => undefined);
-      startRecording((text) => addText(target, (existing) => appendDictation(existing, text)), {
-        keepListening: true,
-      });
+      startRecording(
+        (text) =>
+          addText(target, (existing) => {
+            // Notes are a shared record of who said what; the solution is one statement.
+            const speaker = speakerNameRef.current;
+            return target === 'notes' && labelWithNameRef.current && speaker
+              ? appendLabelledDictation(existing, text, speaker)
+              : appendDictation(existing, text);
+          }),
+        { keepListening: true },
+      );
       setField(target);
     },
     [addText, field, runSave, startRecording],
@@ -85,6 +120,15 @@ export function useIssueDictation({ open, activeTab, issueId, issueStatus, notes
     setAutoStartState(value);
     try {
       localStorage.setItem(AUTOSTART_KEY, value ? '1' : '0');
+    } catch {
+      // Preference just will not persist.
+    }
+  }, []);
+
+  const setLabelWithName = useCallback((value: boolean) => {
+    setLabelWithNameState(value);
+    try {
+      localStorage.setItem(LABEL_KEY, value ? '1' : '0');
     } catch {
       // Preference just will not persist.
     }
@@ -136,6 +180,8 @@ export function useIssueDictation({ open, activeTab, issueId, issueStatus, notes
     isSupported,
     autoStart,
     setAutoStart,
+    labelWithName,
+    setLabelWithName,
     toggle,
     /** Stops dictating and resolves once the dictated text has been saved. */
     stop,
