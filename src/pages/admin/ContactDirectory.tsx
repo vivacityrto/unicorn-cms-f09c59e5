@@ -49,6 +49,7 @@ import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { GroupMembersPanel } from '@/components/contact-directory/GroupMembersPanel';
 import { SortableHead } from '@/components/contact-directory/SortableHead';
+import { chunk, summariseSelection } from '@/lib/contactDirectory/selection';
 import { nextSort, sortDirectoryRows, type DirectorySort, type DirectorySortKey } from '@/lib/contactDirectory/sortRows';
 import { RemoveMemberConfirm, type RemoveMemberRequest } from '@/components/contact-directory/RemoveMemberConfirm';
 import { usePermission } from '@/hooks/usePermission';
@@ -373,6 +374,15 @@ export default function ContactDirectory() {
 
   const selectedRows = rows.filter((r) => selected.has(r.row_key));
 
+  // The header checkbox ticks this page only; this is the explicit "everything that matches" step.
+  const selection = summariseSelection(
+    filteredRows.map((r) => r.row_key),
+    pagedRows.map((r) => r.row_key),
+    selected,
+  );
+  const selectAllMatching = () => setSelected(new Set([...selected, ...filteredRows.map((r) => r.row_key)]));
+  const clearSelection = () => setSelected(new Set());
+
   const openAddToGroup = () => {
     if (selected.size === 0) {
       toast.error('Select at least one contact or user first');
@@ -411,10 +421,13 @@ export default function ContactDirectory() {
         tenant_id: r.tenant_id,
       }));
 
-      const { error: insertError } = await supabase
-        .from('tenant_contact_group_members')
-        .upsert(memberRows, { onConflict: 'group_id,member_type,member_id' });
-      if (insertError) throw insertError;
+      // A select-all can be thousands of people: write in batches rather than one huge request.
+      for (const batch of chunk(memberRows, 500)) {
+        const { error: insertError } = await supabase
+          .from('tenant_contact_group_members')
+          .upsert(batch, { onConflict: 'group_id,member_type,member_id' });
+        if (insertError) throw insertError;
+      }
 
       toast.success(`Added ${selectedRows.length} to the group`);
       setAddToGroupOpen(false);
@@ -621,7 +634,20 @@ export default function ContactDirectory() {
 
             {selected.size > 0 && (
               <div className="flex items-center justify-between rounded-md border bg-muted/30 px-4 py-2">
-                <span className="text-sm">{selected.size} selected</span>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <span>{selected.size} selected</span>
+                  {selection.canSelectAllMatching && (
+                    <Button variant="link" size="sm" className="h-auto p-0" onClick={selectAllMatching}>
+                      Select all {filteredRows.length} matching
+                    </Button>
+                  )}
+                  {selection.allMatchingSelected && filteredRows.length > pagedRows.length && (
+                    <span className="text-muted-foreground">All {filteredRows.length} matching are selected.</span>
+                  )}
+                  <Button variant="link" size="sm" className="h-auto p-0" onClick={clearSelection}>
+                    Clear selection
+                  </Button>
+                </div>
                 <Button size="sm" onClick={openAddToGroup}>
                   <FolderPlus className="mr-2 h-4 w-4" />
                   Add to group
