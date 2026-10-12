@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DictationControl } from '@/components/eos/DictationControl';
+import { useIssueDictation } from '@/components/eos/useIssueDictation';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
@@ -211,6 +213,37 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
     },
   });
 
+  // Voice dictation into the notes / solution fields (hands-free, autosaves while dictating).
+  // Saves quietly - the per-save "saved" toast would fire every few seconds.
+  const dictation = useIssueDictation({
+    open,
+    activeTab,
+    issueId: issue?.id,
+    issueStatus: issue?.status,
+    notes: discussionNotes,
+    solution,
+    addText: (field, update) => (field === 'notes' ? setDiscussionNotes(update) : setSolution(update)),
+    save: async (field) => {
+      if (!issue) return;
+      const column: IssueTextField = field === 'notes' ? 'outcome_note' : 'solution';
+      const text = field === 'notes' ? discussionNotes : solution;
+      const baseline = (field === 'notes' ? notesBaseline : solutionBaseline).current ?? '';
+      if (text === baseline) return;
+      try {
+        await saveSharedField(column, text);
+        queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
+        queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
+        onIssueChanged?.();
+      } catch (error) {
+        toast({
+          title: field === 'notes' ? 'Error saving notes' : 'Error saving solution',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        });
+      }
+    },
+  });
+
   // Set issue status mutation with auto-tab-advance
   const setStatus = useMutation({
     mutationFn: async ({ status, solutionText, autoAdvanceTab = true, fromStatus }: { 
@@ -310,6 +343,8 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
     }
 
     try {
+      // Finish any dictation first so its text is saved before the issue is solved
+      await dictation.stop();
       // Save shared text first (merging with anyone else's concurrent edit), then solve with the saved text
       if (discussionNotes !== (notesBaseline.current ?? '')) {
         await saveDiscussionNotes.mutateAsync(discussionNotes);
@@ -416,6 +451,14 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
           <TabsContent value="discuss" className="space-y-4">
             <div className="space-y-2">
               <Label>Discussion Notes</Label>
+              <DictationControl
+                isSupported={dictation.isSupported}
+                isListening={dictation.field === 'notes'}
+                interim={dictation.interim}
+                onToggle={() => dictation.toggle('notes')}
+                autoStart={dictation.autoStart}
+                onAutoStartChange={dictation.setAutoStart}
+              />
               <Textarea
                 placeholder="Add discussion notes..."
                 value={discussionNotes}
@@ -431,8 +474,8 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
             {(issue.status === 'Discussing' || issue.status === 'Open') && (
               <Button
                 onClick={() => {
-                  // Save notes before moving to solve
-                  if (discussionNotes && discussionNotes !== (notesBaseline.current ?? '')) {
+                  // Save notes before moving to solve (dictation saves its own text when it stops)
+                  if (dictation.field !== 'notes' && discussionNotes && discussionNotes !== (notesBaseline.current ?? '')) {
                     saveDiscussionNotes.mutate(discussionNotes);
                   }
                   // Transition to Discussing if still Open
@@ -451,6 +494,12 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
           <TabsContent value="solve" className="space-y-4">
             <div className="space-y-2">
               <Label>Solution *</Label>
+              <DictationControl
+                isSupported={dictation.isSupported}
+                isListening={dictation.field === 'solution'}
+                interim={dictation.interim}
+                onToggle={() => dictation.toggle('solution')}
+              />
               <Textarea
                 placeholder="Describe the solution..."
                 value={solution}
