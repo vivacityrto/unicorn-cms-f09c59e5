@@ -102,7 +102,7 @@ CREATE OR REPLACE FUNCTION public.protect_todos_in_completed_meeting()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
-AS \$
+AS $function$
 DECLARE
   v_status text;
 BEGIN
@@ -129,7 +129,7 @@ BEGIN
 
   RETURN COALESCE(NEW, OLD);
 END;
-\$;
+$function$;
 
 -- Backfill: create_todos_from_issue() inserts its to-dos and its 'bulk_create' audit row in
 -- one transaction, so they share created_at / created_by / tenant_id and the audit row's
