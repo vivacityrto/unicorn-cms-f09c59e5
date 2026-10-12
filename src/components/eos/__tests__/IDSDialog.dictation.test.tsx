@@ -6,8 +6,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 const saveMock = vi.fn();
+const auth = vi.hoisted(() => ({ profile: { user_uuid: 'attendee-1', tenant_id: 6372 } as Record<string, unknown> }));
 
-vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'attendee-1', tenant_id: 6372 } }) }));
+vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: auth.profile }) }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 vi.mock('@/hooks/useEosOptions', () => ({
   useEosStatusTransitions: () => ({ data: [] }),
@@ -80,6 +81,7 @@ beforeEach(() => {
   FakeRecognition.instances = [];
   (window as unknown as { SpeechRecognition: unknown }).SpeechRecognition = FakeRecognition;
   localStorage.clear();
+  auth.profile = { user_uuid: 'attendee-1', tenant_id: 6372 };
   saveMock.mockReset();
   saveMock.mockResolvedValue(undefined);
 });
@@ -241,5 +243,66 @@ describe('IDSDialog: dictation autosave', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(saveMock).toHaveBeenCalledTimes(1);
     expect(latest().started).toBe(false);
+  });
+});
+
+describe('IDSDialog: dictation name labels', () => {
+  beforeEach(() => {
+    auth.profile = { user_uuid: 'attendee-1', tenant_id: 6372, first_name: 'Nova' };
+  });
+
+  it('labels dictated notes with the speaker name and continues the line while they keep talking', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.click(screen.getByRole('button', { name: /^dictate$/i }));
+    act(() => latest().say('we should cancel the unused tools'));
+    act(() => latest().say('and review GHL next month'));
+
+    expect(notesField().value).toBe('Nova: We should cancel the unused tools and review GHL next month');
+  });
+
+  it('starts a new labelled line when someone else spoke last', async () => {
+    const user = userEvent.setup();
+    renderDialog({ outcome_note: 'Angela: We need two more consultants.' });
+
+    await user.click(screen.getByRole('button', { name: /^dictate$/i }));
+    act(() => latest().say('agreed'));
+
+    expect(notesField().value).toBe('Angela: We need two more consultants.\nNova: Agreed');
+  });
+
+  it('the label can be switched off, and the choice is remembered', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    const toggle = screen.getByRole('switch', { name: /label with my name/i });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(localStorage.getItem('eos-ids-dictation-label-name')).toBe('0');
+
+    await user.click(screen.getByRole('button', { name: /^dictate$/i }));
+    act(() => latest().say('no label please'));
+    expect(notesField().value).toBe('No label please');
+  });
+
+  it('never labels the solution', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.click(screen.getByRole('tab', { name: /solve/i }));
+    await user.click(screen.getByRole('button', { name: /^dictate$/i }));
+    act(() => latest().say('cancel two subscriptions'));
+
+    expect((screen.getByPlaceholderText(/describe the solution/i) as HTMLTextAreaElement).value).toBe(
+      'Cancel two subscriptions',
+    );
+  });
+
+  it('shows no label switch on the Solve tab', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.click(screen.getByRole('tab', { name: /solve/i }));
+    expect(screen.queryByRole('switch', { name: /label with my name/i })).not.toBeInTheDocument();
   });
 });

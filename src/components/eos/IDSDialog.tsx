@@ -220,6 +220,7 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
     activeTab,
     issueId: issue?.id,
     issueStatus: issue?.status,
+    speakerName: profile?.first_name ?? undefined,
     notes: discussionNotes,
     solution,
     addText: (field, update) => (field === 'notes' ? setDiscussionNotes(update) : setSolution(update)),
@@ -458,6 +459,8 @@ export function IDSDialog({ open, onOpenChange, issue, meetingId, onIssueChanged
                 onToggle={() => dictation.toggle('notes')}
                 autoStart={dictation.autoStart}
                 onAutoStartChange={dictation.setAutoStart}
+                labelWithName={dictation.labelWithName}
+                onLabelWithNameChange={dictation.setLabelWithName}
               />
               <Textarea
                 placeholder="Add discussion notes..."
