@@ -166,7 +166,7 @@
     {
       "id": "link-eos-todos-to-issue",
       "file": "supabase/migrations/20261012030000_link_eos_todos_to_issue.sql",
-      "categories": ["data-mutation"],
+      "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Adds nullable eos_todos.issue_id (FK to eos_issues, ON DELETE SET NULL), updates create_todos_from_issue to set it and the completed-meeting guard to let issue_id through. The only data change is a one-off backfill UPDATE that sets issue_id on to-dos NOT already linked, matched to their issue by the create_todos_from_issue bulk_create audit row (same created_at / created_by / tenant_id): 19 rows, each matched exactly once, 0 cross-tenant, no other column touched, idempotent (re-run touches 0 rows). The flagged INSERT/UPDATE inside the function body is the existing create_todos_from_issue logic, executed per call and not at migration time. Dry-run against production inside a rolled-back transaction before applying. See docs/audit-log/entries/2026-10-12-link-eos-todos-to-ids-issue.md. Pending Carl's review via this PR.",
