@@ -53,6 +53,7 @@ export interface TeamProfileFieldsProps {
   onSave: () => void;
   currentUserId?: string;  // To determine if editing self or another user
   isCurrentUserSuperAdmin?: boolean;  // To know if current user can edit others
+  canManageTeamUsers?: boolean;  // Holds admin.team_users.manage (full) - may edit other team members
 }
 
 const DAYS = [
@@ -82,7 +83,7 @@ const HOLIDAY_REGIONS = [
   { value: 'US', label: 'United States' },
 ];
 
-export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurrentUserSuperAdmin }: TeamProfileFieldsProps) {
+export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurrentUserSuperAdmin, canManageTeamUsers = false }: TeamProfileFieldsProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
@@ -193,8 +194,8 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
         });
         data = result.data;
         error = result.error;
-      } else if (isCurrentUserSuperAdmin) {
-        // SuperAdmin editing another team member - use admin RPC
+      } else if (isCurrentUserSuperAdmin || canManageTeamUsers) {
+        // Staff with team-user management editing another team member - use admin RPC
         const result = await supabase.rpc('update_team_member_profile', {
           p_target_user_id: user.user_uuid,
           p_linkedin_url: formData.linkedin_url || null,

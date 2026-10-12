@@ -15,6 +15,7 @@ import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
 import { TimeInboxSettings } from '@/components/profile/TimeInboxSettings';
 import { OutlookIntegration } from '@/components/profile/OutlookIntegration';
 import { CelebrationSettings } from '@/components/profile/CelebrationSettings';
+import { usePermission } from '@/hooks/usePermission';
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
@@ -77,6 +78,8 @@ export default function UserProfile() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  // UI gate only: update-user-profile and RLS re-authorise server-side.
+  const canManageTeamUsers = usePermission('admin.team_users.manage', 'full');
 
   const fetchCurrentUser = async () => {
     try {
@@ -198,8 +201,8 @@ export default function UserProfile() {
 
   const canEditProfile = user && currentUser && (
     user.user_uuid === currentUser.user_uuid || // User editing themselves
-    (currentUser.unicorn_role === 'Super Admin' && 
-     (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team')) || // Super Admin
+    (canManageTeamUsers &&
+     (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team')) || // Internal staff holding admin.team_users.manage (Super Admin always does)
     (currentUser.unicorn_role === 'Admin' && 
      (currentUser.user_type === 'Client' || currentUser.user_type === 'Client Parent') && 
      user.tenant_id === currentUser.tenant_id) // Client Admin
@@ -325,6 +328,7 @@ export default function UserProfile() {
             }}
             currentUserId={currentUser.user_uuid}
             isCurrentUserSuperAdmin={isSuperAdmin}
+            canManageTeamUsers={canManageTeamUsers}
           />
 
           {/* CSC Profile Fields (for CSC users) */}
