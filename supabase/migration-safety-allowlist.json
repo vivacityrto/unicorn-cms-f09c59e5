@@ -2,6 +2,15 @@
   "version": 1,
   "entries": [
     {
+      "id": "grant-team-users-manage-to-internal-staff",
+      "file": "supabase/migrations/20261012020000_grant_team_users_manage_to_internal_staff.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved (2026-10-12): upserts 5 role_permissions rows (admin.team_users.manage = full for Team Leader, Team Member, Integrator, BGT, CSC) so internal staff can edit users' profiles; idempotent ON CONFLICT (role, feature_key). The remaining flagged lines are the update_team_member_profile function body (keyed UPDATE ... WHERE user_uuid = p_target_user_id, unchanged from the prior definition) and an error string containing the word update.",
+      "expires": "2026-11-11"
+    },
+    {
       "id": "add-system-account-role-and-reclassify",
       "file": "supabase/migrations/20260915025352_add_system_account_role_and_reclassify.sql",
       "categories": ["data-mutation", "destructive-mutation"],

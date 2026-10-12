@@ -74,6 +74,12 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
   // Can toggle status if SuperAdmin viewing another user's profile
   const canToggleStatus = isSuperAdmin && !isViewingOwnProfile;
 
+  // Avatar storage is own-folder or SuperAdmin only. Staff who can edit someone
+  // else's profile via admin.team_users.manage must not see avatar controls,
+  // otherwise the upload would land in their own folder and be written onto
+  // the viewed user's row.
+  const canChangeAvatar = canEdit && (isUploadingForSelf || isSuperAdmin);
+
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'U';
 
   const getRoleBadgeVariant = () => {
@@ -333,7 +339,7 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
             <AvatarFallback className="text-3xl font-semibold">{initials}</AvatarFallback>
           </Avatar>
           
-          {canEdit && (
+          {canChangeAvatar && (
             <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full">
               <label htmlFor="avatar-upload" className="cursor-pointer">
                 <div className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-2 shadow-lg transition-colors">
