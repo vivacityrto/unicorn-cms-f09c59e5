@@ -8,13 +8,16 @@ vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { tenant_id: 6372
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 
 // Records which filter the hook applied to eos_todos.
-const seen: { or?: string; eq?: [string, unknown] } = {};
+const seen: { or?: string; eq?: [string, unknown]; select?: string } = {};
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: () => {
       const chain: Record<string, unknown> = {};
-      chain.select = () => chain;
+      chain.select = (cols: string) => {
+        seen.select = cols;
+        return chain;
+      };
       chain.or = (filter: string) => {
         seen.or = filter;
         return chain;
@@ -48,6 +51,13 @@ describe('useMeetingTodos', () => {
 
     expect(seen.or).toBe('meeting_id.eq.m-1,and(status.eq.Open,tenant_id.eq.6372)');
     expect(seen.eq).toBeUndefined();
+  });
+
+  it('also loads the title of the IDS issue each to-do came from, for the row tag', async () => {
+    const { result } = renderHook(() => useMeetingTodos('m-1', 6372), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(seen.select).toContain('issue:eos_issues!eos_todos_issue_id_fkey(title)');
   });
 
   it("without a tenant, is just this meeting's to-dos", async () => {
