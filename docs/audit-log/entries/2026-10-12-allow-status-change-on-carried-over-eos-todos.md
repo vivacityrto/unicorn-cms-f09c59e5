@@ -1,5 +1,7 @@
 # Audit: 2026-10-12 — allow-status-change-on-carried-over-eos-todos
 
+> Scope was widened during review: carried-over to-dos can also be **re-dated**, not just marked done.
+
 **Trigger:** drift-surfaced (reported live during the 12 Oct 2026 L10: "we can't change the status" of to-dos from an earlier meeting)
 **Scope:** the `trg_protect_todos_in_completed_meeting` trigger on `public.eos_todos` in
 production (`yxkgdalkbrriasiyyrwk`) and the live To-Do List segment. Did not change
@@ -26,32 +28,31 @@ production (`yxkgdalkbrriasiyyrwk`) and the live To-Do List segment. Did not cha
 - `supabase/migrations/20261012020000_allow_status_change_on_carried_over_eos_todos.sql`:
   new `protect_todos_in_completed_meeting()` trigger function and the trigger re-pointed at
   it. For a to-do whose meeting is closed/completed:
-  - `status`, `completed_at`, `updated_at` changes: **allowed**
-  - any other column changed (title, owner, due date, `meeting_id`, ...): blocked
+  - `status`, `completed_at`, `due_date`, `updated_at` changes: **allowed**
+  - any other column changed (title, owner, `meeting_id`, ...): blocked
   - `DELETE`: blocked
   - moving a to-do into a closed/completed meeting: blocked
   Behaviour for to-dos of open meetings is unchanged.
-- No frontend change.
+- `src/components/eos/TodoDueDateButton.tsx` (new) and `LiveMeetingView.tsx`: the due date on each To-Do List row is now a click-to-change date picker (stops click propagation so it does not toggle done), broadcasting `todo_change` so every attendee sees the new date. Test: `TodoDueDateButton.test.tsx`.
 
 ## Verification
 Dry run against production inside a transaction that was deliberately rolled back (all
 state confirmed unchanged afterwards: old trigger function still attached, new function
-absent, 24 open to-dos, no edited titles). Nine cases against real rows:
+absent, no edited rows). Nine cases against real rows:
 1. mark complete (closed meeting) — allowed
 2. reopen — allowed
-3. title edit (closed) — blocked
-4. status + title together (closed) — blocked
-5. delete (closed) — blocked
-6. move out of the closed meeting — blocked
-7. move an open-meeting to-do into a closed meeting — blocked
-8. title edit (in-progress meeting) — allowed
-9. delete (in-progress meeting) — allowed
+3. re-date (closed meeting) — allowed
+4. re-date + title together (closed) — blocked
+5. owner change (closed) — blocked
+6. delete (closed) — blocked
+7. move out of the closed meeting — blocked
+8. move an open-meeting to-do into a closed meeting — blocked
+9. edit title + due date (in-progress meeting) — allowed
 
 ## Decisions
-- Narrow the guard rather than drop it: closed-meeting to-dos stay protected from edits
-  and deletes; only the review action (done / not done) is opened up. A to-do's due date
-  and owner are still frozen once its meeting closes; if the team wants to re-date
-  carried-over items during review, that is a separate, deliberate widening.
+- Narrow the guard rather than drop it: closed-meeting to-dos stay protected from title/owner
+  edits and deletes; only the review actions (done / not done / new due date) are opened up.
+  Re-dating was requested during review of this change.
 - New function rather than editing `protect_completed_meeting_data()`, which
   `eos_headlines` still depends on. No signature change, so no overload risk.
 - **Rollback:** re-point the trigger at the old shared function:
@@ -60,8 +61,8 @@ absent, 24 open to-dos, no edited titles). Nine cases against real rows:
   (the new function can then be dropped).
 
 ## Open questions parked
-- Do the L10 attendees want to change the due date or owner of a carried-over to-do during
-  review? Today only done / not done works.
+- Re-assigning the owner of a carried-over to-do is still blocked; add `owner_id` to the
+  allowed list if the team wants that too.
 - `eos_issues` rows from closed meetings are not covered by this trigger (it is on
   `eos_todos` and `eos_headlines` only); worth checking if IDS issues carry over the same
   way and hit a similar freeze elsewhere.

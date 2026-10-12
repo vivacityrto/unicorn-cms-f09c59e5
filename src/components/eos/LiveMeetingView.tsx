@@ -39,6 +39,7 @@ import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
 import { IssuesQueue } from '@/components/eos/IssuesQueue';
 import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
+import { TodoDueDateButton } from '@/components/eos/TodoDueDateButton';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
@@ -531,6 +532,13 @@ export const LiveMeetingView = () => {
     broadcastChange('todo_change');
   };
 
+  // Re-date a to-do during review (carried-over items included).
+  const handleChangeTodoDueDate = async (todo: EosTodo, dueDate: string) => {
+    if (dueDate === todo.due_date) return;
+    await updateTodo.mutateAsync({ id: todo.id, due_date: dueDate });
+    broadcastChange('todo_change');
+  };
+
   // Render segment content based on type — segment_type is a real stored
   // column (M9), always meaningfully derived at write time (from the
   // Configuration directly, or via keyword-match for the one remaining
@@ -882,7 +890,12 @@ export const LiveMeetingView = () => {
                         {todo.title}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Due: {todo.due_date ? format(new Date(todo.due_date), 'dd/MM/yyyy') : 'Not set'}
+                        Due:{' '}
+                        <TodoDueDateButton
+                          dueDate={todo.due_date}
+                          disabled={updateTodo.isPending}
+                          onChange={(due_date) => handleChangeTodoDueDate(todo, due_date)}
+                        />
                         {todo.meeting_id !== meetingId && (
                           <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
                             From an earlier meeting

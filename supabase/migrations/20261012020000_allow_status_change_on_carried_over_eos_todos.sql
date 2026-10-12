@@ -1,4 +1,4 @@
--- Let carried-over EOS to-dos be marked done / reopened after their meeting closes.
+-- Let carried-over EOS to-dos be marked done / reopened / re-dated after their meeting closes.
 --
 -- trg_protect_todos_in_completed_meeting used the shared protect_completed_meeting_data()
 -- guard, which blocks EVERY update or delete of a to-do whose meeting is closed. Since
@@ -6,10 +6,10 @@
 -- reviewed ("did you do it?"), but those to-dos belong to closed meetings, so ticking one
 -- failed with "Cannot modify data for completed meeting".
 --
--- To-dos are living items that carry over, so reviewing one is allowed. The new guard keeps
+-- To-dos are living items that carry over, so reviewing one (done / not done / new due date) is allowed. The new guard keeps
 -- every other protection:
---   * status / completed_at / updated_at changes on a closed meeting's to-do: allowed
---   * any other column changed (title, owner, due date, meeting_id ...): blocked
+--   * status / completed_at / due_date (and updated_at) changes on a closed meeting's to-do: allowed
+--   * any other column changed (title, owner, meeting_id ...): blocked
 --   * DELETE: blocked
 --   * moving a to-do into a closed meeting: blocked
 -- Other tables (eos_headlines) keep the shared protect_completed_meeting_data() function.
@@ -26,8 +26,8 @@ BEGIN
     SELECT status INTO v_status FROM eos_meetings WHERE id = OLD.meeting_id;
     IF v_status IN ('closed', 'completed') THEN
       IF TG_OP = 'UPDATE'
-         AND (to_jsonb(NEW) - ARRAY['status', 'completed_at', 'updated_at'])
-           = (to_jsonb(OLD) - ARRAY['status', 'completed_at', 'updated_at']) THEN
+         AND (to_jsonb(NEW) - ARRAY['status', 'completed_at', 'updated_at', 'due_date'])
+           = (to_jsonb(OLD) - ARRAY['status', 'completed_at', 'updated_at', 'due_date']) THEN
         RETURN NEW;
       END IF;
       RAISE EXCEPTION 'Cannot modify data for completed meeting. Create a new item instead.';

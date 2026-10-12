@@ -7,7 +7,7 @@ Newest first.
 
 ---
 
-- [2026-10-12 — Carried-over EOS to-dos can be marked done after their meeting closes](entries/2026-10-12-allow-status-change-on-carried-over-eos-todos.md) — the live To-Do List shows open to-dos from earlier meetings, but a trigger froze every to-do of a closed meeting, so ticking one failed. The guard now allows status/completed_at changes only and still blocks edits, deletes and moves into closed meetings. Dry-run in a rolled-back transaction against 9 cases; migration not yet applied.
+- [2026-10-12 — Carried-over EOS to-dos can be marked done after their meeting closes](entries/2026-10-12-allow-status-change-on-carried-over-eos-todos.md) — the live To-Do List shows open to-dos from earlier meetings, but a trigger froze every to-do of a closed meeting, so ticking one failed. The guard now allows status/completed_at/due_date changes only (mark done, reopen, re-date) and still blocks other edits, deletes and moves into closed meetings. Dry-run in a rolled-back transaction against 9 cases; migration not yet applied.
 
 - [2026-10-12 — Drop the legacy 2-argument create_todos_from_issue](entries/2026-10-12-drop-legacy-create-todos-from-issue.md) — production had two overloads of the EOS IDS to-do RPC after a parameter was added with CREATE OR REPLACE. The only caller already uses the 3-argument version and nothing else in the database references the old one, so it is dropped to remove the ambiguous-overload risk. No behaviour change; migration not yet applied.
 
