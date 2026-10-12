@@ -153,6 +153,15 @@
       "owner": "Carl",
       "reason": "Requested by Angela. Inserts exactly 2 lookup rows (aat_support, asqa_support) into public.dd_work_sub_type under the consultation category so they appear in the Add Note / Add Time Sub Type dropdown. ON CONFLICT (code) DO NOTHING, so a re-run never changes existing rows; no existing row is updated or deleted, and no schema, RLS, grant or trigger change. Pending Carl's review via this PR.",
       "expires": "2026-10-30"
+    },
+    {
+      "id": "allow-status-change-on-carried-over-eos-todos",
+      "file": "supabase/migrations/20261012020000_allow_status_change_on_carried_over_eos_todos.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "False positive. The flagged UPDATE is the words BEFORE DELETE OR UPDATE in the CREATE TRIGGER definition, not an UPDATE or DELETE statement. This migration performs NO data changes: it creates one trigger function (protect_todos_in_completed_meeting) and re-points the existing trg_protect_todos_in_completed_meeting trigger at it, so to-dos of a closed meeting can have status/completed_at changed (carried-over to-dos reviewed in the live To-Do List) while every other edit, DELETE, and moving a to-do into a closed meeting stay blocked. Dry-run against production inside a rolled-back transaction before applying (9 cases, all as intended, nothing persisted). See docs/audit-log/entries/2026-10-12-allow-status-change-on-carried-over-eos-todos.md. Pending Carl's review via this PR.",
+      "expires": "2026-10-30"
     }
   ]
 }
