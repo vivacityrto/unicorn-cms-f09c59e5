@@ -50,6 +50,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { GroupMembersPanel } from '@/components/contact-directory/GroupMembersPanel';
 import { SortableHead } from '@/components/contact-directory/SortableHead';
 import { chunk, summariseSelection } from '@/lib/contactDirectory/selection';
+import { ACTIVE_CLIENT_STATUS, clientStatusOptions, matchesClientStatus } from '@/lib/contactDirectory/clientStatus';
+import { ClientLink } from '@/components/contact-directory/ClientLink';
 import { nextSort, sortDirectoryRows, type DirectorySort, type DirectorySortKey } from '@/lib/contactDirectory/sortRows';
 import { RemoveMemberConfirm, type RemoveMemberRequest } from '@/components/contact-directory/RemoveMemberConfirm';
 import { usePermission } from '@/hooks/usePermission';
@@ -73,6 +75,8 @@ interface DirectoryRow {
   position_type: string | null;
   status: string;
   created_at: string;
+  /** The client's own status (tenants.status), not the person's. */
+  tenant_status: string | null;
 }
 
 interface ContactGroup {
@@ -129,7 +133,9 @@ export default function ContactDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [tenantFilters, setTenantFilters] = useState<string[]>([]);
   const [tenantFilterDialogOpen, setTenantFilterDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Default to active people at active clients; wider views are an explicit choice.
+  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [clientStatusFilter, setClientStatusFilter] = useState<string>(ACTIVE_CLIENT_STATUS);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -335,6 +341,9 @@ export default function ContactDirectory() {
     if (statusFilter !== 'all') {
       filtered = filtered.filter((r) => r.status === statusFilter);
     }
+    if (clientStatusFilter !== 'all') {
+      filtered = filtered.filter((r) => matchesClientStatus(r.tenant_status, clientStatusFilter));
+    }
     if (sourceFilter !== 'all') {
       filtered = filtered.filter((r) => r.source === sourceFilter);
     }
@@ -345,11 +354,13 @@ export default function ContactDirectory() {
     }
     // Sorting is applied last so the table, its pages and the CSV export agree on order.
     return sortDirectoryRows(filtered, sort, (value) => positionTypeLabel(value, positionTypeOptions));
-  }, [rows, searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter, sort, positionTypeOptions]);
+  }, [rows, searchQuery, tenantFilters, statusFilter, clientStatusFilter, sourceFilter, positionFilter, sort, positionTypeOptions]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, tenantFilters, statusFilter, sourceFilter, positionFilter, sort]);
+  }, [searchQuery, tenantFilters, statusFilter, clientStatusFilter, sourceFilter, positionFilter, sort]);
+
+  const clientStatusChoices = useMemo(() => clientStatusOptions(rows, tenantStatusOptions), [rows, tenantStatusOptions]);
 
   const pagedRows = filteredRows.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
@@ -608,6 +619,19 @@ export default function ContactDirectory() {
                   <SelectItem value="disabled">Disabled</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
+                <SelectTrigger className="w-full md:w-[180px]" aria-label="Client status">
+                  <SelectValue placeholder="Client status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All client statuses</SelectItem>
+                  {clientStatusChoices.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      Client: {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={positionFilter} onValueChange={setPositionFilter}>
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Position type" />
@@ -673,7 +697,11 @@ export default function ContactDirectory() {
                         subtitle={r.email}
                         status={<Badge variant={r.source === 'user' ? 'default' : 'outline'}>{r.source}</Badge>}
                         fields={[
-                          { label: 'Client', value: r.tenant_name, priority: 'primary' },
+                          {
+                            label: 'Client',
+                            value: <ClientLink tenantId={r.tenant_id} name={r.tenant_name} status={r.tenant_status} statusOptions={tenantStatusOptions} />,
+                            priority: 'primary',
+                          },
                           {
                             label: 'Position',
                             value: (
@@ -742,7 +770,9 @@ export default function ContactDirectory() {
                               {r.first_name} {r.last_name || ''}
                             </TableCell>
                             <TableCell className={cn('text-sm text-muted-foreground', columnVisibility.lg)}>{r.email}</TableCell>
-                            <TableCell className="text-sm">{r.tenant_name}</TableCell>
+                            <TableCell className="text-sm">
+                              <ClientLink tenantId={r.tenant_id} name={r.tenant_name} status={r.tenant_status} statusOptions={tenantStatusOptions} />
+                            </TableCell>
                             <TableCell className={columnVisibility.xl} onClick={(e) => e.stopPropagation()}>
                               <Select
                                 value={r.position_type || '__none__'}

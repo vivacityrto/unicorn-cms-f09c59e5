@@ -71,6 +71,27 @@ describe('GroupMembersPanel', () => {
     expect(names()).toEqual(['Person01 Test', 'Person02 Test', 'Person03 Test', '(no longer in the directory)']);
   });
 
+  it('links each client to its page in a new tab and flags clients that are not active', () => {
+    render(
+      <GroupMembersPanel
+        groupName="G"
+        members={refs([1, 2])}
+        directory={[
+          person(1, { tenant_id: 7, tenant_name: 'Acme RTO', tenant_status: 'active' }),
+          person(2, { tenant_id: 9, tenant_name: 'All States', tenant_status: 'cancelled' }),
+        ]}
+        positionTypeOptions={[]}
+      />,
+    );
+    const acme = screen.getByRole('link', { name: 'Open client Acme RTO in a new tab' });
+    expect(acme).toHaveAttribute('href', '/tenant/7');
+    expect(acme).toHaveAttribute('target', '_blank');
+    expect(acme).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(screen.getByRole('link', { name: 'Open client All States in a new tab' })).toHaveAttribute('href', '/tenant/9');
+    expect(screen.getByText('(cancelled)')).toBeInTheDocument();
+    expect(screen.getAllByText(/^\(/)).toHaveLength(1); // active clients are not flagged
+  });
+
   it('says so when the group is empty', () => {
     render(<GroupMembersPanel groupName="Empty" members={[]} directory={[]} positionTypeOptions={[]} />);
     expect(screen.getByText('This group has no members yet.')).toBeInTheDocument();

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { positionTypeLabel, type PositionTypeOption } from '@/lib/roles/positionType';
 import { nextSort, sortGroupMembers, type DirectorySort, type DirectorySortKey } from '@/lib/contactDirectory/sortRows';
 import { SortableHead } from './SortableHead';
+import { ClientLink } from './ClientLink';
 import {
   filterGroupMembers,
   resolveGroupMembers,
@@ -92,7 +93,9 @@ export function GroupMembersPanel({ groupName, members, directory, positionTypeO
                 <TableRow key={m.key}>
                   <TableCell className="font-medium">{m.name}</TableCell>
                   <TableCell className="break-all">{m.email || '—'}</TableCell>
-                  <TableCell>{m.tenantName || '—'}</TableCell>
+                  <TableCell>
+                    <ClientLink tenantId={m.tenantId ?? null} name={m.tenantName} status={m.tenantStatus} />
+                  </TableCell>
                   <TableCell>{m.source === 'user' ? 'User' : 'Contact'}</TableCell>
                   <TableCell>{m.positionType ? positionTypeLabel(m.positionType, positionTypeOptions) : '—'}</TableCell>
                   <TableCell>
