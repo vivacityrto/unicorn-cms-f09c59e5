@@ -180,6 +180,15 @@
       "owner": "Carl",
       "reason": "Adds nullable eos_todos.issue_id (FK to eos_issues, ON DELETE SET NULL), updates create_todos_from_issue to set it and the completed-meeting guard to let issue_id through. The only data change is a one-off backfill UPDATE that sets issue_id on to-dos NOT already linked, matched to their issue by the create_todos_from_issue bulk_create audit row (same created_at / created_by / tenant_id): 19 rows, each matched exactly once, 0 cross-tenant, no other column touched, idempotent (re-run touches 0 rows). The flagged INSERT/UPDATE inside the function body is the existing create_todos_from_issue logic, executed per call and not at migration time. Dry-run against production inside a rolled-back transaction before applying. See docs/audit-log/entries/2026-10-12-link-eos-todos-to-ids-issue.md. Pending Carl's review via this PR.",
       "expires": "2026-10-30"
+    },
+    {
+      "id": "client-status-cascade-to-people",
+      "file": "supabase/migrations/20261012040000_client_status_cascade_to_people.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Pending Carl's review via this PR. Installs the client-status cascade: a restore ledger table, two functions and a trigger on tenants. THE MIGRATION ITSELF CHANGES NO EXISTING ROW: every flagged INSERT/UPDATE sits inside the function bodies (cascade_deactivate_tenant_people, cascade_restore_tenant_people) and runs only when a client's status changes (disable users / archive contacts for that client, or restore exactly the people recorded in the ledger), each keyed by explicit id arrays; nothing is deleted. The migration also replaces update_tenant_status() so it never overwrites a status other than active/inactive. Dry-run against production inside a rolled-back transaction (cancel then reactivate a client, a person in two clients, and the legacy-trigger guard). See docs/audit-log/entries/2026-10-12-client-status-cascade-to-people.md.",
+      "expires": "2026-10-30"
     }
   ]
 }
