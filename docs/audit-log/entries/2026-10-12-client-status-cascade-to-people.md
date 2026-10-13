@@ -39,3 +39,12 @@
 ## Applied
 
 - Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 12 October 2026 via the Supabase MCP as `client_status_cascade_to_people`, **before** the PR merged. Verified afterwards: the ledger table exists empty with RLS on and `authenticated` holding SELECT only; the trigger `trg_cascade_tenant_status_to_people` is enabled; the three new functions are executable by `postgres` and `service_role` only; the legacy `update_tenant_status()` now carries the `status IN ('active','inactive')` guard. **No existing person changed**: disabled users (394) and archived contacts (18) are identical to the counts taken immediately before. The one-off clean-up of people at clients that are already non-active has not been run.
+
+## One-off clean-up (run 12 October 2026, Carl-approved)
+
+- Carl reviewed the dry-run list and approved the clean-up, excluding the QA fixture clients "Test RTO" (7533), "Test RTO A" (7517) and "Test RTO B" (7546).
+- Dry run first (`cascade_deactivate_tenant_people(..., dry_run => true)` per client): 47 users and 6 contacts across 32 clients, matching the reviewed list minus the 16 QA users.
+- Run: `cascade_deactivate_tenant_people(client, client_status, false)` for every client whose status is not `active`, excluding the three QA clients, in one transaction.
+- Result: disabled users 394 -> 438 (+44) and archived contacts 18 -> 24 (+6). 44 rather than 47 because three people belong to two non-active clients (counted once per client in the dry run, disabled once). The ledger holds 44 user rows and 6 contact rows across 30 clients, all unrestored, so reactivating a client restores exactly them.
+- Checks after the run: no client's status changed (counts identical: active 58, cancelled 29, inactive 324, completed 2, disabled 4, on hold 2, in arrears 1, terminated 1, archived 1); zero enabled users remain whose only clients are non-active; the QA fixtures still have 16 enabled users and no ledger rows.
+- Still open: whether the QA fixture clients should be permanently exempt from the cascade. They are `cancelled` today, so nothing will happen to them unless one is moved to active and back out again.
