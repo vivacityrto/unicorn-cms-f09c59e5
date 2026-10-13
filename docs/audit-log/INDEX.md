@@ -7,7 +7,7 @@ Newest first.
 
 ---
 
-- [2026-10-12 — Contact Directory shows the client's status](entries/2026-10-12-contact-directory-tenant-status.md) — the directory only reported a person's own status, so contacts at cancelled clients still read as active. Adds tenant_status to get_admin_contact_directory() (read-only drop and re-create), defaults the page to active people at active clients, adds a Client status filter and a client link. Part 1 of 2; deactivating a client's people is a separate change. Migration not yet applied.
+- [2026-10-12 — Contact Directory shows the client's status](entries/2026-10-12-contact-directory-tenant-status.md) — the directory only reported a person's own status, so contacts at cancelled clients still read as active. Adds tenant_status to get_admin_contact_directory() (read-only drop and re-create), defaults the page to active people at active clients, adds a Client status filter and a client link. Part 1 of 2; deactivating a client's people is a separate change. Migration applied 12 October 2026.
 
 - [2026-10-12 — EOS to-dos linked to the IDS issue they came from](entries/2026-10-12-link-eos-todos-to-ids-issue.md) — IDS to-dos recorded no link to their issue, so the dialog could only show those added in the current session. Adds eos_todos.issue_id, has create_todos_from_issue set it, backfills 19 existing to-dos from the audit trail, and lets the closed-meeting guard pass issue_id. Dry-run in a rolled-back transaction; migration not yet applied.
 

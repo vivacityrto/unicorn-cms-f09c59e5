@@ -23,3 +23,7 @@
 ## Open questions parked
 
 - What should happen to people when a client leaves active? Handled in the follow-up (part 2), which also has to account for a legacy trigger, `update_tenant_status`, that rewrites `tenants.status` to `active`/`inactive` whenever any user's disabled/archived flag changes, and for the 34 users who belong to more than one client.
+
+## Applied
+
+- Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 12 October 2026 via the Supabase MCP as `contact_directory_tenant_status`, **before** the page change merges. Verified afterwards: exactly one `get_admin_contact_directory` function (no stray overload), result columns now end with `tenant_status`, still `SECURITY DEFINER` and `STABLE`, and execute privileges are the same as before (`authenticated` and `service_role`, plus the pre-existing default grants).
