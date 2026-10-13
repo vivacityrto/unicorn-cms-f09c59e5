@@ -3,10 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 
 /**
- * One row of v_client_package_hours_recent — most recent up-to-10 time entries
- * per package_instance. Client-facing fields only: no user_id.
- * `is_billable` is exposed so the UI can badge non-billable ("Included")
- * entries; non-billable time is excluded from all package-hour aggregates.
+ * One row of get_client_package_hours_recent — every time log entry in the
+ * package's current renewal cycle, newest first. Client-facing fields only: no
+ * user_id. `duration_minutes`/`hours` are the minutes credited to THIS package
+ * (so the list sums to the "Where your hours went" total). `is_billable` lets
+ * the UI badge non-billable ("Included") entries; non-billable time is excluded
+ * from all package-hour aggregates.
  * Powers the "Recent work" panel inside PackageCard.
  */
 export interface ClientPackageHoursRecentRow {
@@ -23,11 +25,9 @@ export interface ClientPackageHoursRecentRow {
   is_billable: boolean;
 }
 
-const VIEW = 'v_client_package_hours_recent';
-
 /**
- * SECURITY: Explicit tenant_id filter is required because internal staff bypass
- * tenant RLS via get_current_user_tenant_id(). Mirrors useClientPackageDashboard.
+ * SECURITY: tenant-gated SECURITY DEFINER RPC — see useClientPackageHoursByType
+ * for why the old security_invoker view returned nothing to real client users.
  */
 export function useClientPackageHoursRecent(packageInstanceId: number | null) {
   const { activeTenantId } = useClientTenant();
@@ -39,33 +39,10 @@ export function useClientPackageHoursRecent(packageInstanceId: number | null) {
     queryFn: async (): Promise<ClientPackageHoursRecentRow[]> => {
       if (!activeTenantId || !packageInstanceId) return [];
 
-      // The view is not yet present in the generated supabase types, so we
-      // use a cast through `unknown` rather than leaking `any` into the codebase.
-      const { data, error } = await (supabase as unknown as {
-        from: (table: string) => {
-          select: (cols: string) => {
-            eq: (
-              col: string,
-              val: number,
-            ) => {
-              eq: (
-                col: string,
-                val: number,
-              ) => {
-                order: (
-                  col: string,
-                  opts: { ascending: boolean },
-                ) => Promise<{ data: ClientPackageHoursRecentRow[] | null; error: { message: string } | null }>;
-              };
-            };
-          };
-        };
-      })
-        .from(VIEW)
-        .select('*')
-        .eq('tenant_id', activeTenantId)
-        .eq('package_instance_id', packageInstanceId)
-        .order('rank_in_package', { ascending: true });
+      const { data, error } = await supabase.rpc('get_client_package_hours_recent', {
+        p_tenant_id: activeTenantId,
+        p_package_instance_id: packageInstanceId,
+      });
 
       if (error) throw new Error(error.message);
       return (data ?? []) as ClientPackageHoursRecentRow[];

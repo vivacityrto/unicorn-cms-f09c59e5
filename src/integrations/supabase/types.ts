@@ -71123,6 +71123,46 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      get_client_package_hours_by_type: {
+        Args: { p_package_instance_id: number; p_tenant_id: number }
+        Returns: {
+          hours: number
+          minutes: number
+          package_instance_id: number
+          pct_of_total: number
+          rank_in_package: number
+          tenant_id: number
+          work_sub_type: string
+          work_type: string
+        }[]
+      }
+      get_client_package_hours_recent: {
+        Args: { p_package_instance_id: number; p_tenant_id: number }
+        Returns: {
+          duration_minutes: number
+          entry_id: string
+          hours: number
+          is_billable: boolean
+          notes: string
+          occurred_at: string
+          package_instance_id: number
+          rank_in_package: number
+          tenant_id: number
+          work_sub_type: string
+          work_type: string
+        }[]
+      }
+      get_client_package_hours_timeline: {
+        Args: { p_package_instance_id: number; p_tenant_id: number }
+        Returns: {
+          activity_date: string
+          cumulative_hours_used: number
+          hours_on_day: number
+          package_instance_id: number
+          point_rank: number
+          tenant_id: number
+        }[]
+      }
       get_client_tenant_users: {
         Args: { p_tenant_id: number }
         Returns: {

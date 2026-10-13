@@ -406,7 +406,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           packageInstanceId={packageInstanceId}
         />
 
-        {/* Recent work — last 10 time entries, no staff names, no $ flag */}
+        {/* Time log — every entry in the current cycle, no staff names, no $ flag */}
         <PackageRecentWork
           entries={hoursRecent.data ?? []}
           isLoading={hoursRecent.isLoading}
