@@ -7,7 +7,7 @@ Newest first.
 
 ---
 
-- [2026-10-12 — Deactivate a client's people when the client leaves active](entries/2026-10-12-client-status-cascade-to-people.md) — trigger on tenants: active to anything else disables the client's users and archives its contacts (never internal staff, never someone still at another active client), and returning to active restores only who the cascade changed, via a ledger. Also stops the legacy update_tenant_status() trigger overwriting cancelled/on_hold etc. Dry-run in a rolled-back transaction; migration not yet applied; clean-up of existing people is a separate reviewed step.
+- [2026-10-12 — Deactivate a client's people when the client leaves active](entries/2026-10-12-client-status-cascade-to-people.md) — trigger on tenants: active to anything else disables the client's users and archives its contacts (never internal staff, never someone still at another active client), and returning to active restores only who the cascade changed, via a ledger. Also stops the legacy update_tenant_status() trigger overwriting cancelled/on_hold etc. Dry-run in a rolled-back transaction; migration applied 12 October 2026; clean-up of existing people is a separate reviewed step, not yet run.
 
 - [2026-10-12 — Contact Directory shows the client's status](entries/2026-10-12-contact-directory-tenant-status.md) — the directory only reported a person's own status, so contacts at cancelled clients still read as active. Adds tenant_status to get_admin_contact_directory() (read-only drop and re-create), defaults the page to active people at active clients, adds a Client status filter and a client link. Part 1 of 2; deactivating a client's people is a separate change. Migration applied 12 October 2026.
 

@@ -35,3 +35,7 @@
 - Exempt the QA fixture clients (Test RTO, Test RTO A, Test RTO B) from the one-off clean-up, and decide whether they should be permanently exempt from the cascade.
 - Any bulk or automated change of `tenants.status` (an import, a billing sync) will now deactivate people. Every code path that sets a client's status (the status dropdown, the lifecycle function, the import and any sync) has not been individually audited for this; worth watching after release.
 - Whether the Teams event registration should also skip people at non-active clients (deliberately left out for now).
+
+## Applied
+
+- Applied to the Unicorn project (`yxkgdalkbrriasiyyrwk`) on 12 October 2026 via the Supabase MCP as `client_status_cascade_to_people`, **before** the PR merged. Verified afterwards: the ledger table exists empty with RLS on and `authenticated` holding SELECT only; the trigger `trg_cascade_tenant_status_to_people` is enabled; the three new functions are executable by `postgres` and `service_role` only; the legacy `update_tenant_status()` now carries the `status IN ('active','inactive')` guard. **No existing person changed**: disabled users (394) and archived contacts (18) are identical to the counts taken immediately before. The one-off clean-up of people at clients that are already non-active has not been run.
