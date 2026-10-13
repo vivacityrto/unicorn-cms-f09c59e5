@@ -46,30 +46,53 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
     }
   }, [upsertAnswer.isPending, upsertAnswer.isError, isDirty]);
 
+  // Prompts with edits that haven't been confirmed saved yet. A refetch triggered by an
+  // earlier save must not overwrite these, or it clobbers what the user is still typing.
+  const unsavedKeys = useRef<Set<string>>(new Set());
+  const editVersions = useRef<Record<string, number>>({});
+
   useEffect(() => {
-    const answerMap: Record<string, LocalAnswerValue> = {};
-    myAnswers.forEach(answer => {
-      answerMap[answer.prompt_key] = answer.value_json as unknown as LocalAnswerValue;
+    setLocalAnswers(prev => {
+      const answerMap: Record<string, LocalAnswerValue> = {};
+      myAnswers.forEach(answer => {
+        answerMap[answer.prompt_key] = answer.value_json as unknown as LocalAnswerValue;
+      });
+      unsavedKeys.current.forEach(key => {
+        if (prev[key]) answerMap[key] = prev[key];
+      });
+      return answerMap;
     });
-    setLocalAnswers(answerMap);
   }, [myAnswers]);
 
   const handleAnswerChange = (promptKey: string, value: string | boolean) => {
-    const newAnswers = { ...localAnswers, [promptKey]: { value } };
-    setLocalAnswers(newAnswers);
+    setLocalAnswers(prev => ({ ...prev, [promptKey]: { value } }));
     setIsDirty(true);
+
+    const version = (editVersions.current[promptKey] || 0) + 1;
+    editVersions.current[promptKey] = version;
+    unsavedKeys.current.add(promptKey);
 
     if (debounceTimers.current[promptKey]) {
       clearTimeout(debounceTimers.current[promptKey]);
     }
     debounceTimers.current[promptKey] = setTimeout(() => {
-      upsertAnswer.mutate({
-        qc_id: qcId,
-        section_key: section.key,
-        prompt_key: promptKey,
-        value_json: { value },
-        respondent_role: respondentRole,
-      });
+      upsertAnswer
+        .mutateAsync({
+          qc_id: qcId,
+          section_key: section.key,
+          prompt_key: promptKey,
+          value_json: { value },
+          respondent_role: respondentRole,
+        })
+        .catch(() => {
+          // Error toast is handled in the mutation's onError.
+        })
+        .finally(() => {
+          // Only release the key if the user hasn't typed again since this save started.
+          if (editVersions.current[promptKey] === version) {
+            unsavedKeys.current.delete(promptKey);
+          }
+        });
     }, 1000);
   };
 
