@@ -63,9 +63,22 @@ policy, `get_client_package_dashboard`, `get_package_burndown`, or the staff-sid
   project (functions compile, return types match, grants and revokes run, smoke calls execute;
   zero functions left behind afterwards). QA has no `time_entries` rows, so result values were not
   compared there.
-- **Migration is written but not yet applied to production.** The frontend change depends on it,
-  so apply the migration before the app deploys, then verify as a real client (not "View as
-  client") that all three panels populate.
+- **Migration applied to production 13 October 2026** (project `yxkgdalkbrriasiyyrwk`, via the
+  Supabase MCP `apply_migration`, after Carl approved). Verified live: all three functions exist as
+  `SECURITY DEFINER` with EXECUTE for `authenticated` and `service_role` only (no `anon`/`PUBLIC`),
+  and the three views have no remaining `anon`/`authenticated` privileges. The frontend change
+  depends on it, so the merge order is now safe.
+- **Verified against production as a real client user** (read-only session: `SET LOCAL ROLE
+  authenticated` with a client primary contact's JWT subject for tenant 7467, rolled back).
+  Package 15149:
+  - Old path: a direct read of `time_entries` for the package returned **0 rows** (the bug).
+  - `get_client_package_hours_by_type`: 4 rows, 742 min total (document_review/tas 410,
+    meeting/general_meeting 155, support 115, meeting 62), matching the figures in the report
+    (6:50, 2:35, 1:55, 1:02 = 12:22).
+  - `get_client_package_hours_recent`: 14 entries whose billable minutes sum to 742, equal to the
+    by-type total.
+  - `get_client_package_hours_timeline`: 11 points, final cumulative 12.37 h.
+  - Calling the functions with a different tenant id for the same package returned 0 rows.
 
 ## Open questions parked
 - The tiles read `package_instances.hours_used`, while the panels sum windowed time entries. They
@@ -74,5 +87,5 @@ policy, `get_client_package_dashboard`, `get_package_burndown`, or the staff-sid
 - Clients can see the free-text `notes` of each entry in the time log (as the old view already
   intended, cleaned by `cleanWorkNote`). If any notes are internal-only that needs a product
   decision, not a code fix.
-- Nothing verified with a real client login: no seeded client credentials exist in this
-  environment.
+- Not exercised through the browser UI as a real client (no seeded client credentials); the
+  server side was verified by simulating a real client user's JWT in a read-only session, above.
