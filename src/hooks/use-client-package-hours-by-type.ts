@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 
 /**
- * One row of v_client_package_hours_by_type — per-package time totals
+ * One row of get_client_package_hours_by_type — per-package time totals
  * grouped by (work_type, work_sub_type). Powers the "Where your hours went"
  * panel inside PackageCard.
  */
@@ -18,11 +18,13 @@ export interface ClientPackageHoursByTypeRow {
   rank_in_package: number;  // 1 = largest category
 }
 
-const VIEW = 'v_client_package_hours_by_type';
-
 /**
- * SECURITY: Explicit tenant_id filter is required because internal staff bypass
- * tenant RLS via get_current_user_tenant_id(). Mirrors useClientPackageDashboard.
+ * SECURITY: reads through a tenant-gated SECURITY DEFINER RPC, not the old
+ * v_client_package_hours_by_type view. The view was security_invoker over
+ * time_entries, whose RLS only admits the entry's author and Vivacity staff, so
+ * a real client user saw nothing while staff using "View as client" saw
+ * everything. The RPC enforces app.user_can_access_tenant() server-side and
+ * returns client-facing columns only.
  */
 export function useClientPackageHoursByType(packageInstanceId: number | null) {
   const { activeTenantId } = useClientTenant();
@@ -34,33 +36,10 @@ export function useClientPackageHoursByType(packageInstanceId: number | null) {
     queryFn: async (): Promise<ClientPackageHoursByTypeRow[]> => {
       if (!activeTenantId || !packageInstanceId) return [];
 
-      // The view is not yet present in the generated supabase types, so we
-      // use a cast through `unknown` rather than leaking `any` into the codebase.
-      const { data, error } = await (supabase as unknown as {
-        from: (table: string) => {
-          select: (cols: string) => {
-            eq: (
-              col: string,
-              val: number,
-            ) => {
-              eq: (
-                col: string,
-                val: number,
-              ) => {
-                order: (
-                  col: string,
-                  opts: { ascending: boolean },
-                ) => Promise<{ data: ClientPackageHoursByTypeRow[] | null; error: { message: string } | null }>;
-              };
-            };
-          };
-        };
-      })
-        .from(VIEW)
-        .select('*')
-        .eq('tenant_id', activeTenantId)
-        .eq('package_instance_id', packageInstanceId)
-        .order('rank_in_package', { ascending: true });
+      const { data, error } = await supabase.rpc('get_client_package_hours_by_type', {
+        p_tenant_id: activeTenantId,
+        p_package_instance_id: packageInstanceId,
+      });
 
       if (error) throw new Error(error.message);
       return (data ?? []) as ClientPackageHoursByTypeRow[];

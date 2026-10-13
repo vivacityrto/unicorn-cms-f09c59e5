@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 
 /**
- * One row of v_client_package_hours_timeline — per-package daily hours,
+ * One row of get_client_package_hours_timeline — per-package daily hours,
  * sparse (only days with activity), with a running cumulative total.
  * Powers the burndown chart inside PackageCard.
  */
@@ -16,11 +16,9 @@ export interface ClientPackageHoursTimelinePoint {
   point_rank: number;
 }
 
-const VIEW = 'v_client_package_hours_timeline';
-
 /**
- * SECURITY: Explicit tenant_id filter is required because internal staff bypass
- * tenant RLS via get_current_user_tenant_id(). Mirrors useClientPackageHoursByType.
+ * SECURITY: tenant-gated SECURITY DEFINER RPC — see useClientPackageHoursByType
+ * for why the old security_invoker view returned nothing to real client users.
  */
 export function useClientPackageHoursTimeline(packageInstanceId: number | null) {
   const { activeTenantId } = useClientTenant();
@@ -32,33 +30,10 @@ export function useClientPackageHoursTimeline(packageInstanceId: number | null) 
     queryFn: async (): Promise<ClientPackageHoursTimelinePoint[]> => {
       if (!activeTenantId || !packageInstanceId) return [];
 
-      // The view is not yet present in the generated supabase types, so we
-      // use a cast through `unknown` rather than leaking `any` into the codebase.
-      const { data, error } = await (supabase as unknown as {
-        from: (table: string) => {
-          select: (cols: string) => {
-            eq: (
-              col: string,
-              val: number,
-            ) => {
-              eq: (
-                col: string,
-                val: number,
-              ) => {
-                order: (
-                  col: string,
-                  opts: { ascending: boolean },
-                ) => Promise<{ data: ClientPackageHoursTimelinePoint[] | null; error: { message: string } | null }>;
-              };
-            };
-          };
-        };
-      })
-        .from(VIEW)
-        .select('*')
-        .eq('tenant_id', activeTenantId)
-        .eq('package_instance_id', packageInstanceId)
-        .order('activity_date', { ascending: true });
+      const { data, error } = await supabase.rpc('get_client_package_hours_timeline', {
+        p_tenant_id: activeTenantId,
+        p_package_instance_id: packageInstanceId,
+      });
 
       if (error) throw new Error(error.message);
       return (data ?? []) as ClientPackageHoursTimelinePoint[];

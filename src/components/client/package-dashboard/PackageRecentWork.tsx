@@ -51,10 +51,15 @@ function truncate(s: string, max = 80): string {
   return s.slice(0, max - 1).trimEnd() + '…';
 }
 
-function SectionHeading() {
+function SectionHeading({ count }: { count?: number }) {
   return (
     <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      Recent work
+      Time log
+      {count !== undefined && count > 0 && (
+        <span className="ml-1.5 font-normal normal-case tracking-normal">
+          · {count} {count === 1 ? 'entry' : 'entries'}
+        </span>
+      )}
     </h4>
   );
 }
@@ -85,7 +90,7 @@ export function PackageRecentWork({
       <div className="space-y-2">
         <SectionHeading />
         <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
-          Couldn't load recent work.
+          Couldn't load the time log.
         </div>
       </div>
     );
@@ -99,7 +104,7 @@ export function PackageRecentWork({
 
   return (
     <div className="space-y-2">
-      <SectionHeading />
+      <SectionHeading count={entries.length} />
       <ul className="space-y-3">
         {visible.map((e) => {
           const { Icon, colorClass } = iconFor(e.work_type);
@@ -143,14 +148,14 @@ export function PackageRecentWork({
         })}
       </ul>
 
-      {hasMore && !expanded && (
+      {hasMore && (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setExpanded(true)}
+          onClick={() => setExpanded((v) => !v)}
           className="text-xs h-7 px-2"
         >
-          Show more
+          {expanded ? 'Show fewer' : `Show all ${entries.length} entries`}
         </Button>
       )}
     </div>
