@@ -22,6 +22,8 @@ export interface DirectoryPerson {
   email: string;
   position_type: string | null;
   status: string;
+  /** The client's own status, when the directory supplies it. */
+  tenant_status?: string | null;
 }
 
 export interface ResolvedGroupMember {
@@ -30,6 +32,9 @@ export interface ResolvedGroupMember {
   name: string;
   email: string;
   tenantName: string;
+  /** The client's id and own status, so the table can link to the client and flag non-active ones. */
+  tenantId?: number | null;
+  tenantStatus?: string | null;
   positionType: string | null;
   status: string;
   /** The underlying user/contact is no longer in the directory. */
@@ -59,6 +64,8 @@ export function resolveGroupMembers(
       name: displayName(person) || '(no name)',
       email: person.email,
       tenantName: person.tenant_name,
+      tenantId: person.tenant_id,
+      tenantStatus: person.tenant_status ?? null,
       positionType: person.position_type,
       status: person.status,
       missing: false,

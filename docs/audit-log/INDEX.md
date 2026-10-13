@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-10-12 — Contact Directory shows the client's status](entries/2026-10-12-contact-directory-tenant-status.md) — the directory only reported a person's own status, so contacts at cancelled clients still read as active. Adds tenant_status to get_admin_contact_directory() (read-only drop and re-create), defaults the page to active people at active clients, adds a Client status filter and a client link. Part 1 of 2; deactivating a client's people is a separate change. Migration not yet applied.
+
 - [2026-10-12 — EOS to-dos linked to the IDS issue they came from](entries/2026-10-12-link-eos-todos-to-ids-issue.md) — IDS to-dos recorded no link to their issue, so the dialog could only show those added in the current session. Adds eos_todos.issue_id, has create_todos_from_issue set it, backfills 19 existing to-dos from the audit trail, and lets the closed-meeting guard pass issue_id. Dry-run in a rolled-back transaction; migration not yet applied.
 
 - [2026-10-12 — Carried-over EOS to-dos can be marked done after their meeting closes](entries/2026-10-12-allow-status-change-on-carried-over-eos-todos.md) — the live To-Do List shows open to-dos from earlier meetings, but a trigger froze every to-do of a closed meeting, so ticking one failed. The guard now allows status/completed_at/due_date changes only (mark done, reopen, re-date) and still blocks other edits, deletes and moves into closed meetings. Dry-run in a rolled-back transaction against 9 cases; migration not yet applied.

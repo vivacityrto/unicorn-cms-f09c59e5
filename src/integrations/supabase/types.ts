@@ -71039,6 +71039,7 @@ export type Database = {
           status: string
           tenant_id: number
           tenant_name: string
+          tenant_status: string
         }[]
       }
       get_all_resources: {
