@@ -461,3 +461,8 @@ verify_jwt = false
 # src/features/pdp/exportAuditPack.ts.
 [functions.export-pdp-audit-pack]
 verify_jwt = false
+
+# Reads the public AddEvent calendar page and returns upcoming events for the
+# calendar PDF download. Auth is enforced in-function via requireCaller.
+[functions.addevent-calendar-events]
+verify_jwt = false
