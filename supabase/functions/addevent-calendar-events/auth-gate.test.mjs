@@ -41,6 +41,11 @@ describe("addevent-calendar-events", () => {
     assert.match(src, /fetch\(ADDEVENT_CALENDAR_URL,/);
   });
 
+  it("pins the AddEvent time zone with a fixed cookie so the label does not depend on the edge region", () => {
+    assert.match(src, /const ADDEVENT_ZONE_COOKIE = "usrtzid=Australia\/Sydney; usrtifm=24h";/);
+    assert.match(src, /Cookie: ADDEVENT_ZONE_COOKIE,/);
+  });
+
   it("never reads request body, query string or headers into the outbound call", () => {
     assert.doesNotMatch(src, /req\.json\(|req\.text\(|new URL\(req\.url|searchParams/);
   });

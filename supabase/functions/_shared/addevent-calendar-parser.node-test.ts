@@ -147,6 +147,14 @@ test("an unknown or ambiguous time zone label throws parse_unexpected_format ins
   }
 });
 
+test("the unexpected-zone error names the offending label so the function log shows it", () => {
+  const html = card("Webinar", "Monday 26 October ⋅ 3:00 – 4:30 (+05)");
+  assert.throws(
+    () => parseAddEventCalendarHtml(html, NOW),
+    (err) => err instanceof AddEventParseError && err.message.includes('"+05"'),
+  );
+});
+
 test("accepts the alternate HTML-encoded separator the live page mixes in", () => {
   const html =
     card("Webinar", "Monday 2 November ⋅ 04:00 – 5:30 (UTC)") +

@@ -32,6 +32,11 @@ import {
 } from "../_shared/addevent-calendar-parser.ts";
 
 const ADDEVENT_CALENDAR_URL = "https://www.addevent.com/calendar/DE347781";
+// AddEvent localises every time on the page to the requester (by IP, or by this
+// cookie). Supabase runs the function in the region nearest the caller, so
+// without pinning, the label changes with where the signed-in user is and can
+// be one the parser rejects. Pin Sydney so the output is the same everywhere.
+const ADDEVENT_ZONE_COOKIE = "usrtzid=Australia/Sydney; usrtifm=24h";
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -55,6 +60,7 @@ async function fetchCalendarHtml(): Promise<string> {
   const res = await fetch(ADDEVENT_CALENDAR_URL, {
     headers: {
       Accept: "text/html",
+      Cookie: ADDEVENT_ZONE_COOKIE,
       "User-Agent": "UnicornCMS/1.0 (+https://unicorn-cms.au)",
     },
     redirect: "follow",
