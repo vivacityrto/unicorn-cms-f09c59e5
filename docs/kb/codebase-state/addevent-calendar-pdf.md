@@ -18,7 +18,8 @@ The "Download calendar (PDF)" button on the calendar pages produces a PDF of Viv
 ## Things that are easy to get wrong
 
 - **The page has no year.** The parser infers it from the weekday and the chronological order of the list, and skips a card rather than guess if it only fits a date more than 500 days away.
-- **The page shows times in the requester's own zone.** The same request returned `(UTC)` to one client and `(PHT)` to another. The parser reads the label on every card and converts with a fixed-offset table; an unknown or ambiguous label (`IST`, `CST`, `BST`) fails loudly (`parse_unexpected_format`).
+- **The page shows times in the requester's own zone.** The same request returned `(UTC)` to one client and `(PHT)` to another, and the page can emit about 50 different labels (including ambiguous ones like `IST`, `CST`, `BST` and numeric ones like `+05`). The parser reads the label on every card and converts with a fixed-offset table; an unknown or ambiguous label fails loudly (`parse_unexpected_format`, with the label in the function log).
+- **The function pins the zone with a cookie (2026-10-20 fix).** Supabase runs the function in the region nearest the signed-in caller, so the page's label depended on where that caller was; one user hit `parse_unexpected_format` while another (in the Philippines) did not. The function now sends `Cookie: usrtzid=Australia/Sydney; usrtifm=24h`, which the page honours server-side (checked: the label becomes `AEDT`/`AEST` from any IP). Staff impersonation cannot reproduce a region-dependent failure, because it keeps the staff member's own network location.
 - **The date/time separator is not stable.** The page mixes `⋅` (U+22C5) and an HTML-encoded `‧` (U+2027) in one list, so any punctuation is accepted there.
 - **Recurring events share one id.** Events are keyed on id plus start time.
 

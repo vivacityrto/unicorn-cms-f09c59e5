@@ -198,11 +198,11 @@ interface ClockDate {
   endM: number;
 }
 
-function parseDateLine(line: string): ClockDate | "unexpected_timezone" | null {
+function parseDateLine(line: string): ClockDate | { unexpectedZone: string } | null {
   const m = line.match(DATE_LINE);
   if (!m) return null;
   const offsetMinutes = ZONE_OFFSET_MINUTES[m[8].trim().toUpperCase()];
-  if (offsetMinutes === undefined) return "unexpected_timezone";
+  if (offsetMinutes === undefined) return { unexpectedZone: m[8].trim().slice(0, 20) };
   const weekday = WEEKDAYS.indexOf(m[1].toLowerCase());
   const month = MONTHS.indexOf(m[3].toLowerCase());
   const day = Number(m[2]);
@@ -265,10 +265,10 @@ export function parseAddEventCalendarHtml(html: string, now: Date = new Date()):
       continue;
     }
     const clock = parseDateLine(card.dateLine);
-    if (clock === "unexpected_timezone") {
+    if (clock && "unexpectedZone" in clock) {
       throw new AddEventParseError(
         "parse_unexpected_format",
-        "The AddEvent page is showing times in a time zone this reader does not recognise, so the calendar cannot be read safely.",
+        `The AddEvent page is showing times in a time zone this reader does not recognise ("${clock.unexpectedZone}"), so the calendar cannot be read safely.`,
       );
     }
     if (!clock) {
