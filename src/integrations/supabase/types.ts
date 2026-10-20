@@ -71163,6 +71163,13 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      get_client_tenant_user_position_types: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          position_type: string
+          user_id: string
+        }[]
+      }
       get_client_tenant_users: {
         Args: { p_tenant_id: number }
         Returns: {
@@ -72856,6 +72863,14 @@ export type Database = {
         Args: {
           p_reason?: string
           p_relationship_role: string
+          p_tenant_id: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      set_tenant_user_position_type: {
+        Args: {
+          p_position_type: string
           p_tenant_id: number
           p_user_id: string
         }

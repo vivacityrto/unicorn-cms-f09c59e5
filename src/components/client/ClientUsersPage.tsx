@@ -73,6 +73,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { TenantContactsSection } from "./TenantContactsSection";
 import { type PositionTypeOption } from "@/lib/roles/positionType";
+import { useClientUserPositionTypes } from "@/hooks/use-client-user-position-types";
+import { UserPositionTypeCell } from "@/components/client/users/UserPositionTypeCell";
 import { swapTenantUserToContact } from "@/features/client-identity/swapToContact";
 import type { LegacyTenantContact } from "@/features/client-identity/models";
 
@@ -161,6 +163,9 @@ function LoadingSkeleton() {
             <Skeleton className="h-5 w-24" />
           </TableCell>
           <TableCell className="hidden md:table-cell">
+            <Skeleton className="h-5 w-28" />
+          </TableCell>
+          <TableCell className="hidden md:table-cell">
             <Skeleton className="h-4 w-20" />
           </TableCell>
           <TableCell className="hidden md:table-cell">
@@ -186,6 +191,7 @@ export default function ClientUsersPage() {
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [positionTypeOptions, setPositionTypeOptions] = useState<PositionTypeOption[]>([]);
+  const { data: userPositionTypes } = useClientUserPositionTypes();
   const [contactsRefreshKey, setContactsRefreshKey] = useState(0);
   const [userToSwap, setUserToSwap] = useState<ClientTenantUserRow | null>(null);
   const [swapping, setSwapping] = useState(false);
@@ -358,6 +364,7 @@ export default function ClientUsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead className="hidden md:table-cell w-[200px]">Role</TableHead>
+                  <TableHead className="hidden md:table-cell w-[190px]">Position</TableHead>
                   <TableHead className="hidden md:table-cell w-[180px]">Status</TableHead>
                   <TableHead className="hidden md:table-cell w-[180px]">Last active</TableHead>
                   <TableHead className="w-10" />
@@ -388,6 +395,15 @@ export default function ClientUsersPage() {
                         ) : (
                           <RolePill row={row} />
                         )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <UserPositionTypeCell
+                          row={row}
+                          tenantId={activeTenantId}
+                          value={row.user_id ? (userPositionTypes?.[row.user_id] ?? null) : null}
+                          options={positionTypeOptions}
+                          canEdit={canManagePortalUsers && !isReadOnly}
+                        />
                       </TableCell>
 
                       <TableCell className="hidden md:table-cell">
