@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { CalendarPdfDownload } from "@/components/calendar/CalendarPdfDownload";
 
 /**
  * Shared AddEvent calendar embed component.
@@ -27,7 +28,7 @@ export function AddEventEmbed() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4">
+      <div className="flex items-center gap-4">
         <a
           title="Add to Calendar"
           className="addeventstc"
@@ -38,14 +39,7 @@ export function AddEventEmbed() {
         >
           Add to Calendar
         </a>
-        <a
-          title="Vivacity Calendar"
-          href="https://www.vivacity.training/wp-content/uploads/2023/11/Vivacity-Calendar-2024.pdf"
-          target="_blank"
-          rel="noopener"
-        >
-          Download PDF to Print
-        </a>
+        <CalendarPdfDownload />
       </div>
 
       <div
