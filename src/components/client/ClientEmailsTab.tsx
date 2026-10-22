@@ -25,29 +25,56 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
   const { data: clientDomain } = useQuery({
     queryKey: ['client-email-domain', tenantId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('tenant_users')
-        .select('users!inner(email)')
-        .eq('tenant_id', tenantId)
-        .limit(10);
+      const [{ data }, { data: tenant }] = await Promise.all([
+        supabase
+          .from('tenant_users')
+          .select('primary_contact, users!inner(email, is_vivacity_internal, is_team, is_system_account, disabled)')
+          .eq('tenant_id', tenantId),
+        supabase.from('tenants').select('website').eq('id', tenantId).maybeSingle(),
+      ]);
 
-      if (!data || data.length === 0) return undefined;
+      // Free providers and our own domains never identify the client's organisation
+      const ignoredDomains = [
+        'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.com.au', 'hotmail.com', 'hotmail.com.au',
+        'outlook.com', 'outlook.com.au', 'live.com', 'live.com.au', 'icloud.com', 'me.com', 'aol.com',
+        'bigpond.com', 'bigpond.net.au', 'optusnet.com.au', 'vivacity.com.au', 'complyhub.ai',
+      ];
+      const isUsable = (domain: string | undefined): domain is string =>
+        !!domain && !ignoredDomains.includes(domain);
 
-      // Extract domains from all user emails, excluding common free providers
-      const freeProviders = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'aol.com'];
-      const domains = data
-        .map((row: { users: { email: string | null } | null }) => {
-          const email = row.users?.email ?? undefined;
-          if (!email) return null;
-          const domain = email.split('@')[1]?.toLowerCase();
-          return domain && !freeProviders.includes(domain) ? domain : null;
-        })
-        .filter(Boolean) as string[];
+      type Row = {
+        primary_contact: boolean | null;
+        users: {
+          email: string | null;
+          is_vivacity_internal: boolean | null;
+          is_team: boolean | null;
+          is_system_account: boolean | null;
+          disabled: boolean | null;
+        } | null;
+      };
 
-      // Return the most common non-free domain
-      if (domains.length === 0) return undefined;
-      const freq = domains.reduce((acc, d) => ({ ...acc, [d]: (acc[d] || 0) + 1 }), {} as Record<string, number>);
-      return Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0];
+      // Count domains from the client's own users only. Vivacity staff are attached to
+      // tenants too, and would otherwise outvote the client's real domain. A primary
+      // contact counts extra so a stray colleague with another address can't win.
+      const freq: Record<string, number> = {};
+      for (const row of (data ?? []) as unknown as Row[]) {
+        const u = row.users;
+        if (!u?.email || u.is_vivacity_internal || u.is_team || u.is_system_account || u.disabled) continue;
+        const domain = u.email.split('@')[1]?.trim().toLowerCase();
+        if (!isUsable(domain)) continue;
+        freq[domain] = (freq[domain] || 0) + (row.primary_contact ? 2 : 1);
+      }
+      const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (top) return top;
+
+      // No usable user email — fall back to the client's website domain
+      const websiteDomain = tenant?.website
+        ?.trim()
+        .toLowerCase()
+        .replace(/^[a-z]+:\/\//, '')
+        .replace(/^www\./, '')
+        .split(/[/?#:]/)[0];
+      return isUsable(websiteDomain) ? websiteDomain : undefined;
     },
     enabled: showInboxBrowser,
   });
