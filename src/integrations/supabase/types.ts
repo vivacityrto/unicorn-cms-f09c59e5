@@ -28317,6 +28317,60 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_rock_milestone_task_links: {
+        Row: {
+          assignees: string[]
+          created_at: string
+          due_date: string | null
+          external_key: string
+          external_url: string
+          id: string
+          last_synced_at: string
+          milestone_id: string
+          priority: string | null
+          provider: string
+          source_updated_at: string
+          task_state: string
+          task_status: string
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          assignees?: string[]
+          created_at?: string
+          due_date?: string | null
+          external_key: string
+          external_url: string
+          id?: string
+          last_synced_at?: string
+          milestone_id: string
+          priority?: string | null
+          provider: string
+          source_updated_at: string
+          task_state: string
+          task_status: string
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          assignees?: string[]
+          created_at?: string
+          due_date?: string | null
+          external_key?: string
+          external_url?: string
+          id?: string
+          last_synced_at?: string
+          milestone_id?: string
+          priority?: string | null
+          provider?: string
+          source_updated_at?: string
+          task_state?: string
+          task_status?: string
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: []
+      }
       eos_rock_milestones: {
         Row: {
           created_at: string
@@ -28941,6 +28995,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      eos_task_sync_events: {
+        Row: {
+          detail: Json | null
+          event_id: string
+          external_key: string
+          milestone_id: string | null
+          milestone_updated_at: string | null
+          outcome: string
+          provider: string
+          received_at: string
+          status_after: string | null
+          status_before: string | null
+        }
+        Insert: {
+          detail?: Json | null
+          event_id: string
+          external_key: string
+          milestone_id?: string | null
+          milestone_updated_at?: string | null
+          outcome: string
+          provider: string
+          received_at?: string
+          status_after?: string | null
+          status_before?: string | null
+        }
+        Update: {
+          detail?: Json | null
+          event_id?: string
+          external_key?: string
+          milestone_id?: string | null
+          milestone_updated_at?: string | null
+          outcome?: string
+          provider?: string
+          received_at?: string
+          status_after?: string | null
+          status_before?: string | null
+        }
+        Relationships: []
       }
       eos_todos: {
         Row: {
@@ -70238,6 +70331,10 @@ export type Database = {
         Args: { p_actor?: string; p_reason?: string; p_time_entry_id: string }
         Returns: undefined
       }
+      apply_rock_task_sync_event: {
+        Args: { p_event: Json; p_expected_tenant_id: number }
+        Returns: Json
+      }
       apply_stage_version_to_package: {
         Args: {
           p_package_id: number
@@ -72337,6 +72434,10 @@ export type Database = {
         }[]
       }
       reclaim_stale_cohort_locks: { Args: never; Returns: number }
+      recompute_rock_milestone_from_tasks: {
+        Args: { p_milestone_id: string }
+        Returns: Json
+      }
       record_bulk_document_item_outcome: {
         Args: {
           p_error?: string

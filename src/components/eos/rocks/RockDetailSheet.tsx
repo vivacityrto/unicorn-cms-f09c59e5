@@ -11,6 +11,7 @@ import {
   Flag,
   GitBranch,
   Link2,
+  ListChecks,
   Pencil,
   Target,
   Users,
@@ -33,6 +34,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
+import {
+  sortMilestoneTasks,
+  summarizeMilestoneTasks,
+  TASK_STATUS_LABEL,
+  type MilestoneTaskLink,
+} from '@/utils/rockMilestoneTasks';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import type {
   EosRock,
@@ -186,6 +193,70 @@ function RelatedRockRow({ rock, ownerInfo }: { rock: EosRock; ownerInfo?: UserIn
   );
 }
 
+function MilestoneTasks({ tasks, milestoneStatus }: { tasks: MilestoneTaskLink[]; milestoneStatus: RockMilestoneStatus }) {
+  if (tasks.length === 0) return null;
+  const summary = summarizeMilestoneTasks(tasks, milestoneStatus);
+  return (
+    <div className="ml-6 space-y-1.5 rounded-md border bg-muted/30 p-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="inline-flex items-center gap-1 font-medium text-foreground">
+          <ListChecks className="h-3.5 w-3.5" aria-hidden />
+          Tasks · {summary.closed} of {summary.total} closed
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          {summary.blocked > 0 && (
+            <Badge variant="outline" className="border-transparent bg-red-100 px-1.5 py-0 text-[10px] text-red-700 dark:bg-red-900/30 dark:text-red-300">
+              {summary.blocked} blocked
+            </Badge>
+          )}
+          {summary.readyForReview && (
+            <Badge variant="outline" className="border-transparent bg-green-100 px-1.5 py-0 text-[10px] text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              Ready for review
+            </Badge>
+          )}
+        </span>
+      </div>
+      <ul className="space-y-1">
+        {sortMilestoneTasks(tasks).map(task => {
+          const href = safeExternalUrl(task.external_url);
+          const closed = task.task_state === 'closed';
+          const due = formatDate(task.due_date, 'd MMM');
+          return (
+            <li key={task.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-xs">
+              <span className="min-w-0 flex-1 basis-48 break-words">
+                {href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn('rounded text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', closed && 'text-muted-foreground line-through')}
+                  >
+                    {task.title}
+                  </a>
+                ) : (
+                  <span className={cn(closed && 'text-muted-foreground line-through')}>{task.title}</span>
+                )}
+              </span>
+              <span className="inline-flex flex-wrap items-center gap-x-2 text-muted-foreground">
+                <span className={cn(task.task_status === 'blocked' && !closed && 'font-medium text-destructive')}>
+                  {TASK_STATUS_LABEL[task.task_status] ?? task.task_status}
+                </span>
+                {task.assignees.length > 0 && <span>{task.assignees.join(', ')}</span>}
+                {due && !closed && <span>Due {due}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {summary.readyForReview && (
+        <p className="text-xs text-muted-foreground">
+          Every linked task is closed. Review the evidence, then mark this milestone complete in Unicorn.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function RockDetailSheet({
   rock,
   open,
@@ -245,7 +316,32 @@ export function RockDetailSheet({
     enabled: !!profile && open && isIndividual && normalizedIds.length > 0,
   });
 
+  // GitHub tasks linked by the rock-task-sync webhook. Tolerates the table not
+  // existing yet so the panel still opens if the frontend deploys first.
+  const tasksQuery = useQuery({
+    queryKey: ['eos-rock-milestone-tasks', rockId, normalizedIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_rock_milestone_task_links')
+        .select('id, milestone_id, external_key, external_url, title, task_state, task_status, priority, due_date, assignees, last_synced_at')
+        .in('milestone_id', normalizedIds);
+      if (error) {
+        if (isRockMilestoneSchemaUnavailable(error)) return [] as MilestoneTaskLink[];
+        throw error;
+      }
+      return data as MilestoneTaskLink[];
+    },
+    enabled: !!profile && open && normalizedIds.length > 0,
+  });
+
   if (!rock) return null;
+
+  const tasksByMilestone = new Map<string, MilestoneTaskLink[]>();
+  for (const task of tasksQuery.data || []) {
+    const list = tasksByMilestone.get(task.milestone_id) || [];
+    list.push(task);
+    tasksByMilestone.set(task.milestone_id, list);
+  }
 
   const supportsByMilestone = new Map<string, string[]>();
   for (const link of supportsQuery.data?.links || []) {
@@ -404,6 +500,9 @@ export function RockDetailSheet({
             ) : (
               <>
                 <Progress value={milestoneProgress} className="h-2" aria-label="Milestone progress" />
+                {tasksQuery.isError && (
+                  <p className="text-xs text-muted-foreground">Linked tasks could not be loaded.</p>
+                )}
                 {hasStatusMismatch && (
                   <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -473,6 +572,7 @@ export function RockDetailSheet({
                             <span>Supports: {supports.join(', ')}</span>
                           </p>
                         )}
+                        <MilestoneTasks tasks={tasksByMilestone.get(milestone.id) || []} milestoneStatus={milestone.status} />
                       </li>
                     );
                   })}
