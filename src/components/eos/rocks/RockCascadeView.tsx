@@ -207,7 +207,7 @@ export function RockCascadeView({
             </div>
           )}
 
-          {rock.rock_level === 'team' && onCreateIndividualRock && (
+          {(rock.rock_level === 'team' || rock.rock_level === 'company') && onCreateIndividualRock && (
             <div className="ml-8 py-2">
               <Button
                 variant="outline"

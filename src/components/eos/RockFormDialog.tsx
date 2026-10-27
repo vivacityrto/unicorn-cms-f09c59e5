@@ -18,8 +18,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Plus, X, ListChecks, GitBranch, Building2, Users, UserCircle, Info } from 'lucide-react';
 import { DB_ROCK_STATUS, getStatusOptions } from '@/utils/rockStatusUtils';
+import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 import { toast } from '@/hooks/use-toast';
-import type { EosRock, RockLevel } from '@/types/eos';
+import type { EosRock, EosRockMilestone, RockLevel } from '@/types/eos';
 import type { Json } from '@/integrations/supabase/types';
 
 interface RockFormDialogProps {
@@ -32,7 +33,19 @@ interface Milestone {
   id: string;
   text: string;
   completed: boolean;
+  owner_id: string | null;
+  due_date: string;
+  priority: EosRockMilestone['priority'];
+  status: EosRockMilestone['status'];
+  exit_criteria: string;
+  evidence_url: string;
+  linked_company_milestone_ids: string[];
 }
+
+const getMilestoneId = (id?: string) =>
+  id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    ? id
+    : crypto.randomUUID();
 
 export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps) {
   const { profile } = useAuth();
@@ -41,16 +54,97 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   // RPC-based mutation for save with auto-parenting
   const upsertRock = useMutation({
-    mutationFn: async (payload: Json) => {
+    mutationFn: async ({ payload, milestonesToSave }: { payload: Json; milestonesToSave: Milestone[] }) => {
       const { data, error } = await supabase.rpc('upsert_rock_with_parenting', {
         p_payload: payload,
       });
       if (error) throw error;
-      return data as { id: string; parent_rock_id: string | null; action: string };
+      const rockResult = data as { id: string; parent_rock_id: string | null; action: string };
+      const rockPayload = payload as { tenant_id: number; rock_level: string };
+      const activeMilestones = milestonesToSave.filter(milestone => milestone.text.trim());
+      const nextIds = activeMilestones.map(milestone => milestone.id);
+
+      try {
+        const { data: existing, error: existingError } = await supabase
+          .from('eos_rock_milestones')
+          .select('id')
+          .eq('rock_id', rockResult.id);
+        if (existingError) {
+          if (isRockMilestoneSchemaUnavailable(existingError)) return rockResult;
+          throw existingError;
+        }
+
+        if (activeMilestones.length > 0) {
+          const rows = activeMilestones.map((milestone, index) => ({
+            id: milestone.id,
+            tenant_id: rockPayload.tenant_id,
+            rock_id: rockResult.id,
+            title: milestone.text.trim(),
+            owner_id: milestone.owner_id || null,
+            due_date: milestone.due_date || null,
+            priority: milestone.priority,
+            status: milestone.status,
+            exit_criteria: milestone.exit_criteria.trim() || null,
+            evidence_url: milestone.evidence_url.trim() || null,
+            sort_order: index,
+          }));
+          const { error: saveError } = await supabase
+            .from('eos_rock_milestones')
+            .upsert(rows, { onConflict: 'id' });
+          if (saveError) throw saveError;
+        }
+
+        const obsoleteIds = (existing || []).map(row => row.id).filter(id => !nextIds.includes(id));
+        if (obsoleteIds.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('eos_rock_milestones')
+            .delete()
+            .in('id', obsoleteIds);
+          if (deleteError) throw deleteError;
+        }
+
+        if (rockPayload.rock_level === 'individual') {
+          const links = activeMilestones.flatMap(milestone =>
+            milestone.linked_company_milestone_ids.map(companyMilestoneId => ({
+              tenant_id: rockPayload.tenant_id,
+              company_milestone_id: companyMilestoneId,
+              individual_milestone_id: milestone.id,
+            }))
+          );
+          for (const milestone of activeMilestones) {
+            const desiredCompanyIds = milestone.linked_company_milestone_ids;
+            const removeStaleLinks = supabase
+              .from('eos_rock_milestone_links')
+              .delete()
+              .eq('individual_milestone_id', milestone.id);
+            const { error: clearLinksError } = desiredCompanyIds.length > 0
+              ? await removeStaleLinks.not('company_milestone_id', 'in', `(${desiredCompanyIds.join(',')})`)
+              : await removeStaleLinks;
+            if (clearLinksError) throw clearLinksError;
+          }
+          if (links.length > 0) {
+            const { error: linkError } = await supabase
+              .from('eos_rock_milestone_links')
+              .upsert(links, {
+                onConflict: 'company_milestone_id,individual_milestone_id',
+                ignoreDuplicates: true,
+              });
+            if (linkError) throw linkError;
+          }
+        }
+      } catch (saveError) {
+        const message = saveError instanceof Error ? saveError.message : 'Unknown error';
+        throw new Error(`Rock was saved, but milestone details could not be synchronized: ${message}`);
+      }
+
+      return rockResult;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
       queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-milestones'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-milestone-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-milestone-links'] });
       toast({ title: data.action === 'created' ? 'Rock created' : 'Rock updated' });
     },
     onError: (error: Error) => {
@@ -72,9 +166,16 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     const savedMilestones = rock?.milestones;
     if (Array.isArray(savedMilestones)) {
       return (savedMilestones as unknown as Partial<Milestone>[]).map(m => ({
-        id: m.id || crypto.randomUUID(),
+        id: getMilestoneId(m.id),
         text: m.text || '',
         completed: !!m.completed,
+        owner_id: m.owner_id || null,
+        due_date: m.due_date || '',
+        priority: m.priority || 'medium',
+        status: m.status || (m.completed ? 'complete' : 'not_started'),
+        exit_criteria: m.exit_criteria || '',
+        evidence_url: m.evidence_url || '',
+        linked_company_milestone_ids: m.linked_company_milestone_ids || [],
       }));
     }
     return [];
@@ -130,9 +231,16 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         const savedMilestones = rock?.milestones;
         if (Array.isArray(savedMilestones)) {
           setMilestones((savedMilestones as unknown as Partial<Milestone>[]).map(m => ({
-            id: m.id || crypto.randomUUID(),
+            id: getMilestoneId(m.id),
             text: m.text || '',
             completed: !!m.completed,
+            owner_id: m.owner_id || null,
+            due_date: m.due_date || '',
+            priority: m.priority || 'medium',
+            status: m.status || (m.completed ? 'complete' : 'not_started'),
+            exit_criteria: m.exit_criteria || '',
+            evidence_url: m.evidence_url || '',
+            linked_company_milestone_ids: m.linked_company_milestone_ids || [],
           })));
         } else {
           setMilestones([]);
@@ -215,7 +323,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
       const { data, error } = await supabase
         .from('eos_rocks')
-        .select('id, title, rock_level, quarter_year, quarter_number, function_id, client_tenant_id')
+        .select('id, title, rock_level, parent_rock_id, quarter_year, quarter_number, function_id, client_tenant_id')
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .in('rock_level', parentLevels)
         .is('archived_at', null)
@@ -225,6 +333,108 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     },
     enabled: !!profile && open && rockLevel !== 'company',
   });
+
+  const companyParentId = useMemo(() => {
+    if (rockLevel !== 'individual' || !parentRockId) return null;
+    const parent = parentRocks?.find(candidate => candidate.id === parentRockId);
+    if (parent?.rock_level === 'company') return parent.id;
+    if (parent?.rock_level === 'team') {
+      const companyParent = parentRocks?.find(candidate => candidate.id === parent.parent_rock_id);
+      return companyParent?.rock_level === 'company' ? companyParent.id : null;
+    }
+    return null;
+  }, [rockLevel, parentRockId, parentRocks]);
+
+  const normalizedMilestonesQuery = useQuery({
+    queryKey: ['eos-rock-milestones', rock?.id],
+    queryFn: async () => {
+      if (!rock?.id) return [];
+      const { data, error } = await supabase
+        .from('eos_rock_milestones')
+        .select('*')
+        .eq('rock_id', rock.id)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile && open && !!rock?.id,
+  });
+  const normalizedMilestones = normalizedMilestonesQuery.data;
+
+  const normalizedMilestoneIds = useMemo(
+    () => (normalizedMilestones || []).map(milestone => milestone.id),
+    [normalizedMilestones]
+  );
+  const milestoneLinksQuery = useQuery({
+    queryKey: ['eos-rock-milestone-links', rock?.id, normalizedMilestoneIds],
+    queryFn: async () => {
+      if (normalizedMilestoneIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('eos_rock_milestone_links')
+        .select('company_milestone_id, individual_milestone_id')
+        .in('individual_milestone_id', normalizedMilestoneIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile && open && rockLevel === 'individual' && normalizedMilestoneIds.length > 0,
+  });
+  const milestoneLinks = milestoneLinksQuery.data;
+
+  const companyMilestonesQuery = useQuery({
+    queryKey: ['eos-rock-company-milestones', companyParentId],
+    queryFn: async () => {
+      if (!companyParentId) return [];
+      const { data, error } = await supabase
+        .from('eos_rock_milestones')
+        .select('id, title, status, due_date')
+        .eq('rock_id', companyParentId)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile && open && !!companyParentId,
+  });
+  const companyMilestones = companyMilestonesQuery.data;
+  const isMilestoneDataLoading =
+    (!!rock?.id && normalizedMilestonesQuery.isLoading) ||
+    (rockLevel === 'individual' && milestoneLinksQuery.isLoading) ||
+    (!!companyParentId && companyMilestonesQuery.isLoading);
+
+  useEffect(() => {
+    if (!open || !rock?.id || !normalizedMilestones) return;
+    if (normalizedMilestones.length === 0) return;
+    const linksByIndividual = new Map<string, string[]>();
+    for (const link of milestoneLinks || []) {
+      const ids = linksByIndividual.get(link.individual_milestone_id) || [];
+      ids.push(link.company_milestone_id);
+      linksByIndividual.set(link.individual_milestone_id, ids);
+    }
+    setMilestones(normalizedMilestones.map(milestone => ({
+      id: milestone.id,
+      text: milestone.title,
+      completed: milestone.status === 'complete',
+      owner_id: milestone.owner_id,
+      due_date: milestone.due_date || '',
+      priority: milestone.priority as EosRockMilestone['priority'],
+      status: milestone.status as EosRockMilestone['status'],
+      exit_criteria: milestone.exit_criteria || '',
+      evidence_url: milestone.evidence_url || '',
+      linked_company_milestone_ids: linksByIndividual.get(milestone.id) || [],
+    })));
+  }, [open, rock?.id, normalizedMilestones, milestoneLinks]);
+
+  useEffect(() => {
+    if (rockLevel !== 'individual') return;
+    if (!parentRocks) return;
+    if (companyParentId && !companyMilestones) return;
+    const validCompanyMilestoneIds = new Set((companyMilestones || []).map(milestone => milestone.id));
+    setMilestones(current => current.map(milestone => ({
+      ...milestone,
+      linked_company_milestone_ids: milestone.linked_company_milestone_ids.filter(id =>
+        validCompanyMilestoneIds.has(id)
+      ),
+    })));
+  }, [rockLevel, parentRocks, companyParentId, companyMilestones]);
 
   // Track whether user has manually changed parent
   const [parentManuallySet, setParentManuallySet] = useState(false);
@@ -266,6 +476,16 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     setParentManuallySet(false);
   }, [rockLevel]);
 
+  const eligibleParentRocks = parentRocks?.filter((candidate) => {
+    // Keep a legacy current parent visible during edits even when its stored
+    // quarter/client scope is inconsistent; only offer new same-scope choices.
+    if (candidate.id === rock?.parent_rock_id) return true;
+    if (candidate.quarter_year !== quarterYear || candidate.quarter_number !== quarterNumber) return false;
+    if (rockLevel === 'team') return candidate.rock_level === 'company';
+    if (rockLevel !== 'individual') return false;
+    return candidate.client_tenant_id === (clientId ? Number(clientId) : null);
+  });
+
   // Get user info helper
   const getUserInfo = (userId: string) => {
     const user = vivacityUsers?.find(u => u.user_uuid === userId);
@@ -288,10 +508,21 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   // Milestone handlers
   const addMilestone = () => {
-    setMilestones([...milestones, { id: crypto.randomUUID(), text: '', completed: false }]);
+    setMilestones([...milestones, {
+      id: crypto.randomUUID(),
+      text: '',
+      completed: false,
+      owner_id: ownerId || null,
+      due_date: dueDate,
+      priority: 'medium',
+      status: 'not_started',
+      exit_criteria: '',
+      evidence_url: '',
+      linked_company_milestone_ids: [],
+    }]);
   };
-  const updateMilestone = (id: string, text: string) => {
-    setMilestones(milestones.map(m => m.id === id ? { ...m, text } : m));
+  const updateMilestone = (id: string, updates: Partial<Milestone>) => {
+    setMilestones(milestones.map(m => m.id === id ? { ...m, ...updates } : m));
   };
   const removeMilestone = (id: string) => {
     setMilestones(milestones.filter(m => m.id !== id));
@@ -306,7 +537,11 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       issue: issue || null,
       outcome: problemSolved || null,
       milestones: milestones.filter(m => m.text.trim()).length > 0
-        ? (milestones.filter(m => m.text.trim()) as unknown as Json)
+        ? (milestones.filter(m => m.text.trim()).map(m => ({
+            id: m.id,
+            text: m.text,
+            completed: m.status === 'complete',
+          })) as unknown as Json)
         : null,
       client_tenant_id: clientId ? Number(clientId) : null,
       rock_level: rockLevel,
@@ -325,7 +560,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       if (rock?.id) {
         rockData.id = rock.id;
       }
-      await upsertRock.mutateAsync(rockData);
+      await upsertRock.mutateAsync({ payload: rockData as Json, milestonesToSave: milestones });
       onOpenChange(false);
       resetForm();
     } catch (error) {
@@ -469,7 +704,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None (no parent)</SelectItem>
-                  {parentRocks?.map((pr) => (
+                  {eligibleParentRocks?.map((pr) => (
                     <SelectItem key={pr.id} value={pr.id}>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-[10px] capitalize shrink-0">{pr.rock_level}</Badge>
@@ -558,29 +793,134 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             </Label>
             <div className="space-y-2">
               {milestones.map((milestone, index) => (
-                <div key={milestone.id} className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
-                  <input
-                    type="checkbox"
-                    checked={milestone.completed}
-                    onChange={(e) => setMilestones(milestones.map(m => m.id === milestone.id ? { ...m, completed: e.target.checked } : m))}
-                    className="h-4 w-4 rounded border-border accent-primary shrink-0"
-                  />
-                  <Input
-                    placeholder={`Milestone ${index + 1}`}
-                    value={milestone.text}
-                    onChange={(e) => updateMilestone(milestone.id, e.target.value)}
-                    className={cn("flex-1", milestone.completed && "line-through text-muted-foreground")}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeMilestone(milestone.id)}
-                    className="h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div key={milestone.id} className="space-y-3 rounded-md border p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                    <Input
+                      placeholder={`Milestone ${index + 1}`}
+                      value={milestone.text}
+                      onChange={(e) => updateMilestone(milestone.id, { text: e.target.value })}
+                      className={cn("flex-1", milestone.status === 'complete' && "line-through text-muted-foreground")}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeMilestone(milestone.id)}
+                      className="h-8 w-8"
+                      aria-label={`Remove milestone ${index + 1}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Owner</Label>
+                      <Select
+                        value={milestone.owner_id || 'rock-owner'}
+                        onValueChange={(value) => updateMilestone(milestone.id, {
+                          owner_id: value === 'rock-owner' ? null : value,
+                        })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Use Rock owner" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="rock-owner">Use Rock owner</SelectItem>
+                          {vivacityUsers?.map((user) => {
+                            const info = getUserInfo(user.user_uuid);
+                            return <SelectItem key={user.user_uuid} value={user.user_uuid}>{info?.name}</SelectItem>;
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Due date</Label>
+                      <Input
+                        type="date"
+                        value={milestone.due_date}
+                        onChange={(event) => updateMilestone(milestone.id, { due_date: event.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Priority</Label>
+                      <Select
+                        value={milestone.priority}
+                        onValueChange={(value) => updateMilestone(milestone.id, {
+                          priority: value as EosRockMilestone['priority'],
+                        })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(['critical', 'high', 'medium', 'low'] as const).map(value => (
+                            <SelectItem key={value} value={value} className="capitalize">{value}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Status</Label>
+                      <Select
+                        value={milestone.status}
+                        onValueChange={(value) => updateMilestone(milestone.id, {
+                          status: value as EosRockMilestone['status'],
+                          completed: value === 'complete',
+                        })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {([
+                            ['not_started', 'Not started'],
+                            ['in_progress', 'In progress'],
+                            ['blocked', 'Blocked'],
+                            ['off_track', 'Off track'],
+                            ['complete', 'Complete'],
+                            ['deferred', 'Deferred'],
+                          ] as const).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Exit criteria</Label>
+                    <Textarea
+                      value={milestone.exit_criteria}
+                      onChange={(event) => updateMilestone(milestone.id, { exit_criteria: event.target.value })}
+                      placeholder="What must be true to mark this milestone complete?"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Evidence link</Label>
+                    <Input
+                      type="url"
+                      value={milestone.evidence_url}
+                      onChange={(event) => updateMilestone(milestone.id, { evidence_url: event.target.value })}
+                      placeholder="https://…"
+                    />
+                  </div>
+                  {rockLevel === 'individual' && (companyMilestones?.length || 0) > 0 && (
+                    <div className="space-y-2 rounded bg-muted/40 p-2">
+                      <Label className="text-xs">Supports Company milestones</Label>
+                      {companyMilestones?.map(companyMilestone => (
+                        <label key={companyMilestone.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={milestone.linked_company_milestone_ids.includes(companyMilestone.id)}
+                            onChange={(event) => {
+                              const links = new Set(milestone.linked_company_milestone_ids);
+                              if (event.target.checked) links.add(companyMilestone.id);
+                              else links.delete(companyMilestone.id);
+                              updateMilestone(milestone.id, { linked_company_milestone_ids: [...links] });
+                            }}
+                            className="h-4 w-4 rounded border-border accent-primary"
+                          />
+                          <span>{companyMilestone.title}</span>
+                          <Badge variant="outline" className="ml-auto text-[10px]">{companyMilestone.status.replace('_', ' ')}</Badge>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               <Button
@@ -689,7 +1029,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!canSubmit || upsertRock.isPending}
+            disabled={!canSubmit || upsertRock.isPending || isMilestoneDataLoading}
           >
             {rock ? 'Update' : 'Create'} Rock
           </Button>
