@@ -234,6 +234,15 @@
       "owner": "Carl",
       "reason": "Reviewed function-body findings only (2026-10-27): the rollback restores the previous definition of upsert_rock_with_parenting() verbatim (migration 20261027100000), including its client Rock auto-parenting. The flagged INSERT and UPDATE are statements inside that staff-gated SECURITY DEFINER function body; applying the rollback changes no rows. Use only if the explicit-upsert migration must be reverted.",
       "expires": "2026-11-27"
+    },
+    {
+      "id": "rock-lifecycle",
+      "file": "supabase/migrations/20261027160000_rock_lifecycle.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings (2026-10-27): none of the six matches changes a row when the migration is applied. Three INSERTs are statements inside the body of the append-only history trigger function record_eos_rock_event(); the flagged DELETE is the words OR DELETE in that trigger's CREATE TRIGGER definition; the two UPDATEs are statements inside the staff-gated SECURITY DEFINER functions archive_rock() and restore_rock(), which set archived_at on named Rocks only when an authorized user archives or restores. The migration also adds a delete guard trigger that only refuses deletions, a created_by default trigger, and a read-only impact function. Dry-run against production inside one rolled-back transaction before applying: history, created_by default, delete guard cases, archive and restore (single, with children, only Rocks archived together), staff-only refusal for a non-staff user, and archiving all 155 existing Rocks without a failure; afterwards 156 Rocks, no new objects, nothing persisted. See docs/audit-log/entries/2026-10-27-rock-lifecycle.md.",
+      "expires": "2026-11-27"
     }
   ]
 }

@@ -28257,6 +28257,42 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_rock_events: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          id: number
+          occurred_at: string
+          rock_id: string
+          rock_title: string | null
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          id?: number
+          occurred_at?: string
+          rock_id: string
+          rock_title?: string | null
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          id?: number
+          occurred_at?: string
+          rock_id?: string
+          rock_title?: string | null
+          tenant_id?: number
+        }
+        Relationships: []
+      }
       eos_rock_milestone_events: {
         Row: {
           action: string
@@ -73402,6 +73438,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      archive_rock: {
+        Args: { p_include_children?: boolean; p_rock_id: string }
+        Returns: Json
+      }
+      restore_rock: {
+        Args: {
+          p_include_children?: boolean
+          p_include_parents?: boolean
+          p_rock_id: string
+        }
+        Returns: Json
+      }
+      rock_impact: { Args: { p_rock_id: string }; Returns: Json }
       upsert_rock_with_parenting: { Args: { p_payload: Json }; Returns: Json }
       user_contact_fields_change_authorized_safe: {
         Args: {

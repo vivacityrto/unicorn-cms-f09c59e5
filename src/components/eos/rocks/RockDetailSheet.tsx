@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/sheet';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
+import { RockHistory } from '@/components/eos/rocks/detail/RockHistory';
 import { useAuth } from '@/hooks/useAuth';
 import { useMilestoneDelivery } from '@/hooks/useMilestoneDelivery';
 import { supabase } from '@/integrations/supabase/client';
@@ -501,6 +502,8 @@ export function RockDetailSheet({
               </section>
             </>
           )}
+
+          <RockHistory rockId={rock.id} nameOf={id => (id && getUserInfo?.(id)?.name) || 'Someone'} />
 
           {(createdLabel || updatedLabel) && (
             <p className="pt-2 text-xs text-muted-foreground">
