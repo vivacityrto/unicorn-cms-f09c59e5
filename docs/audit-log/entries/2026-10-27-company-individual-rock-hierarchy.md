@@ -2,10 +2,10 @@
 
 **Trigger:** ad-hoc (approved RBAC Company Rock decomposition)
 **Scope:** EOS Rock hierarchy creation, normalized milestones and
-`upsert_rock_with_parenting()` parent validation. Reviewed current production
-relationship counts read-only for compatibility. Did not create, edit or
-archive any production Rocks, apply either migration, add GitHub tasks, or
-change ComplyHub KB records.
+`upsert_rock_with_parenting()` parent validation. Read-only target: configured
+Supabase project `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). Existing Rock
+rows were not edited or archived; migrations are not yet applied. No GitHub
+tasks or ComplyHub KB records were created.
 
 ## Findings
 - `eos_rocks.parent_rock_id` already represents Rock hierarchy; no new parent
@@ -14,7 +14,7 @@ change ComplyHub KB records.
 - The staff-gated SECURITY DEFINER upsert accepted a caller-supplied parent
   without checking its tenant or quarter. The proposed replacement preserves
   its existing staff gate and validates new or changed parent relationships.
-- Read-only production counts showed existing Individual-to-Individual links,
+- Read-only counts in the configured Unicorn project showed existing Individual-to-Individual links,
   plus some existing quarter and client mismatches. The new validation is
   limited to new or changed hierarchy values so unrelated edits do not reject
   legacy records. Existing rows are not backfilled or changed.
@@ -42,7 +42,7 @@ change ComplyHub KB records.
   same quarter and compatible client scope.
 - `supabase/migrations/20261027100000_validate_company_individual_rock_parenting.sql`:
   preserve the existing RPC authorization while validating new or changed
-  parent tenant, quarter, archive state and level. **Not applied to production.**
+  parent tenant, quarter, archive state and level. **Not applied.**
 - `src/types/eos.ts`, `src/integrations/supabase/types.ts`,
   `src/components/eos/RockFormDialog.tsx`: add normalized milestone fields,
   per-milestone ownership and acceptance details, evidence URL, and linking
@@ -53,24 +53,33 @@ change ComplyHub KB records.
 - `supabase/migrations/20261027110000_normalize_eos_rock_milestones.sql`:
   add tenant-scoped milestone/link/event tables, validate Rock/tenant scope
   and Company-to-Individual links, record append-only change events, and
-  backfill JSON milestones losslessly. **Not applied to production.**
+  backfill JSON milestones losslessly. **Not applied.**
 - `src/utils/rockMilestones.ts` and the Rock create/edit flows preserve the
   legacy JSON path during staggered frontend/schema rollout; once the tables
   exist, new and edited checklist items also write normalized records.
+- `scripts/audit-migrations.mjs` and its unit test: changed-only CI validates
+  only allowlist entries for migrations in the current diff, preventing stale,
+  unrelated historical entries from blocking every migration PR.
+- `supabase/migration-safety-allowlist.json`: records the reviewed DML and
+  trigger-pattern findings for these two migrations through 2026-11-27.
 
 ## Verification
-- Production reads only; no rows changed.
+- Read-only query against the configured Unicorn project: tenant 6372 has 152
+  Rocks, 107 Rocks with milestone arrays, and 453 legacy milestone items.
 - `npm run typecheck`: passed.
-- Targeted ESLint on changed TypeScript files: passed.
+- `npm run test:frontend`: passed (112 files, 844 passed, 43 skipped).
+- `node --test scripts/audit-migrations.test.mjs`: passed.
+- `node scripts/audit-migrations.mjs --changed-only --base-ref origin/main`:
+  passed (2 migration files, 10 findings, all scoped allowlisted, 0 blocking).
 - `npm run lint:ratchet -- --base origin/main`: passed with no regressions.
+- `npm run build`: passed; Vite reported its existing outdated Browserslist data
+  notice and large-chunk warning.
 - `git diff --check`: passed.
 - `npm run check:kb-links`: passed (171 files, 1,515 local links, 0 broken).
-- `npm run audit:migrations`: blocked by 14 expired entries in the existing
-  migration allowlist, including the prior Rock upsert entry. No allowlist
-  entry was changed as part of this scope; the report listed no separate
-  finding against the new migration.
-- Automated test suites and migration QA have not been run. The migrations
-  have not been applied to QA or production.
+- The full `npm run audit:migrations` remains blocked by 14 expired historical
+  allowlist entries. The changed-only CI path now validates only relevant
+  entries; unrelated historical exceptions were left untouched.
+- No migration has been applied to QA or the configured Unicorn project.
 
 ## Decisions
 - Reuse `parent_rock_id`; do not add another hierarchy column.

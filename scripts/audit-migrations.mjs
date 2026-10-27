@@ -328,12 +328,20 @@ function loadFiles({ changedOnly, baseRef }) {
   }));
 }
 
+function validateRelevantAllowlist(entries, changedFiles, now = new Date()) {
+  const changedPaths = new Set(changedFiles.map((entry) => entry.file));
+  const relevantEntries = entries.filter((entry) => entry.file === "*" || changedPaths.has(entry.file));
+  return validateAllowlist(relevantEntries, now);
+}
+
 function audit({ changedOnly = false, baseRef = "origin/main", allowlistFile = DEFAULT_ALLOWLIST, now = new Date() } = {}) {
   const allowlist = parseAllowlist(allowlistFile);
-  const allowlistErrors = validateAllowlist(allowlist, now);
+  const files = loadFiles({ changedOnly, baseRef });
+  const allowlistErrors = changedOnly
+    ? validateRelevantAllowlist(allowlist, files, now)
+    : validateAllowlist(allowlist, now);
   if (allowlistErrors.length) throw new Error(allowlistErrors.join("\n"));
 
-  const files = loadFiles({ changedOnly, baseRef });
   const reports = [];
   for (const entry of files) {
     if (!statSync(entry.fullPath, { throwIfNoEntry: false })) continue;
@@ -436,4 +444,5 @@ export {
   parseAllowlist,
   scanMigration,
   validateAllowlist,
+  validateRelevantAllowlist,
 };

@@ -189,6 +189,24 @@
       "owner": "Carl",
       "reason": "Pending Carl's review via this PR. Installs the client-status cascade: a restore ledger table, two functions and a trigger on tenants. THE MIGRATION ITSELF CHANGES NO EXISTING ROW: every flagged INSERT/UPDATE sits inside the function bodies (cascade_deactivate_tenant_people, cascade_restore_tenant_people) and runs only when a client's status changes (disable users / archive contacts for that client, or restore exactly the people recorded in the ledger), each keyed by explicit id arrays; nothing is deleted. The migration also replaces update_tenant_status() so it never overwrites a status other than active/inactive. Dry-run against production inside a rolled-back transaction (cancel then reactivate a client, a person in two clients, and the legacy-trigger guard). See docs/audit-log/entries/2026-10-12-client-status-cascade-to-people.md.",
       "expires": "2026-10-30"
+    },
+    {
+      "id": "company-individual-rock-parenting-rpc",
+      "file": "supabase/migrations/20261027100000_validate_company_individual_rock_parenting.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed function-body findings only: INSERT/UPDATE statements are inside the existing staff-gated SECURITY DEFINER RPC and execute only when an authorized user creates or edits a Rock. This migration changes no rows during replay; it extends Company/Individual parent validation and preserves current staff authorization and client auto-parenting.",
+      "expires": "2026-11-27"
+    },
+    {
+      "id": "company-individual-rock-milestone-normalization",
+      "file": "supabase/migrations/20261027110000_normalize_eos_rock_milestones.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings: the one migration-time INSERT copies existing tenant 6372 legacy milestone JSON into normalized rows using deterministic IDs and a uniqueness guard; the source JSON is preserved. The event-table INSERT is trigger-function behavior, and UPDATE matches are trigger declarations, not migration-time row updates. Read-only preflight counted 453 legacy items across 152 Rocks; post-apply verification will confirm row parity and source preservation.",
+      "expires": "2026-11-27"
     }
   ]
 }
