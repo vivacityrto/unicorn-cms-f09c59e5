@@ -95,12 +95,27 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
   }, [open, currentUserId]);
 
   // Save what has been typed, so a closed sheet or a reload does not lose it.
+  const latestValues = useRef(values);
+  latestValues.current = values;
+  const draftWaiting = useRef(false);
+  draftWaiting.current = !!draft;
+  const skipFlush = useRef(false);
   useEffect(() => {
     // While a saved draft is waiting to be restored or discarded, leave it untouched.
     if (!open || draft) return;
     const timer = setTimeout(() => saveDraft(storage(), startKey, values), 600);
     return () => clearTimeout(timer);
   }, [open, values, startKey, draft]);
+
+  // Closing within the debounce window must not lose the last edits: save what is there as the sheet closes.
+  useEffect(() => {
+    if (!open) return;
+    skipFlush.current = false;
+    return () => {
+      if (skipFlush.current || draftWaiting.current) return;
+      saveDraft(storage(), startKey, latestValues.current);
+    };
+  }, [open, startKey]);
 
   const quarter = { year: values.quarterYear, quarter: values.quarterNumber };
   const candidates = useMemo(() => candidateParents(values.level, quarter, rocks), [values.level, values.quarterYear, values.quarterNumber, rocks]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -142,6 +157,8 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
       clearDraft(storage(), startKey);
       setDraft(null);
       setCreated(count => count + 1);
+      // The Rock exists now; closing must not save it again as a draft.
+      if (!another) skipFlush.current = true;
       if (result.milestoneError) {
         // The Rock exists, so closing avoids a second Create making a duplicate. The toast explains the milestones.
         onOpenChange(false);
@@ -273,7 +290,7 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
                   </Select>
                 </div>
                 {parentLocksQuarter
-                  ? <p className="text-xs text-muted-foreground">Set by the Rock it serves; a Rock and its parent share a quarter.</p>
+                  ? <p className="text-xs text-muted-foreground">Set by the Rock it serves, because a Rock and its parent share a quarter. Clear that choice to use another quarter.</p>
                   : err('quarter') && <p className="text-xs text-destructive">{err('quarter')}</p>}
               </div>
             </div>
