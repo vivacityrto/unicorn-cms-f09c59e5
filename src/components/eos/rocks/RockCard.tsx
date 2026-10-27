@@ -47,6 +47,7 @@ interface UserInfo {
 
 interface RockCardProps {
   rock: RockWithHierarchy;
+  onOpen?: (rock: RockWithHierarchy) => void;
   onEdit?: (rock: RockWithHierarchy) => void;
   onViewCascade?: (rock: RockWithHierarchy) => void;
   onStatusChange?: (rockId: string, status: string) => void;
@@ -62,6 +63,7 @@ interface RockCardProps {
 
 export function RockCard({
   rock,
+  onOpen,
   onEdit,
   onViewCascade,
   onStatusChange,
@@ -124,29 +126,29 @@ export function RockCard({
   const seatName = rock.seat_id && getSeatName ? getSeatName(rock.seat_id) : rock.seat?.seat_name;
 
   const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!onEdit) return;
+    if (!onOpen) return;
     if (event.target instanceof Element && event.target.closest('button, a, input, textarea, select, [role="button"]')) {
       return;
     }
-    onEdit(rock);
+    onOpen(rock);
   };
 
   if (compact) {
     return (
       <div
-        className={cn('flex items-center justify-between p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow', onEdit && 'cursor-pointer')}
-        onClick={onEdit ? handleCardClick : undefined}
+        className={cn('flex items-center justify-between p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow', onOpen && 'cursor-pointer')}
+        onClick={onOpen ? handleCardClick : undefined}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Badge variant={statusConfig.variant} className={cn('gap-1 shrink-0', statusConfig.className)}>
             <StatusIcon className="w-3 h-3" />
           </Badge>
-          {onEdit ? (
+          {onOpen ? (
             <button
               type="button"
               className="font-medium truncate text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               aria-label={`Open Rock: ${rock.title}`}
-              onClick={() => onEdit(rock)}
+              onClick={() => onOpen(rock)}
             >
               {rock.title}
             </button>
@@ -173,18 +175,18 @@ export function RockCard({
 
   return (
     <>
-    <Card className={cn('hover:shadow-lg transition-shadow', onEdit && 'cursor-pointer')} onClick={onEdit ? handleCardClick : undefined}>
+    <Card className={cn('hover:shadow-lg transition-shadow', onOpen && 'cursor-pointer')} onClick={onOpen ? handleCardClick : undefined}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <h3 className="font-semibold text-lg leading-tight">
-                {onEdit ? (
+                {onOpen ? (
                   <button
                     type="button"
                     className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                     aria-label={`Open Rock: ${rock.title}`}
-                    onClick={() => onEdit(rock)}
+                    onClick={() => onOpen(rock)}
                   >
                     {rock.title}
                   </button>

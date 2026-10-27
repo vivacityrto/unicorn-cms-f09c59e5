@@ -17,42 +17,51 @@ const rock: RockWithHierarchy = {
   childStats: { total: 1, complete: 0, offTrack: 0 },
 };
 
-describe('RockCard dialog entry points', () => {
-  it('opens the Rock from a click on non-interactive card content', () => {
-    const onEdit = vi.fn();
-    render(<RockCard rock={rock} onEdit={onEdit} />);
+describe('RockCard entry points', () => {
+  it('opens the Rock details from a click on non-interactive card content', () => {
+    const onOpen = vi.fn();
+    render(<RockCard rock={rock} onOpen={onOpen} />);
 
     fireEvent.click(screen.getByText('Due Mar 31'));
 
-    expect(onEdit).toHaveBeenCalledExactlyOnceWith(rock);
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(rock);
   });
 
-  it('opens the Rock from its keyboard-accessible title button', () => {
-    const onEdit = vi.fn();
-    render(<RockCard rock={rock} onEdit={onEdit} />);
+  it('opens the Rock details from its keyboard-accessible title button', () => {
+    const onOpen = vi.fn();
+    render(<RockCard rock={rock} onOpen={onOpen} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Rock: Increase Revenue by 20%' }));
 
-    expect(onEdit).toHaveBeenCalledExactlyOnceWith(rock);
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(rock);
   });
 
   it('opens compact Rocks from non-interactive card content', () => {
-    const onEdit = vi.fn();
-    render(<RockCard rock={rock} onEdit={onEdit} compact />);
+    const onOpen = vi.fn();
+    render(<RockCard rock={rock} onOpen={onOpen} compact />);
 
     fireEvent.click(screen.getByText('Company'));
 
-    expect(onEdit).toHaveBeenCalledExactlyOnceWith(rock);
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(rock);
   });
 
-  it('keeps nested card actions from triggering the card click handler twice', () => {
+  it('keeps Edit separate from opening the read-only details', () => {
+    const onOpen = vi.fn();
     const onEdit = vi.fn();
     const onViewCascade = vi.fn();
-    render(<RockCard rock={rock} onEdit={onEdit} onViewCascade={onViewCascade} />);
+    render(<RockCard rock={rock} onOpen={onOpen} onEdit={onEdit} onViewCascade={onViewCascade} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 
     expect(onEdit).toHaveBeenCalledExactlyOnceWith(rock);
+    expect(onOpen).not.toHaveBeenCalled();
     expect(onViewCascade).not.toHaveBeenCalled();
+  });
+
+  it('does not look clickable when no open handler is supplied', () => {
+    const { container } = render(<RockCard rock={rock} onEdit={vi.fn()} />);
+
+    expect(container.querySelector('.cursor-pointer')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Open Rock/ })).toBeNull();
   });
 });
