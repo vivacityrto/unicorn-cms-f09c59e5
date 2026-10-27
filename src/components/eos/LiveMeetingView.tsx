@@ -1248,7 +1248,11 @@ export const LiveMeetingView = () => {
         </div>
 
         {/* Center: Main Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* relative: makes this scroll column the containing block for absolutely
+            positioned descendants (e.g. sr-only labels). Without it they anchor to the
+            page, escape this column's clipping and stretch the document, so the whole
+            page scrolls behind the meeting. */}
+        <div className="relative flex-1 overflow-y-auto p-6">
           <div className="max-w-3xl mx-auto space-y-6">
             {/* Not started state - viewing mode */}
             {!meetingStarted && (
