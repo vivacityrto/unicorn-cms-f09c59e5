@@ -59,7 +59,9 @@ export function RockLifecycleDialog({ mode: requested, rockId, onClose, onDone }
     } catch (error) {
       // The mutation already explained what went wrong; the dialog stays so the person can choose again.
       // A Rock above the parent is archived: say so and offer to bring those back too.
-      if (mode === 'restore' && error instanceof Error && /Restore the Rock it serves first/.test(error.message)) setNeedsParents(true);
+      // Match on the message, not the class: depending on the client, a database error may be a plain object.
+      const message = typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message : '';
+      if (mode === 'restore' && /Restore the Rock it serves first/.test(message)) setNeedsParents(true);
     }
   };
 

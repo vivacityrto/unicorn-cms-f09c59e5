@@ -169,6 +169,14 @@ describe('RockLifecycleDialog: restore with an archived Rock further up', () => 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith('restore'));
   });
 
+  it('recognises the refusal even when the client rejects with a plain object rather than an Error', async () => {
+    state.impact.data = impact({ parent: { id: 'p', title: 'Active parent', archived_at: null } });
+    state.restore.mockRejectedValueOnce({ message: 'Restore the Rock it serves first, because that one is archived', code: 'P0001' });
+    open('restore');
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    expect(await screen.findByRole('button', { name: 'Restore with the Rocks above' })).toBeInTheDocument();
+  });
+
   it('does not offer it for any other failure', async () => {
     state.restore.mockRejectedValueOnce(new Error('Something else went wrong'));
     open('restore');
