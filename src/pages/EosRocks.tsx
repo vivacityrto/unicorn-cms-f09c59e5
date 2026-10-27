@@ -40,6 +40,7 @@ import { CreateCompanyRockDialog } from '@/components/eos/rocks/CreateCompanyRoc
 import { CreateTeamRockDialog } from '@/components/eos/rocks/CreateTeamRockDialog';
 import { CreateIndividualRockDialog } from '@/components/eos/rocks/CreateIndividualRockDialog';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
+import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { dbToUiStatus } from '@/utils/rockStatusUtils';
 import { getCurrentQuarter, formatQuarter } from '@/utils/rockRollup';
@@ -65,6 +66,7 @@ function RocksHierarchyContent() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedParentRock, setSelectedParentRock] = useState<RockWithHierarchy | null>(null);
   const [editingRock, setEditingRock] = useState<RockWithHierarchy | null>(null);
+  const [viewingRockId, setViewingRockId] = useState<string | null>(null);
   const [cascadeRock, setCascadeRock] = useState<RockWithHierarchy | null>(null);
 
   const {
@@ -163,9 +165,21 @@ function RocksHierarchyContent() {
   };
 
   const handleEditRock = (rock: RockWithHierarchy) => {
+    setViewingRockId(null);
     setEditingRock(rock);
     setShowEditDialog(true);
   };
+
+  const handleOpenRock = (rock: RockWithHierarchy) => {
+    setViewingRockId(rock.id);
+  };
+
+  // Resolve from the live list so the panel reflects edits and status changes after a refetch.
+  const viewingRock = viewingRockId ? rocks?.find(r => r.id === viewingRockId) ?? null : null;
+  const viewingParent = viewingRock?.parent_rock_id
+    ? rocks?.find(r => r.id === viewingRock.parent_rock_id) ?? null
+    : null;
+  const viewingChildren = viewingRock ? (rocks ?? []).filter(r => r.parent_rock_id === viewingRock.id) : [];
 
   const handleViewCascade = (rock: RockWithHierarchy) => {
     setCascadeRock(rock);
@@ -508,6 +522,7 @@ function RocksHierarchyContent() {
                 <RockCard
                   key={rock.id}
                   rock={rock}
+                  onOpen={handleOpenRock}
                   onEdit={handleEditRock}
                   onArchive={handleArchiveRock}
                   onDelete={handleDeleteRock}
@@ -561,6 +576,7 @@ function RocksHierarchyContent() {
                         <RockCard
                           key={rock.id}
                           rock={rock}
+                          onOpen={handleOpenRock}
                           onEdit={handleEditRock}
                   onArchive={handleArchiveRock}
                   onDelete={handleDeleteRock}
@@ -605,6 +621,7 @@ function RocksHierarchyContent() {
                 <RockCard
                   key={rock.id}
                   rock={rock}
+                  onOpen={handleOpenRock}
                   onEdit={handleEditRock}
                   onArchive={handleArchiveRock}
                   onDelete={handleDeleteRock}
@@ -695,6 +712,19 @@ function RocksHierarchyContent() {
           if (!open) setSelectedParentRock(null);
         }}
         parentRock={selectedParentRock}
+      />
+
+      <RockDetailSheet
+        rock={viewingRock}
+        open={viewingRockId !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewingRockId(null);
+        }}
+        parentRock={viewingParent}
+        childRocks={viewingChildren}
+        onEdit={handleEditRock}
+        onViewCascade={handleViewCascade}
+        getUserInfo={getUserInfo}
       />
 
       <RockFormDialog
