@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -31,7 +31,7 @@ interface RockCascadeViewProps {
   allRocks: RockWithHierarchy[];
   onCreateTeamRock?: (parentRock: RockWithHierarchy) => void;
   onCreateIndividualRock?: (parentRock: RockWithHierarchy) => void;
-  onEditRock?: (rock: RockWithHierarchy) => void;
+  onOpenRock?: (rock: RockWithHierarchy) => void;
   getUserName?: (userId: string) => string | null;
   getUserInfo?: (userId: string) => UserInfo | null;
   getFunctionName?: (functionId: string) => string | null;
@@ -43,7 +43,7 @@ export function RockCascadeView({
   allRocks,
   onCreateTeamRock,
   onCreateIndividualRock,
-  onEditRock,
+  onOpenRock,
   getUserName,
   getUserInfo,
   getFunctionName,
@@ -91,6 +91,14 @@ export function RockCascadeView({
   const ownerName = ownerInfo?.name || (rock.owner_id && getUserName ? getUserName(rock.owner_id) : null);
   const functionName = rock.function_id && getFunctionName ? getFunctionName(rock.function_id) : rock.function?.name;
 
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!onOpenRock) return;
+    if (event.target instanceof Element && event.target.closest('button, a, input, textarea, select, [role="button"]')) {
+      return;
+    }
+    onOpenRock(rock);
+  };
+
   return (
     <div className={cn('relative', level > 0 && 'ml-6 border-l-2 border-muted pl-4')}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -113,12 +121,13 @@ export function RockCascadeView({
           {/* Rock card */}
           <Card 
             className={cn(
-              'flex-1 p-3 hover:shadow-md transition-shadow cursor-pointer',
+              'flex-1 p-3 hover:shadow-md transition-shadow',
+              onOpenRock && 'cursor-pointer',
               status === 'off_track' && 'border-l-4 border-l-red-500',
               status === 'at_risk' && 'border-l-4 border-l-amber-500',
               status === 'complete' && 'border-l-4 border-l-blue-500'
             )}
-            onClick={() => onEditRock?.(rock)}
+            onClick={onOpenRock ? handleCardClick : undefined}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -129,7 +138,18 @@ export function RockCascadeView({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{rock.title}</span>
+                    {onOpenRock ? (
+                      <button
+                        type="button"
+                        className="font-medium text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        aria-label={`Open Rock: ${rock.title}`}
+                        onClick={() => onOpenRock(rock)}
+                      >
+                        {rock.title}
+                      </button>
+                    ) : (
+                      <span className="font-medium">{rock.title}</span>
+                    )}
                     {functionName && (
                       <Badge variant="outline" className="text-xs">
                         {functionName}
@@ -179,7 +199,7 @@ export function RockCascadeView({
                   allRocks={allRocks}
                   onCreateTeamRock={onCreateTeamRock}
                   onCreateIndividualRock={onCreateIndividualRock}
-                  onEditRock={onEditRock}
+                  onOpenRock={onOpenRock}
                   getUserName={getUserName}
                   getUserInfo={getUserInfo}
                   getFunctionName={getFunctionName}

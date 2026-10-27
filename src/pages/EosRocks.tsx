@@ -653,7 +653,7 @@ function RocksHierarchyContent() {
                 allRocks={rocks || []}
                 onCreateTeamRock={handleCreateTeamRock}
                 onCreateIndividualRock={handleCreateIndividualRock}
-                onEditRock={handleEditRock}
+                onOpenRock={handleOpenRock}
                 getUserName={getUserName}
                 getUserInfo={getUserInfo}
                 getFunctionName={getFunctionName}
@@ -678,7 +678,7 @@ function RocksHierarchyContent() {
                     allRocks={rocks || []}
                     onCreateTeamRock={handleCreateTeamRock}
                     onCreateIndividualRock={handleCreateIndividualRock}
-                    onEditRock={handleEditRock}
+                    onOpenRock={handleOpenRock}
                     getUserName={getUserName}
                     getUserInfo={getUserInfo}
                     getFunctionName={getFunctionName}
