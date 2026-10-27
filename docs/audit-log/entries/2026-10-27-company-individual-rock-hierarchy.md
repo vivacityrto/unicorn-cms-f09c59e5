@@ -2,10 +2,12 @@
 
 **Trigger:** ad-hoc (approved RBAC Company Rock decomposition)
 **Scope:** EOS Rock hierarchy creation, normalized milestones and
-`upsert_rock_with_parenting()` parent validation. Read-only target: configured
-Supabase project `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). Existing Rock
-rows were not edited or archived; migrations are not yet applied. No GitHub
-tasks or ComplyHub KB records were created.
+`upsert_rock_with_parenting()` parent validation. Target: configured
+Supabase project `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). The initial
+read-only preflight counted existing Rocks and milestones; existing Rock rows
+were not edited or archived. Both migrations were applied after PR #1444
+merged. No proposed Individual Rocks were created, and no
+GitHub tasks or ComplyHub KB records were created.
 
 ## Findings
 - `eos_rocks.parent_rock_id` already represents Rock hierarchy; no new parent
@@ -42,7 +44,10 @@ tasks or ComplyHub KB records were created.
   same quarter and compatible client scope.
 - `supabase/migrations/20261027100000_validate_company_individual_rock_parenting.sql`:
   preserve the existing RPC authorization while validating new or changed
-  parent tenant, quarter, archive state and level. **Not applied.**
+  parent tenant, quarter, archive state and level. Applied to `unicorn-qa` and
+  the configured Unicorn project after PR #1444 merged; Supabase recorded
+  versions `20261027002007`/`20261027002010` in QA and
+  `20261027002027`/`20261027002034` in the configured project.
 - `src/types/eos.ts`, `src/integrations/supabase/types.ts`,
   `src/components/eos/RockFormDialog.tsx`: add normalized milestone fields,
   per-milestone ownership and acceptance details, evidence URL, and linking
@@ -53,46 +58,57 @@ tasks or ComplyHub KB records were created.
 - `supabase/migrations/20261027110000_normalize_eos_rock_milestones.sql`:
   add tenant-scoped milestone/link/event tables, validate Rock/tenant scope
   and Company-to-Individual links, record append-only change events, and
-  backfill JSON milestones losslessly. **Not applied.**
+  backfill JSON milestones losslessly. Applied with the versions listed above.
 - `src/utils/rockMilestones.ts` and the Rock create/edit flows preserve the
   legacy JSON path during staggered frontend/schema rollout; once the tables
   exist, new and edited checklist items also write normalized records.
-- `scripts/audit-migrations.mjs` and its unit test: changed-only CI validates
-  only allowlist entries for migrations in the current diff, preventing stale,
-  unrelated historical entries from blocking every migration PR.
 - `supabase/migration-safety-allowlist.json`: records the reviewed DML and
-  trigger-pattern findings for these two migrations through 2026-11-27.
+  trigger-pattern findings for these two migrations through 2026-11-27. The
+  follow-up maintenance PR renews the 14 previously expired entries to
+  2026-11-27 while preserving their recorded scope and decision state.
 
 ## Verification
-- Read-only query against the configured Unicorn project: tenant 6372 has 152
-  Rocks, 107 Rocks with milestone arrays, and 453 legacy milestone items.
+- Pre-apply read-only query against the configured Unicorn project: tenant 6372
+  had 152 Rocks, 107 Rocks with milestone arrays, and 453 legacy items.
+- Post-apply verification in the configured project: 453 normalized milestone
+  rows exactly match all 453 legacy JSON snapshots; 0 are missing and 0 rows
+  were written outside tenant 6372. All 152 Rocks and 107 legacy arrays remain.
+  The migration trigger recorded 453 `created` milestone events with null actor
+  and an after-snapshot; these are migration-generated backfill events.
+- QA verification: three new tables have RLS enabled, five policies and four
+  validation/audit triggers are present; QA had no Rock fixtures and received
+  zero normalized rows.
 - `npm run typecheck`: passed.
 - `npm run test:frontend`: passed (112 files, 844 passed, 43 skipped).
 - `node --test scripts/audit-migrations.test.mjs`: passed.
 - `node scripts/audit-migrations.mjs --changed-only --base-ref origin/main`:
-  passed (2 migration files, 10 findings, all scoped allowlisted, 0 blocking).
+  passed for the feature PR (2 migration files, 10 findings, all scoped
+  allowlisted, 0 blocking).
 - `npm run lint:ratchet -- --base origin/main`: passed with no regressions.
 - `npm run build`: passed; Vite reported its existing outdated Browserslist data
   notice and large-chunk warning.
 - `git diff --check`: passed.
 - `npm run check:kb-links`: passed (171 files, 1,515 local links, 0 broken).
-- The full `npm run audit:migrations` remains blocked by 14 expired historical
-  allowlist entries. The changed-only CI path now validates only relevant
-  entries; unrelated historical exceptions were left untouched.
-- No migration has been applied to QA or the configured Unicorn project.
+- The full audit initially failed on 14 expired historical allowlist entries.
+  Per Carl's direction, the follow-up maintenance PR renews those entries
+  through 2026-11-27 without changing their scope or prior decision state. The
+  full audit now exits successfully; historical findings remain reported.
 
 ## Decisions
 - Reuse `parent_rock_id`; do not add another hierarchy column.
 - Keep GitHub as the future actionable task record. This change does not add
   webhook synchronization or create task issues.
 - Keep the proposed Individual Rocks as drafts until Carl reviews the scope
-  and owner mapping. No production Rock rows have been created.
+  and owner mapping. No proposed Rock rows have been created.
 - Retain `eos_rocks.milestones` as a compatibility source; the normalized
   schema is additive. Milestone history is captured by database triggers and
   is read-only to authenticated clients.
 
+## Deployment
+- PR #1444 merged at `f249f7cc4b1a1a5dfff91d412eb14fae5e6e7382`; the Vercel
+  Production deployment completed successfully at
+  `https://unicorn-cms-f09c59e5-g3oma2ooo-unicorn-a96954d9.vercel.app/eos/rocks`.
+
 ## Open questions parked
-- Both migrations need their normal review and QA/application path before
-  their database behavior is active.
 - GitHub issue links/webhook synchronization remain deferred until the owner
   approves the resulting Individual Rock breakdown and requests task workflow.
