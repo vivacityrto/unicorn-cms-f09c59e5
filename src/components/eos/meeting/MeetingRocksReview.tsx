@@ -406,6 +406,7 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
           onEditRock(rock);
         }}
         getUserInfo={getUserInfo}
+        onOpenRock={setViewingRockId}
       />
     </Card>
   );
