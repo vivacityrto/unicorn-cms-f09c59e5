@@ -1,7 +1,7 @@
 # Audit: 2026-10-27 — GitHub task sync for Rock milestones
 
 **Trigger:** ad-hoc (Carl's request to sync GitHub/Teams task state to Unicorn milestones; policy option 2 chosen 2026-10-27)
-**Scope:** two new tables, two `SECURITY DEFINER` functions and one new Edge Function (`rock-task-sync`), plus a read-only display of linked tasks in the Rock details panel. Target: `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). **The migration has not been applied to any project, and no event has been received.** Read-only preflight against production was limited to Rock and milestone counts and schema inspection.
+**Scope:** two new tables, two `SECURITY DEFINER` functions and one new Edge Function (`rock-task-sync`), plus a read-only display of linked tasks in the Rock details panel. Target: `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). **The migration is applied to `unicorn-qa` only (2026-10-27, ledger version `20261027034437`, name `rock_task_sync`) and verified there; it is not applied to production, and no event has been received.** Read-only preflight against production was limited to Rock and milestone counts and schema inspection.
 
 ## Findings
 - GitHub `[task]` issues in `ComplyHub-ai/rto-compass-hub` already carry `Linked: Unicorn milestone UUID …` (crosswalk: `docs/kb/reference/authorization-rbac-assurance/unicorn-rock-task-crosswalk.md` in that repository). Unicorn had no table holding that link, no way to attribute a status change to an automation, and no delivery log. 559 existing milestone events have a null actor, so null cannot be read as "automation".
@@ -22,6 +22,9 @@
 
 ## Verification
 - `unicorn-qa`, one rolled-back transaction (migration plus a throwaway Rock and two milestones; nothing left behind, confirmed afterwards): backlog task changes nothing; in-progress task → `in_progress`; repeated event → `duplicate`; older revision → `stale`, link unchanged; open blocked task → `blocked`; task unblocked → released; a sync-set block is released, a block a later edit touched is kept (simulated by moving the recorded timestamp, see Findings); a block restores the prior status when only backlog tasks remain; all tasks closed → status unchanged with `ready_for_review = true`; `complete` milestone untouched; unknown milestone and wrong tenant → `rejected`; closed task only → `in_progress`; re-pointed task updates its link. `authenticated` cannot execute the function; `anon` cannot read the links.
+- **Applied to `unicorn-qa`** with `apply_migration` after a clean pre-check (new objects absent, dependencies present). Structure as stored: RLS enabled on both tables; one select policy on the links and none on the log; `authenticated` holds only `SELECT` on the links, `anon` nothing, and neither role any privilege on the log; only `service_role` can execute the two functions; both are `SECURITY DEFINER` with an empty `search_path` and a single overload; both function bodies' md5 match the migration file byte for byte. Zero rows.
+- **Behaviour on the applied objects** (one transaction, rolled back, nothing left behind, confirmed): all policy scenarios as above, plus refusal of an incomplete event and of a non-https URL; as `authenticated` with no staff context the links read as 0 rows through RLS and INSERT, UPDATE, the sync log and both functions are denied; as `anon` the links and the recompute function are denied.
+- Supabase security advisor on `unicorn-qa`: the only mention of the new objects is an INFO `rls_enabled_no_policy` for `eos_task_sync_events`, which is intentional (service-role-only log). The SECURITY DEFINER function advisories do not list the new functions.
 - Frontend, Edge and migration-audit checks: see the PR.
 
 ## Decisions
@@ -32,7 +35,7 @@
 - No GitHub-login → user mapping yet; assignees are stored as logins.
 
 ## Deployment
-- Not deployed. The Edge Function deploys on merge to `main` (CI) but returns 500 to every request until `ROCK_TASK_SYNC_SECRET` is set. The migration needs Carl's explicit approval and is applied through the Supabase MCP: `unicorn-qa` first, then production.
+- `unicorn-qa`: migration applied and verified 2026-10-27 (see Verification). Production: **not applied**; it needs Carl's explicit approval, through the Supabase MCP. The Edge Function deploys on merge to `main` (CI) but returns 500 to every request until `ROCK_TASK_SYNC_SECRET` is set.
 
 ## Open questions parked
 - Owner and timing of the ComplyHub-side publisher and its two repository secrets.
