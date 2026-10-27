@@ -63,6 +63,8 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
   const [values, setValues] = useState<RockEditorValues>(() => initialValues({ level: initialLevel, currentUserId }));
   /** Editing: what was loaded, to detect unsaved changes and to tell the server's checks what changed. */
   const [loaded, setLoaded] = useState<RockEditorValues | null>(null);
+  /** Which Rock `loaded` and the form belong to. The form is only trusted when this is the Rock being edited. */
+  const [loadedId, setLoadedId] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [confirmClose, setConfirmClose] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
@@ -77,6 +79,7 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
     level: values.level,
     parentId: values.parentId,
     rockId: rock?.id ?? null,
+    savedLevel: rock ? ((rock.rock_level || 'company') as RockLevel) : null,
     clientTenantId: rock?.client_tenant_id ?? null,
   });
   const { rocks } = data;
@@ -100,12 +103,25 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
   // Editing: fill the form once the Rock's milestones have arrived, and only once per opening.
   const loadedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!open || !rock) { loadedFor.current = null; return; }
+    if (!open || !rock) {
+      // Closed, or no Rock: forget what was loaded, so reopening never shows (or saves) the previous opening's values.
+      loadedFor.current = null;
+      setLoaded(null);
+      setLoadedId(null);
+      return;
+    }
+    if (loadedFor.current && loadedFor.current !== rock.id) {
+      // A different Rock was chosen while open: the form still holds the old one until the new one has loaded.
+      loadedFor.current = null;
+      setLoaded(null);
+      setLoadedId(null);
+    }
     if (loadedFor.current === rock.id || !data.editDataReady) return;
     loadedFor.current = rock.id;
     const next = valuesFromRock(rock, milestonesFromRows(data.savedMilestones, data.savedLinks));
     setValues(next);
     setLoaded(next);
+    setLoadedId(rock.id);
     setStatus(rock.status || '');
     setShowErrors(false);
     setContextOpen(!!(next.description || next.issue || next.outcome));
@@ -131,12 +147,27 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
   }, [open, isEdit, currentUserId]);
 
   // Save what has been typed, so a closed sheet or a reload does not lose it.
+  const latestValues = useRef(values);
+  latestValues.current = values;
+  const draftWaiting = useRef(false);
+  draftWaiting.current = !!draft;
+  const skipFlush = useRef(false);
   useEffect(() => {
     // While a saved draft is waiting to be restored or discarded, leave it untouched.
     if (!open || isEdit || draft) return;
     const timer = setTimeout(() => saveDraft(storage(), startKey, values), 600);
     return () => clearTimeout(timer);
   }, [open, isEdit, values, startKey, draft]);
+
+  // Closing within the debounce window must not lose the last edits: save what is there as the sheet closes.
+  useEffect(() => {
+    if (!open) return;
+    skipFlush.current = false;
+    return () => {
+      if (skipFlush.current || draftWaiting.current) return;
+      saveDraft(storage(), startKey, latestValues.current);
+    };
+  }, [open, startKey]);
 
   const quarter = { year: values.quarterYear, quarter: values.quarterNumber };
   const candidates = useMemo(() => {
@@ -173,7 +204,7 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
     ? findClientRockOffer({ level: values.level, parentId: values.parentId, clientTenantId: clientResult.clientTenantId ?? rock?.client_tenant_id ?? null, quarterYear: values.quarterYear, quarterNumber: values.quarterNumber, rocks })
     : null), [isEdit, values.level, values.parentId, values.quarterYear, values.quarterNumber, rocks, clientResult.clientTenantId, rock?.client_tenant_id]);
   const dirty = isEdit && !!loaded && isDirty(values, loaded, { current: status, loaded: rock?.status || '' });
-  const loading = isEdit && !loaded;
+  const loading = isEdit && (!loaded || loadedId !== rock?.id);
 
   const requestClose = () => {
     if (dirty) setConfirmClose(true);
@@ -218,6 +249,8 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
         clearDraft(storage(), startKey);
         setDraft(null);
         setCreated(count => count + 1);
+        // The Rock exists now; closing must not save it again as a draft.
+        if (!another) skipFlush.current = true;
       }
       if (result.milestoneError) {
         // The Rock exists, so closing avoids a second Create making a duplicate. The toast explains the milestones.
@@ -372,7 +405,7 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
                   </Select>
                 </div>
                 {parentLocksQuarter
-                  ? <p className="text-xs text-muted-foreground">{children.length > 0 ? 'Rocks serve this one, and they share its quarter.' : 'Set by the Rock it serves; a Rock and its parent share a quarter.'}</p>
+                  ? <p className="text-xs text-muted-foreground">{children.length > 0 ? 'Rocks serve this one, and they share its quarter.' : 'Set by the Rock it serves, because a Rock and its parent share a quarter. Clear that choice to use another quarter.'}</p>
                   : err('quarter') && <p className="text-xs text-destructive">{err('quarter')}</p>}
               </div>
             </div>
