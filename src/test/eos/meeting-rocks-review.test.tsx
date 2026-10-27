@@ -71,7 +71,8 @@ describe('MeetingRocksReview', () => {
     expect(screen.getByRole('img', { name: /1 On Track/ })).toBeInTheDocument();
     expect(screen.getByText('Harden RBAC')).toBeInTheDocument();
     expect(screen.getByText('2 cascaded')).toBeInTheDocument();
-    expect(screen.getByText('1/4 milestones')).toBeInTheDocument();
+    // Only a total and complete count are known here, so the meter falls back to those.
+    expect(screen.getByText('/4 milestones · 25%')).toBeInTheDocument();
     expect(screen.getByTestId('status-control-c1')).toBeInTheDocument();
   });
 
@@ -175,5 +176,132 @@ describe('MeetingRocksReview', () => {
     renderReview({ scope: ['company'] });
 
     expect(screen.getByTestId('insights')).toHaveTextContent('1 insights rocks');
+  });
+  describe('milestone health and attention', () => {
+    const bd = (over: Partial<NonNullable<RockWithHierarchy['milestoneBreakdown']>> = {}) => ({
+      total: 10, complete: 2, inProgress: 3, blocked: 0, offTrack: 0, notStarted: 5, overdue: 0, ...over,
+    });
+    const healthy = (id: string, extra: Partial<RockWithHierarchy> = {}) =>
+      make({ id, title: `Rock ${id}`, owner_id: 'u1', milestoneBreakdown: bd(), ...extra });
+
+    it('draws a milestone meter with counts and a percentage on every row', () => {
+      hierarchy.rocks = [healthy('a', { milestoneBreakdown: bd({ total: 39, complete: 4, inProgress: 10, blocked: 3, notStarted: 22 }) })];
+      renderReview();
+
+      expect(screen.getByText('/39 milestones · 10%')).toBeInTheDocument();
+      expect(screen.getAllByRole('img', { name: /Milestones: 4 complete, 10 in progress, 3 blocked/ }).length).toBeGreaterThan(0);
+    });
+
+    it('says when a Rock has no milestones yet', () => {
+      hierarchy.rocks = [healthy('a', { milestoneBreakdown: bd({ total: 0, complete: 0, inProgress: 0, notStarted: 0 }) })];
+      renderReview();
+
+      expect(screen.getByText('No milestones yet')).toBeInTheDocument();
+    });
+
+    it('summarises milestones across every Rock under review', () => {
+      hierarchy.rocks = [
+        healthy('a', { milestoneBreakdown: bd({ total: 20, complete: 4, blocked: 1, overdue: 2 }) }),
+        healthy('b', { milestoneBreakdown: bd({ total: 10, complete: 5, offTrack: 1 }) }),
+      ];
+      renderReview();
+
+      const card = screen.getByText('Milestones', { selector: 'h4' }).closest('div')!.parentElement as HTMLElement;
+      expect(card).toHaveTextContent('9 of 30 done');
+      expect(card).toHaveTextContent('1 blocked');
+      expect(card).toHaveTextContent('1 off track');
+      expect(card).toHaveTextContent('2 overdue');
+      expect(within(card).getByRole('img', { name: /Milestones across these Rocks/ })).toBeInTheDocument();
+    });
+
+    it('flags blocked, off-track and overdue milestones on the row', () => {
+      hierarchy.rocks = [healthy('a', { milestoneBreakdown: bd({ blocked: 2, offTrack: 1, overdue: 3 }) })];
+      renderReview();
+
+      // Scoped to the row: the summary card above repeats the same totals.
+      const rows = within(screen.getByRole('list', { name: 'Rock cascade' }));
+      expect(rows.getByText('2 blocked milestones')).toBeInTheDocument();
+      expect(rows.getByText('1 off track')).toBeInTheDocument();
+      expect(rows.getByText('3 overdue')).toBeInTheDocument();
+    });
+
+    it('shows no flags on a healthy Rock', () => {
+      hierarchy.rocks = [healthy('a')];
+      renderReview();
+
+      expect(screen.queryByText(/blocked milestone/)).toBeNull();
+      expect(screen.queryByText(/overdue$/)).toBeNull();
+      expect(screen.getByRole('button', { name: /Needs attention/ })).toHaveTextContent('0');
+    });
+
+    function seedProblem() {
+      hierarchy.rocks = [
+        healthy('ok', { rock_level: 'company', title: 'Healthy Company Rock' }),
+        healthy('bad', { rock_level: 'company', title: 'Problem Company Rock' }),
+        healthy('badTeam', { rock_level: 'team', parent_rock_id: 'bad', title: 'Problem Team Rock' }),
+        healthy('badInd', { rock_level: 'individual', parent_rock_id: 'badTeam', title: 'Problem Individual Rock', status: 'off_track' }),
+        healthy('fineTeam', { rock_level: 'team', parent_rock_id: 'bad', title: 'Fine Team Rock' }),
+      ];
+    }
+
+    it('counts the Company Rocks that need attention, including a problem further down', () => {
+      seedProblem();
+      renderReview();
+
+      expect(screen.getByRole('button', { name: /Needs attention/ })).toHaveTextContent('1');
+    });
+
+    it('marks a collapsed Rock whose problem is further down, without blaming the Rock itself', () => {
+      seedProblem();
+      renderReview();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }));
+
+      expect(screen.getByText('Needs attention below')).toBeInTheDocument();
+      expect(screen.queryByText('Problem Team Rock')).toBeNull();
+    });
+
+    it('focuses on what needs attention: hides healthy Rocks and opens the path to the problem', () => {
+      seedProblem();
+      renderReview();
+
+      fireEvent.click(screen.getByRole('button', { name: /Needs attention/ }));
+
+      expect(screen.getByRole('button', { name: /Needs attention/ })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByText('Healthy Company Rock')).toBeNull();
+      expect(screen.getByText('Problem Company Rock')).toBeInTheDocument();
+      expect(screen.getByText('Problem Team Rock')).toBeInTheDocument();
+      expect(screen.getByText('Problem Individual Rock')).toBeInTheDocument(); // opened without a click
+      expect(screen.queryByText('Fine Team Rock')).toBeNull();
+    });
+
+    it('says so when nothing needs attention, and lets you show everything again', () => {
+      hierarchy.rocks = [healthy('a', { title: 'Calm Rock' })];
+      renderReview();
+
+      fireEvent.click(screen.getByRole('button', { name: /Needs attention/ }));
+      expect(screen.getByText('Nothing needs attention in these Rocks.')).toBeInTheDocument();
+      expect(screen.queryByText('Calm Rock')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show all Rocks' }));
+      expect(screen.getByText('Calm Rock')).toBeInTheDocument();
+    });
+
+    it('applies the same filter in the list view, by each Rock’s own reasons', () => {
+      hierarchy.rocks = [
+        healthy('ok', { title: 'Healthy Rock' }),
+        healthy('late', { title: 'Overdue Rock', due_date: '2020-01-01' }),
+        healthy('unowned', { title: 'Unowned Rock', owner_id: undefined }),
+      ];
+      renderReview();
+
+      fireEvent.click(screen.getByRole('radio', { name: 'List view' }));
+      expect(screen.getByRole('button', { name: /Needs attention/ })).toHaveTextContent('2');
+
+      fireEvent.click(screen.getByRole('button', { name: /Needs attention/ }));
+      expect(screen.queryByText('Healthy Rock')).toBeNull();
+      expect(screen.getByText('Overdue Rock')).toBeInTheDocument();
+      expect(screen.getByText('Unowned Rock')).toBeInTheDocument();
+    });
   });
 });

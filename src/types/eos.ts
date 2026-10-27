@@ -1,5 +1,6 @@
 // EOS Type Definitions
 import type { Json } from '@/integrations/supabase/types';
+import type { MilestoneBreakdown } from '@/utils/rockMilestoneRollup';
 
 export type EosRole = 'admin' | 'facilitator' | 'scribe' | 'participant' | 'client_viewer';
 export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'closed' | 'cancelled' | 'skipped';
@@ -188,6 +189,8 @@ export interface RockWithHierarchy extends EosRock {
     total: number;
     complete: number;
   };
+  /** Active milestones by status, rolled up like milestoneStats; overdue is counted within the status counts. */
+  milestoneBreakdown?: MilestoneBreakdown;
   function?: {
     id: string;
     name: string;

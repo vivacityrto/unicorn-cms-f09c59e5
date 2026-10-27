@@ -16,6 +16,7 @@ import {
 } from '@/utils/rockRollup';
 import { DB_ROCK_STATUS, uiToDbStatus } from '@/utils/rockStatusUtils';
 import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
+import { emptyBreakdown, rollupMilestones } from '@/utils/rockMilestoneRollup';
 
 export interface CreateRockInput {
   title: string;
@@ -83,7 +84,7 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
       if (rockIds.length === 0) return [];
       const { data, error } = await supabase
         .from('eos_rock_milestones')
-        .select('id, rock_id, status')
+        .select('id, rock_id, status, due_date')
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .in('rock_id', rockIds);
       if (error) throw error;
@@ -97,50 +98,13 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
     if (!rocksRaw) return [];
     const hierarchy = buildRockHierarchy(rocksRaw);
     if (!milestoneRows) return hierarchy;
-    const progressByRock = new Map<string, { total: number; complete: number }>();
-    const rockIdsWithMilestones = new Set<string>();
-    for (const milestone of milestoneRows || []) {
-      rockIdsWithMilestones.add(milestone.rock_id);
-      if (milestone.status === 'deferred') continue;
-      const current = progressByRock.get(milestone.rock_id) || { total: 0, complete: 0 };
-      current.total += 1;
-      if (milestone.status === 'complete') current.complete += 1;
-      progressByRock.set(milestone.rock_id, current);
-    }
-    const childrenByParent = new Map<string, typeof hierarchy>();
-    for (const rock of hierarchy) {
-      if (!rock.parent_rock_id) continue;
-      const children = childrenByParent.get(rock.parent_rock_id) || [];
-      children.push(rock);
-      childrenByParent.set(rock.parent_rock_id, children);
-    }
-    const descendantIndividuals = (rockId: string): string[] => {
-      const children = childrenByParent.get(rockId) || [];
-      return children.flatMap(child =>
-        child.rock_level === 'individual' ? [child.id] : descendantIndividuals(child.id)
-      );
-    };
+    const breakdowns = rollupMilestones(hierarchy, milestoneRows);
     return hierarchy.map((rock) => {
-      if (rock.rock_level === 'individual') {
-        return { ...rock, milestoneStats: progressByRock.get(rock.id) || { total: 0, complete: 0 } };
-      }
-      const leafIds = descendantIndividuals(rock.id);
-      const hasLeafMilestones = leafIds.some(childId => rockIdsWithMilestones.has(childId));
-      const leafStats = leafIds.reduce(
-        (total, childId) => {
-          const childStats = progressByRock.get(childId);
-          return {
-            total: total.total + (childStats?.total || 0),
-            complete: total.complete + (childStats?.complete || 0),
-          };
-        },
-        { total: 0, complete: 0 }
-      );
+      const breakdown = breakdowns.get(rock.id) ?? emptyBreakdown();
       return {
         ...rock,
-        milestoneStats: hasLeafMilestones
-          ? leafStats
-          : progressByRock.get(rock.id) || { total: 0, complete: 0 },
+        milestoneStats: { total: breakdown.total, complete: breakdown.complete },
+        milestoneBreakdown: breakdown,
       };
     });
   }, [rocksRaw, milestoneRows]);
