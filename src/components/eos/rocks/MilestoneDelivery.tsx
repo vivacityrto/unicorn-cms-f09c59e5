@@ -9,10 +9,10 @@ import {
   DELIVERY_STATE_LABEL,
   type CompanyMilestoneDelivery,
   type DeliveryState,
-  type RockDeliverySummary,
   type SupportedCompanyMilestone,
 } from '@/utils/milestoneDelivery';
 import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
+import { parseMilestoneTitle } from '@/utils/rockPanelMetrics';
 
 interface UserInfo {
   name: string;
@@ -43,67 +43,22 @@ function percentLabel(percent: number | null) {
   return percent === null ? '' : ` · ${percent}%`;
 }
 
-/** Company Rock: how far the linked Individual milestones have got, alongside what a person has signed off. */
-export function DeliverySummaryStrip({ summary }: { summary: RockDeliverySummary }) {
-  if (summary.milestones === 0) return null;
-  const chips: Array<{ key: string; text: string; tone?: 'warn' | 'bad' | 'good' }> = [
-    { key: 'signed', text: `Signed off ${summary.signedOff} of ${summary.milestones}` },
-    { key: 'covered', text: `Being delivered ${summary.covered} of ${summary.milestones}` },
-  ];
-  if (summary.readyForReview > 0) chips.push({ key: 'ready', text: `${summary.readyForReview} ready for sign-off`, tone: 'good' });
-  if (summary.blocked > 0) chips.push({ key: 'blocked', text: `${summary.blocked} blocked`, tone: 'bad' });
-  if (summary.uncovered > 0) chips.push({ key: 'uncovered', text: `${summary.uncovered} with nothing delivering`, tone: 'warn' });
-
-  return (
-    <div className="space-y-2 rounded-lg border bg-muted/30 p-3" data-testid="delivery-summary">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="flex items-center gap-1.5 text-sm font-semibold">
-          <GitMerge className="h-4 w-4 text-muted-foreground" aria-hidden />
-          Delivery progress
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {summary.contributors === 0
-            ? 'No Individual milestones linked yet'
-            : `${summary.contributorsComplete} of ${summary.contributors} linked milestones delivered${percentLabel(summary.percent)}`}
-        </p>
-      </div>
-      {summary.percent !== null && <Progress value={summary.percent} className="h-2" aria-label="Delivery progress" />}
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {chips.map(chip => (
-          <li
-            key={chip.key}
-            className={cn(
-              'text-muted-foreground',
-              chip.tone === 'good' && 'font-medium text-green-700 dark:text-green-300',
-              chip.tone === 'bad' && 'font-medium text-destructive',
-              chip.tone === 'warn' && 'font-medium text-amber-700 dark:text-amber-300',
-            )}
-          >
-            {chip.text}
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs text-muted-foreground">
-        A person signs off each Company milestone. Delivery progress is calculated from the Individual milestones linked to it.
-      </p>
-    </div>
-  );
-}
-
 /** Under a Company milestone: the Individual milestones that deliver it, and how far they have got. */
 export function CompanyMilestoneDeliveryBlock({
   delivery,
   getUserInfo,
+  className = 'ml-6',
 }: {
   delivery: CompanyMilestoneDelivery;
   getUserInfo?: (userId: string) => UserInfo | null;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const { counts, contributors, percent, state } = delivery;
 
   if (state === 'uncovered') {
     return (
-      <div className="ml-6 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+      <div className={cn('flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200', className)}>
         <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         <span>No active Individual milestone is linked to this, so nobody is delivering it yet.</span>
       </div>
@@ -111,7 +66,7 @@ export function CompanyMilestoneDeliveryBlock({
   }
 
   return (
-    <div className="ml-6 space-y-2 rounded-md border bg-muted/30 p-2">
+    <div className={cn('space-y-2 rounded-md border bg-muted/30 p-2', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="inline-flex items-center gap-1 font-medium text-foreground">
           <GitMerge className="h-3.5 w-3.5" aria-hidden />
@@ -186,42 +141,51 @@ export function CompanyMilestoneDeliveryBlock({
 export function SupportedMilestonesBlock({
   supported,
   onOpenRock,
+  className = 'ml-6',
 }: {
   supported: SupportedCompanyMilestone[];
   onOpenRock?: (rockId: string) => void;
+  className?: string;
 }) {
   if (supported.length === 0) return null;
   return (
-    <div className="ml-6 space-y-1.5">
-      {supported.map(({ milestone, rock, delivery }) => (
-        <div key={milestone.id} className="space-y-1 rounded-md border bg-muted/30 p-2 text-xs">
-          <p className="flex items-start gap-1.5 break-words">
-            <Link2 className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
-            <span>
-              Supports <span className="font-medium text-foreground">{milestone.title}</span>
-            </span>
-          </p>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
-            <DeliveryStateBadge state={delivery.state} />
-            {delivery.counts.active > 0 && (
+    <div className={cn('space-y-1.5', className)}>
+      {supported.map(({ milestone, rock, delivery }) => {
+        const ref = parseMilestoneTitle(milestone.title);
+        return (
+          <div key={milestone.id} className="space-y-1 rounded-md border bg-muted/30 p-2 text-xs">
+            <p className="flex items-start gap-1.5 break-words">
+              <Link2 className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
               <span>
-                {delivery.counts.complete} of {delivery.counts.active} delivering milestones done
+                Supports{' '}
+                <span className="font-medium text-foreground">
+                  {ref.number !== null && <span className="mr-1 font-mono">M{ref.number} ·</span>}
+                  {ref.label}
+                </span>
               </span>
-            )}
-            {onOpenRock && rock && (
-              <button
-                type="button"
-                className="rounded text-left text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`Open Company Rock: ${rock.title}`}
-                title={rock.title}
-                onClick={() => onOpenRock(rock.id)}
-              >
-                Open Company Rock
-              </button>
-            )}
+            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
+              <DeliveryStateBadge state={delivery.state} />
+              {delivery.counts.active > 0 && (
+                <span>
+                  {delivery.counts.complete} of {delivery.counts.active} delivering milestones done
+                </span>
+              )}
+              {onOpenRock && rock && (
+                <button
+                  type="button"
+                  className="rounded text-left text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Open Company Rock: ${rock.title}`}
+                  title={rock.title}
+                  onClick={() => onOpenRock(rock.id)}
+                >
+                  Open Company Rock
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

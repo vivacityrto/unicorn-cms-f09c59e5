@@ -1,4 +1,5 @@
 import type { RockMilestoneStatus } from '@/types/eos';
+import { todayLocalIso } from '@/utils/localDate';
 
 /**
  * Relationship and progress between Company milestones and the Individual
@@ -97,7 +98,7 @@ export function emptyDeliveryCounts(): DeliveryCounts {
   return { active: 0, complete: 0, inProgress: 0, notStarted: 0, blocked: 0, offTrack: 0, deferred: 0, overdue: 0 };
 }
 
-const todayIso = (now: Date) => now.toISOString().slice(0, 10);
+const todayIso = (now: Date) => todayLocalIso(now);
 
 function isOverdue(milestone: DeliveryMilestone, now: Date): boolean {
   if (!milestone.dueDate) return false;
@@ -251,6 +252,75 @@ export function rockDeliverySummary(
     ? Math.round((summary.contributorsComplete / summary.contributors) * 100)
     : null;
   return summary;
+}
+
+export interface RockDeliveryShare {
+  rockId: string;
+  rockTitle: string;
+  ownerId: string | null;
+  /** Active milestones this Rock contributes to the Company milestones (each counted once). */
+  total: number;
+  complete: number;
+  inProgress: number;
+  blocked: number;
+  offTrack: number;
+  overdue: number;
+}
+
+/**
+ * Who is delivering a Company Rock: its linked Individual milestones grouped by
+ * the Rock they belong to. A milestone feeding several Company milestones is
+ * one piece of work and is counted once.
+ */
+export function deliveryByRock(
+  companyMilestoneIds: readonly string[],
+  data: DeliveryData,
+  now: Date = new Date(),
+): RockDeliveryShare[] {
+  const counted = new Set<string>();
+  const shares = new Map<string, RockDeliveryShare>();
+  for (const id of companyMilestoneIds) {
+    for (const { milestone, rock, overdue } of companyMilestoneDelivery(id, data, now).contributors) {
+      if (milestone.status === 'deferred' || counted.has(milestone.id)) continue;
+      counted.add(milestone.id);
+      const share = shares.get(milestone.rockId) ?? {
+        rockId: milestone.rockId,
+        rockTitle: rock?.title ?? 'Unknown Rock',
+        ownerId: rock?.ownerId ?? null,
+        total: 0,
+        complete: 0,
+        inProgress: 0,
+        blocked: 0,
+        offTrack: 0,
+        overdue: 0,
+      };
+      share.total += 1;
+      if (milestone.status === 'complete') share.complete += 1;
+      else if (milestone.status === 'in_progress') share.inProgress += 1;
+      else if (milestone.status === 'blocked') share.blocked += 1;
+      else if (milestone.status === 'off_track') share.offTrack += 1;
+      if (overdue) share.overdue += 1;
+      shares.set(milestone.rockId, share);
+    }
+  }
+  return [...shares.values()].sort((a, b) => b.total - a.total || a.rockTitle.localeCompare(b.rockTitle));
+}
+
+/**
+ * Company milestones whose delivery needs discussing: a contributor is blocked or
+ * off track, or nothing is delivering them. Signed-off and deferred ones never do.
+ */
+export function deliveryAttentionIds(
+  companyMilestoneIds: readonly string[],
+  data: DeliveryData,
+  now: Date = new Date(),
+): Set<string> {
+  const ids = new Set<string>();
+  for (const id of companyMilestoneIds) {
+    const { state } = companyMilestoneDelivery(id, data, now);
+    if (state === 'blocked' || state === 'at_risk' || state === 'uncovered') ids.add(id);
+  }
+  return ids;
 }
 
 export const DELIVERY_STATE_LABEL: Record<DeliveryState, string> = {

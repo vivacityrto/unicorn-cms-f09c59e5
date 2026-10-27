@@ -203,3 +203,43 @@ describe('rockDeliverySummary', () => {
     expect(rockDeliverySummary(['C1', 'C2'], data, NOW).uncovered).toBe(0);
   });
 });
+
+describe('deliveryByRock', () => {
+  it('groups contributors by the Rock they belong to, counting each milestone once', async () => {
+    const { deliveryByRock } = await import('@/utils/milestoneDelivery');
+    const data = build(
+      [
+        ms('C1', 'company', 'not_started'), ms('C2', 'company', 'not_started'),
+        ms('a', 'khian', 'complete'), ms('b', 'khian', 'blocked', { due_date: '2026-11-01' }), ms('c', 'rj', 'in_progress'), ms('d', 'rj', 'deferred'),
+      ],
+      [['C1', 'a'], ['C2', 'a'], ['C1', 'b'], ['C2', 'c'], ['C2', 'd']],
+    );
+    const shares = deliveryByRock(['C1', 'C2'], data, NOW);
+
+    expect(shares).toEqual([
+      { rockId: 'khian', rockTitle: 'Khian Rock', ownerId: 'u-khian', total: 2, complete: 1, inProgress: 0, blocked: 1, offTrack: 0, overdue: 1 },
+      { rockId: 'rj', rockTitle: 'RJ Rock', ownerId: 'u-rj', total: 1, complete: 0, inProgress: 1, blocked: 0, offTrack: 0, overdue: 0 },
+    ]);
+  });
+
+  it('returns nothing when nothing is linked', async () => {
+    const { deliveryByRock } = await import('@/utils/milestoneDelivery');
+    expect(deliveryByRock(['C1'], build([ms('C1', 'company', 'not_started')], []), NOW)).toEqual([]);
+  });
+});
+
+describe('deliveryAttentionIds', () => {
+  it('flags Company milestones whose delivery is blocked, at risk or has nothing behind it', async () => {
+    const { deliveryAttentionIds } = await import('@/utils/milestoneDelivery');
+    const data = build(
+      [
+        ms('blocked', 'company', 'not_started'), ms('risk', 'company', 'not_started'), ms('fine', 'company', 'not_started'),
+        ms('empty', 'company', 'not_started'), ms('signed', 'company', 'complete'), ms('deferredCo', 'company', 'deferred'),
+        ms('b', 'khian', 'blocked'), ms('o', 'khian', 'off_track'), ms('p', 'rj', 'in_progress'), ms('q', 'rj', 'blocked'), ms('r', 'rj', 'not_started'),
+      ],
+      [['blocked', 'b'], ['risk', 'o'], ['fine', 'p'], ['signed', 'q'], ['deferredCo', 'r']],
+    );
+
+    expect(deliveryAttentionIds(['blocked', 'risk', 'fine', 'empty', 'signed', 'deferredCo'], data, NOW)).toEqual(new Set(['blocked', 'risk', 'empty']));
+  });
+});
