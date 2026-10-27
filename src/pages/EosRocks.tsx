@@ -725,6 +725,7 @@ function RocksHierarchyContent() {
         onEdit={handleEditRock}
         onViewCascade={handleViewCascade}
         getUserInfo={getUserInfo}
+        onOpenRock={setViewingRockId}
       />
 
       <RockFormDialog

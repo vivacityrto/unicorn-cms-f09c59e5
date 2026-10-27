@@ -10,7 +10,6 @@ import {
   ExternalLink,
   Flag,
   GitBranch,
-  Link2,
   ListChecks,
   Pencil,
   Target,
@@ -23,6 +22,11 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  CompanyMilestoneDeliveryBlock,
+  DeliverySummaryStrip,
+  SupportedMilestonesBlock,
+} from '@/components/eos/rocks/MilestoneDelivery';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -33,7 +37,10 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { useMilestoneDelivery } from '@/hooks/useMilestoneDelivery';
 import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
+import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
+import { companyMilestoneDelivery, rockDeliverySummary, supportedCompanyMilestones } from '@/utils/milestoneDelivery';
 import {
   sortMilestoneTasks,
   summarizeMilestoneTasks,
@@ -64,6 +71,8 @@ interface RockDetailSheetProps {
   onEdit?: (rock: RockWithHierarchy) => void;
   onViewCascade?: (rock: RockWithHierarchy) => void;
   getUserInfo?: (userId: string) => UserInfo | null;
+  /** Switch the panel to another Rock, e.g. from an Individual milestone to the Company Rock it supports. */
+  onOpenRock?: (rockId: string) => void;
 }
 
 interface DetailMilestone {
@@ -75,22 +84,12 @@ interface DetailMilestone {
   dueDate?: string | null;
   exitCriteria?: string | null;
   evidenceUrl?: string | null;
-  supportsCompanyMilestoneIds: string[];
 }
 
 const LEVEL_STYLES: Record<RockLevel, { label: string; className: string }> = {
   company: { label: 'Company', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
   team: { label: 'Team', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
   individual: { label: 'Individual', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-};
-
-const MILESTONE_STATUS: Record<RockMilestoneStatus, { label: string; className: string }> = {
-  not_started: { label: 'Not started', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  in_progress: { label: 'In progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  blocked: { label: 'Blocked', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-  complete: { label: 'Complete', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  off_track: { label: 'Off track', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-  deferred: { label: 'Deferred', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
 };
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -117,9 +116,6 @@ function legacyMilestones(rock: RockWithHierarchy): DetailMilestone[] {
     dueDate: typeof m.due_date === 'string' && m.due_date ? m.due_date : null,
     exitCriteria: typeof m.exit_criteria === 'string' && m.exit_criteria ? m.exit_criteria : null,
     evidenceUrl: typeof m.evidence_url === 'string' && m.evidence_url ? m.evidence_url : null,
-    supportsCompanyMilestoneIds: Array.isArray(m.linked_company_milestone_ids)
-      ? (m.linked_company_milestone_ids as string[])
-      : [],
   })).filter(m => m.title.trim());
 }
 
@@ -266,6 +262,7 @@ export function RockDetailSheet({
   onEdit,
   onViewCascade,
   getUserInfo,
+  onOpenRock,
 }: RockDetailSheetProps) {
   const { profile } = useAuth();
   const rockId = rock?.id;
@@ -290,31 +287,15 @@ export function RockDetailSheet({
 
   const normalized = milestonesQuery.data;
   const normalizedIds = (normalized || []).map(m => m.id);
-  const isIndividual = rock?.rock_level === 'individual';
 
-  // Which Company milestones each of this Rock's milestones supports (individual Rocks only).
-  const supportsQuery = useQuery({
-    queryKey: ['eos-rock-detail-supports', rockId, normalizedIds],
-    queryFn: async () => {
-      const { data: links, error: linkError } = await supabase
-        .from('eos_rock_milestone_links')
-        .select('company_milestone_id, individual_milestone_id')
-        .in('individual_milestone_id', normalizedIds);
-      if (linkError) throw linkError;
-      const companyIds = [...new Set((links || []).map(l => l.company_milestone_id))];
-      if (companyIds.length === 0) return { links: links || [], titles: new Map<string, string>() };
-      const { data: companyMilestones, error: titleError } = await supabase
-        .from('eos_rock_milestones')
-        .select('id, title')
-        .in('id', companyIds);
-      if (titleError) throw titleError;
-      return {
-        links: links || [],
-        titles: new Map((companyMilestones || []).map(m => [m.id, m.title])),
-      };
-    },
-    enabled: !!profile && open && isIndividual && normalizedIds.length > 0,
+  // Both directions of the Company <-> Individual milestone links, with the
+  // contributors and Rocks needed to name and measure them.
+  const deliveryQuery = useMilestoneDelivery({
+    rockId,
+    milestoneIds: normalizedIds,
+    enabled: !!profile && open,
   });
+  const deliveryData = deliveryQuery.data;
 
   // GitHub tasks linked by the rock-task-sync webhook. Tolerates the table not
   // existing yet so the panel still opens if the frontend deploys first.
@@ -343,13 +324,6 @@ export function RockDetailSheet({
     tasksByMilestone.set(task.milestone_id, list);
   }
 
-  const supportsByMilestone = new Map<string, string[]>();
-  for (const link of supportsQuery.data?.links || []) {
-    const list = supportsByMilestone.get(link.individual_milestone_id) || [];
-    list.push(link.company_milestone_id);
-    supportsByMilestone.set(link.individual_milestone_id, list);
-  }
-
   const milestones: DetailMilestone[] = normalized && normalized.length > 0
     ? normalized.map(m => ({
         id: m.id,
@@ -360,7 +334,6 @@ export function RockDetailSheet({
         dueDate: m.due_date,
         exitCriteria: m.exit_criteria,
         evidenceUrl: m.evidence_url,
-        supportsCompanyMilestoneIds: supportsByMilestone.get(m.id) || [],
       }))
     : legacyMilestones(rock);
 
@@ -481,7 +454,7 @@ export function RockDetailSheet({
               </h3>
               {milestones.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  {completedMilestones} of {milestones.length} complete
+                  {completedMilestones} of {milestones.length} {rock.rock_level === 'company' ? 'signed off' : 'complete'}
                 </span>
               )}
             </div>
@@ -499,7 +472,17 @@ export function RockDetailSheet({
               </p>
             ) : (
               <>
-                <Progress value={milestoneProgress} className="h-2" aria-label="Milestone progress" />
+                <Progress
+                  value={milestoneProgress}
+                  className="h-2"
+                  aria-label={rock.rock_level === 'company' ? 'Milestones signed off' : 'Milestone progress'}
+                />
+                {rock.rock_level === 'company' && deliveryData && (
+                  <DeliverySummaryStrip summary={rockDeliverySummary(milestones.map(m => m.id), deliveryData)} />
+                )}
+                {deliveryQuery.isError && (
+                  <p className="text-xs text-muted-foreground">Milestone relationships could not be loaded.</p>
+                )}
                 {tasksQuery.isError && (
                   <p className="text-xs text-muted-foreground">Linked tasks could not be loaded.</p>
                 )}
@@ -516,9 +499,7 @@ export function RockDetailSheet({
                     const owner = milestone.ownerId && getUserInfo ? getUserInfo(milestone.ownerId) : null;
                     const due = formatDate(milestone.dueDate, 'd MMM');
                     const evidenceHref = milestone.evidenceUrl ? safeExternalUrl(milestone.evidenceUrl) : null;
-                    const supports = milestone.supportsCompanyMilestoneIds
-                      .map(id => supportsQuery.data?.titles.get(id))
-                      .filter((title): title is string => !!title);
+                    const hasRows = !!normalized && normalized.length > 0;
                     return (
                       <li key={milestone.id} className="space-y-2 rounded-lg border bg-card p-3">
                         <div className="flex items-start gap-2.5">
@@ -566,11 +547,17 @@ export function RockDetailSheet({
                             Evidence
                           </a>
                         )}
-                        {supports.length > 0 && (
-                          <p className="ml-6 flex items-start gap-1 text-xs text-muted-foreground break-words">
-                            <Link2 className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-                            <span>Supports: {supports.join(', ')}</span>
-                          </p>
+                        {deliveryData && hasRows && rock.rock_level === 'company' && (
+                          <CompanyMilestoneDeliveryBlock
+                            delivery={companyMilestoneDelivery(milestone.id, deliveryData)}
+                            getUserInfo={getUserInfo}
+                          />
+                        )}
+                        {deliveryData && hasRows && rock.rock_level === 'individual' && (
+                          <SupportedMilestonesBlock
+                            supported={supportedCompanyMilestones(milestone.id, deliveryData)}
+                            onOpenRock={onOpenRock}
+                          />
                         )}
                         <MilestoneTasks tasks={tasksByMilestone.get(milestone.id) || []} milestoneStatus={milestone.status} />
                       </li>
