@@ -148,6 +148,7 @@ export interface EosRock {
   id: string;
   tenant_id: number;
   client_tenant_id?: number | null;
+  rock_type?: string | null;
   title: string;
   description?: string;
   issue?: string | null;

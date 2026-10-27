@@ -98,3 +98,24 @@ export function nextInBatch(values: RockEditorValues): RockEditorValues {
     milestones: [],
   };
 }
+
+/**
+ * What carries over when a Rock is recreated at another level: the words, the owner,
+ * the quarter and the milestones as fresh, not-started rows. The parent, team, links
+ * and evidence belong to the old Rock's place in the hierarchy and are left behind.
+ */
+export function copyToNewLevel(values: RockEditorValues): Partial<RockEditorValues> {
+  return {
+    title: values.title,
+    description: values.description,
+    issue: values.issue,
+    outcome: values.outcome,
+    ownerId: values.ownerId,
+    quarterYear: values.quarterYear,
+    quarterNumber: values.quarterNumber,
+    dueDate: values.dueDate,
+    milestones: values.milestones
+      .filter(m => m.title.trim())
+      .map(m => ({ ...newMilestone(m.title), ownerId: m.ownerId, dueDate: m.dueDate, priority: m.priority, exitCriteria: m.exitCriteria })),
+  };
+}

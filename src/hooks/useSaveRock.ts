@@ -33,6 +33,8 @@ const INVALIDATE = [
   ['eos-rock-milestone-progress'],
   ['eos-rock-milestone-links'],
   ['eos-rock-company-milestones'],
+  ['eos-rock-editor-milestones'],
+  ['eos-rock-editor-links'],
 ];
 
 /**
@@ -77,7 +79,8 @@ export function useSaveRock() {
 
       try {
         if (values.level === 'company' && activeVto?.id && !input.id) {
-          const { error: vtoError } = await supabase.from('eos_rocks').update({ vto_id: activeVto.id }).eq('id', saved.id);
+          // The server now does this too; this covers a database that has not been updated yet.
+          const { error: vtoError } = await supabase.from('eos_rocks').update({ vto_id: activeVto.id }).eq('id', saved.id).is('vto_id', null);
           if (vtoError) throw vtoError;
         }
         await syncMilestones(values, saved.id);

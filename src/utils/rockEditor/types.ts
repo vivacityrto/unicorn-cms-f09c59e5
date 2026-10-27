@@ -15,6 +15,8 @@ export interface EditorMilestone {
   status: RockMilestoneStatus;
   /** Company milestones this one supports (Individual Rocks only). */
   supports: string[];
+  /** A saved milestone that has no owner or date of its own keeps it that way instead of taking the Rock's. */
+  keepBlank?: { owner: boolean; due: boolean };
 }
 
 export interface RockEditorValues {

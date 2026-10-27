@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-10-27 — Rock editor: explicit upsert, level lock, V/TO default](entries/2026-10-27-rock-editor-explicit-upsert.md) — drafted migration for `upsert_rock_with_parenting`: removes the two silent side effects (an auto-created Client Rock Team Rock, and a quietly picked parent), refuses a level change for a Rock with a parent or children, and links a new Company Rock to the latest V/TO. Dry-run in a rolled-back transaction against production (all cases as designed, nothing persisted); **not yet applied** to `unicorn-qa` or production, pending approval.
+
 - [2026-10-27 — GitHub task sync for Rock milestones](entries/2026-10-27-rock-task-sync.md) — adds a signed Edge Function (`rock-task-sync`), two tables and two service-role-only functions so GitHub `[task]` issues linked to a Unicorn milestone move it to in progress or blocked and flag it ready for review when every task is closed; a person still marks it complete. One-way GitHub → Unicorn; policy option 2 chosen by Carl. Migration applied to and verified on `unicorn-qa` and production (2026-10-27: structure, grants, RLS, function bodies identical to the file, all policy scenarios, privilege attacks refused, existing data fingerprints unchanged); no events are sent yet.
 
 - [2026-10-27 — Company to Individual Rock hierarchy and milestone accountability](entries/2026-10-27-company-individual-rock-hierarchy.md) — expose direct Company→Individual Rock creation; add normalized milestones with owner, due date, priority, exit criteria, evidence, linked parent deliverables, change history and leaf-progress rollups; migrations were applied after PR #1444 (453/453 legacy milestone items normalized in tenant 6372); proposed Individual Rock rows and GitHub tasks were not created.

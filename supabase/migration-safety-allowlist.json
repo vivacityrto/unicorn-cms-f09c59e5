@@ -216,6 +216,24 @@
       "owner": "Carl",
       "reason": "Reviewed findings (2026-10-27, under Carl's option-2 task-sync policy decision; applied to unicorn-qa and production on Carl's explicit instruction, 2026-10-27): all 8 matches are statements inside the bodies of two SECURITY DEFINER functions (apply_rock_task_sync_event and recompute_rock_milestone_from_tasks), executable only by service_role. The migration itself writes no rows when applied. At runtime the functions insert/upsert eos_rock_milestone_task_links and eos_task_sync_events keyed by (provider, external_key) and event_id, and update eos_rock_milestones.status for one named milestone only within the not_started/in_progress/blocked transitions (never complete, deferred or off_track), after tenant validation. Verified in unicorn-qa and production (PostgreSQL 15): all policy scenarios plus the human-block and restore cases, run in rolled-back transactions.",
       "expires": "2026-11-27"
+    },
+    {
+      "id": "rock-editor-explicit-upsert",
+      "file": "supabase/migrations/20261027150000_rock_editor_explicit_upsert.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed function-body findings only (2026-10-27): the flagged INSERT and UPDATE are the existing statements inside the staff-gated SECURITY DEFINER upsert_rock_with_parenting(), which run only when an authorized user saves a Rock. This migration changes no rows when applied. It removes the function's two silent side effects (the auto-created Client Rock Team Rock and the quiet first-Team-Rock parent pick), adds a level lock for Rocks that have a parent or children, and defaults a new Company Rock's vto_id to the tenant's latest V/TO. Signature and return shape are unchanged, so CREATE OR REPLACE leaves a single overload. Dry-run against production inside a rolled-back transaction before applying: all cases behaved as designed and nothing persisted (156 Rocks, 0 test Rocks, old definition still live afterwards). See docs/audit-log/entries/2026-10-27-rock-editor-explicit-upsert.md.",
+      "expires": "2026-11-27"
+    },
+    {
+      "id": "rock-editor-explicit-upsert-rollback",
+      "file": "supabase/migrations/rollback/20261027150000_rock_editor_explicit_upsert.down.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed function-body findings only (2026-10-27): the rollback restores the previous definition of upsert_rock_with_parenting() verbatim (migration 20261027100000), including its client Rock auto-parenting. The flagged INSERT and UPDATE are statements inside that staff-gated SECURITY DEFINER function body; applying the rollback changes no rows. Use only if the explicit-upsert migration must be reverted.",
+      "expires": "2026-11-27"
     }
   ]
 }

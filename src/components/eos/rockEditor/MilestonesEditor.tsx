@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { newMilestone } from '@/utils/rockEditor/defaults';
 import { parseMilestoneList } from '@/utils/rockEditor/pasteList';
 import type { EditorMilestone, MilestonePriority, ValidationResult } from '@/utils/rockEditor/types';
+import type { RockMilestoneStatus } from '@/types/eos';
+import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
 import type { CompanyMilestoneOption } from '@/hooks/useRockEditorData';
 
 interface MilestonesEditorProps {
@@ -178,12 +180,31 @@ export function MilestonesEditor({
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Status</Label>
+                      <Select value={m.status} onValueChange={value => update(m.id, { status: value as RockMilestoneStatus })}>
+                        <SelectTrigger aria-label={`Status for milestone ${index + 1}`}><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(MILESTONE_STATUS) as RockMilestoneStatus[]).map(status => (
+                            <SelectItem key={status} value={status}>{MILESTONE_STATUS[status].label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label htmlFor={`${detailsId}-exit`} className="text-xs">Done when</Label>
                       <Textarea
                         id={`${detailsId}-exit`} value={m.exitCriteria} rows={2}
                         onChange={e => update(m.id, { exitCriteria: e.target.value })}
                         placeholder="How will we know this milestone is finished?"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor={`${detailsId}-evidence`} className="text-xs">Evidence link</Label>
+                      <Input
+                        id={`${detailsId}-evidence`} type="url" inputMode="url" value={m.evidenceUrl}
+                        onChange={e => update(m.id, { evidenceUrl: e.target.value })}
+                        placeholder="https://"
                       />
                     </div>
                     {isIndividual && companyMilestones.length > 0 && (
