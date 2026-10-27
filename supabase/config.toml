@@ -366,6 +366,11 @@ verify_jwt = false
 [functions.mailgun-webhook]
 verify_jwt = false
 
+[functions.rock-task-sync]
+# GitHub Actions calls this directly with no Supabase auth header - auth is
+# entirely via HMAC signature verification against ROCK_TASK_SYNC_SECRET.
+verify_jwt = false
+
 [functions.summarize-daily-notes]
 verify_jwt = false
 

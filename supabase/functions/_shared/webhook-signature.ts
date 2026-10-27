@@ -92,6 +92,23 @@ export async function verifyMailgunSignature(
   return timingSafeEqualBytes(expected, provided);
 }
 
+/**
+ * GitHub-style: header value `sha256=<hex>` where hex is HMAC-SHA256(raw body).
+ * The `sha256=` prefix is required, so a bare hex digest is rejected.
+ */
+export async function verifyHmacSha256Hex(
+  secret: string,
+  rawBody: string,
+  signatureHeader: string,
+): Promise<boolean> {
+  const prefix = "sha256=";
+  if (!signatureHeader.startsWith(prefix)) return false;
+  const provided = hexToBytes(signatureHeader.slice(prefix.length));
+  if (!provided) return false;
+  const expected = await hmacSha256(secret, rawBody);
+  return timingSafeEqualBytes(expected, provided);
+}
+
 /** Xero: HMAC-SHA256(raw body), base64-encoded, compared constant-time. */
 export async function verifyXeroSignature(
   webhookKey: string,

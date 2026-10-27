@@ -33,6 +33,7 @@ status of every file here, not just these three):
 - **`kpi-module.md`** — completed KPI module implementation record.
 - **`kpi-module-remaining.md`** — in-progress tracker for remaining KPI work.
 - **`messaging-pipeline.md`** — as-shipped messaging/broadcast pipeline state.
+- **`rock-task-sync.md`** — GitHub `[task]` → Rock milestone sync: policy, tables, signed receiver contract, rollout (written, not yet applied or sending).
 - **`route-inventory-by-role.md`** — generated route-by-guard-tier tables; regenerate with `node scripts/generate-route-manifest.mjs`, check drift with `node scripts/check-route-drift.mjs`.
 - **`super-admin-executive-academy-audit-2026-07-29.md`** — dated SuperAdmin/Executive/Academy Builder Playwright audit findings.
 - **`super-admin-exploration-2026-05-21.md`** — dated SuperAdmin feature exploration findings.

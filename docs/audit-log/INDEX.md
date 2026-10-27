@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-10-27 — GitHub task sync for Rock milestones](entries/2026-10-27-rock-task-sync.md) — adds a signed Edge Function (`rock-task-sync`), two tables and two service-role-only functions so GitHub `[task]` issues linked to a Unicorn milestone move it to in progress or blocked and flag it ready for review when every task is closed; a person still marks it complete. One-way GitHub → Unicorn; policy option 2 chosen by Carl. Migration applied to and verified on `unicorn-qa` and production (2026-10-27: structure, grants, RLS, function bodies identical to the file, all policy scenarios, privilege attacks refused, existing data fingerprints unchanged); no events are sent yet.
+
 - [2026-10-27 — Company to Individual Rock hierarchy and milestone accountability](entries/2026-10-27-company-individual-rock-hierarchy.md) — expose direct Company→Individual Rock creation; add normalized milestones with owner, due date, priority, exit criteria, evidence, linked parent deliverables, change history and leaf-progress rollups; migrations were applied after PR #1444 (453/453 legacy milestone items normalized in tenant 6372); proposed Individual Rock rows and GitHub tasks were not created.
 
 - [2026-10-20 — Admin Assistant position type and a Position column in the client portal Users table](entries/2026-10-20-admin-assistant-position-type-and-portal-position-column.md) — adds the Admin Assistant option and two SECURITY DEFINER RPCs (read and set) so portal managers can see and edit each user's position type; the direct table route fails for secondary contacts under RLS. Migration written, not yet applied to production.

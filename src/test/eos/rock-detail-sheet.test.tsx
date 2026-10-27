@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
 import type { EosRock, RockWithHierarchy } from '@/types/eos';
 
-const mockMilestoneRows = vi.hoisted(() => ({ rows: [] as unknown[], error: null as unknown }));
+const tableData = vi.hoisted(() => ({
+  rows: {} as Record<string, unknown[]>,
+  errors: {} as Record<string, unknown>,
+}));
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ profile: { user_uuid: 'user-1' } }),
@@ -12,14 +15,14 @@ vi.mock('@/hooks/useAuth', () => ({
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: () => {
+    from: (table: string) => {
+      const result = () => ({ data: tableData.rows[table] ?? [], error: tableData.errors[table] ?? null });
       const builder: Record<string, unknown> = {};
       builder.select = () => builder;
       builder.eq = () => builder;
       builder.in = () => builder;
-      builder.order = () => Promise.resolve({ data: mockMilestoneRows.rows, error: mockMilestoneRows.error });
-      builder.then = (resolve: (value: unknown) => unknown) =>
-        resolve({ data: mockMilestoneRows.rows, error: mockMilestoneRows.error });
+      builder.order = () => Promise.resolve(result());
+      builder.then = (resolve: (value: unknown) => unknown) => resolve(result());
       return builder;
     },
   },
@@ -68,8 +71,8 @@ function renderSheet(props: Partial<React.ComponentProps<typeof RockDetailSheet>
 
 describe('RockDetailSheet', () => {
   beforeEach(() => {
-    mockMilestoneRows.rows = [];
-    mockMilestoneRows.error = null;
+    tableData.rows = {};
+    tableData.errors = {};
   });
 
   it('shows the Rock narrative, owner and status read-only', async () => {
@@ -86,7 +89,7 @@ describe('RockDetailSheet', () => {
   });
 
   it('lists normalized milestones with progress and detail', async () => {
-    mockMilestoneRows.rows = [
+    tableData.rows.eos_rock_milestones = [
       { id: 'm1', rock_id: 'rock-1', title: 'Draft pipeline plan', status: 'complete', priority: 'high', owner_id: null, due_date: '2026-11-15', exit_criteria: 'Plan signed off', evidence_url: 'https://example.com/plan', sort_order: 0 },
       { id: 'm2', rock_id: 'rock-1', title: 'Launch outreach', status: 'in_progress', priority: 'medium', owner_id: null, due_date: null, exit_criteria: null, evidence_url: 'javascript:alert(1)', sort_order: 1 },
     ];
@@ -146,5 +149,78 @@ describe('RockDetailSheet', () => {
     renderSheet({ rock: null });
 
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  describe('linked GitHub tasks', () => {
+    const milestoneRows = [
+      { id: 'm1', rock_id: 'rock-1', title: 'Draft pipeline plan', status: 'in_progress', priority: 'high', owner_id: null, due_date: null, exit_criteria: null, evidence_url: null, sort_order: 0 },
+    ];
+    const task = (overrides: Record<string, unknown>) => ({
+      id: 't-1', milestone_id: 'm1', external_key: 'repo#1', external_url: 'https://github.com/ComplyHub-ai/rto-compass-hub/issues/1',
+      title: 'Build the fixtures', task_state: 'open', task_status: 'in progress', priority: 'HIGH', due_date: '2026-11-20',
+      assignees: ['KhianBrian'], last_synced_at: '2026-10-27T01:00:00Z', ...overrides,
+    });
+
+    it('lists linked tasks under their milestone with state, assignee and a safe link', async () => {
+      tableData.rows.eos_rock_milestones = milestoneRows;
+      tableData.rows.eos_rock_milestone_task_links = [
+        task({}),
+        task({ id: 't-2', title: 'Write the cases', task_status: 'blocked', external_key: 'repo#2', external_url: 'javascript:alert(1)' }),
+      ];
+      renderSheet();
+
+      expect(await screen.findByText(/Tasks · 0 of 2 closed/)).toBeInTheDocument();
+      expect(screen.getByText('1 blocked')).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: 'Build the fixtures' });
+      expect(link).toHaveAttribute('href', 'https://github.com/ComplyHub-ai/rto-compass-hub/issues/1');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      // An unsafe URL is shown as plain text, never as a link.
+      expect(screen.getByText('Write the cases')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Write the cases' })).toBeNull();
+      expect(screen.getAllByText('KhianBrian')).toHaveLength(2);
+      expect(screen.queryByText('Ready for review')).toBeNull();
+    });
+
+    it('flags a milestone as ready for review, without completing it, once every task is closed', async () => {
+      tableData.rows.eos_rock_milestones = milestoneRows;
+      tableData.rows.eos_rock_milestone_task_links = [
+        task({ task_state: 'closed', task_status: 'completed' }),
+        task({ id: 't-2', external_key: 'repo#2', task_state: 'closed', task_status: 'completed', title: 'Write the cases' }),
+      ];
+      renderSheet();
+
+      expect(await screen.findByText('Ready for review')).toBeInTheDocument();
+      expect(screen.getByText(/Tasks · 2 of 2 closed/)).toBeInTheDocument();
+      expect(screen.getByText(/mark this milestone complete in Unicorn/)).toBeInTheDocument();
+      // The milestone itself is still In progress: a person completes it.
+      expect(screen.getByText('In progress')).toBeInTheDocument();
+    });
+
+    it('does not offer review on a milestone that is already complete', async () => {
+      tableData.rows.eos_rock_milestones = [{ ...milestoneRows[0], status: 'complete' }];
+      tableData.rows.eos_rock_milestone_task_links = [task({ task_state: 'closed', task_status: 'completed' })];
+      renderSheet();
+
+      expect(await screen.findByText(/Tasks · 1 of 1 closed/)).toBeInTheDocument();
+      expect(screen.queryByText('Ready for review')).toBeNull();
+    });
+
+    it('still opens the panel when the task links table does not exist yet', async () => {
+      tableData.rows.eos_rock_milestones = milestoneRows;
+      tableData.errors.eos_rock_milestone_task_links = { code: 'PGRST205', message: 'not found' };
+      renderSheet();
+
+      expect(await screen.findByText('Draft pipeline plan')).toBeInTheDocument();
+      expect(screen.queryByText(/Tasks ·/)).toBeNull();
+      expect(screen.queryByText('Linked tasks could not be loaded.')).toBeNull();
+    });
+
+    it('says so when linked tasks fail to load for another reason', async () => {
+      tableData.rows.eos_rock_milestones = milestoneRows;
+      tableData.errors.eos_rock_milestone_task_links = { code: '500', message: 'boom' };
+      renderSheet();
+
+      expect(await screen.findByText('Linked tasks could not be loaded.')).toBeInTheDocument();
+      expect(screen.getByText('Draft pipeline plan')).toBeInTheDocument();
+    });
   });
 });
