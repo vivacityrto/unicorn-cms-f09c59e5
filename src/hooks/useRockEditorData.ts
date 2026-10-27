@@ -29,6 +29,8 @@ export function useRockEditorData(options: {
   parentId: string | null;
   /** Editing: the saved Rock whose milestones, links and client are needed. */
   rockId?: string | null;
+  /** Editing: the saved Rock's level, which decides whether it has links to load. The form's own level is not known until it is filled. */
+  savedLevel?: RockLevel | null;
   clientTenantId?: number | null;
 }) {
   const { profile } = useAuth();
@@ -114,8 +116,14 @@ export function useRockEditorData(options: {
       return data || [];
     },
     enabled: enabled && !!rockId,
+    // The form is filled from this once, so it must be what the database holds now, never a cached copy.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
   const milestoneIds = useMemo(() => (milestonesQuery.data || []).map(m => m.id), [milestonesQuery.data]);
+
+  const needsLinks = !!rockId && (options.savedLevel ?? options.level) === 'individual' && milestoneIds.length > 0;
 
   const linksQuery = useQuery({
     queryKey: ['eos-rock-editor-links', rockId, milestoneIds],
@@ -127,7 +135,10 @@ export function useRockEditorData(options: {
       if (error) throw error;
       return data || [];
     },
-    enabled: enabled && !!rockId && options.level === 'individual' && milestoneIds.length > 0,
+    enabled: enabled && needsLinks,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
 
   const clientQuery = useQuery({
@@ -145,7 +156,11 @@ export function useRockEditorData(options: {
     savedMilestones: milestonesQuery.data ?? [],
     savedLinks: linksQuery.data ?? [],
     /** Everything a saved Rock needs has arrived. */
-    editDataReady: !rockId || (!!rocks && !milestonesQuery.isLoading && !milestonesQuery.isError && (!linksQuery.isFetching || !!linksQuery.data)),
+    editDataReady: !rockId || (
+      !!rocks
+      && milestonesQuery.isSuccess && !milestonesQuery.isFetching
+      && (!needsLinks || (linksQuery.isSuccess && !linksQuery.isFetching))
+    ),
     editDataError: (milestonesQuery.error as Error | null) ?? null,
     clientName: clientQuery.data?.name ?? null,
     rocks: rocks ?? [],

@@ -350,6 +350,46 @@ describe('RockEditorSheet: edit', () => {
   });
 });
 
+describe('RockEditorSheet: edit never offers the values of a different Rock', () => {
+  const saved = (id: string, title: string): EosRock => ({
+    id, tenant_id: 6372, title, description: null, issue: null, outcome: null, status: 'on_track',
+    quarter_year: NOW_Q.year, quarter_number: NOW_Q.quarter, due_date: `${NOW_Q.year}-12-31T00:00:00.000Z`, created_at: '', updated_at: '',
+    rock_level: 'individual', owner_id: 'me', parent_rock_id: null, function_id: null, client_tenant_id: null, rock_type: 'general',
+  } as EosRock);
+  const props = { onOpenChange: vi.fn() };
+
+  it('shows loading and blocks Save when another Rock is chosen while its data is still arriving', async () => {
+    const a = saved('a', 'Rock A');
+    const { rerender } = render(<RockEditorSheet open rock={a} {...props} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Rock A'));
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Rock A, edited' } });
+
+    state.edit.ready = false;
+    rerender(<RockEditorSheet open rock={saved('b', 'Rock B')} {...props} />);
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Loading the Rock/);
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Save changes' }), { key: 'Enter', ctrlKey: true });
+    expect(state.mutateAsync).not.toHaveBeenCalled();
+
+    state.edit.ready = true;
+    rerender(<RockEditorSheet open rock={saved('b', 'Rock B')} {...props} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Rock B'));
+  });
+
+  it('does not keep the previous opening’s values when the same Rock is reopened before its data is back', async () => {
+    const a = saved('a', 'Rock A');
+    const { rerender } = render(<RockEditorSheet open rock={a} {...props} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Rock A'));
+    rerender(<RockEditorSheet open={false} rock={a} {...props} />);
+
+    state.edit.ready = false;
+    rerender(<RockEditorSheet open rock={a} {...props} />);
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+});
+
 describe('RockEditorSheet: review fixes', () => {
   const DRAFT_KEY = 'eos-rock-draft:company:none';
   const props = { onOpenChange: vi.fn(), onCreated: vi.fn() };
