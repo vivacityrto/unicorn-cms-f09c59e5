@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-27 · **Reconsider by:** 2027-01-27 · **Confidence:** high on the database behaviour (dry-run in a rolled-back `unicorn-qa` transaction, 13 policy scenarios plus the human-block and restore cases); medium on the sender side, which is proposed and not yet built.
 >
-> **Status:** receiver, tables and Rock-panel display are written and tested. **The migration is applied to `unicorn-qa` only (verified 2026-10-27); it is not applied to production, the Edge Function has no secret, and nothing sends events yet.** See "Rollout" below.
+> **Status:** receiver, tables and Rock-panel display are written and tested. **The migration is applied to `unicorn-qa` and to production (both verified 2026-10-27); the Edge Function has no secret, and nothing sends events yet, so no milestone has been changed by the sync.** See "Rollout" below.
 
 GitHub `[task]` issues in `ComplyHub-ai/rto-compass-hub` already carry `Linked: Unicorn milestone UUID <uuid>`. This sync turns that link into live progress on the Unicorn milestone. GitHub stays authoritative: the sync is one-way, and Unicorn never writes back.
 
@@ -54,10 +54,10 @@ The Rock details panel lists each milestone's linked tasks (title linking to the
 
 Add a second publisher beside the Planner one in `.github/workflows/task-planner-sync.yml`, reusing `taskEventPayload` from `scripts/task-planner-notify.mjs`: build the same payload, `JSON.stringify` it once, sign that exact string with HMAC-SHA256, and POST it with the existing 429/5xx retry. Repository secrets (names only): `UNICORN_ROCK_TASK_SYNC_URL`, `UNICORN_ROCK_TASK_SYNC_SECRET`. Like the Planner step, do nothing when the URL is unset. The Planner leg stays a projection: a Planner completion should reach Unicorn only by first reaching GitHub (the return path F-717 describes), so there is one authority and no loop.
 
-## Rollout (only the `unicorn-qa` part of step 2 is done)
+## Rollout (step 2 is done; steps 1 and 3 to 5 are not)
 
 1. Review and merge the PR. Merging deploys the function; with no secret set it returns 500 to every request, which is safe.
-2. Apply the migration to `unicorn-qa`, verify, then production (Supabase MCP; allowlist entry `rock-task-sync` expires 2026-11-27). **`unicorn-qa` is done and verified (2026-10-27); production is pending Carl's approval.**
+2. Apply the migration to `unicorn-qa`, verify, then production (Supabase MCP; allowlist entry `rock-task-sync` expires 2026-11-27). **Done and verified on `unicorn-qa` and on production (2026-10-27).**
 3. Set the three function secrets in the Unicorn Supabase project.
 4. Land the ComplyHub-side publisher and secrets.
 5. Backfill: re-publish the open `[task]` issues once (events are idempotent) so existing tasks link up.
