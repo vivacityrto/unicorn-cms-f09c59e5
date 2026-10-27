@@ -180,16 +180,18 @@ describe('payload builders', () => {
     ],
   };
 
-  it('builds the server payload without sending a team for a non-Team Rock', () => {
-    const p = buildRockPayload(values, { tenantId: 6372 });
+  it('builds the server payload', () => {
+    const p = buildRockPayload({ ...values, functionId: null }, { tenantId: 6372 });
     expect(p).toMatchObject({ title: 'Ship it', description: null, issue: 'why', outcome: null, rock_level: 'individual', function_id: null, owner_id: 'me', parent_rock_id: 'tm', quarter_year: 2026, quarter_number: 4, due_date: '2026-12-31', tenant_id: 6372 });
     expect(p).not.toHaveProperty('id');
     expect(p).not.toHaveProperty('status');
     expect(p).not.toHaveProperty('client_tenant_id');
   });
 
-  it('sends the team only for a Team Rock, and never a parent for a Company Rock', () => {
+  it('sends the team for a Team Rock, keeps one an Individual Rock already has, and never sends a parent or team for a Company Rock', () => {
     expect(buildRockPayload({ ...values, level: 'team', functionId: 'fn' }, { tenantId: 1 }).function_id).toBe('fn');
+    expect(buildRockPayload({ ...values, functionId: null }, { tenantId: 1 }).function_id).toBeNull();
+    expect(buildRockPayload({ ...values, functionId: 'saved-team' }, { tenantId: 1 }).function_id).toBe('saved-team');
     expect(buildRockPayload({ ...values, level: 'company' }, { tenantId: 1 })).toMatchObject({ parent_rock_id: null, function_id: null });
   });
 

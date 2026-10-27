@@ -28,7 +28,8 @@ export function buildRockPayload(
       ? (milestones.map(m => ({ id: m.id, text: m.title.trim(), completed: m.status === 'complete' })) as unknown as Json)
       : null,
     rock_level: values.level,
-    function_id: values.level === 'team' ? values.functionId : null,
+    // A Team Rock needs its team; an Individual Rock keeps one it already has but never gains one here.
+    function_id: values.level === 'company' ? null : values.functionId,
     owner_id: values.ownerId,
     parent_rock_id: values.level === 'company' ? null : values.parentId,
     quarter_year: values.quarterYear,
@@ -51,8 +52,8 @@ export function buildMilestoneRows(values: RockEditorValues, rockId: string, ten
     tenant_id: tenantId,
     rock_id: rockId,
     title: m.title.trim(),
-    owner_id: m.ownerId ?? values.ownerId,
-    due_date: m.dueDate || values.dueDate || null,
+    owner_id: m.ownerId ?? (m.keepBlank?.owner ? null : values.ownerId),
+    due_date: m.dueDate || (m.keepBlank?.due ? null : values.dueDate) || null,
     priority: m.priority,
     status: m.status,
     exit_criteria: m.exitCriteria.trim() || null,

@@ -37,12 +37,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { RockCard } from '@/components/eos/rocks/RockCard';
 import { RockCascadeView } from '@/components/eos/rocks/RockCascadeView';
 import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
-import { RockFormDialog } from '@/components/eos/RockFormDialog';
+import { copyToNewLevel } from '@/utils/rockEditor/defaults';
 import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { dbToUiStatus } from '@/utils/rockStatusUtils';
 import { getCurrentQuarter, formatQuarter } from '@/utils/rockRollup';
 import type { RockLevel, RockWithHierarchy } from '@/types/eos';
+import type { RockEditorValues } from '@/utils/rockEditor/types';
 
 export default function EosRocks() {
   return <RocksHierarchyContent />;
@@ -59,7 +60,7 @@ function RocksHierarchyContent() {
   
   // Dialog states
   // Where a new Rock starts: its level, and the Rock it serves when opened from one.
-  const [creating, setCreating] = useState<{ level: RockLevel; parentId: string | null } | null>(null);
+  const [creating, setCreating] = useState<{ level: RockLevel; parentId: string | null; prefill?: Partial<RockEditorValues> } | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingRock, setEditingRock] = useState<RockWithHierarchy | null>(null);
   const [viewingRockId, setViewingRockId] = useState<string | null>(null);
@@ -668,6 +669,7 @@ function RocksHierarchyContent() {
         onOpenChange={open => { if (!open) setCreating(null); }}
         initialLevel={creating?.level}
         initialParentId={creating?.parentId}
+        prefill={creating?.prefill}
       />
 
       <RockDetailSheet
@@ -684,13 +686,18 @@ function RocksHierarchyContent() {
         onOpenRock={setViewingRockId}
       />
 
-      <RockFormDialog
+      <RockEditorSheet
         open={showEditDialog}
         onOpenChange={(open) => {
           setShowEditDialog(open);
           if (!open) setEditingRock(null);
         }}
         rock={editingRock}
+        onCopyToLevel={(level, values) => {
+          setShowEditDialog(false);
+          setEditingRock(null);
+          setCreating({ level, parentId: null, prefill: copyToNewLevel(values) });
+        }}
       />
     </div>
   );

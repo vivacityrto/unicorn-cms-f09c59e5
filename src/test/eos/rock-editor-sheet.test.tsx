@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
-import type { RockLevel } from '@/types/eos';
+import type { EosRock, RockLevel } from '@/types/eos';
 import type { EditorRock } from '@/hooks/useRockEditorData';
 
 const state = vi.hoisted(() => ({
@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   companyMilestones: [] as unknown[],
   mutateAsync: vi.fn(),
   suggest: vi.fn(),
+  edit: { ready: true, milestones: [] as unknown[], links: [] as unknown[], error: null as Error | null, clientName: null as string | null },
 }));
 
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'me' } }) }));
@@ -21,6 +22,8 @@ vi.mock('@/hooks/useRockEditorData', () => ({
     rocks: state.rocks, rocksLoading: false, rocksError: null,
     functions: [{ id: 'fn', name: 'Delivery' }],
     companyMilestones: state.companyMilestones, companyRootId: null,
+    savedMilestones: state.edit.milestones, savedLinks: state.edit.links, editDataReady: state.edit.ready,
+    editDataError: state.edit.error, clientName: state.edit.clientName,
   }),
 }));
 vi.mock('@/hooks/useSaveRock', () => ({ useSaveRock: () => ({ mutateAsync: state.mutateAsync, isPending: false }) }));
@@ -43,9 +46,17 @@ const open = (props: Partial<React.ComponentProps<typeof RockEditorSheet>> = {})
   return { onOpenChange, onCreated };
 };
 
+beforeAll(() => {
+  // Radix Select scrolls the chosen option into view; jsdom has no layout.
+  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn(() => false);
+  Element.prototype.releasePointerCapture = vi.fn();
+});
+
 beforeEach(() => {
   state.rocks = [];
   state.companyMilestones = [];
+  state.edit = { ready: true, milestones: [], links: [], error: null, clientName: null };
   state.mutateAsync.mockReset().mockResolvedValue({ id: 'new-1', parent_rock_id: null, action: 'created' });
   state.suggest.mockReset();
   window.localStorage.clear();
@@ -194,6 +205,188 @@ describe('RockEditorSheet: create', () => {
     await waitFor(() => expect(screen.getByLabelText('Description')).toHaveValue('AI description'));
     expect(screen.getByLabelText(/^Title/)).toHaveValue('My own title');
     expect(screen.getByLabelText('Milestone 1 title')).toHaveValue('AI step');
+  });
+});
+
+
+describe('RockEditorSheet: edit', () => {
+  const saved = (over: Partial<EosRock> = {}): EosRock => ({
+    id: 'r1', tenant_id: 6372, title: 'Close five enterprise deals', description: 'Why it matters', issue: null, outcome: null, status: 'at_risk',
+    quarter_year: NOW_Q.year, quarter_number: NOW_Q.quarter, due_date: `${NOW_Q.year}-12-31T00:00:00.000Z`, created_at: '', updated_at: '',
+    rock_level: 'individual', owner_id: 'me', parent_rock_id: null, function_id: null, client_tenant_id: null, rock_type: 'general', ...over,
+  } as EosRock);
+
+  const edit = (rock: EosRock, props: Partial<React.ComponentProps<typeof RockEditorSheet>> = {}) => {
+    const onOpenChange = vi.fn();
+    render(<RockEditorSheet open onOpenChange={onOpenChange} rock={rock} {...props} />);
+    return { onOpenChange };
+  };
+
+  it('loads the saved Rock and its milestones, and offers Save changes rather than Create', async () => {
+    state.edit.milestones = [{ id: 'm1', title: 'Draft the plan', owner_id: null, due_date: null, priority: 'high', status: 'in_progress', exit_criteria: null, evidence_url: null }];
+    edit(saved());
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Close five enterprise deals'));
+    expect(screen.getByRole('heading', { name: 'Edit Rock' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Milestone 1 title')).toHaveValue('Draft the plan');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create and add another' })).not.toBeInTheDocument();
+  });
+
+  it('shows a loading state until the milestones arrive, and cannot save meanwhile', () => {
+    state.edit.ready = false;
+    edit(saved());
+    expect(screen.getByRole('status')).toHaveTextContent(/Loading the Rock/);
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+
+  it('saves with the Rock’s id, keeps its client and type, and leaves status alone when unchanged', async () => {
+    state.rocks = [rock({ id: 'co', title: 'Grow', level: 'company' })];
+    const { onOpenChange } = edit(saved({ parent_rock_id: 'co', client_tenant_id: 55, rock_type: 'general' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Close five enterprise deals'));
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Close six enterprise deals' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalledTimes(1));
+    const input = state.mutateAsync.mock.calls[0][0];
+    expect(input).toMatchObject({ id: 'r1', clientTenantId: 55, rockType: 'general' });
+    expect(input.values).toMatchObject({ title: 'Close six enterprise deals', parentId: 'co' });
+    expect(input.status).toBeUndefined();
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it('does not nag about a legacy Rock whose parent is in another quarter while the hierarchy is untouched', async () => {
+    state.rocks = [rock({ id: 'old', title: 'Old parent', level: 'company', quarterNumber: NOW_Q.quarter === 1 ? 4 : NOW_Q.quarter - 1 })];
+    edit(saved({ parent_rock_id: 'old' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Close five enterprise deals'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('locks the level for a Rock that serves another, and offers a new Rock at another level instead', async () => {
+    state.rocks = [rock({ id: 'co', title: 'Grow', level: 'company' })];
+    const onCopyToLevel = vi.fn();
+    edit(saved({ rock_level: 'team', parent_rock_id: 'co', function_id: 'fn' }), { onCopyToLevel });
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    expect(screen.getByText(/locked because it serves another Rock/)).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Company/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Individual Rock' }));
+    expect(onCopyToLevel).toHaveBeenCalledWith('individual', expect.objectContaining({ title: 'Close five enterprise deals', level: 'team' }));
+  });
+
+  it('also locks the level, and the quarter, for a Rock that other Rocks serve', async () => {
+    state.rocks = [rock({ id: 'kid', title: 'Child', level: 'individual', parentId: 'r1' })];
+    edit(saved({ rock_level: 'company', owner_id: 'me' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    expect(screen.getByText(/locked because 1 Rock serves it/)).toBeInTheDocument();
+    expect(screen.getByText(/Rocks serve this one, and they share its quarter/)).toBeInTheDocument();
+  });
+
+  it('lets a loose Rock change level', async () => {
+    edit(saved({ parent_rock_id: null }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    expect(screen.getByRole('radiogroup', { name: 'Rock level' })).toBeInTheDocument();
+  });
+
+  it('closes straight away when nothing has changed', async () => {
+    const { onOpenChange } = edit(saved());
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText('Discard your changes?')).not.toBeInTheDocument();
+  });
+
+  it('asks before discarding unsaved changes, and lets the person keep editing', async () => {
+    const { onOpenChange } = edit(saved());
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Changed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByText('Discard your changes?')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByLabelText(/^Title/)).toHaveValue('Changed');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('sends a changed status, and only a changed one', async () => {
+    edit(saved({ status: 'at_risk' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    const trigger = screen.getByRole('combobox', { name: /Status/i });
+    expect(trigger).toHaveTextContent('At Risk');
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'On Track' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalled());
+    expect(state.mutateAsync.mock.calls[0][0].status).toBe('on_track');
+  });
+
+  it('offers a client’s own Team Rock to a client Individual Rock sitting under something else', async () => {
+    state.edit.clientName = 'Altaira Education';
+    state.rocks = [
+      rock({ id: 'co', title: 'Grow', level: 'company' }),
+      rock({ id: 'ct', title: 'Client Rock - Altaira Education', level: 'team', clientTenantId: 55 }),
+    ];
+    edit(saved({ parent_rock_id: 'co', client_tenant_id: 55 }));
+    await waitFor(() => expect(screen.getByText(/Add under the Client Rock for Altaira Education/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Use it' }));
+    expect(screen.queryByText(/Add under the Client Rock/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalled());
+    expect(state.mutateAsync.mock.calls[0][0].values.parentId).toBe('ct');
+    expect(state.mutateAsync.mock.calls[0][0].clientTenantId).toBe(55);
+  });
+
+  it('does not offer a client Team Rock to a Rock with no client', async () => {
+    state.rocks = [rock({ id: 'ct', title: 'Client Rock', level: 'team', clientTenantId: 55 })];
+    edit(saved({ client_tenant_id: null }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    expect(screen.queryByText(/Add under the Client Rock/)).not.toBeInTheDocument();
+  });
+});
+
+describe('RockEditorSheet: edit never offers the values of a different Rock', () => {
+  const saved = (id: string, title: string): EosRock => ({
+    id, tenant_id: 6372, title, description: null, issue: null, outcome: null, status: 'on_track',
+    quarter_year: NOW_Q.year, quarter_number: NOW_Q.quarter, due_date: `${NOW_Q.year}-12-31T00:00:00.000Z`, created_at: '', updated_at: '',
+    rock_level: 'individual', owner_id: 'me', parent_rock_id: null, function_id: null, client_tenant_id: null, rock_type: 'general',
+  } as EosRock);
+  const props = { onOpenChange: vi.fn() };
+
+  it('shows loading and blocks Save when another Rock is chosen while its data is still arriving', async () => {
+    const a = saved('a', 'Rock A');
+    const { rerender } = render(<RockEditorSheet open rock={a} {...props} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Rock A'));
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Rock A, edited' } });
+
+    state.edit.ready = false;
+    rerender(<RockEditorSheet open rock={saved('b', 'Rock B')} {...props} />);
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Loading the Rock/);
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Save changes' }), { key: 'Enter', ctrlKey: true });
+    expect(state.mutateAsync).not.toHaveBeenCalled();
+
+    state.edit.ready = true;
+    rerender(<RockEditorSheet open rock={saved('b', 'Rock B')} {...props} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Rock B'));
+  });
+
+  it('does not keep the previous opening’s values when the same Rock is reopened before its data is back', async () => {
+    const a = saved('a', 'Rock A');
+    const { rerender } = render(<RockEditorSheet open rock={a} {...props} />);
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toHaveValue('Rock A'));
+    rerender(<RockEditorSheet open={false} rock={a} {...props} />);
+
+    state.edit.ready = false;
+    rerender(<RockEditorSheet open rock={a} {...props} />);
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 });
 

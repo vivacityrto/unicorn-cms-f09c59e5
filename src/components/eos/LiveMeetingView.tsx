@@ -32,7 +32,7 @@ import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { useLiveMeetingViewingState } from '@/hooks/useLiveMeetingViewingState';
 import { useLiveMeetingSegmentNavigation } from '@/hooks/useLiveMeetingSegmentNavigation';
-import { RockFormDialog } from '@/components/eos/RockFormDialog';
+import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
 import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
 import { IssuesQueue } from '@/components/eos/IssuesQueue';
 import { IDSDialog } from '@/components/eos/IDSDialog';
@@ -1487,8 +1487,8 @@ export const LiveMeetingView = () => {
         meetingId={meetingId!}
       />
 
-      <RockFormDialog
-        open={rockFormOpen}
+      <RockEditorSheet
+        open={rockFormOpen && editingRock !== null}
         onOpenChange={(open) => { setRockFormOpen(open); if (!open) setEditingRock(null); }}
         rock={editingRock}
       />
