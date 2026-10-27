@@ -20,6 +20,7 @@
 | Need Codex or Claude to inspect Supabase without write access | [supabase-mcp-read-only.md](supabase-mcp-read-only.md) |
 | Ask Viv crashes or compliance mode is broken ("Something went wrong") | [ask-viv-fix-procedure.md](ask-viv-fix-procedure.md) |
 | Are implementing the client portal Tasks overhaul (stage tasks + action items unification) | [tasks-overhaul-plan.md](tasks-overhaul-plan.md) |
+| Are building the ComplyHub-side publisher that sends GitHub `[task]` events to Unicorn's Rock task sync (Codex / Khian) | [rock-task-sync-publisher.md](rock-task-sync-publisher.md) |
 
 ---
 

@@ -52,6 +52,8 @@ The Rock details panel lists each milestone's linked tasks (title linking to the
 
 ## ComplyHub side (proposed; owned by the task-workflow owners, not built here)
 
+A self-contained build brief for Codex and Khian, with the exact contract, test vectors, backfill and rollout order, is in [the publisher handoff](../handoffs/rock-task-sync-publisher.md).
+
 Add a second publisher beside the Planner one in `.github/workflows/task-planner-sync.yml`, reusing `taskEventPayload` from `scripts/task-planner-notify.mjs`: build the same payload, `JSON.stringify` it once, sign that exact string with HMAC-SHA256, and POST it with the existing 429/5xx retry. Repository secrets (names only): `UNICORN_ROCK_TASK_SYNC_URL`, `UNICORN_ROCK_TASK_SYNC_SECRET`. Like the Planner step, do nothing when the URL is unset. The Planner leg stays a projection: a Planner completion should reach Unicorn only by first reaching GitHub (the return path F-717 describes), so there is one authority and no loop.
 
 ## Rollout (step 2 is done; steps 1 and 3 to 5 are not)
