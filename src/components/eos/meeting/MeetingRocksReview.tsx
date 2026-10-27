@@ -170,9 +170,13 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
                 <span className="w-6 shrink-0" aria-hidden />
               )
             )}
-            <span className={cn('mt-0.5 shrink-0 rounded p-1.5', level.className)} title={level.label}>
+            <span
+              className={cn('mt-0.5 shrink-0 rounded p-1.5', level.className)}
+              role="img"
+              aria-label={`${level.label} Rock`}
+              title={level.label}
+            >
               <LevelIcon className="h-4 w-4" aria-hidden />
-              <span className="sr-only">{level.label} Rock</span>
             </span>
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
@@ -210,7 +214,7 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
                   {rock.due_date ? `${overdue ? 'Overdue · ' : 'Due '}${format(new Date(rock.due_date), 'd MMM')}` : 'No due date'}
                 </span>
                 {milestones && milestones.total > 0 && (
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                     <Progress
                       value={(milestones.complete / milestones.total) * 100}
                       className="h-1.5 w-16"
