@@ -168,62 +168,6 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
     },
   });
 
-  // Archive rock mutation (soft delete)
-  const archiveRock = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('eos_rocks')
-        .update({ archived_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
-      toast({ title: 'Rock archived' });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error archiving rock',
-        description: error.message,
-        variant: 'destructive'
-      });
-    },
-  });
-
-  // Delete rock mutation (hard delete) - refuses to delete a rock with
-  // children, matching eos.scorecard.manage's deleteMetric guard against
-  // orphaning cascaded data; archive is the path for a rock still linked
-  // to child rocks.
-  const deleteRock = useMutation({
-    mutationFn: async (id: string) => {
-      const hasChildren = rocks.some(r => r.parent_rock_id === id);
-      if (hasChildren) {
-        throw new Error('This rock has child rocks cascading from it. Archive it instead of deleting.');
-      }
-
-      const { error } = await supabase
-        .from('eos_rocks')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
-      queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
-      toast({ title: 'Rock deleted' });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error deleting rock',
-        description: error.message,
-        variant: 'destructive'
-      });
-    },
-  });
-
   // Helper to get children of a rock
   const getChildren = (rockId: string): RockWithHierarchy[] => {
     return rocks.filter(r => r.parent_rock_id === rockId);
@@ -272,8 +216,6 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
     
     // Mutations
     updateRock,
-    archiveRock,
-    deleteRock,
 
     // Helpers
     getChildren,

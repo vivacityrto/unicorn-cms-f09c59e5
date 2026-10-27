@@ -19,7 +19,8 @@ import {
   User,
   Search,
   GitBranch,
-  ChevronDown
+  ChevronDown,
+  Archive
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +39,8 @@ import { RockCard } from '@/components/eos/rocks/RockCard';
 import { RockCascadeView } from '@/components/eos/rocks/RockCascadeView';
 import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
 import { copyToNewLevel } from '@/utils/rockEditor/defaults';
+import { ArchivedRocksPanel } from '@/components/eos/rocks/ArchivedRocksPanel';
+import { RockLifecycleDialog, type LifecycleMode } from '@/components/eos/rocks/RockLifecycleDialog';
 import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { dbToUiStatus } from '@/utils/rockStatusUtils';
@@ -56,12 +59,13 @@ function RocksHierarchyContent() {
   const [quarterNumber, setQuarterNumber] = useState(currentQuarter.quarter);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'company' | 'team' | 'individual' | 'cascade'>('company');
+  const [activeTab, setActiveTab] = useState<'company' | 'team' | 'individual' | 'cascade' | 'archived'>('company');
   
   // Dialog states
   // Where a new Rock starts: its level, and the Rock it serves when opened from one.
   const [creating, setCreating] = useState<{ level: RockLevel; parentId: string | null; prefill?: Partial<RockEditorValues> } | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [lifecycle, setLifecycle] = useState<{ mode: LifecycleMode; rockId: string } | null>(null);
   const [editingRock, setEditingRock] = useState<RockWithHierarchy | null>(null);
   const [viewingRockId, setViewingRockId] = useState<string | null>(null);
   const [cascadeRock, setCascadeRock] = useState<RockWithHierarchy | null>(null);
@@ -73,8 +77,6 @@ function RocksHierarchyContent() {
     individualRocks,
     functions,
     isLoading,
-    archiveRock,
-    deleteRock,
   } = useEosRocksHierarchy({ quarterYear, quarterNumber });
   
   const { data: vivacityUsers } = useVivacityTeamUsers();
@@ -136,6 +138,7 @@ function RocksHierarchyContent() {
     { key: 'team', label: 'Team', icon: Users, count: filteredTeamRocks.length },
     { key: 'individual', label: 'Individual', icon: User, count: filteredIndividualRocks.length },
     { key: 'cascade', label: 'Cascade', icon: GitBranch, count: 0 },
+    { key: 'archived', label: 'Archived', icon: Archive, count: 0 },
   ] as const;
   const { containerRef: tabsContainerRef, itemRef: tabItemRef, moreMeasureRef: tabsMoreMeasureRef, activeMoreMeasureRef: tabsActiveMoreMeasureRef, visibleCount: visibleTabCount } = useOverflowTabs(ROCKS_TABS.length, 0);
   const visibleRocksTabs = ROCKS_TABS.slice(0, visibleTabCount);
@@ -181,13 +184,8 @@ function RocksHierarchyContent() {
     setActiveTab('cascade');
   };
 
-  const handleArchiveRock = (rock: RockWithHierarchy) => {
-    archiveRock.mutate(rock.id);
-  };
-
-  const handleDeleteRock = (rock: RockWithHierarchy) => {
-    deleteRock.mutate(rock.id);
-  };
+  const handleArchiveRock = (rock: RockWithHierarchy) => setLifecycle({ mode: 'archive', rockId: rock.id });
+  const handleDeleteRock = (rock: RockWithHierarchy) => setLifecycle({ mode: 'delete', rockId: rock.id });
 
   if (isLoading) {
     return (
@@ -374,7 +372,7 @@ function RocksHierarchyContent() {
       {/* Tabs - as many as fit render directly; the rest collapse into a
           "More" dropdown, measured dynamically - never via horizontal
           scroll (see useOverflowTabs / feedback_no_tab_scroll). */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'company' | 'team' | 'individual' | 'cascade')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'company' | 'team' | 'individual' | 'cascade' | 'archived')}>
         <div ref={tabsContainerRef} className="flex items-center gap-0 min-w-0">
           <TabsList>
             {visibleRocksTabs.map((t) => {
@@ -661,6 +659,14 @@ function RocksHierarchyContent() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="archived" className="mt-6">
+          <ArchivedRocksPanel
+            onRestore={rockId => setLifecycle({ mode: 'restore', rockId })}
+            onDelete={rockId => setLifecycle({ mode: 'delete', rockId })}
+            getUserName={getUserName}
+          />
+        </TabsContent>
       </Tabs>
 
       {/* Dialogs */}
@@ -670,6 +676,13 @@ function RocksHierarchyContent() {
         initialLevel={creating?.level}
         initialParentId={creating?.parentId}
         prefill={creating?.prefill}
+      />
+
+      <RockLifecycleDialog
+        mode={lifecycle?.mode ?? null}
+        rockId={lifecycle?.rockId ?? null}
+        onClose={() => setLifecycle(null)}
+        onDone={mode => { if (mode !== 'restore') setViewingRockId(null); }}
       />
 
       <RockDetailSheet

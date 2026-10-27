@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react';
+import type { MouseEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -6,16 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   TrendingUp,
   TrendingDown,
@@ -76,7 +66,6 @@ export function RockCard({
   getUserInfo,
   getSeatName,
 }: RockCardProps) {
-  const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null);
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
   const legacyMilestones = Array.isArray(rock.milestones) ? rock.milestones : [];
@@ -174,7 +163,6 @@ export function RockCard({
   }
 
   return (
-    <>
     <Card className={cn('hover:shadow-lg transition-shadow', onOpen && 'cursor-pointer')} onClick={onOpen ? handleCardClick : undefined}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
@@ -339,13 +327,13 @@ export function RockCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {onArchive && (
-                  <DropdownMenuItem onClick={() => setConfirmAction('archive')}>
+                  <DropdownMenuItem onClick={() => onArchive(rock)}>
                     <Archive className="h-4 w-4 mr-2" />
                     Archive
                   </DropdownMenuItem>
                 )}
                 {onDelete && (
-                  <DropdownMenuItem onClick={() => setConfirmAction('delete')} className="text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={() => onDelete(rock)} className="text-destructive focus:text-destructive">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -356,34 +344,5 @@ export function RockCard({
         </div>
       </CardContent>
     </Card>
-
-      <AlertDialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction === 'delete' ? 'Delete this rock?' : 'Archive this rock?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmAction === 'delete'
-                ? `"${rock.title}" will be permanently deleted. This can't be undone. Rocks with children cascading from them can't be deleted — archive those instead.`
-                : `"${rock.title}" will be hidden from active views. You can restore it later if needed.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={confirmAction === 'delete' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
-              onClick={() => {
-                if (confirmAction === 'delete') onDelete?.(rock);
-                else if (confirmAction === 'archive') onArchive?.(rock);
-                setConfirmAction(null);
-              }}
-            >
-              {confirmAction === 'delete' ? 'Delete' : 'Archive'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
   );
 }
