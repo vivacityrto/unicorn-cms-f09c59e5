@@ -506,7 +506,7 @@ export function RockDetailSheet({
             <p className="pt-2 text-xs text-muted-foreground">
               {createdLabel && <>Created {createdLabel}</>}
               {createdLabel && updatedLabel && ' · '}
-              {updatedLabel && <>Updated {updatedLabel}</>}
+              {updatedLabel && <>Last activity {updatedLabel}</>}
             </p>
           )}
         </div>

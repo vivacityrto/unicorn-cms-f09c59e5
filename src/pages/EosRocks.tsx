@@ -36,15 +36,13 @@ import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { RockCard } from '@/components/eos/rocks/RockCard';
 import { RockCascadeView } from '@/components/eos/rocks/RockCascadeView';
-import { CreateCompanyRockDialog } from '@/components/eos/rocks/CreateCompanyRockDialog';
-import { CreateTeamRockDialog } from '@/components/eos/rocks/CreateTeamRockDialog';
-import { CreateIndividualRockDialog } from '@/components/eos/rocks/CreateIndividualRockDialog';
+import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { dbToUiStatus } from '@/utils/rockStatusUtils';
 import { getCurrentQuarter, formatQuarter } from '@/utils/rockRollup';
-import type { RockWithHierarchy } from '@/types/eos';
+import type { RockLevel, RockWithHierarchy } from '@/types/eos';
 
 export default function EosRocks() {
   return <RocksHierarchyContent />;
@@ -60,11 +58,9 @@ function RocksHierarchyContent() {
   const [activeTab, setActiveTab] = useState<'company' | 'team' | 'individual' | 'cascade'>('company');
   
   // Dialog states
-  const [showCompanyDialog, setShowCompanyDialog] = useState(false);
-  const [showTeamDialog, setShowTeamDialog] = useState(false);
-  const [showIndividualDialog, setShowIndividualDialog] = useState(false);
+  // Where a new Rock starts: its level, and the Rock it serves when opened from one.
+  const [creating, setCreating] = useState<{ level: RockLevel; parentId: string | null } | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedParentRock, setSelectedParentRock] = useState<RockWithHierarchy | null>(null);
   const [editingRock, setEditingRock] = useState<RockWithHierarchy | null>(null);
   const [viewingRockId, setViewingRockId] = useState<string | null>(null);
   const [cascadeRock, setCascadeRock] = useState<RockWithHierarchy | null>(null);
@@ -155,13 +151,11 @@ function RocksHierarchyContent() {
 
   // Handlers
   const handleCreateTeamRock = (parentRock: RockWithHierarchy) => {
-    setSelectedParentRock(parentRock);
-    setShowTeamDialog(true);
+    setCreating({ level: 'team', parentId: parentRock.id });
   };
 
   const handleCreateIndividualRock = (parentRock: RockWithHierarchy) => {
-    setSelectedParentRock(parentRock);
-    setShowIndividualDialog(true);
+    setCreating({ level: 'individual', parentId: parentRock.id });
   };
 
   const handleEditRock = (rock: RockWithHierarchy) => {
@@ -214,29 +208,13 @@ function RocksHierarchyContent() {
         icon={Target}
         actions={
           <PermissionTooltip permission="rocks:create" action="create rocks">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild disabled={!canCreateRocks()}>
-                <Button disabled={!canCreateRocks()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Rock
-                  <ChevronDown className="w-4 h-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover border border-border shadow-lg z-50">
-                <DropdownMenuItem onClick={() => setShowCompanyDialog(true)}>
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Company Rock
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setSelectedParentRock(null); setShowTeamDialog(true); }}>
-                  <Users className="w-4 h-4 mr-2" />
-                  Team Rock
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setSelectedParentRock(null); setShowIndividualDialog(true); }}>
-                  <User className="w-4 h-4 mr-2" />
-                  Individual Rock
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              disabled={!canCreateRocks()}
+              onClick={() => setCreating({ level: activeTab === 'team' || activeTab === 'individual' ? activeTab : 'company', parentId: null })}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Rock
+            </Button>
           </PermissionTooltip>
         }
       />
@@ -511,7 +489,7 @@ function RocksHierarchyContent() {
               <p className="text-muted-foreground mb-4">
                 Create 3-7 company-wide priorities for {formatQuarter(quarterYear, quarterNumber)}
               </p>
-              <Button onClick={() => setShowCompanyDialog(true)}>
+              <Button onClick={() => setCreating({ level: 'company', parentId: null })}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Company Rock
               </Button>
@@ -547,10 +525,7 @@ function RocksHierarchyContent() {
                 Create team rocks that cascade from company rocks
               </p>
               {companyRocks && companyRocks.length > 0 && (
-                <Button onClick={() => {
-                  setSelectedParentRock(companyRocks[0]);
-                  setShowTeamDialog(true);
-                }}>
+                <Button onClick={() => setCreating({ level: 'team', parentId: null })}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Team Rock
                 </Button>
@@ -606,10 +581,7 @@ function RocksHierarchyContent() {
                 Create individual Rocks that cascade directly from a Company Rock or through a Team Rock
               </p>
               {(companyRocks?.length || 0) + (teamRocks?.length || 0) > 0 && (
-                <Button onClick={() => {
-                  setSelectedParentRock(companyRocks?.[0] || teamRocks?.[0] || null);
-                  setShowIndividualDialog(true);
-                }}>
+                <Button onClick={() => setCreating({ level: 'individual', parentId: null })}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Individual Rock
                 </Button>
@@ -691,27 +663,11 @@ function RocksHierarchyContent() {
       </Tabs>
 
       {/* Dialogs */}
-      <CreateCompanyRockDialog
-        open={showCompanyDialog}
-        onOpenChange={setShowCompanyDialog}
-      />
-
-      <CreateTeamRockDialog
-        open={showTeamDialog}
-        onOpenChange={(open) => {
-          setShowTeamDialog(open);
-          if (!open) setSelectedParentRock(null);
-        }}
-        parentRock={selectedParentRock}
-      />
-
-      <CreateIndividualRockDialog
-        open={showIndividualDialog}
-        onOpenChange={(open) => {
-          setShowIndividualDialog(open);
-          if (!open) setSelectedParentRock(null);
-        }}
-        parentRock={selectedParentRock}
+      <RockEditorSheet
+        open={creating !== null}
+        onOpenChange={open => { if (!open) setCreating(null); }}
+        initialLevel={creating?.level}
+        initialParentId={creating?.parentId}
       />
 
       <RockDetailSheet
