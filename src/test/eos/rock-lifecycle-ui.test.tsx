@@ -150,6 +150,35 @@ describe('RockLifecycleDialog: restore', () => {
   });
 });
 
+describe('RockLifecycleDialog: restore with an archived Rock further up', () => {
+  it('explains the refusal and offers to restore the Rocks above too, then does', async () => {
+    // The parent is active, but a Rock above it is archived: the impact check only sees the direct parent.
+    state.impact.data = impact({ parent: { id: 'p', title: 'Active parent', archived_at: null } });
+    state.restore
+      .mockRejectedValueOnce(new Error('Restore the Rock it serves first, because that one is archived'))
+      .mockResolvedValueOnce({ restored: ['r1', 'g'] });
+    const { onClose, onDone } = open('restore');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    await waitFor(() => expect(state.restore).toHaveBeenCalledWith({ id: 'r1', includeParents: false, includeChildren: false }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(await screen.findByText(/A Rock further up, above “Active parent”, is archived too/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore with the Rocks above' }));
+    await waitFor(() => expect(state.restore).toHaveBeenLastCalledWith({ id: 'r1', includeParents: true, includeChildren: false }));
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('restore'));
+  });
+
+  it('does not offer it for any other failure', async () => {
+    state.restore.mockRejectedValueOnce(new Error('Something else went wrong'));
+    open('restore');
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    await waitFor(() => expect(state.restore).toHaveBeenCalled());
+    expect(screen.queryByText(/further up/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restore with the Rocks above' })).not.toBeInTheDocument();
+  });
+});
+
 describe('ArchivedRocksPanel', () => {
   const rock = (over: Record<string, unknown>) => ({ id: 'a', title: 'Old Rock', level: 'team', quarterYear: 2026, quarterNumber: 3, ownerId: null, archivedAt: '2026-10-05T00:00:00Z', archivedBy: 'u1', ...over });
 

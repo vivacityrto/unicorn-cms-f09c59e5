@@ -26,6 +26,8 @@ export function RockLifecycleDialog({ mode: requested, rockId, onClose, onDone }
   const [mode, setMode] = useState<LifecycleMode | null>(requested);
   const [includeChildren, setIncludeChildren] = useState(false);
   const [restoreTogether, setRestoreTogether] = useState(true);
+  /** The database said a Rock further up is archived, which the impact check (direct parent only) cannot show. */
+  const [needsParents, setNeedsParents] = useState(false);
   const impactQuery = useRockImpact(requested ? rockId : null);
   const archive = useArchiveRock();
   const restore = useRestoreRock();
@@ -35,6 +37,7 @@ export function RockLifecycleDialog({ mode: requested, rockId, onClose, onDone }
     setMode(requested);
     setIncludeChildren(false);
     setRestoreTogether(true);
+    setNeedsParents(false);
   }, [requested, rockId]);
 
   const impact = impactQuery.data;
@@ -50,11 +53,13 @@ export function RockLifecycleDialog({ mode: requested, rockId, onClose, onDone }
     if (!impact || !mode) return;
     try {
       if (mode === 'archive') await archive.mutateAsync({ id: impact.rock.id, includeChildren });
-      else if (mode === 'restore') await restore.mutateAsync({ id: impact.rock.id, includeParents: !!impact.parent?.archived_at, includeChildren: restoreTogether && impact.children_archived > 0 });
+      else if (mode === 'restore') await restore.mutateAsync({ id: impact.rock.id, includeParents: !!impact.parent?.archived_at || needsParents, includeChildren: restoreTogether && impact.children_archived > 0 });
       else await remove.mutateAsync(impact.rock.id);
       finish(mode);
-    } catch {
+    } catch (error) {
       // The mutation already explained what went wrong; the dialog stays so the person can choose again.
+      // A Rock above the parent is archived: say so and offer to bring those back too.
+      if (mode === 'restore' && error instanceof Error && /Restore the Rock it serves first/.test(error.message)) setNeedsParents(true);
     }
   };
 
@@ -121,6 +126,11 @@ export function RockLifecycleDialog({ mode: requested, rockId, onClose, onDone }
                 It serves “{impact.parent.title}”, which is archived. Restoring brings both back.
               </p>
             )}
+            {needsParents && !impact.parent?.archived_at && (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2">
+                A Rock further up, above “{impact.parent?.title ?? 'the Rock it serves'}”, is archived too. Restoring brings those back with it.
+              </p>
+            )}
             {impact.children_archived > 0 && (
               <div className="flex items-start gap-2">
                 <Checkbox id="restore-together" checked={restoreTogether} onCheckedChange={v => setRestoreTogether(v === true)} />
@@ -144,7 +154,7 @@ export function RockLifecycleDialog({ mode: requested, rockId, onClose, onDone }
               disabled={!impact || busy}
             >
               {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
-              {mode === 'delete' ? 'Delete permanently' : mode === 'restore' ? (impact?.parent?.archived_at ? 'Restore both' : 'Restore') : 'Archive'}
+              {mode === 'delete' ? 'Delete permanently' : mode === 'restore' ? (impact?.parent?.archived_at ? 'Restore both' : needsParents ? 'Restore with the Rocks above' : 'Restore') : 'Archive'}
             </Button>
           )}
         </DialogFooter>
