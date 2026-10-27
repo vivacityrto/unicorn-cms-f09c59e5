@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -123,14 +123,36 @@ export function RockCard({
   const ownerName = ownerInfo?.name || (rock.owner_id && getUserName ? getUserName(rock.owner_id) : null);
   const seatName = rock.seat_id && getSeatName ? getSeatName(rock.seat_id) : rock.seat?.seat_name;
 
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!onEdit) return;
+    if (event.target instanceof Element && event.target.closest('button, a, input, textarea, select, [role="button"]')) {
+      return;
+    }
+    onEdit(rock);
+  };
+
   if (compact) {
     return (
-      <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+      <div
+        className={cn('flex items-center justify-between p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow', onEdit && 'cursor-pointer')}
+        onClick={onEdit ? handleCardClick : undefined}
+      >
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Badge variant={statusConfig.variant} className={cn('gap-1 shrink-0', statusConfig.className)}>
             <StatusIcon className="w-3 h-3" />
           </Badge>
-          <span className="font-medium truncate">{rock.title}</span>
+          {onEdit ? (
+            <button
+              type="button"
+              className="font-medium truncate text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              aria-label={`Open Rock: ${rock.title}`}
+              onClick={() => onEdit(rock)}
+            >
+              {rock.title}
+            </button>
+          ) : (
+            <span className="font-medium truncate">{rock.title}</span>
+          )}
           {getLevelBadge(rock.rock_level)}
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -151,12 +173,23 @@ export function RockCard({
 
   return (
     <>
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className={cn('hover:shadow-lg transition-shadow', onEdit && 'cursor-pointer')} onClick={onEdit ? handleCardClick : undefined}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-2">
-              <h3 className="font-semibold text-lg leading-tight">{rock.title}</h3>
+              <h3 className="font-semibold text-lg leading-tight">
+                {onEdit ? (
+                  <button
+                    type="button"
+                    className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                    aria-label={`Open Rock: ${rock.title}`}
+                    onClick={() => onEdit(rock)}
+                  >
+                    {rock.title}
+                  </button>
+                ) : rock.title}
+              </h3>
               {getLevelBadge(rock.rock_level)}
               <Badge variant="outline" className="text-xs">
                 Q{rock.quarter_number} {rock.quarter_year}
