@@ -1,7 +1,18 @@
 import type { RockWithHierarchy } from '@/types/eos';
+import { todayLocalIso } from '@/utils/localDate';
+import { emptyBreakdown, type MilestoneBreakdown } from '@/utils/rockMilestoneRollup';
 import { dbToUiStatus, type UiRockStatus } from '@/utils/rockStatusUtils';
 
 export type StatusCounts = Record<UiRockStatus, number> & { total: number };
+
+/** Why a Rock is worth discussing in the meeting. */
+export type AttentionReason =
+  | 'off_track'
+  | 'at_risk'
+  | 'blocked_milestones'
+  | 'overdue_milestones'
+  | 'rock_overdue'
+  | 'no_owner';
 
 export interface RockCascadeNode {
   rock: RockWithHierarchy;
@@ -10,6 +21,10 @@ export interface RockCascadeNode {
   children: RockCascadeNode[];
   /** Status counts across every descendant (not including this Rock). */
   descendants: StatusCounts;
+  /** Reasons this Rock itself needs discussing. */
+  attention: AttentionReason[];
+  /** This Rock, or anything cascading from it, needs discussing. */
+  needsAttention: boolean;
 }
 
 export interface MeetingRocksCascade {
@@ -17,6 +32,8 @@ export interface MeetingRocksCascade {
   /** Flat, owner-sorted list of the Rocks under review (same set the old list showed). */
   reviewRocks: RockWithHierarchy[];
   counts: StatusCounts;
+  /** Active milestones across everything under review. Each root already includes what cascades from it. */
+  milestoneTotals: MilestoneBreakdown;
 }
 
 const LEVEL_ORDER: Record<string, number> = { company: 0, team: 1, individual: 2 };
@@ -45,6 +62,38 @@ function mergeInto(target: StatusCounts, source: StatusCounts) {
 }
 
 /**
+ * Why this Rock itself is worth discussing: its own status is off track or at
+ * risk, milestones under it are blocked, off track or overdue, the Rock is past
+ * its due date, or nobody owns it. A completed Rock never needs attention.
+ */
+export function attentionReasons(rock: RockWithHierarchy, now: Date = new Date()): AttentionReason[] {
+  const status = dbToUiStatus(rock.status);
+  if (status === 'complete') return [];
+  const reasons: AttentionReason[] = [];
+  if (status === 'off_track') reasons.push('off_track');
+  if (status === 'at_risk') reasons.push('at_risk');
+  const m = rock.milestoneBreakdown;
+  if (m && (m.blocked > 0 || m.offTrack > 0)) reasons.push('blocked_milestones');
+  if (m && m.overdue > 0) reasons.push('overdue_milestones');
+  if (rock.due_date && rock.due_date.slice(0, 10) < todayLocalIso(now)) reasons.push('rock_overdue');
+  if (!rock.owner_id) reasons.push('no_owner');
+  return reasons;
+}
+
+/** A node with no cascade, for the flat list. */
+export function standaloneNode(rock: RockWithHierarchy, scope: readonly string[], now: Date = new Date()): RockCascadeNode {
+  const attention = attentionReasons(rock, now);
+  return {
+    rock,
+    reviewable: isRockInReviewScope(rock, scope),
+    children: [],
+    descendants: emptyCounts(),
+    attention,
+    needsAttention: attention.length > 0,
+  };
+}
+
+/**
  * Builds the Company → Team → Individual cascade for the meeting's Rock Review.
  *
  * - Rocks under review are those in `scope` and not complete (as before).
@@ -56,6 +105,7 @@ export function buildMeetingRocksCascade(
   rocks: readonly RockWithHierarchy[],
   scope: readonly string[],
   ownerNames: Readonly<Record<string, string>> = {},
+  now: Date = new Date(),
 ): MeetingRocksCascade {
   const ownerOf = (rock: RockWithHierarchy) => ownerNames[rock.owner_id || ''] || '';
   const byOwnerThenTitle = (a: RockWithHierarchy, b: RockWithHierarchy) =>
@@ -87,7 +137,15 @@ export function buildMeetingRocksCascade(
       addTo(descendants, child.rock);
       mergeInto(descendants, child.descendants);
     }
-    return { rock, reviewable: isRockInReviewScope(rock, scope), children, descendants };
+    const attention = attentionReasons(rock, now);
+    return {
+      rock,
+      reviewable: isRockInReviewScope(rock, scope),
+      children,
+      descendants,
+      attention,
+      needsAttention: attention.length > 0 || children.some(child => child.needsAttention),
+    };
   };
 
   const roots = reviewRocks
@@ -97,7 +155,20 @@ export function buildMeetingRocksCascade(
   const counts = emptyCounts();
   for (const rock of reviewRocks) addTo(counts, rock);
 
-  return { roots, reviewRocks, counts };
+  const milestoneTotals = emptyBreakdown();
+  for (const { rock } of roots) {
+    const b = rock.milestoneBreakdown;
+    if (!b) continue;
+    milestoneTotals.total += b.total;
+    milestoneTotals.complete += b.complete;
+    milestoneTotals.inProgress += b.inProgress;
+    milestoneTotals.blocked += b.blocked;
+    milestoneTotals.offTrack += b.offTrack;
+    milestoneTotals.notStarted += b.notStarted;
+    milestoneTotals.overdue += b.overdue;
+  }
+
+  return { roots, reviewRocks, counts, milestoneTotals };
 }
 
 /** Ids of every node that has children, for expand-all. */

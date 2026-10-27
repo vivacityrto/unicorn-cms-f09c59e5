@@ -9,6 +9,7 @@ import {
   Pencil,
   Rows3,
   Target,
+  TriangleAlert,
   User,
   Users,
 } from 'lucide-react';
@@ -16,12 +17,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ClientBadge } from '@/components/eos/ClientBadge';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
+import { StatusBar, StatusLegend } from '@/components/eos/rocks/detail/StatusBar';
 import { OffTrackRockPrompt, RockReviewPrompt } from '@/components/eos/facilitator/FacilitatorPrompts';
 import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
@@ -29,10 +30,11 @@ import { cn } from '@/lib/utils';
 import {
   buildMeetingRocksCascade,
   collectBranchIds,
-  emptyCounts,
+  standaloneNode,
   type RockCascadeNode,
   type StatusCounts,
 } from '@/utils/meetingRocksCascade';
+import type { MilestoneBreakdown } from '@/utils/rockMilestoneRollup';
 import { dbToUiStatus, getStatusConfig, type UiRockStatus } from '@/utils/rockStatusUtils';
 import type { RockLevel, RockWithHierarchy } from '@/types/eos';
 
@@ -56,15 +58,7 @@ const STATUS_BAR_COLOUR: Record<UiRockStatus, string> = {
   on_track: 'bg-green-500',
   at_risk: 'bg-amber-500',
   off_track: 'bg-red-500',
-  not_started: 'bg-gray-300 dark:bg-gray-600',
-  complete: 'bg-blue-500',
-};
-
-const STATUS_DOT_COLOUR: Record<UiRockStatus, string> = {
-  on_track: 'bg-green-500',
-  at_risk: 'bg-amber-500',
-  off_track: 'bg-red-500',
-  not_started: 'bg-gray-400',
+  not_started: 'bg-gray-400 dark:bg-gray-500',
   complete: 'bg-blue-500',
 };
 
@@ -72,26 +66,41 @@ function initialsOf(name: string): string {
   return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
 
-function StatusSummary({ counts }: { counts: StatusCounts }) {
+/** The hook supplies a full breakdown; fall back to the simple total and complete count if that is all there is. */
+function breakdownOf(rock: RockWithHierarchy): MilestoneBreakdown | undefined {
+  if (rock.milestoneBreakdown) return rock.milestoneBreakdown;
+  if (!rock.milestoneStats) return undefined;
+  const { total, complete } = rock.milestoneStats;
+  return { total, complete, inProgress: 0, blocked: 0, offTrack: 0, notStarted: total - complete, overdue: 0 };
+}
+
+function barCounts(b: MilestoneBreakdown) {
+  return { complete: b.complete, inProgress: b.inProgress, blocked: b.blocked, offTrack: b.offTrack, notStarted: b.notStarted };
+}
+
+function RockStatusSummary({ counts }: { counts: StatusCounts }) {
   if (counts.total === 0) return null;
+  const present = STATUS_ORDER.filter(s => counts[s] > 0);
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 rounded-lg border bg-card p-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h4 className="text-sm font-semibold">Rocks under review</h4>
+        <span className="text-xs tabular-nums text-muted-foreground">{counts.total}</span>
+      </div>
       <div
-        className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+        className="flex h-3 w-full overflow-hidden rounded-full bg-muted-foreground/20"
         role="img"
-        aria-label={STATUS_ORDER.filter(s => counts[s] > 0)
-          .map(s => `${counts[s]} ${getStatusConfig(s).label}`)
-          .join(', ')}
+        aria-label={`Rocks by status: ${present.map(s => `${counts[s]} ${getStatusConfig(s).label}`).join(', ')}`}
       >
-        {STATUS_ORDER.filter(s => counts[s] > 0).map(s => (
-          <div key={s} className={STATUS_BAR_COLOUR[s]} style={{ width: `${(counts[s] / counts.total) * 100}%` }} />
+        {present.map(s => (
+          <div key={s} className={cn('h-full min-w-[3px]', STATUS_BAR_COLOUR[s])} style={{ width: `${(counts[s] / counts.total) * 100}%` }} />
         ))}
       </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {STATUS_ORDER.filter(s => counts[s] > 0).map(s => (
+        {present.map(s => (
           <li key={s} className="inline-flex items-center gap-1.5">
-            <span className={cn('h-2 w-2 rounded-full', STATUS_DOT_COLOUR[s])} aria-hidden />
-            <span className="font-medium text-foreground">{counts[s]}</span>
+            <span className={cn('h-2 w-2 rounded-full', STATUS_BAR_COLOUR[s])} aria-hidden />
+            <span className="font-medium tabular-nums text-foreground">{counts[s]}</span>
             {getStatusConfig(s).label}
           </li>
         ))}
@@ -100,8 +109,76 @@ function StatusSummary({ counts }: { counts: StatusCounts }) {
   );
 }
 
+function MilestoneSummary({ totals }: { totals: MilestoneBreakdown }) {
+  return (
+    <div className="space-y-2 rounded-lg border bg-card p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h4 className="text-sm font-semibold">Milestones</h4>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {totals.total === 0 ? 'None yet' : (
+            <>
+              <span className="font-semibold text-foreground">{totals.complete}</span> of {totals.total} done
+              {totals.blocked > 0 && <span className="ml-2 font-medium text-destructive">{totals.blocked} blocked</span>}
+              {totals.offTrack > 0 && <span className="ml-2 font-medium text-orange-600 dark:text-orange-400">{totals.offTrack} off track</span>}
+              {totals.overdue > 0 && <span className="ml-2 font-medium text-amber-700 dark:text-amber-300">{totals.overdue} overdue</span>}
+            </>
+          )}
+        </span>
+      </div>
+      <StatusBar size="lg" label="Milestones across these Rocks" counts={barCounts(totals)} total={totals.total} />
+      <StatusLegend counts={barCounts(totals)} />
+    </div>
+  );
+}
+
+function MilestoneMeter({ breakdown }: { breakdown?: MilestoneBreakdown }) {
+  if (!breakdown || breakdown.total === 0) {
+    return <span className="text-xs text-muted-foreground">No milestones yet</span>;
+  }
+  const percent = Math.round((breakdown.complete / breakdown.total) * 100);
+  return (
+    <span className="inline-flex items-center gap-2 text-xs">
+      <StatusBar size="md" className="w-36 shrink-0" label="Milestones" counts={barCounts(breakdown)} total={breakdown.total} />
+      <span className="whitespace-nowrap tabular-nums">
+        <span className="font-semibold">{breakdown.complete}</span>
+        <span className="text-muted-foreground">/{breakdown.total} milestones · {percent}%</span>
+      </span>
+    </span>
+  );
+}
+
+function AttentionChips({ breakdown, bubbled }: { breakdown?: MilestoneBreakdown; bubbled: boolean }) {
+  const chips: Array<{ key: string; text: string; className: string }> = [];
+  if (breakdown && breakdown.blocked > 0) {
+    chips.push({ key: 'blocked', text: `${breakdown.blocked} blocked ${breakdown.blocked === 1 ? 'milestone' : 'milestones'}`, className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' });
+  }
+  if (breakdown && breakdown.offTrack > 0) {
+    chips.push({ key: 'offTrack', text: `${breakdown.offTrack} off track`, className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' });
+  }
+  if (breakdown && breakdown.overdue > 0) {
+    chips.push({ key: 'overdue', text: `${breakdown.overdue} overdue`, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' });
+  }
+  if (bubbled) {
+    chips.push({ key: 'bubbled', text: 'Needs attention below', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' });
+  }
+  if (chips.length === 0) return null;
+  return (
+    <>
+      {chips.map(chip => (
+        <Badge key={chip.key} variant="outline" className={cn('gap-1 border-transparent px-1.5 py-0 text-[11px] font-medium', chip.className)}>
+          <TriangleAlert className="h-3 w-3" aria-hidden />
+          {chip.text}
+        </Badge>
+      ))}
+    </>
+  );
+}
+
 function DescendantChips({ counts }: { counts: StatusCounts }) {
   if (counts.total === 0) return null;
+  const dot: Record<UiRockStatus, string> = {
+    on_track: 'bg-green-500', at_risk: 'bg-amber-500', off_track: 'bg-red-500', not_started: 'bg-gray-400', complete: 'bg-blue-500',
+  };
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="inline-flex items-center gap-1">
@@ -110,7 +187,7 @@ function DescendantChips({ counts }: { counts: StatusCounts }) {
       </span>
       {STATUS_ORDER.filter(s => counts[s] > 0 && s !== 'on_track').map(s => (
         <span key={s} className="inline-flex items-center gap-1">
-          <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT_COLOUR[s])} aria-hidden />
+          <span className={cn('h-1.5 w-1.5 rounded-full', dot[s])} aria-hidden />
           {counts[s]} {getStatusConfig(s).label.toLowerCase()}
         </span>
       ))}
@@ -123,37 +200,37 @@ interface RowProps {
   depth: number;
   ownerNames: Readonly<Record<string, string>>;
   showCascade: boolean;
-  isOpen: (id: string, depth: number) => boolean;
-  onToggle: (id: string, depth: number) => void;
+  /** Only Rocks that need discussing, and the path down to them. */
+  attentionOnly: boolean;
+  isOpen: (id: string, defaultOpen: boolean) => boolean;
+  onToggle: (id: string, currentlyOpen: boolean) => void;
   onOpenRock: (rock: RockWithHierarchy) => void;
   onEditRock: (rock: RockWithHierarchy) => void;
   parentTitle?: string | null;
 }
 
-function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpenRock, onEditRock, parentTitle }: RowProps) {
-  const { rock, reviewable, children, descendants } = node;
+function RockRow({ node, depth, ownerNames, showCascade, attentionOnly, isOpen, onToggle, onOpenRock, onEditRock, parentTitle }: RowProps) {
+  const { rock, reviewable, children, descendants, attention } = node;
   const status = dbToUiStatus(rock.status);
   const statusConfig = getStatusConfig(status);
   const level = LEVEL[rock.rock_level || 'company'];
   const LevelIcon = level.icon;
   const ownerName = rock.owner_id ? ownerNames[rock.owner_id] : undefined;
+  const shownChildren = attentionOnly ? children.filter(child => child.needsAttention) : children;
   const hasChildren = showCascade && children.length > 0;
-  const open = hasChildren && isOpen(rock.id, depth);
+  const defaultOpen = depth < 1 || (attentionOnly && shownChildren.length > 0);
+  const open = hasChildren && isOpen(rock.id, defaultOpen);
   const overdue = !!rock.due_date && status !== 'complete' && isPast(new Date(rock.due_date));
-  const milestones = rock.milestoneStats;
+  const breakdown = breakdownOf(rock);
+  const red = attention.includes('off_track') || attention.includes('blocked_milestones');
+  const amber = !red && (attention.includes('at_risk') || attention.includes('overdue_milestones') || attention.includes('rock_overdue'));
+  const bubbledOnly = showCascade && !open && attention.length === 0 && node.needsAttention;
 
   return (
     <li>
-      <Card
-        className={cn(
-          'p-3 transition-colors',
-          reviewable ? 'bg-muted/20' : 'bg-card',
-          status === 'off_track' && 'border-l-4 border-l-red-500',
-          status === 'at_risk' && 'border-l-4 border-l-amber-500',
-        )}
-      >
+      <Card className={cn('p-3 transition-colors', reviewable ? 'bg-muted/20' : 'bg-card', red && 'border-l-4 border-l-red-500', amber && 'border-l-4 border-l-amber-500')}>
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 flex-1 basis-64 items-start gap-2">
+          <div className="flex min-w-0 flex-1 basis-72 items-start gap-2">
             {showCascade && (
               hasChildren ? (
                 <Button
@@ -162,7 +239,7 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
                   className="h-6 w-6 shrink-0"
                   aria-expanded={open}
                   aria-label={`${open ? 'Collapse' : 'Expand'} cascade for ${rock.title}`}
-                  onClick={() => onToggle(rock.id, depth)}
+                  onClick={() => onToggle(rock.id, open)}
                 >
                   {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </Button>
@@ -178,7 +255,7 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
             >
               <LevelIcon className="h-4 w-4" aria-hidden />
             </span>
-            <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -188,9 +265,7 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
                 >
                   {rock.title}
                 </button>
-                {rock.function?.name && (
-                  <Badge variant="outline" className="text-xs">{rock.function.name}</Badge>
-                )}
+                {rock.function?.name && <Badge variant="outline" className="text-xs">{rock.function.name}</Badge>}
                 {rock.client_tenant_id ? <ClientBadge clientId={rock.client_tenant_id} /> : null}
               </div>
               {parentTitle && (
@@ -199,7 +274,7 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
                   <span className="truncate">From {parentTitle}</span>
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
                 {ownerName ? (
                   <span className="inline-flex items-center gap-1.5">
                     <Avatar className="h-5 w-5">
@@ -208,21 +283,15 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
                     {ownerName}
                   </span>
                 ) : (
-                  <span>No owner</span>
+                  <span className={cn(attention.includes('no_owner') && 'font-medium text-amber-700 dark:text-amber-300')}>No owner</span>
                 )}
                 <span className={cn(overdue && 'font-medium text-destructive')}>
                   {rock.due_date ? `${overdue ? 'Overdue · ' : 'Due '}${format(new Date(rock.due_date), 'd MMM')}` : 'No due date'}
                 </span>
-                {milestones && milestones.total > 0 && (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <Progress
-                      value={(milestones.complete / milestones.total) * 100}
-                      className="h-1.5 w-16"
-                      aria-label="Milestone progress"
-                    />
-                    {milestones.complete}/{milestones.total} milestones
-                  </span>
-                )}
+                <AttentionChips breakdown={breakdown} bubbled={bubbledOnly} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                <MilestoneMeter breakdown={breakdown} />
                 {showCascade && <DescendantChips counts={descendants} />}
               </div>
             </div>
@@ -242,7 +311,8 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
           </div>
         </div>
         {reviewable && status === 'off_track' && (
-          <div className="mt-3">
+          // The facilitator prompt renders nothing for other viewers; don't leave its margin behind.
+          <div className="mt-3 empty:hidden">
             <OffTrackRockPrompt rockTitle={rock.title} />
           </div>
         )}
@@ -250,13 +320,14 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
 
       {open && (
         <ul className="ml-5 mt-2 space-y-2 border-l-2 border-muted pl-4">
-          {children.map(child => (
+          {shownChildren.map(child => (
             <RockRow
               key={child.rock.id}
               node={child}
               depth={depth + 1}
               ownerNames={ownerNames}
               showCascade={showCascade}
+              attentionOnly={attentionOnly}
               isOpen={isOpen}
               onToggle={onToggle}
               onOpenRock={onOpenRock}
@@ -272,20 +343,28 @@ function RockRow({ node, depth, ownerNames, showCascade, isOpen, onToggle, onOpe
 export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRocksReviewProps) {
   const { quarterRocks, isLoading, currentQuarter } = useEosRocksHierarchy();
   const [view, setView] = useState<'cascade' | 'list'>('cascade');
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [viewingRockId, setViewingRockId] = useState<string | null>(null);
 
-  const { roots, reviewRocks, counts } = useMemo(
+  const { roots, reviewRocks, counts, milestoneTotals } = useMemo(
     () => buildMeetingRocksCascade(quarterRocks, scope, ownerNames),
     [quarterRocks, scope, ownerNames],
   );
+  const listNodes = useMemo(() => reviewRocks.map(rock => standaloneNode(rock, scope)), [reviewRocks, scope]);
   const branchIds = useMemo(() => collectBranchIds(roots), [roots]);
   const rocksById = useMemo(() => new Map(quarterRocks.map(r => [r.id, r])), [quarterRocks]);
 
+  const showCascade = view === 'cascade';
+  const attentionCount = showCascade
+    ? roots.filter(node => node.needsAttention).length
+    : listNodes.filter(node => node.attention.length > 0).length;
+  const visibleRoots = attentionOnly ? roots.filter(node => node.needsAttention) : roots;
+  const visibleList = attentionOnly ? listNodes.filter(node => node.attention.length > 0) : listNodes;
+
   // Top level opens to show its direct cascade; deeper levels start collapsed.
-  const isOpen = (id: string, depth: number) => overrides[id] ?? depth < 1;
-  const toggle = (id: string, depth: number) =>
-    setOverrides(current => ({ ...current, [id]: !(current[id] ?? depth < 1) }));
+  const isOpen = (id: string, defaultOpen: boolean) => overrides[id] ?? defaultOpen;
+  const toggle = (id: string, currentlyOpen: boolean) => setOverrides(current => ({ ...current, [id]: !currentlyOpen }));
   const setAll = (open: boolean) => setOverrides(Object.fromEntries(branchIds.map(id => [id, open])));
 
   const viewingRock = viewingRockId ? rocksById.get(viewingRockId) ?? null : null;
@@ -294,7 +373,6 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
 
   const quarterLabel = `Q${currentQuarter.quarter} ${currentQuarter.year}`;
   const hasCascade = branchIds.length > 0;
-  const showCascade = view === 'cascade';
 
   const getUserInfo = (userId: string) => {
     const name = ownerNames[userId];
@@ -311,6 +389,18 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
             <Badge variant="outline" className="text-xs font-normal">{quarterLabel}</Badge>
           </h3>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={attentionOnly ? 'default' : 'outline'}
+              aria-pressed={attentionOnly}
+              className="h-8 gap-1.5"
+              onClick={() => setAttentionOnly(value => !value)}
+            >
+              <TriangleAlert className="h-4 w-4" aria-hidden />
+              Needs attention
+              <span className="tabular-nums">{attentionCount}</span>
+            </Button>
             {showCascade && hasCascade && (
               <>
                 <Button variant="ghost" size="sm" onClick={() => setAll(true)}>Expand all</Button>
@@ -348,46 +438,58 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
         <RocksInsights rocks={reviewRocks.map(r => ({ ...r, owner_user_id: r.owner_id }))} />
       </div>
 
-      <StatusSummary counts={counts} />
+      {counts.total > 0 && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          <RockStatusSummary counts={counts} />
+          <MilestoneSummary totals={milestoneTotals} />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-2">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
         </div>
       ) : reviewRocks.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
           No active rocks for {quarterLabel}
         </p>
+      ) : (showCascade ? visibleRoots.length : visibleList.length) === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          <p>Nothing needs attention in these Rocks.</p>
+          <Button type="button" variant="link" size="sm" onClick={() => setAttentionOnly(false)}>Show all Rocks</Button>
+        </div>
       ) : (
         <ul className="space-y-2" aria-label={showCascade ? 'Rock cascade' : 'Rocks under review'}>
           {showCascade
-            ? roots.map(node => (
+            ? visibleRoots.map(node => (
                 <RockRow
                   key={node.rock.id}
                   node={node}
                   depth={0}
                   ownerNames={ownerNames}
                   showCascade
+                  attentionOnly={attentionOnly}
                   isOpen={isOpen}
                   onToggle={toggle}
                   onOpenRock={rock => setViewingRockId(rock.id)}
                   onEditRock={onEditRock}
                 />
               ))
-            : reviewRocks.map(rock => (
+            : visibleList.map(node => (
                 <RockRow
-                  key={rock.id}
-                  node={{ rock, reviewable: true, children: [], descendants: emptyCounts() }}
+                  key={node.rock.id}
+                  node={node}
                   depth={0}
                   ownerNames={ownerNames}
                   showCascade={false}
+                  attentionOnly={false}
                   isOpen={isOpen}
                   onToggle={toggle}
-                  onOpenRock={r => setViewingRockId(r.id)}
+                  onOpenRock={rock => setViewingRockId(rock.id)}
                   onEditRock={onEditRock}
-                  parentTitle={rock.parent_rock_id ? rocksById.get(rock.parent_rock_id)?.title : null}
+                  parentTitle={node.rock.parent_rock_id ? rocksById.get(node.rock.parent_rock_id)?.title : null}
                 />
               ))}
         </ul>

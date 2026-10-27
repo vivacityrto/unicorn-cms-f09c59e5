@@ -119,3 +119,83 @@ describe('collectBranchIds', () => {
     expect(collectBranchIds(roots).sort()).toEqual(['c1', 't1']);
   });
 });
+
+describe('attention', () => {
+  const NOW = new Date(2026, 10, 10, 9, 0, 0);
+  const breakdown = (over: Partial<NonNullable<RockWithHierarchy['milestoneBreakdown']>> = {}) => ({
+    total: 10, complete: 2, inProgress: 3, blocked: 0, offTrack: 0, notStarted: 5, overdue: 0, ...over,
+  });
+  const healthy = (id: string, extra: Partial<RockWithHierarchy> = {}) =>
+    make({ id, owner_id: 'u-1', due_date: '2026-12-31', milestoneBreakdown: breakdown(), ...extra });
+
+  it('has no reasons for a healthy Rock', async () => {
+    const { attentionReasons } = await import('@/utils/meetingRocksCascade');
+    expect(attentionReasons(healthy('a'), NOW)).toEqual([]);
+  });
+
+  it('names each reason a Rock needs discussing', async () => {
+    const { attentionReasons } = await import('@/utils/meetingRocksCascade');
+
+    expect(attentionReasons(healthy('a', { status: 'off_track' }), NOW)).toEqual(['off_track']);
+    expect(attentionReasons(healthy('a', { status: 'at_risk' }), NOW)).toEqual(['at_risk']);
+    expect(attentionReasons(healthy('a', { milestoneBreakdown: breakdown({ blocked: 1 }) }), NOW)).toEqual(['blocked_milestones']);
+    expect(attentionReasons(healthy('a', { milestoneBreakdown: breakdown({ offTrack: 2 }) }), NOW)).toEqual(['blocked_milestones']);
+    expect(attentionReasons(healthy('a', { milestoneBreakdown: breakdown({ overdue: 3 }) }), NOW)).toEqual(['overdue_milestones']);
+    expect(attentionReasons(healthy('a', { due_date: '2026-11-09' }), NOW)).toEqual(['rock_overdue']);
+    expect(attentionReasons(healthy('a', { owner_id: undefined }), NOW)).toEqual(['no_owner']);
+  });
+
+  it('lists several reasons together, and treats a Rock due today as not yet overdue', async () => {
+    const { attentionReasons } = await import('@/utils/meetingRocksCascade');
+
+    expect(attentionReasons(healthy('a', { status: 'off_track', milestoneBreakdown: breakdown({ blocked: 1, overdue: 1 }) }), NOW))
+      .toEqual(['off_track', 'blocked_milestones', 'overdue_milestones']);
+    expect(attentionReasons(healthy('a', { due_date: '2026-11-10' }), NOW)).toEqual([]);
+  });
+
+  it('never flags a completed Rock, however stale its numbers', async () => {
+    const { attentionReasons } = await import('@/utils/meetingRocksCascade');
+    expect(attentionReasons(healthy('a', { status: 'complete', due_date: '2020-01-01', owner_id: undefined, milestoneBreakdown: breakdown({ blocked: 4 }) }), NOW)).toEqual([]);
+  });
+
+  it('copes with a Rock whose milestone data has not loaded', async () => {
+    const { attentionReasons } = await import('@/utils/meetingRocksCascade');
+    expect(attentionReasons(make({ id: 'a', owner_id: 'u-1', due_date: '2026-12-31' }), NOW)).toEqual([]);
+  });
+
+  it('bubbles a descendant’s problem up to every ancestor without blaming them', () => {
+    const parent = healthy('p', { rock_level: 'company' });
+    const kid = healthy('k', { rock_level: 'team', parent_rock_id: 'p' });
+    const grandkid = healthy('g', { rock_level: 'individual', parent_rock_id: 'k', status: 'off_track' });
+    const { roots } = buildMeetingRocksCascade([parent, kid, grandkid], ['company'], {}, NOW);
+    const [root] = roots;
+
+    expect(root.attention).toEqual([]);
+    expect(root.needsAttention).toBe(true);
+    expect(root.children[0].attention).toEqual([]);
+    expect(root.children[0].needsAttention).toBe(true);
+    expect(root.children[0].children[0].attention).toEqual(['off_track']);
+  });
+
+  it('leaves a healthy cascade unflagged', () => {
+    const { roots } = buildMeetingRocksCascade([healthy('p', { rock_level: 'company' }), healthy('k', { rock_level: 'team', parent_rock_id: 'p' })], ['company'], {}, NOW);
+    expect(roots[0].needsAttention).toBe(false);
+  });
+
+  it('sums each root’s milestone breakdown once, since a root already includes what cascades from it', () => {
+    const a = healthy('a', { rock_level: 'company', milestoneBreakdown: breakdown({ total: 20, complete: 4, blocked: 1, overdue: 2 }) });
+    const b = healthy('b', { rock_level: 'company', milestoneBreakdown: breakdown({ total: 5, complete: 5, inProgress: 0, notStarted: 0 }) });
+    const kid = healthy('k', { rock_level: 'team', parent_rock_id: 'a', milestoneBreakdown: breakdown({ total: 999 }) });
+    const { milestoneTotals } = buildMeetingRocksCascade([a, b, kid], ['company'], {}, NOW);
+
+    expect(milestoneTotals).toMatchObject({ total: 25, complete: 9, blocked: 1, overdue: 2 });
+  });
+
+  it('builds a standalone node for the flat list', async () => {
+    const { standaloneNode } = await import('@/utils/meetingRocksCascade');
+    const node = standaloneNode(healthy('a', { status: 'at_risk' }), ['company'], NOW);
+
+    expect(node).toMatchObject({ reviewable: true, children: [], attention: ['at_risk'], needsAttention: true });
+    expect(standaloneNode(healthy('a', { rock_level: 'team' }), ['company'], NOW).reviewable).toBe(false);
+  });
+});
