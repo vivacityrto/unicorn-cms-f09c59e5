@@ -16,8 +16,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Carl-approved (2026-09-15): inserts one new dd_unicorn_roles catalogue row (System Account) and reassigns unicorn_role/is_system_account for exactly 3 named accounts (admin@vivacity.com.au, angela+invitetest@vivacity.com.au, bulk-generate-automation@vivacity.com.au) already confirmed non-human/test/automation identities. bulk-generate-automation's real production capability is carried by a separate, untouched supplemental role -- this migration only reclassifies its primary role label. No other user rows are affected.",
-      "expires": "2026-10-15"
+      "reason": "Carl-approved (2026-09-15): inserts one new dd_unicorn_roles catalogue row (System Account) and reassigns unicorn_role/is_system_account for exactly 3 named accounts (admin@vivacity.com.au, angela+invitetest@vivacity.com.au, bulk-generate-automation@vivacity.com.au) already confirmed non-human/test/automation identities. bulk-generate-automation's real production capability is carried by a separate, untouched supplemental role -- this migration only reclassifies its primary role label. No other user rows are affected. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "add-email-templates-manage-capability",
@@ -25,8 +25,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Carl-approved RBAC v6 capability scoping (2026-09-15): inserts one new permission_features row and 7 role_permissions rows for the new email_templates.manage key, modeled directly on the existing public.email_templates RLS boundary (Super Admin full, other internal Vivacity roles limited/view-only). The ON CONFLICT DO UPDATE is a safe upsert guard, not a destructive operation on existing data -- these are brand-new rows for a brand-new feature key.",
-      "expires": "2026-10-15"
+      "reason": "Carl-approved RBAC v6 capability scoping (2026-09-15): inserts one new permission_features row and 7 role_permissions rows for the new email_templates.manage key, modeled directly on the existing public.email_templates RLS boundary (Super Admin full, other internal Vivacity roles limited/view-only). The ON CONFLICT DO UPDATE is a safe upsert guard, not a destructive operation on existing data -- these are brand-new rows for a brand-new feature key. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "retire-client-eos-access-user-roles-cleanup",
@@ -34,8 +34,8 @@
       "categories": ["destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Carl-approved retirement of client-tenant EOS access (2026-09-15): DELETE FROM public.eos_user_roles removes 384 rows from a 2026-01-06 bulk backfill across 377 tenants that was never real onboarding (all identical timestamp, assigned_by NULL). Verified zero effect on Vivacity's own tenant (6372), which has zero rows in this table already.",
-      "expires": "2026-10-15"
+      "reason": "Carl-approved retirement of client-tenant EOS access (2026-09-15): DELETE FROM public.eos_user_roles removes 384 rows from a 2026-01-06 bulk backfill across 377 tenants that was never real onboarding (all identical timestamp, assigned_by NULL). Verified zero effect on Vivacity's own tenant (6372), which has zero rows in this table already. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "academy-solo-internal-staff-demo-invite-support",
@@ -43,8 +43,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Approved Academy Solo controlled-pilot access policy: grant the existing internal-staff roles the Academy feature and upsert their existing role-permission rows so staff can provision and manage demo invites. Applied to production and QA with no pilot account or invite data seeded; the migration is covered by the Academy Solo audit entry. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed.",
-      "expires": "2026-10-25"
+      "reason": "Approved Academy Solo controlled-pilot access policy: grant the existing internal-staff roles the Academy feature and upsert their existing role-permission rows so staff can provision and manage demo invites. Applied to production and QA with no pilot account or invite data seeded; the migration is covered by the Academy Solo audit entry. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "academy-solo-account-provisioning",
@@ -52,8 +52,8 @@
       "categories": ["data-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Approved Academy Solo controlled-pilot provisioning: the SECURITY DEFINER RPC creates an isolated Academy tenant and writes the required audit event only when an authorized staff member starts the pilot flow. Applied to production and QA, verified with zero Academy Solo accounts or demo invites created during migration rollout. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed.",
-      "expires": "2026-10-25"
+      "reason": "Approved Academy Solo controlled-pilot provisioning: the SECURITY DEFINER RPC creates an isolated Academy tenant and writes the required audit event only when an authorized staff member starts the pilot flow. Applied to production and QA, verified with zero Academy Solo accounts or demo invites created during migration rollout. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "academy-solo-access-boundary",
@@ -61,8 +61,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Approved Academy Solo access boundary and lifecycle controls: update the tenant marker during explicit provisioning, write audit events for staff lifecycle actions, and revoke access for the single-seat Academy learner on lifecycle completion. Applied to production and QA; anon EXECUTE was explicitly revoked in the follow-up corrective migration and all pilot counts remain zero. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed.",
-      "expires": "2026-10-25"
+      "reason": "Approved Academy Solo access boundary and lifecycle controls: update the tenant marker during explicit provisioning, write audit events for staff lifecycle actions, and revoke access for the single-seat Academy learner on lifecycle completion. Applied to production and QA; anon EXECUTE was explicitly revoked in the follow-up corrective migration and all pilot counts remain zero. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "academy-solo-invitation-role-compatibility-function-body",
@@ -70,8 +70,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body preserves the existing invitation writes while adding Academy-role compatibility and is covered by the Academy invitation contract tests and audit entry.",
-      "expires": "2026-10-15"
+      "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body preserves the existing invitation writes while adding Academy-role compatibility and is covered by the Academy invitation contract tests and audit entry. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "academy-solo-invitation-anonymous-binding-function-body",
@@ -79,8 +79,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body binds an accepted invitation to the authenticated identity and is covered by the Academy invitation contract tests and audit entry.",
-      "expires": "2026-10-15"
+      "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body binds an accepted invitation to the authenticated identity and is covered by the Academy invitation contract tests and audit entry. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "academy-solo-reversibility-invite-capacity-fix",
@@ -88,8 +88,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Reviewed false positives: UPDATE and INSERT statements are inside the existing staff-only SECURITY DEFINER Academy lifecycle RPC. The migration makes Solo marker and seat-cap changes reversible by preserving the prior cap, removes the marker on disable, and keeps the invitation capacity read on the caller-scoped one-argument RPC. Covered by static contract tests and bounded browser verification; no production deployment is performed by this PR.",
-      "expires": "2026-10-15"
+      "reason": "Reviewed false positives: UPDATE and INSERT statements are inside the existing staff-only SECURITY DEFINER Academy lifecycle RPC. The migration makes Solo marker and seat-cap changes reversible by preserving the prior cap, removes the marker on disable, and keeps the invitation capacity read on the caller-scoped one-argument RPC. Covered by static contract tests and bounded browser verification; no production deployment is performed by this PR. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "add-qa-persona-flag-and-role-retirements",
@@ -97,8 +97,8 @@
       "categories": ["data-mutation", "destructive-mutation", "hard-coded-id"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Carl-approved (2026-09-15): backfills is_qa_persona=true for the 5 accounts already flagged kpi_pod='qa' (live query confirmed kpi_pod has only ever held null or 'qa' across the entire database), inserts one supplemental CSC user_roles row for Nova's real account (755d843d-8d93-4179-8bb8-50c61a6f21fe, confirmed via live query -- she is an Integrator who also runs the CSC seat, using the existing user_roles/check_permission() multi-role infrastructure already proven in production via the Bulk Generate Automation precedent), and sets dd_unicorn_roles.is_active=false for Team Leader and CET (both confirmed zero current holders) per the RBAC v6 plan's 2026-09-10 baseline. A separate duplicate account (nova+csc@vivacity.com.au) was found and deliberately left untouched, deferred to a later session.",
-      "expires": "2026-10-15"
+      "reason": "Carl-approved (2026-09-15): backfills is_qa_persona=true for the 5 accounts already flagged kpi_pod='qa' (live query confirmed kpi_pod has only ever held null or 'qa' across the entire database), inserts one supplemental CSC user_roles row for Nova's real account (755d843d-8d93-4179-8bb8-50c61a6f21fe, confirmed via live query -- she is an Integrator who also runs the CSC seat, using the existing user_roles/check_permission() multi-role infrastructure already proven in production via the Bulk Generate Automation precedent), and sets dd_unicorn_roles.is_active=false for Team Leader and CET (both confirmed zero current holders) per the RBAC v6 plan's 2026-09-10 baseline. A separate duplicate account (nova+csc@vivacity.com.au) was found and deliberately left untouched, deferred to a later session. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "migrate-staff-directory-fns-to-qa-persona-function-bodies",
@@ -106,8 +106,8 @@
       "categories": ["data-mutation", "destructive-mutation", "hard-coded-id"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "False positive, same shape as prior function-body entries above: all flagged INSERT statements are inside the CREATE OR REPLACE FUNCTION bodies for seed_meeting_attendees_from_roles and sync_l10_meeting_participants (eos_meeting_attendees/eos_meeting_participants inserts) -- unchanged from each function's existing production behavior except swapping the kpi_pod='qa' exclusion for is_qa_persona (sync_l10_meeting_participants previously had no qa-exclusion at all, a separate pre-existing gap closed here), only executed later, per-caller, when a real meeting is scheduled/synced. The migration itself performs no direct data mutation; it only redefines get_vivacity_team_directory, get_vivacity_team_directory_staff, seed_meeting_attendees_from_roles, and sync_l10_meeting_participants. The flagged tenant_id=6372 literal is the pre-existing, unchanged Vivacity-tenant constant already used throughout this function.",
-      "expires": "2026-10-15"
+      "reason": "False positive, same shape as prior function-body entries above: all flagged INSERT statements are inside the CREATE OR REPLACE FUNCTION bodies for seed_meeting_attendees_from_roles and sync_l10_meeting_participants (eos_meeting_attendees/eos_meeting_participants inserts) -- unchanged from each function's existing production behavior except swapping the kpi_pod='qa' exclusion for is_qa_persona (sync_l10_meeting_participants previously had no qa-exclusion at all, a separate pre-existing gap closed here), only executed later, per-caller, when a real meeting is scheduled/synced. The migration itself performs no direct data mutation; it only redefines get_vivacity_team_directory, get_vivacity_team_directory_staff, seed_meeting_attendees_from_roles, and sync_l10_meeting_participants. The flagged tenant_id=6372 literal is the pre-existing, unchanged Vivacity-tenant constant already used throughout this function. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "gate-upsert-rock-with-parenting-security-definer",
@@ -115,8 +115,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "False positive, same shape as prior function-body entries above: the flagged INSERT/UPDATE statements are the pre-existing, unchanged body of the CREATE OR REPLACE FUNCTION upsert_rock_with_parenting (eos_rocks writes) -- only executed later, per-caller, when a real EOS rock is created or edited. This migration adds exactly one new statement (an is_vivacity_team_safe(auth.uid()) authorization gate as the function's first line) and changes nothing else; applied as an urgent same-day security fix after discovering the function had zero internal authorization check and its SECURITY DEFINER writes bypass eos_rocks RLS entirely (table owned by postgres, relforcerowsecurity=false) while being EXECUTE-granted to `authenticated` -- see the linked audit entry for full detail. Self-directed given severity (live, exploitable-today bypass), matching this session's established same-day-fix precedent for the eos_scorecard/eos_rocks client-tenant RLS gap; pending Carl's review via this PR, same as any other change to this repo.",
-      "expires": "2026-10-15"
+      "reason": "False positive, same shape as prior function-body entries above: the flagged INSERT/UPDATE statements are the pre-existing, unchanged body of the CREATE OR REPLACE FUNCTION upsert_rock_with_parenting (eos_rocks writes) -- only executed later, per-caller, when a real EOS rock is created or edited. This migration adds exactly one new statement (an is_vivacity_team_safe(auth.uid()) authorization gate as the function's first line) and changes nothing else; applied as an urgent same-day security fix after discovering the function had zero internal authorization check and its SECURITY DEFINER writes bypass eos_rocks RLS entirely (table owned by postgres, relforcerowsecurity=false) while being EXECUTE-granted to `authenticated` -- see the linked audit entry for full detail. Self-directed given severity (live, exploitable-today bypass), matching this session's established same-day-fix precedent for the eos_scorecard/eos_rocks client-tenant RLS gap; pending Carl's review via this PR, same as any other change to this repo. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "grant-eos-rocks-company-create-all-internal-roles",
@@ -124,8 +124,8 @@
       "categories": ["destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Carl-approved (2026-09-15, RBAC v6 P1-x eos.rocks.own.manage golden-matrix packet): 'internal staff can create rocks' -- eos.rocks.company.create's Super-Admin/Team-Leader-only catalogue restriction is retired. Sets role_permissions.level='full' for BGT/CET/CSC/Integrator on this one feature_key, matching Super Admin/Team Leader (already full) and eos.rocks.own.manage (already full for every internal role). This brings the catalogue in line with already-live behavior -- neither the UI dropdown gate nor eos_rocks RLS ever actually checked rock_level on create, so no new access is granted, only the catalogue's stale claim is corrected.",
-      "expires": "2026-10-15"
+      "reason": "Carl-approved (2026-09-15, RBAC v6 P1-x eos.rocks.own.manage golden-matrix packet): 'internal staff can create rocks' -- eos.rocks.company.create's Super-Admin/Team-Leader-only catalogue restriction is retired. Sets role_permissions.level='full' for BGT/CET/CSC/Integrator on this one feature_key, matching Super Admin/Team Leader (already full) and eos.rocks.own.manage (already full for every internal role). This brings the catalogue in line with already-live behavior -- neither the UI dropdown gate nor eos_rocks RLS ever actually checked rock_level on create, so no new access is granted, only the catalogue's stale claim is corrected. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "vivacity-academy-tiers-function-bodies",
@@ -133,8 +133,8 @@
       "categories": ["data-mutation", "destructive-mutation"],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Two distinct findings. (1) 4 of the 5 flagged statements are function-body false positives, same shape as the other entries above: the INSERT/UPDATE statements are inside the CREATE OR REPLACE FUNCTION bodies for manage_academy_solo_access (tenants update, audit_eos_events insert) and create_academy_solo_account (tenants insert, audit_eos_events insert) -- unchanged from each function's existing production behavior, only executed later, per-caller, when an authorized staff member actually calls the RPC. (2) The 5th (the top-level UPDATE public.tenants backfill at the end of the migration) is a real, already-applied one-time data mutation: it stamps metadata.academy_solo.tier='solo' on rows that already have a metadata.academy_solo object but no tier field -- by construction, every existing Academy Solo tenant. Verified live via execute_sql immediately after applying: exactly the 4 known Academy Solo tenants (The Australian Higher Education Academy, Techskill Academy, Kingston State College, Rothwell Early Learning Centre Daycare) were updated, academy_max_users unchanged at 1 for all four, no other tenant rows touched. See docs/audit-log/entries/2026-09-25-vivacity-academy-tiers-and-seat-limit-fix.md.",
-      "expires": "2026-10-25"
+      "reason": "Two distinct findings. (1) 4 of the 5 flagged statements are function-body false positives, same shape as the other entries above: the INSERT/UPDATE statements are inside the CREATE OR REPLACE FUNCTION bodies for manage_academy_solo_access (tenants update, audit_eos_events insert) and create_academy_solo_account (tenants insert, audit_eos_events insert) -- unchanged from each function's existing production behavior, only executed later, per-caller, when an authorized staff member actually calls the RPC. (2) The 5th (the top-level UPDATE public.tenants backfill at the end of the migration) is a real, already-applied one-time data mutation: it stamps metadata.academy_solo.tier='solo' on rows that already have a metadata.academy_solo object but no tier field -- by construction, every existing Academy Solo tenant. Verified live via execute_sql immediately after applying: exactly the 4 known Academy Solo tenants (The Australian Higher Education Academy, Techskill Academy, Kingston State College, Rothwell Early Learning Centre Daycare) were updated, academy_max_users unchanged at 1 for all four, no other tenant rows touched. See docs/audit-log/entries/2026-09-25-vivacity-academy-tiers-and-seat-limit-fix.md. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
+      "expires": "2026-11-27"
     },
     {
       "id": "package-usage-alert-function-and-trigger",
