@@ -36,6 +36,7 @@ export function ParentPicker({ id, level, value, candidates, quarterLabel, inval
 
   const groups: RockLevel[] = level === 'team' ? ['company'] : ['company', 'team'];
   return (
+    <div className="flex items-center gap-2">
     <Select value={value ?? undefined} onValueChange={v => onChange(v || null)}>
       <SelectTrigger id={id} aria-invalid={invalid} aria-describedby={describedBy} aria-label="The Rock this one serves">
         <SelectValue placeholder={`Choose the ${level === 'team' ? 'Company' : 'Company or Team'} Rock this serves`} />
@@ -58,5 +59,11 @@ export function ParentPicker({ id, level, value, candidates, quarterLabel, inval
         })}
       </SelectContent>
     </Select>
+    {value && (
+      <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => onChange(null)} aria-label="Clear the Rock this serves, to choose one from another quarter">
+        Clear
+      </Button>
+    )}
+    </div>
   );
 }
