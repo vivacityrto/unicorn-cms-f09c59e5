@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,7 @@ import { useOverflowTabs } from '@/hooks/useOverflowTabs';
 import { cn } from '@/lib/utils';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+import { useEosRockOwnerFilter } from '@/hooks/useEosRockOwnerFilter';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { RockCard } from '@/components/eos/rocks/RockCard';
@@ -54,7 +55,6 @@ function RocksHierarchyContent() {
   const [quarterYear, setQuarterYear] = useState(currentQuarter.year);
   const [quarterNumber, setQuarterNumber] = useState(currentQuarter.quarter);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [userFilter, setUserFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'company' | 'team' | 'individual' | 'cascade'>('company');
   
@@ -79,19 +79,12 @@ function RocksHierarchyContent() {
   } = useEosRocksHierarchy({ quarterYear, quarterNumber });
   
   const { data: vivacityUsers } = useVivacityTeamUsers();
+  const { filter: effectiveUserFilter, setFilter: setUserFilter } =
+    useEosRockOwnerFilter(profile?.user_uuid, vivacityUsers);
   const canCreateCompanyRock = usePermission('eos.rocks.company.create');
   const canManageOwnRocks = usePermission('eos.rocks.own.manage');
   const canCreateRocks = () => canCreateCompanyRock || canManageOwnRocks;
 
-  // Default user filter to logged-in user once profile and users are available
-  useEffect(() => {
-    if (userFilter === 'all' && profile?.user_uuid && vivacityUsers?.length) {
-      const isMember = vivacityUsers.some(u => u.user_uuid === profile.user_uuid);
-      if (isMember) setUserFilter(profile.user_uuid);
-    }
-  }, [profile?.user_uuid, vivacityUsers, userFilter]);
-
-  const effectiveUserFilter = userFilter;
   // Helper functions
   const getUserName = (userId: string): string | null => {
     const user = vivacityUsers?.find(u => u.user_uuid === userId);
