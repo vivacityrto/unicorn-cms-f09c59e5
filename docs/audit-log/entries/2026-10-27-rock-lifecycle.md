@@ -2,11 +2,11 @@
 
 **Trigger:** ad-hoc (Rock editor redesign, stage 3 of 3: Archive, Restore, Delete)
 **Scope:** `public.eos_rocks` and its hosted Supabase project `1. Unicorn 2.0-dev`
-(`yxkgdalkbrriasiyyrwk`): one new table, three triggers, five functions.
-**Status: drafted and dry-run only. The migration has not been applied to
-`unicorn-qa` or to the configured project;** applying it needs Carl's explicit
-approval. Stacked on the stage 2 migration (`20261027150000`), which is also
-not yet applied; neither depends on the other being applied first.
+(`yxkgdalkbrriasiyyrwk`): one new table, four triggers, five functions.
+**Status: applied** on 27 Oct 2026 on Carl's explicit instruction, to
+`unicorn-qa` first (version `20261027084909`) and then to the configured project
+(version `20261027085500`), after the stage 2 migration (`20261027150000`), and
+verified on both (see Verification). Neither migration depends on the other.
 
 ## Findings
 - Archive was a bare `UPDATE archived_at`. Child Rocks stayed active pointing at
@@ -55,10 +55,9 @@ not yet applied; neither depends on the other being applied first.
   direct archive and delete mutations and the card's own confirmation are removed.
 - `src/integrations/supabase/types.ts`: hand-added entries for the new table and
   functions, matching the generated shape, until the next regeneration.
-- Until the migration is applied, the Archived tab works (it only reads archived
-  Rocks), but archive, restore and the impact check will report the functions as
-  missing, and the history section says history is not available yet. The
-  migration should be applied before or together with this change.
+- The migration is applied, so this change can merge. Before it was applied,
+  archive, restore and the impact check would have reported the functions as
+  missing, which is why it had to be applied first.
 
 ## Verification
 - Dry run against the configured project inside one transaction that rolled back
@@ -80,8 +79,25 @@ not yet applied; neither depends on the other being applied first.
   blocked by the scope trigger).
 - After the dry run: 156 Rocks, 1 archived (already archived before), 0 `[TEST]`
   Rocks, no history table, none of the new functions or triggers.
-- `unicorn-qa` has no EOS data; apply there first, with approval, and re-run the
-  checks that do not need Rock rows.
+- Applied to `unicorn-qa`, then to the configured project, as the migration
+  file's exact content. Verified on both afterwards: all eight function bodies
+  (stage 2 and stage 3) have the same md5 and length as the bodies in the files;
+  each function exists once; `rock_impact`, `archive_rock` and `restore_rock` are
+  executable by `authenticated` and not by `anon` or `PUBLIC`; the trigger and
+  helper functions are executable by neither; `eos_rock_events` has row-level
+  security on, one select policy, and `SELECT` only for `authenticated`; the
+  four new triggers are enabled beside the three existing ones.
+- `unicorn-qa` has no EOS data (no tenant 6372, no teams), so it was also checked
+  with a rolled-back smoke test on another tenant: history, `created_by`, level
+  lock, delete refused with a child and allowed with nothing attached, impact,
+  archive with children, restore refused under an archived parent and allowed
+  with it, non-staff refused. Afterwards QA had 0 Rocks and 0 events.
+- Live check against the applied functions on the configured project, in a
+  transaction that rolled back: archive with children (2 Rocks), restore with
+  children (2), `rock_impact` (1 child), a real Rock with a linked issue refused
+  for deletion with its reasons, a non-staff user refused. Afterwards: 156 Rocks,
+  1 archived (as before), 0 `[TEST]` Rocks, 0 history rows, 498 milestones, 15
+  linked issues, 40 milestone links, 24 outcomes, all unchanged.
 
 ## Rollback
 Apply `rollback/20261027160000_rock_lifecycle.down.sql`. Archived Rocks stay

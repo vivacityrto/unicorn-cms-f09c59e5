@@ -2,9 +2,10 @@
 
 **Trigger:** ad-hoc (Rock editor redesign, stage 2 of 3: Edit)
 **Scope:** `public.upsert_rock_with_parenting(jsonb)` on the configured Supabase
-project `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). **Status: drafted and
-dry-run only. The migration has not been applied to `unicorn-qa` or to the
-configured project;** applying it needs Carl's explicit approval.
+project `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). **Status: applied** on
+27 Oct 2026 on Carl's explicit instruction, to `unicorn-qa` first (version
+`20261027084833`) and then to the configured project (version
+`20261027085424`), and verified on both (see Verification).
 
 ## Findings
 - The staff-gated SECURITY DEFINER upsert had two silent side effects that
@@ -69,8 +70,22 @@ configured project;** applying it needs Carl's explicit approval.
   were still refused.
 - After the dry run: 156 Rocks, 0 `[TEST]` Rocks, the previous definition still
   live, one overload.
-- `unicorn-qa` has no EOS data, so it was not used for the dry run; apply there
-  first, with approval, and re-run the checks that do not need Rock rows.
+- Applied to `unicorn-qa`, then to the configured project, as the migration
+  file's exact content. QA has no EOS data, so it was verified structurally and
+  with a rolled-back smoke test (Company and Individual Rocks under another
+  tenant; no teams exist there).
+- Verified on both projects after applying: all eight function bodies (the
+  upsert function and the stage 3 functions) have the same md5 and length as the
+  bodies in the migration files; each function exists once; the public RPCs are
+  executable by `authenticated` and not by `anon` or `PUBLIC`; the table, index,
+  triggers, policy and grants are as designed.
+- Live check against the applied function on the configured project, in a
+  transaction that rolled back: a Company Rock took `created_by` and the V/TO; an
+  Individual Rock carrying a team was created under it with no Client Rock created
+  as a side effect (client Rock count unchanged at 9); a level change for a Rock
+  with a parent was refused; a non-staff user was refused. Afterwards: 156 Rocks,
+  1 archived (as before), 0 `[TEST]` Rocks, 498 milestones, 15 linked issues, 40
+  milestone links, 24 outcomes, all unchanged.
 - `node scripts/audit-migrations.mjs --changed-only --base-ref origin/main`:
   5 findings, all scoped allowlisted, 0 blocking.
 
