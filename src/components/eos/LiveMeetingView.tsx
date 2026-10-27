@@ -32,9 +32,7 @@ import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { useLiveMeetingViewingState } from '@/hooks/useLiveMeetingViewingState';
 import { useLiveMeetingSegmentNavigation } from '@/hooks/useLiveMeetingSegmentNavigation';
-import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
-import { ClientBadge } from '@/components/eos/ClientBadge';
 import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
 import { IssuesQueue } from '@/components/eos/IssuesQueue';
 import { IDSDialog } from '@/components/eos/IDSDialog';
@@ -49,16 +47,16 @@ import { ChangeFacilitatorDialog } from '@/components/eos/ChangeFacilitatorDialo
 import { OnlineUsersIndicator } from '@/components/eos/OnlineUsersIndicator';
 import { FacilitatorChecklist } from '@/components/eos/facilitator/FacilitatorChecklist';
 import {
-  RockReviewPrompt,
   IDSPrompt,
   ScorecardPrompt,
   MeetingRatingPrompt,
-  OffTrackRockPrompt,
   IDSDecisionPrompt,
   QuorumWarningPrompt,
 } from '@/components/eos/facilitator/FacilitatorPrompts';
-import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
+import { MeetingRocksReview } from '@/components/eos/meeting/MeetingRocksReview';
 import type { EosMeetingSegment, MeetingType, ConfigMeetingType, EosIssue, EosRock, EosTodo, EosTodoWithIssue } from '@/types/eos';
+
+const EMPTY_OWNER_NAMES: Record<string, string> = {};
 
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
@@ -664,121 +662,14 @@ export const LiveMeetingView = () => {
           </div>
         );
 
-      case 'rocks': {
-        const now = new Date();
-        const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
-        const currentYear = now.getFullYear();
-        
-        // Filter to current quarter, scoped by the Configuration's rocks_scope
-        // (defaults to Company + Team; empty array = show all levels), exclude
-        // completed, sort by owner name.
-        const currentQuarterRocks = rocks
-          ?.filter(r =>
-            r.quarter_year === currentYear &&
-            r.quarter_number === currentQuarter &&
-            r.status !== 'complete' &&
-            (rocksScope.length === 0 || rocksScope.includes(r.rock_level ?? ''))
-          )
-          .sort((a, b) => {
-            const nameA = rockOwners?.[a.owner_id || ''] || '';
-            const nameB = rockOwners?.[b.owner_id || ''] || '';
-            return nameA.localeCompare(nameB);
-          }) || [];
-
+      case 'rocks':
         return (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Rock Review
-            </h3>
-            <p className="text-muted-foreground text-sm mb-4">
-              Quick status update only - On Track or Off Track. No discussion.
-            </p>
-            <div className="space-y-3 mb-4">
-              <RockReviewPrompt />
-              {/* Same rocks_scope-filtered set as the list below, not the raw
-                  rocks array - otherwise insights (overdue/off-track counts)
-                  can reference rocks the segment itself isn't even showing. */}
-              <RocksInsights rocks={currentQuarterRocks.map(r => ({ ...r, owner_user_id: r.owner_id }))} />
-            </div>
-            <div className="space-y-3">
-              {currentQuarterRocks.map((rock) => (
-                <Card key={rock.id} className="p-4 bg-muted/20">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <p className="font-medium">{rock.title}</p>
-                          <ClientBadge clientId={rock.client_tenant_id} />
-                          <Badge variant="outline" className={`text-xs ${
-                            rock.rock_level === 'company'
-                              ? 'border-primary/40 text-primary'
-                              : 'border-accent-foreground/30 text-accent-foreground'
-                          }`}>
-                            {/* rocks_scope is now editable and can include 'individual'
-                                (round 1 fix) - show the real level instead of assuming
-                                every non-company rock is Team. */}
-                            {rock.rock_level === 'company'
-                              ? 'Company'
-                              : rock.rock_level === 'individual'
-                                ? 'Individual'
-                                : 'Team'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Q{rock.quarter_number} {rock.quarter_year}
-                          </Badge>
-                        </div>
-                        {rock.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">{rock.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    {rock.status === 'off_track' && <OffTrackRockPrompt rockTitle={rock.title} />}
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        {rock.owner_id && rockOwners?.[rock.owner_id] && (
-                          <div className="flex items-center gap-1.5">
-                            <Avatar className="w-5 h-5">
-                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                                {rockOwners[rock.owner_id]
-                                  .split(' ')
-                                  .map((n: string) => n[0])
-                                  .join('')
-                                  .toUpperCase()
-                                  .slice(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs text-muted-foreground">{rockOwners[rock.owner_id]}</span>
-                          </div>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          Due: {rock.due_date ? format(new Date(rock.due_date), 'dd/MM/yyyy') : 'Not set'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RockProgressControl rock={rock} compact />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => { setEditingRock(rock); setRockFormOpen(true); }}
-                          aria-label="Edit rock"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-              {currentQuarterRocks.length === 0 && (
-                <p className="text-muted-foreground text-sm text-center py-4">
-                  No active rocks for Q{currentQuarter} {currentYear}
-                </p>
-              )}
-            </div>
-          </Card>
+          <MeetingRocksReview
+            scope={rocksScope}
+            ownerNames={rockOwners ?? EMPTY_OWNER_NAMES}
+            onEditRock={(rock) => { setEditingRock(rock); setRockFormOpen(true); }}
+          />
         );
-      }
 
       case 'headlines':
         return (
