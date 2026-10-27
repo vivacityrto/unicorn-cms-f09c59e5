@@ -54,6 +54,15 @@ export function candidateParents(
     .sort((a, b) => a.level.localeCompare(b.level) || a.title.localeCompare(b.title));
 }
 
+/**
+ * The client an Individual Rock belongs to is its parent's: the server refuses a
+ * parent from a different client, so the form follows the parent instead of asking.
+ * Company and Team Rocks made here belong to no client.
+ */
+export function clientForParent(level: RockLevel, parent: ParentCandidate | null | undefined): number | null {
+  return level === 'individual' ? parent?.clientTenantId ?? null : null;
+}
+
 export interface ValidationContext {
   /** Every Rock the form knows about, for looking a parent up. */
   rocks: readonly ParentCandidate[];

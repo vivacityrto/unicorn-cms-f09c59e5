@@ -31,7 +31,7 @@ export function useRockEditorData(options: { enabled: boolean; level: RockLevel;
     queryFn: async (): Promise<EditorRock[]> => {
       const { data, error } = await supabase
         .from('eos_rocks')
-        .select('id, title, rock_level, quarter_year, quarter_number, owner_id, archived_at, parent_rock_id')
+        .select('id, title, rock_level, quarter_year, quarter_number, owner_id, archived_at, parent_rock_id, client_tenant_id')
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .order('title');
       if (error) throw error;
@@ -44,6 +44,7 @@ export function useRockEditorData(options: { enabled: boolean; level: RockLevel;
         ownerId: row.owner_id,
         archived: !!row.archived_at,
         parentId: row.parent_rock_id,
+        clientTenantId: row.client_tenant_id ?? null,
       }));
     },
     enabled,

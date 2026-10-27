@@ -89,6 +89,25 @@ describe('RockEditorSheet: create', () => {
     expect(state.mutateAsync.mock.calls[0][0].values).toMatchObject({ level: 'individual', parentId: 'co', ownerId: 'me' });
   });
 
+  it('sends the parent’s client with an Individual Rock under a client Team Rock', async () => {
+    state.rocks = [rock({ id: 'ct', title: 'Client Rock - Altaira - Q4', level: 'team', clientTenantId: 55 })];
+    open({ initialLevel: 'individual', initialParentId: 'ct' });
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Run the Altaira onboarding' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Individual Rock' }));
+
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalled());
+    expect(state.mutateAsync.mock.calls[0][0]).toMatchObject({ clientTenantId: 55 });
+  });
+
+  it('sends no client for a Company Rock', async () => {
+    open();
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'No client here' } });
+    fireEvent.change(screen.getByLabelText('Who is accountable?'), { target: { value: 'me' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Company Rock' }));
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalled());
+    expect(state.mutateAsync.mock.calls[0][0].clientTenantId).toBeNull();
+  });
+
   it('says so, and offers a way out, when a Team Rock has no Company Rock to serve', () => {
     open({ initialLevel: 'team' });
     expect(screen.getByText(/no Company Rock in Q\d \d{4} to serve yet/)).toBeInTheDocument();

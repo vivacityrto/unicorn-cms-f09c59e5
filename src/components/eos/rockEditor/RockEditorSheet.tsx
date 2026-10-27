@@ -17,7 +17,7 @@ import type { RockLevel } from '@/types/eos';
 import { changeLevel, changeParent, changeQuarter, initialValues, newMilestone, nextInBatch } from '@/utils/rockEditor/defaults';
 import { findLikelyDuplicates } from '@/utils/rockEditor/duplicates';
 import { clearDraft, draftKey, isMeaningful, loadDraft, saveDraft, type RockDraft } from '@/utils/rockEditor/draft';
-import { candidateParents, hasErrors, LEVEL_LABEL, validateRockEditor } from '@/utils/rockEditor/rules';
+import { candidateParents, clientForParent, hasErrors, LEVEL_LABEL, validateRockEditor } from '@/utils/rockEditor/rules';
 import type { RockEditorValues } from '@/utils/rockEditor/types';
 import { LevelPicker } from './LevelPicker';
 import { ParentPicker } from './ParentPicker';
@@ -137,7 +137,8 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
       return;
     }
     try {
-      const result = await save.mutateAsync({ values });
+      const parent = rocks.find(r => r.id === values.parentId);
+      const result = await save.mutateAsync({ values, clientTenantId: clientForParent(values.level, parent) });
       clearDraft(storage(), startKey);
       setDraft(null);
       setCreated(count => count + 1);

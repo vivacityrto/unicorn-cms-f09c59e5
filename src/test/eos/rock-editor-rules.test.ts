@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedParentLevels, candidateParents, hasErrors, isValidIsoDate, needsParent, validateRockEditor } from '@/utils/rockEditor/rules';
+import { allowedParentLevels, candidateParents, clientForParent, hasErrors, isValidIsoDate, needsParent, validateRockEditor } from '@/utils/rockEditor/rules';
 import { newMilestone } from '@/utils/rockEditor/defaults';
 import type { ParentCandidate, RockEditorValues } from '@/utils/rockEditor/types';
 
@@ -48,6 +48,21 @@ describe('hierarchy helpers', () => {
     expect(isValidIsoDate('2026-02-30')).toBe(false);
     expect(isValidIsoDate('31/12/2026')).toBe(false);
     expect(isValidIsoDate('')).toBe(false);
+  });
+});
+
+describe('clientForParent', () => {
+  const clientTeam = parent('ct', 'team', { clientTenantId: 55 });
+
+  it('gives an Individual Rock its parent’s client, because the server refuses a mismatch', () => {
+    expect(clientForParent('individual', clientTeam)).toBe(55);
+    expect(clientForParent('individual', parent('tm', 'team'))).toBeNull();
+    expect(clientForParent('individual', null)).toBeNull();
+  });
+
+  it('gives Company and Team Rocks made here no client', () => {
+    expect(clientForParent('team', parent('co', 'company', { clientTenantId: 55 }))).toBeNull();
+    expect(clientForParent('company', null)).toBeNull();
   });
 });
 

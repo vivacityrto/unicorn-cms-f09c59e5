@@ -43,6 +43,8 @@ export interface ParentCandidate {
   ownerId: string | null;
   archived: boolean;
   parentId: string | null;
+  /** Set on a Rock that belongs to one client. An Individual Rock must share its parent's client. */
+  clientTenantId?: number | null;
 }
 
 export interface ValidationResult {
