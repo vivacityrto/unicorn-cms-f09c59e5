@@ -28257,6 +28257,123 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_rock_milestone_events: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          entity_id: string
+          entity_type: string
+          id: number
+          occurred_at: string
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: number
+          occurred_at?: string
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: number
+          occurred_at?: string
+          tenant_id?: number
+        }
+        Relationships: []
+      }
+      eos_rock_milestone_links: {
+        Row: {
+          company_milestone_id: string
+          created_at: string
+          created_by: string | null
+          individual_milestone_id: string
+          tenant_id: number
+        }
+        Insert: {
+          company_milestone_id: string
+          created_at?: string
+          created_by?: string | null
+          individual_milestone_id: string
+          tenant_id: number
+        }
+        Update: {
+          company_milestone_id?: string
+          created_at?: string
+          created_by?: string | null
+          individual_milestone_id?: string
+          tenant_id?: number
+        }
+        Relationships: []
+      }
+      eos_rock_milestones: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          evidence_url: string | null
+          exit_criteria: string | null
+          id: string
+          legacy_snapshot: Json | null
+          legacy_source_id: string | null
+          owner_id: string | null
+          priority: string
+          rock_id: string
+          sort_order: number
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          evidence_url?: string | null
+          exit_criteria?: string | null
+          id?: string
+          legacy_snapshot?: Json | null
+          legacy_source_id?: string | null
+          owner_id?: string | null
+          priority?: string
+          rock_id: string
+          sort_order?: number
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          evidence_url?: string | null
+          exit_criteria?: string | null
+          id?: string
+          legacy_snapshot?: Json | null
+          legacy_source_id?: string | null
+          owner_id?: string | null
+          priority?: string
+          rock_id?: string
+          sort_order?: number
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       eos_rocks: {
         Row: {
           archived_at: string | null

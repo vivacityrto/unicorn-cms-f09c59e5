@@ -12,8 +12,10 @@ import {
   groupTeamRocksByFunction,
   groupIndividualRocksByOwner,
   getCurrentQuarter,
+  canRockLevelBeParent,
 } from '@/utils/rockRollup';
 import { DB_ROCK_STATUS, uiToDbStatus } from '@/utils/rockStatusUtils';
+import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 
 export interface CreateRockInput {
   title: string;
@@ -33,6 +35,11 @@ export interface CreateRockInput {
   due_date: string;
   client_tenant_id?: number | null;
 }
+
+const toMilestoneUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : crypto.randomUUID();
 
 export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNumber?: number }) {
   const { profile } = useAuth();
@@ -69,11 +76,74 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
     enabled: !!profile,
   });
 
+  const rockIds = useMemo(() => (rocksRaw || []).map((rock) => rock.id), [rocksRaw]);
+  const { data: milestoneRows } = useQuery({
+    queryKey: ['eos-rock-milestone-progress', VIVACITY_TENANT_ID, quarterYear, quarterNumber, rockIds],
+    queryFn: async () => {
+      if (rockIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('eos_rock_milestones')
+        .select('id, rock_id, status')
+        .eq('tenant_id', VIVACITY_TENANT_ID)
+        .in('rock_id', rockIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile && rockIds.length > 0,
+  });
+
   // Build hierarchy and compute rollup statuses
   const rocks = useMemo(() => {
     if (!rocksRaw) return [];
-    return buildRockHierarchy(rocksRaw);
-  }, [rocksRaw]);
+    const hierarchy = buildRockHierarchy(rocksRaw);
+    if (!milestoneRows) return hierarchy;
+    const progressByRock = new Map<string, { total: number; complete: number }>();
+    const rockIdsWithMilestones = new Set<string>();
+    for (const milestone of milestoneRows || []) {
+      rockIdsWithMilestones.add(milestone.rock_id);
+      if (milestone.status === 'deferred') continue;
+      const current = progressByRock.get(milestone.rock_id) || { total: 0, complete: 0 };
+      current.total += 1;
+      if (milestone.status === 'complete') current.complete += 1;
+      progressByRock.set(milestone.rock_id, current);
+    }
+    const childrenByParent = new Map<string, typeof hierarchy>();
+    for (const rock of hierarchy) {
+      if (!rock.parent_rock_id) continue;
+      const children = childrenByParent.get(rock.parent_rock_id) || [];
+      children.push(rock);
+      childrenByParent.set(rock.parent_rock_id, children);
+    }
+    const descendantIndividuals = (rockId: string): string[] => {
+      const children = childrenByParent.get(rockId) || [];
+      return children.flatMap(child =>
+        child.rock_level === 'individual' ? [child.id] : descendantIndividuals(child.id)
+      );
+    };
+    return hierarchy.map((rock) => {
+      if (rock.rock_level === 'individual') {
+        return { ...rock, milestoneStats: progressByRock.get(rock.id) || { total: 0, complete: 0 } };
+      }
+      const leafIds = descendantIndividuals(rock.id);
+      const hasLeafMilestones = leafIds.some(childId => rockIdsWithMilestones.has(childId));
+      const leafStats = leafIds.reduce(
+        (total, childId) => {
+          const childStats = progressByRock.get(childId);
+          return {
+            total: total.total + (childStats?.total || 0),
+            complete: total.complete + (childStats?.complete || 0),
+          };
+        },
+        { total: 0, complete: 0 }
+      );
+      return {
+        ...rock,
+        milestoneStats: hasLeafMilestones
+          ? leafStats
+          : progressByRock.get(rock.id) || { total: 0, complete: 0 },
+      };
+    });
+  }, [rocksRaw, milestoneRows]);
 
   // Filter by quarter
   const quarterRocks = useMemo(() => {
@@ -137,6 +207,17 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
   // Create rock mutation
   const createRock = useMutation({
     mutationFn: async (input: CreateRockInput) => {
+      if (input.parent_rock_id) {
+        const parent = rocks.find(rock => rock.id === input.parent_rock_id);
+        if (!parent || !canRockLevelBeParent(parent.rock_level, input.rock_level)) {
+          throw new Error('Select a parent Rock that supports this Rock level.');
+        }
+        if (parent.quarter_year !== (input.quarter_year || quarterYear) ||
+            parent.quarter_number !== (input.quarter_number || quarterNumber)) {
+          throw new Error('Parent and child Rocks must be in the same quarter.');
+        }
+      }
+
       const rockData: TablesInsert<'eos_rocks'> = {
         ...input,
         milestones: input.milestones as unknown as Json,
@@ -148,14 +229,50 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
         vto_id: input.rock_level === 'company' ? (input.vto_id || activeVto?.id) : null,
       };
 
-      const { data, error } = await supabase
-        .from('eos_rocks')
-        .insert(rockData)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      let savedRockId: string;
+      if (input.rock_level === 'individual') {
+        const { data, error } = await supabase.rpc('upsert_rock_with_parenting', {
+          p_payload: rockData as unknown as Json,
+        });
+        if (error) throw error;
+        const result = data as { id: string; parent_rock_id: string | null; action: string };
+        savedRockId = result.id;
+      } else {
+        const { data, error } = await supabase
+          .from('eos_rocks')
+          .insert(rockData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        savedRockId = data.id;
+      }
+
+      const legacyMilestones = input.milestones || [];
+      if (legacyMilestones.length > 0) {
+        const milestoneRows = legacyMilestones.map((milestone, index) => {
+          const milestoneId = toMilestoneUuid(milestone.id);
+          return {
+            id: milestoneId,
+            tenant_id: VIVACITY_TENANT_ID,
+            rock_id: savedRockId,
+            legacy_source_id: milestoneId,
+            legacy_snapshot: milestone as unknown as Json,
+            title: milestone.text.trim() || '(untitled milestone)',
+            owner_id: input.owner_id || null,
+            due_date: input.due_date || null,
+            priority: 'medium',
+            status: milestone.completed ? 'complete' : 'not_started',
+            sort_order: index,
+          };
+        });
+        const { error } = await supabase.from('eos_rock_milestones').upsert(milestoneRows, { onConflict: 'id' });
+        if (error && !isRockMilestoneSchemaUnavailable(error)) {
+          throw new Error(`Rock was created, but its milestones could not be synchronized: ${error.message}`);
+        }
+      }
+
+      return { id: savedRockId, rock_level: input.rock_level };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });

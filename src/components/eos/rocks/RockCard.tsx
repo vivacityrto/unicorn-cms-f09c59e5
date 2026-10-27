@@ -77,12 +77,16 @@ export function RockCard({
   const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null);
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
-  const milestones = Array.isArray(rock.milestones) ? rock.milestones : [];
-  const completedMilestones = (milestones as unknown as { completed?: boolean }[]).filter((m) => m.completed).length;
-  const milestoneProgress = milestones.length > 0
-    ? Math.round((completedMilestones / milestones.length) * 100)
+  const legacyMilestones = Array.isArray(rock.milestones) ? rock.milestones : [];
+  const legacyCompleted = (legacyMilestones as unknown as { completed?: boolean }[]).filter((m) => m.completed).length;
+  const milestoneTotal = rock.milestoneStats?.total ?? legacyMilestones.length;
+  const completedMilestones = rock.milestoneStats
+    ? rock.milestoneStats.complete
+    : legacyCompleted;
+  const milestoneProgress = milestoneTotal > 0
+    ? Math.round((completedMilestones / milestoneTotal) * 100)
     : 0;
-  const hasStatusMilestoneMismatch = milestones.length > 0 && (
+  const hasStatusMilestoneMismatch = milestoneTotal > 0 && (
     (status === 'complete' && milestoneProgress < 100) ||
     (milestoneProgress === 100 && status !== 'complete')
   );
@@ -233,11 +237,11 @@ export function RockCard({
         )}
 
         {/* Milestones progress */}
-        {milestones.length > 0 && (
+        {milestoneTotal > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Milestones</span>
-              <span className="font-medium">{completedMilestones}/{milestones.length}</span>
+              <span className="font-medium">{completedMilestones}/{milestoneTotal}</span>
             </div>
             <Progress value={milestoneProgress} className="h-2" />
           </div>

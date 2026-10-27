@@ -4,6 +4,13 @@ import { dbToUiStatus, uiToDbStatus, DB_ROCK_STATUS, type UiRockStatus } from '.
 // Re-export for backwards compatibility
 export { dbToUiStatus as normalizeStatus, uiToDbStatus, getStatusConfig } from './rockStatusUtils';
 
+/** Company Rocks can own Team or Individual Rocks; Team Rocks can own Individuals. */
+export function canRockLevelBeParent(parentLevel: string | null | undefined, childLevel: string): boolean {
+  if (childLevel === 'team') return parentLevel === 'company';
+  if (childLevel === 'individual') return parentLevel === 'company' || parentLevel === 'team';
+  return parentLevel == null;
+}
+
 /**
  * Compute the roll-up status for a rock based on its children's statuses.
  * Rules:

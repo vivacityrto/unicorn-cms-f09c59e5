@@ -594,11 +594,11 @@ function RocksHierarchyContent() {
               <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Individual Rocks</h3>
               <p className="text-muted-foreground mb-4">
-                Create individual rocks that cascade from team rocks
+                Create individual Rocks that cascade directly from a Company Rock or through a Team Rock
               </p>
-              {teamRocks && teamRocks.length > 0 && (
+              {(companyRocks?.length || 0) + (teamRocks?.length || 0) > 0 && (
                 <Button onClick={() => {
-                  setSelectedParentRock(teamRocks[0]);
+                  setSelectedParentRock(companyRocks?.[0] || teamRocks?.[0] || null);
                   setShowIndividualDialog(true);
                 }}>
                   <Plus className="h-4 w-4 mr-2" />

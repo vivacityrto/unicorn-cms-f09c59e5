@@ -23,7 +23,7 @@ interface CreateIndividualRockDialogProps {
 }
 
 export function CreateIndividualRockDialog({ open, onOpenChange, parentRock, onSuccess }: CreateIndividualRockDialogProps) {
-  const { createRock, teamRocks } = useEosRocksHierarchy();
+  const { createRock, companyRocks, teamRocks } = useEosRocksHierarchy();
   const { data: vivacityUsers } = useVivacityTeamUsers();
   const { suggestRock, isGenerating } = useAISuggestRock();
   const currentQuarter = getCurrentQuarter();
@@ -64,7 +64,10 @@ export function CreateIndividualRockDialog({ open, onOpenChange, parentRock, onS
     }
   }, [parentRock?.id]);
 
-  const selectedParent = teamRocks?.find(r => r.id === parentRockId);
+  const eligibleParents = [...(companyRocks || []), ...(teamRocks || [])];
+  const selectedParent = parentRock?.id === parentRockId
+    ? parentRock
+    : eligibleParents.find(r => r.id === parentRockId);
 
   const resetForm = () => {
     setTitle('');
@@ -159,11 +162,11 @@ export function CreateIndividualRockDialog({ open, onOpenChange, parentRock, onS
             </div>
           )}
 
-          {/* Parent Team Rock */}
+          {/* Parent Company or Team Rock */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <GitBranch className="h-4 w-4" />
-              Parent Team Rock *
+              Parent Company or Team Rock *
             </Label>
             <Select 
               value={parentRockId || 'none'} 
@@ -171,14 +174,15 @@ export function CreateIndividualRockDialog({ open, onOpenChange, parentRock, onS
               disabled={!!parentRock}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select team rock..." />
+                <SelectValue placeholder="Select company or team rock..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none" disabled>Select a team rock...</SelectItem>
-                {teamRocks?.map((rock) => (
+                <SelectItem value="none" disabled>Select a parent rock...</SelectItem>
+                {eligibleParents.map((rock) => (
                   <SelectItem key={rock.id} value={rock.id}>
                     <div className="flex items-center gap-2">
                       <span>{rock.title}</span>
+                      <Badge variant="outline" className="text-[10px] capitalize">{rock.rock_level}</Badge>
                       {rock.function?.name && (
                         <Badge variant="outline" className="text-[10px]">
                           {rock.function.name}

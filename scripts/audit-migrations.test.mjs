@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isAllowlisted, scanMigration, validateAllowlist } from "./audit-migrations.mjs";
+import { isAllowlisted, scanMigration, validateAllowlist, validateRelevantAllowlist } from "./audit-migrations.mjs";
 
 test("scans hosted URLs, cron, HTTP, DML, IDs, tags, and replay risk", () => {
   const report = scanMigration(
@@ -97,4 +97,35 @@ test("does not treat SQL comments as executable data mutation", () => {
     "-- Update public.users during the future backfill\n/* DELETE FROM public.users; */\nCREATE TABLE public.example (id integer);",
   );
   assert.equal(report.findings.some((finding) => finding.category === "data-mutation" || finding.category === "destructive-mutation"), false);
+});
+
+
+test("changed-only validation ignores expired allowlist entries for unchanged migrations", () => {
+  const now = new Date("2026-10-27T00:00:00Z");
+  const entries = [
+    {
+      id: "unrelated-expired",
+      file: "supabase/migrations/old.sql",
+      categories: ["data-mutation"],
+      targetProject: "prod-project-ref",
+      owner: "platform",
+      reason: "Historical exception not used by this change",
+      expires: "2026-10-01",
+    },
+    {
+      id: "changed-valid",
+      file: "supabase/migrations/new.sql",
+      categories: ["data-mutation"],
+      targetProject: "prod-project-ref",
+      owner: "platform",
+      reason: "Reviewed changed migration",
+      expires: "2026-11-01",
+    },
+  ];
+
+  assert.deepEqual(validateRelevantAllowlist(entries, [{ file: "supabase/migrations/new.sql" }], now), []);
+  assert.equal(
+    validateRelevantAllowlist(entries, [{ file: "supabase/migrations/old.sql" }], now).some((error) => error.includes("unrelated-expired")),
+    true,
+  );
 });

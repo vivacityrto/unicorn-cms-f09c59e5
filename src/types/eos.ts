@@ -111,6 +111,35 @@ export interface Milestone {
   id: string;
   text: string;
   completed: boolean;
+  due_date?: string | null;
+  owner_id?: string | null;
+  priority?: 'critical' | 'high' | 'medium' | 'low';
+  status?: 'not_started' | 'in_progress' | 'blocked' | 'complete' | 'off_track' | 'deferred';
+  exit_criteria?: string | null;
+  evidence_url?: string | null;
+  linked_company_milestone_ids?: string[];
+}
+
+export type RockMilestonePriority = 'critical' | 'high' | 'medium' | 'low';
+export type RockMilestoneStatus = 'not_started' | 'in_progress' | 'blocked' | 'complete' | 'off_track' | 'deferred';
+
+export interface EosRockMilestone {
+  id: string;
+  tenant_id: number;
+  rock_id: string;
+  legacy_source_id?: string | null;
+  legacy_snapshot?: Json | null;
+  title: string;
+  owner_id?: string | null;
+  due_date?: string | null;
+  priority: RockMilestonePriority;
+  status: RockMilestoneStatus;
+  exit_criteria?: string | null;
+  evidence_url?: string | null;
+  sort_order: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Using existing database schema for Rocks
@@ -154,6 +183,10 @@ export interface RockWithHierarchy extends EosRock {
     total: number;
     complete: number;
     offTrack: number;
+  };
+  milestoneStats?: {
+    total: number;
+    complete: number;
   };
   function?: {
     id: string;

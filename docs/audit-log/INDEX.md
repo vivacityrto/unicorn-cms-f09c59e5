@@ -7,6 +7,8 @@ Newest first.
 
 ---
 
+- [2026-10-27 — Company to Individual Rock hierarchy and milestone accountability](entries/2026-10-27-company-individual-rock-hierarchy.md) — expose direct Company→Individual Rock creation; add normalized milestones with owner, due date, priority, exit criteria, evidence, linked parent deliverables, change history and leaf-progress rollups; migrations are written but not applied, and no Rock records were created.
+
 - [2026-10-20 — Admin Assistant position type and a Position column in the client portal Users table](entries/2026-10-20-admin-assistant-position-type-and-portal-position-column.md) — adds the Admin Assistant option and two SECURITY DEFINER RPCs (read and set) so portal managers can see and edit each user's position type; the direct table route fails for secondary contacts under RLS. Migration written, not yet applied to production.
 
 - [2026-10-13 — Client portal time log and hours panels empty for real clients](entries/2026-10-13-client-package-time-log-permissions.md) — the Packages page's "Where your hours went", "Hours over time" and "Recent work" read security_invoker views over time_entries, whose RLS admits only the author and Vivacity staff, so real clients saw nothing while staff "View as client" saw everything. Replaced by three tenant-gated SECURITY DEFINER RPCs (same pattern as get_client_package_dashboard); the time log now lists every entry in the current cycle, reconciling to the totals. Old views revoked from anon/authenticated. Dry-run in a rolled-back transaction on unicorn-qa; migration applied 13 October 2026 and verified against production as a real client user (old direct read 0 rows; new RPCs return the 12:22 breakdown and a 14-entry log that sums to it; wrong-tenant calls return nothing).
