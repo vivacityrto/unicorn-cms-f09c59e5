@@ -42,7 +42,7 @@
 
 ## Verification
 - Rollback bodies are byte-identical to the originals (md5 `ced27d69...` for `recompute_rock_milestone_from_tasks`, `bba588e8...` for `apply_rock_task_sync_event`), and equal to the bodies currently in production.
-- Read-only inspection of production only; no write, deployment or secret access. See the pull request for check results.
+- Before the migration was applied, production was only inspected read-only (no write, deployment or secret access). The writes since are the ones Carl instructed: secret removal, function deletion and the migration. See PR #1460 for check results.
 - **Migration applied and verified (28 Oct 2026).** Before: both functions present on both projects with the bodies the rollback restores (md5 `bba588e8...` and `ced27d69...`), neither table commented. After, on `unicorn-qa` (version `20261028004312`) and the configured project (version `20261028004326`): neither function exists; both tables exist; both table comments are set; `eos_rock_milestone_task_links` still grants `SELECT` to `authenticated` only and keeps its one policy.
 - **Data unchanged on the configured project:** 15 task links (all open, 13 milestones), 1 delivery-log row (the rejected `#999999` preflight, reason `unknown_milestone`), 498 milestones with 137 not in `not_started` (unchanged by this work), and no new milestone event since the last one recorded. QA has no Rock data and none was added.
 - **Dependents still work:** `rock_impact()` on a real Rock (rolled-back transaction as an active staff user) still reports the 15 task links and the delete blockers. `rock_delete_blockers()` is intentionally not callable by signed-in users.
