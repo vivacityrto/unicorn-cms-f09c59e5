@@ -7,7 +7,7 @@ Newest first.
 
 ---
 
-- [2026-10-28 — Retire the GitHub task sync for Rock milestones](entries/2026-10-28-retire-rock-task-sync.md) — Carl decided to reconcile by hand. Removes the `rock-task-sync` Edge Function source and its payload parser, and (migration, not yet applied) drops the two service-role functions that applied events. Keeps the 15 task-link rows and the one audit row, which the Rock panel and the delete guard still use. **The deployed function and its secret are still live until Carl removes them** (commands in the entry).
+- [2026-10-28 — Retire the GitHub task sync for Rock milestones](entries/2026-10-28-retire-rock-task-sync.md) — Carl decided to reconcile by hand. Removed the `rock-task-sync` Edge Function source and payload parser (PR #1460), and the signing secret and deployed function were removed (verified: 404). The migration dropping the two service-role functions that applied events was applied to `unicorn-qa` and production and verified. Kept: the 15 task-link rows and the one audit row, which the Rock panel and the delete guard still use; no milestone or progress changed.
 
 - [2026-10-27 — Rock lifecycle: archive, restore, guarded delete, change history](entries/2026-10-27-rock-lifecycle.md) — migration: `archive_rock`/`restore_rock`/`rock_impact`, a delete guard that refuses Rocks with children, linked issues or recorded progress for every caller, a `created_by` default, and an append-only `eos_rock_events` history. Dry-run in a rolled-back transaction against production (all cases as designed, all 155 Rocks archivable, nothing persisted), then **applied to `unicorn-qa` and production on 27 Oct 2026** and verified (function bodies identical to the file, grants, triggers, live check, data unchanged).
 

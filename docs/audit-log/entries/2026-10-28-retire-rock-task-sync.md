@@ -2,7 +2,7 @@
 
 **Trigger:** ad-hoc (Carl's decision on 28 Oct 2026 to abandon the automated GitHub-to-Unicorn sync and reconcile Rock milestones with GitHub tasks by hand)
 **Scope:** the receiver Edge Function `rock-task-sync`, its payload parser, the two `SECURITY DEFINER` functions behind it, and the documents that described them, in the Unicorn repository and the hosted project `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). The ComplyHub repository is not touched; Carl has already removed its two repository secrets, which disables the publisher there.
-**Status: prepared, NOT applied.** This change removes code and adds one append-only migration. **Nothing has been applied, deployed or deleted in any Supabase project.** Until the human actions below are done, the deployed function and its signing secret are still live.
+**Status: complete (2026-10-28).** Code merged (PR #1460, `7360acb2e`). The signing secret was removed and the deployed function deleted by Carl, and the migration was applied to `unicorn-qa` (version `20261028004312`) then to the configured project (version `20261028004326`) on Carl's instruction. All verified (see Verification). The one open item is Carl's decision on the 15 frozen task links.
 
 ## Findings (read from production on 28 Oct 2026)
 - The deployed Edge Function `rock-task-sync` is `ACTIVE`, version 3, `verify_jwt = false`, with source matching the repository. It authenticates only by an HMAC signature, so while `ROCK_TASK_SYNC_SECRET` exists, anyone holding the secret can post an event that moves a milestone.
@@ -31,12 +31,10 @@
 - Documents: `docs/kb/codebase-state/rock-task-sync.md` now opens as retired and has a "What remains" section; `docs/kb/handoffs/rock-task-sync-publisher.md` is marked withdrawn; both READMEs and `docs/audit-log/INDEX.md` updated; the 27 Oct audit entry points here.
 - Merging this does **not** undeploy anything: the deploy-on-merge workflow only deploys functions that still exist, so it will deploy nothing and leave the live function in place.
 
-## Human actions still required (nothing here has been done)
-Do these in the Supabase dashboard or CLI for project `yxkgdalkbrriasiyyrwk`. Never print the secret value.
-1. **Remove the secret now**, independent of the PR: Edge Functions secrets, delete `ROCK_TASK_SYNC_SECRET` (CLI: `supabase secrets unset ROCK_TASK_SYNC_SECRET --project-ref yxkgdalkbrriasiyyrwk`). With no secret the function fails closed (500 to everything).
-2. **Delete the deployed function after this PR merges**, not before: Edge Functions, `rock-task-sync`, delete (CLI: `supabase functions delete rock-task-sync --project-ref yxkgdalkbrriasiyyrwk`). Deleting it first is unsafe because the deploy workflow's "deploy everything" fallback (new branch or force-push) would redeploy it from the source still on `main`.
-3. **Apply the migration** to `unicorn-qa`, then production, through the usual approved route, only when Carl says so. It is optional for safety (the functions are unreachable once the receiver and secret are gone) but removes the last code path able to change a milestone from a task.
-4. Afterwards, verify and record: the function no longer exists, the secret is gone, the two functions are dropped, the 15 task links and the 1 log row are unchanged, and no milestone changed.
+## Human actions (all done 28 Oct 2026)
+1. **Secret removed** by Carl. Verified from outside: an empty, unsigned request to the receiver answered 500 "Webhook is not configured" (the fail-closed path), which is only possible with no secret.
+2. **Deployed function deleted** by Carl after #1460 merged. Verified from outside: the receiver URL answers 404 `NOT_FOUND` "Requested function was not found" to POST and GET, and Supabase's own lookup reports "Function not found".
+3. **Migration applied** to `unicorn-qa`, then to the configured project, on Carl's instruction.
 
 ## Decisions for Carl
 - **The 15 task links are frozen snapshots** (all "backlog / open", none updated). The Rock panel still shows them as if current, with no "as of" date. Options: leave as is; add an "as of" date to the panel; hide the panel's task section; or clear the rows. Clearing or hiding is a separate change and was not done here.
@@ -44,4 +42,9 @@ Do these in the Supabase dashboard or CLI for project `yxkgdalkbrriasiyyrwk`. Ne
 
 ## Verification
 - Rollback bodies are byte-identical to the originals (md5 `ced27d69...` for `recompute_rock_milestone_from_tasks`, `bba588e8...` for `apply_rock_task_sync_event`), and equal to the bodies currently in production.
-- Read-only inspection of production only; no write, deployment or secret access. See the pull request for check results.
+- Before the migration was applied, production was only inspected read-only (no write, deployment or secret access). The writes since are the ones Carl instructed: secret removal, function deletion and the migration. See PR #1460 for check results.
+- **Migration applied and verified (28 Oct 2026).** Before: both functions present on both projects with the bodies the rollback restores (md5 `bba588e8...` and `ced27d69...`), neither table commented. After, on `unicorn-qa` (version `20261028004312`) and the configured project (version `20261028004326`): neither function exists; both tables exist; both table comments are set; `eos_rock_milestone_task_links` still grants `SELECT` to `authenticated` only and keeps its one policy.
+- **Data unchanged on the configured project:** 15 task links (all open, 13 milestones), 1 delivery-log row (the rejected `#999999` preflight, reason `unknown_milestone`), 498 milestones with 137 not in `not_started` (unchanged by this work), and no new milestone event since the last one recorded. QA has no Rock data and none was added.
+- **Dependents still work:** `rock_impact()` on a real Rock (rolled-back transaction as an active staff user) still reports the 15 task links and the delete blockers. `rock_delete_blockers()` is intentionally not callable by signed-in users.
+- **Unrelated movement noted:** Rocks went from 156 to 159 between this work's first read and the migration check. The three are Individual Rocks created through the new Rock editor (with `created_by` and a `created` history event), not by anything in this retirement.
+- **Open decision:** the 15 task links are frozen snapshots still shown by the Rock panel. Left as is until Carl decides.

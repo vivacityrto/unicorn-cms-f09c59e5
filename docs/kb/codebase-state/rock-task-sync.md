@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-28 · **Reconsider by:** 2027-01-28 · **Confidence:** high on what was retired and what was kept (read from the repository and the production database on 28 Oct 2026).
 >
-> **Status: RETIRED (2026-10-28).** Carl decided not to automate this and to reconcile Rock milestones with GitHub tasks by hand. The receiver Edge Function, its payload parser and the two functions that applied events are removed (see [the audit entry](../../audit-log/entries/2026-10-28-retire-rock-task-sync.md)). **The rest of this page describes the sync as it was built, for the record; none of it runs.** What remains, and why, is in "What remains" below.
+> **Status: RETIRED (2026-10-28).** Carl decided not to automate this and to reconcile Rock milestones with GitHub tasks by hand. The receiver Edge Function (source and deployment), its signing secret, its payload parser and the two functions that applied events are all removed, in production and `unicorn-qa` (see [the audit entry](../../audit-log/entries/2026-10-28-retire-rock-task-sync.md)). **The rest of this page describes the sync as it was built, for the record; none of it runs.** What remains, and why, is in "What remains" below.
 
 ## What remains after the retirement
 
