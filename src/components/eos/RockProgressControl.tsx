@@ -41,15 +41,19 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
 
   const isOffTrack = dbToUiStatus(status) === 'off_track';
 
+  // Blocked is shown while a Rock is blocked but never offered as a new choice:
+  // it needs a recorded reason, which this select cannot collect.
+  const isBlocked = dbToUiStatus(status) === 'blocked';
   const statusOptions = statuses.length > 0
-    ? statuses.map(s => ({ value: s.value, label: s.label }))
+    ? statuses.filter(s => s.value !== 'blocked' || isBlocked).map(s => ({ value: s.value, label: s.label, disabled: s.value === 'blocked' }))
     : [
         { value: 'not_started', label: 'Not Started' },
         { value: 'on_track', label: 'On Track' },
         { value: 'at_risk', label: 'At Risk' },
         { value: 'off_track', label: 'Off Track' },
+        ...(isBlocked ? [{ value: 'blocked', label: 'Blocked', disabled: true }] : []),
         { value: 'complete', label: 'Complete' },
-      ];
+      ].map(o => ({ disabled: false, ...o }));
 
   if (compact) {
     return (
@@ -60,7 +64,7 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
           </SelectTrigger>
           <SelectContent>
             {statusOptions.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -88,7 +92,7 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
           </SelectTrigger>
           <SelectContent>
             {statusOptions.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

@@ -84,6 +84,7 @@ export function getRockStatusColor(value: string, statuses?: RockStatusOption[])
     on_track: 'text-green-600',
     at_risk: 'text-amber-600',
     off_track: 'text-red-600',
+    blocked: 'text-violet-700',
     complete: 'text-blue-600',
   };
   return defaults[value] || 'text-gray-600';

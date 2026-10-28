@@ -22,10 +22,12 @@ import {
   Calendar,
   Target,
   GitBranch,
-  Clock
+  Clock,
+  Ban,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { RockWithHierarchy, RockLevel } from '@/types/eos';
+import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
 import { dbToUiStatus, getStatusConfig as getStatusConfigUtil } from '@/utils/rockStatusUtils';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +40,8 @@ interface UserInfo {
 interface RockCardProps {
   rock: RockWithHierarchy;
   onOpen?: (rock: RockWithHierarchy) => void;
+  /** Open any Rock by id (an Individual Rock from the expanded list, possibly in another quarter). */
+  onOpenRockById?: (rockId: string) => void;
   onEdit?: (rock: RockWithHierarchy) => void;
   onViewCascade?: (rock: RockWithHierarchy) => void;
   onStatusChange?: (rockId: string, status: string) => void;
@@ -54,6 +58,7 @@ interface RockCardProps {
 export function RockCard({
   rock,
   onOpen,
+  onOpenRockById,
   onEdit,
   onViewCascade,
   onStatusChange,
@@ -68,6 +73,10 @@ export function RockCard({
 }: RockCardProps) {
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
+  const individualChildren = (rock.children ?? []).filter(child => child.rock_level === 'individual');
+  // What the count below is a count of. A Company Rock can cascade to Team Rocks, Individual Rocks or both.
+  const childLevels = new Set((rock.children ?? []).map(child => child.rock_level));
+  const cascadeLabel = childLevels.size === 1 && childLevels.has('individual') ? 'Individual' : childLevels.size === 1 && childLevels.has('team') ? 'Team' : rock.children?.length ? 'Cascaded' : rock.rock_level === 'company' ? 'Team' : 'Individual';
   const legacyMilestones = Array.isArray(rock.milestones) ? rock.milestones : [];
   const legacyCompleted = (legacyMilestones as unknown as { completed?: boolean }[]).filter((m) => m.completed).length;
   const milestoneTotal = rock.milestoneStats?.total ?? legacyMilestones.length;
@@ -88,6 +97,7 @@ export function RockCard({
       on_track: { variant: 'default', icon: TrendingUp, label: 'On Track', className: 'bg-green-600' },
       off_track: { variant: 'destructive', icon: TrendingDown, label: 'Off Track' },
       at_risk: { variant: 'destructive', icon: AlertCircle, label: 'At Risk', className: 'bg-amber-600' },
+      blocked: { variant: 'default', icon: Ban, label: 'Blocked', className: 'bg-violet-700 text-white' },
       complete: { variant: 'secondary', icon: CheckCircle, label: 'Complete', className: 'bg-blue-600 text-white' },
     };
     return configs[s] || configs.on_track;
@@ -277,7 +287,7 @@ export function RockCard({
               <div className="text-center">
                 <div className="text-lg font-semibold">{rock.childStats!.total}</div>
                 <div className="text-xs text-muted-foreground">
-                  {rock.rock_level === 'company' ? 'Team' : 'Individual'}
+                  {cascadeLabel}
                 </div>
               </div>
               <div className="h-8 w-px bg-border" />
@@ -294,6 +304,18 @@ export function RockCard({
                   </div>
                 </>
               )}
+              {(rock.childStats!.blocked ?? 0) > 0 && (
+                <>
+                  <div className="h-8 w-px bg-border" />
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-violet-700 dark:text-violet-300">{rock.childStats!.blocked}</div>
+                    <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                      <Ban className="h-3 w-3" aria-hidden />
+                      Blocked
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             {onViewCascade && (
               <Button variant="ghost" size="sm" onClick={() => onViewCascade(rock)}>
@@ -302,6 +324,19 @@ export function RockCard({
               </Button>
             )}
           </div>
+        )}
+
+        {/* A Company Rock's Individual Rocks: one collapsed line until opened, loaded on demand */}
+        {rock.rock_level === 'company' && showChildren && individualChildren.length > 0 && (
+          <IndividualRocksSection
+            companyRockId={rock.id}
+            getUserInfo={getUserInfo}
+            onOpenRock={onOpenRockById}
+            hint={{
+              total: individualChildren.length,
+              blocked: individualChildren.filter(child => dbToUiStatus(child.status) === 'blocked').length,
+            }}
+          />
         )}
 
         {/* Actions */}

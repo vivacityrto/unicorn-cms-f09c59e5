@@ -186,7 +186,9 @@ export function MilestonesEditor({
                         <SelectTrigger aria-label={`Status for milestone ${index + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {(Object.keys(MILESTONE_STATUS) as RockMilestoneStatus[]).map(status => (
-                            <SelectItem key={status} value={status}>{MILESTONE_STATUS[status].label}</SelectItem>
+                            <SelectItem key={status} value={status} disabled={status === 'blocked'}>
+                              {status === 'blocked' ? 'Blocked (use Mark as blocked in the Rock details)' : MILESTONE_STATUS[status].label}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

@@ -325,6 +325,25 @@ describe('RockEditorSheet: edit', () => {
     expect(state.mutateAsync.mock.calls[0][0].status).toBe('on_track');
   });
 
+  it('does not offer Blocked as a plain status, because blocking needs a recorded reason', async () => {
+    edit(saved({ status: 'at_risk' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    const trigger = screen.getByRole('combobox', { name: /Status/i });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    await screen.findByRole('option', { name: 'On Track' });
+    expect(screen.queryByRole('option', { name: /^Blocked/ })).toBeNull();
+  });
+
+  it('shows a blocked Rock as blocked, with the choice disabled and a pointer to where to resolve it', async () => {
+    edit(saved({ status: 'blocked' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Title/)).toBeInTheDocument());
+    const trigger = screen.getByRole('combobox', { name: /Status/i });
+    expect(trigger).toHaveTextContent('Blocked');
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    const option = await screen.findByRole('option', { name: /Blocked \(resolve it from the Rock details\)/ });
+    expect(option).toHaveAttribute('aria-disabled', 'true');
+  });
+
   it('offers a client’s own Team Rock to a client Individual Rock sitting under something else', async () => {
     state.edit.clientName = 'Altaira Education';
     state.rocks = [

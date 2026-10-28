@@ -79,7 +79,7 @@ export function deleteEffects(impact: RockImpact): string[] {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  not_started: 'not started', on_track: 'on track', at_risk: 'at risk', off_track: 'off track', complete: 'complete',
+  not_started: 'not started', on_track: 'on track', at_risk: 'at risk', off_track: 'off track', blocked: 'blocked', complete: 'complete',
 };
 
 const show = (value: unknown) => (value === null || value === undefined || value === '' ? 'nothing' : String(value));

@@ -252,6 +252,24 @@
       "owner": "Carl",
       "reason": "Reviewed function-body findings only (2026-10-28): the rollback restores, verbatim, the two service-role-only functions recompute_rock_milestone_from_tasks() and apply_rock_task_sync_event() from 20261027130000_rock_task_sync.sql (bodies byte-identical, md5 ced27d69... and bba588e8..., and equal to the bodies currently in production). The flagged INSERT, UPDATE and DELETE statements are inside those function bodies and execute only if the functions are later called by service_role; applying the rollback changes no rows. It also clears two table comments. Use only if the retirement migration must be reverted. See docs/audit-log/entries/2026-10-28-retire-rock-task-sync.md.",
       "expires": "2026-11-28"
+    },
+    {
+      "id": "rock-blockers-and-carryover",
+      "file": "supabase/migrations/20261028020000_rock_blockers_and_carryover.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-10-28): the single statement that runs when the migration is applied is one INSERT of the lookup row 'blocked' into dd_rock_status (guarded by WHERE NOT EXISTS, so re-running adds nothing); no existing Rock, milestone or link row is changed and there is no backfill. Every other flagged INSERT or UPDATE is inside a function body (set_blocker, resolve_blocker, carry_forward_rock, the status-change trigger) or is part of a CREATE TRIGGER clause, and runs only when a signed-in staff user calls the function; each function is SECURITY DEFINER with an empty search_path, checks is_vivacity_team_safe(auth.uid()) first, and is not executable by anon. The three new tables have no INSERT/UPDATE/DELETE grants. Dry-run against unicorn-qa inside rolled-back transactions only (three runs, nothing persisted), including the rollback script. See docs/audit-log/entries/2026-10-28-rock-blockers-and-carryover.md.",
+      "expires": "2026-11-28"
+    },
+    {
+      "id": "rock-blockers-and-carryover-rollback",
+      "file": "supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql",
+      "categories": ["destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-10-28): the rollback for 20261028020000. It deletes the dd_rock_status lookup row 'blocked' and first moves any Rock still at status 'blocked' to 'at_risk' so no Rock keeps a status older screens do not know; it then drops the three new tables, which discards recorded blockers and carryover provenance. Use only if the migration must be reverted. Run inside a rolled-back transaction on unicorn-qa after the migration and verified to leave no table, function, status row or blocked Rock behind, with rock_delete_blockers() back to its earlier answers. See docs/audit-log/entries/2026-10-28-rock-blockers-and-carryover.md.",
+      "expires": "2026-11-28"
     }
   ]
 }

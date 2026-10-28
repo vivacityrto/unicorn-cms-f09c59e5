@@ -16,6 +16,7 @@ const ROCK_STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive
   on_track: 'default',
   off_track: 'destructive',
   at_risk: 'destructive',
+  blocked: 'outline',
   not_started: 'secondary',
 };
 
@@ -23,6 +24,7 @@ const ROCK_STATUS_LABEL: Record<string, string> = {
   on_track: 'On Track',
   off_track: 'Off Track',
   at_risk: 'At Risk',
+  blocked: 'Blocked',
   not_started: 'Not Started',
 };
 

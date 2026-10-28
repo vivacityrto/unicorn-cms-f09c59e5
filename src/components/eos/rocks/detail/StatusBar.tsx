@@ -7,7 +7,7 @@ export type StatusCountsInput = Partial<Record<SegmentKey, number>>;
 const SEGMENTS: ReadonlyArray<{ key: SegmentKey; label: string; bar: string; dot: string }> = [
   { key: 'complete', label: 'Complete', bar: 'bg-green-500', dot: 'bg-green-500' },
   { key: 'inProgress', label: 'In progress', bar: 'bg-blue-500', dot: 'bg-blue-500' },
-  { key: 'blocked', label: 'Blocked', bar: 'bg-red-500', dot: 'bg-red-500' },
+  { key: 'blocked', label: 'Blocked', bar: 'bg-violet-500', dot: 'bg-violet-500' },
   { key: 'offTrack', label: 'Off track', bar: 'bg-orange-500', dot: 'bg-orange-500' },
   { key: 'notStarted', label: 'Not started', bar: 'bg-transparent', dot: 'bg-muted-foreground/40' },
 ];
@@ -21,7 +21,7 @@ function describe(counts: StatusCountsInput) {
 /**
  * A stacked bar of milestones by status. The track is visible against both light
  * and dark cards, and the segments are green (complete), blue (in progress),
- * red (blocked) and orange (off track); the remainder is not started.
+ * violet (blocked) and orange (off track); the remainder is not started.
  */
 export function StatusBar({
   counts,

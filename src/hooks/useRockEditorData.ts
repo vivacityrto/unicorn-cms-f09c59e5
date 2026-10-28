@@ -18,25 +18,9 @@ export interface CompanyMilestoneOption {
   dueDate: string | null;
 }
 
-/**
- * What the Rock editor needs to know about everything else: every Rock (to pick a
- * parent and spot duplicates), the teams, and the Company milestones an Individual
- * Rock's milestones can support.
- */
-export function useRockEditorData(options: {
-  enabled: boolean;
-  level: RockLevel;
-  parentId: string | null;
-  /** Editing: the saved Rock whose milestones, links and client are needed. */
-  rockId?: string | null;
-  /** Editing: the saved Rock's level, which decides whether it has links to load. The form's own level is not known until it is filled. */
-  savedLevel?: RockLevel | null;
-  clientTenantId?: number | null;
-}) {
-  const { profile } = useAuth();
-  const enabled = !!profile && options.enabled;
-
-  const rocksQuery = useQuery({
+/** Every Rock in the Vivacity tenant, lightly shaped. Shared by the editor, the blocker dependency picker and the carryover destination picker. */
+export function useEditorRocks(enabled: boolean) {
+  return useQuery({
     queryKey: ['eos-rock-editor-rocks', VIVACITY_TENANT_ID],
     queryFn: async (): Promise<EditorRock[]> => {
       const { data, error } = await supabase
@@ -60,6 +44,27 @@ export function useRockEditorData(options: {
     enabled,
     staleTime: 30 * 1000,
   });
+}
+
+/**
+ * What the Rock editor needs to know about everything else: every Rock (to pick a
+ * parent and spot duplicates), the teams, and the Company milestones an Individual
+ * Rock's milestones can support.
+ */
+export function useRockEditorData(options: {
+  enabled: boolean;
+  level: RockLevel;
+  parentId: string | null;
+  /** Editing: the saved Rock whose milestones, links and client are needed. */
+  rockId?: string | null;
+  /** Editing: the saved Rock's level, which decides whether it has links to load. The form's own level is not known until it is filled. */
+  savedLevel?: RockLevel | null;
+  clientTenantId?: number | null;
+}) {
+  const { profile } = useAuth();
+  const enabled = !!profile && options.enabled;
+
+  const rocksQuery = useEditorRocks(enabled);
 
   const functionsQuery = useQuery({
     queryKey: ['accountability-functions-for-rocks', VIVACITY_TENANT_ID],

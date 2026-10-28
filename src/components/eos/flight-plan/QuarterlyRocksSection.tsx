@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
-import { Target, TrendingUp, TrendingDown, CheckCircle, Mountain, type LucideIcon } from 'lucide-react';
+import { Target, TrendingUp, TrendingDown, CheckCircle, Ban, Mountain, type LucideIcon } from 'lucide-react';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -37,6 +37,7 @@ export function QuarterlyRocksSection({ rocks, isLoading, quarter, year }: Quart
       'on-track': { variant: 'default', icon: TrendingUp, label: 'On Track' },
       off_track: { variant: 'destructive', icon: TrendingDown, label: 'Off Track' },
       'off-track': { variant: 'destructive', icon: TrendingDown, label: 'Off Track' },
+      blocked: { variant: 'default', icon: Ban, label: 'Blocked' },
       complete: { variant: 'secondary', icon: CheckCircle, label: 'Complete' },
     };
     
