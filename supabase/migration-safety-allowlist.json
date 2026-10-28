@@ -243,6 +243,15 @@
       "owner": "Carl",
       "reason": "Reviewed findings (2026-10-27): none of the six matches changes a row when the migration is applied. Three INSERTs are statements inside the body of the append-only history trigger function record_eos_rock_event(); the flagged DELETE is the words OR DELETE in that trigger's CREATE TRIGGER definition; the two UPDATEs are statements inside the staff-gated SECURITY DEFINER functions archive_rock() and restore_rock(), which set archived_at on named Rocks only when an authorized user archives or restores. The migration also adds a delete guard trigger that only refuses deletions, a created_by default trigger, and a read-only impact function. Dry-run against production inside one rolled-back transaction before applying: history, created_by default, delete guard cases, archive and restore (single, with children, only Rocks archived together), staff-only refusal for a non-staff user, and archiving all 155 existing Rocks without a failure; afterwards 156 Rocks, no new objects, nothing persisted. See docs/audit-log/entries/2026-10-27-rock-lifecycle.md.",
       "expires": "2026-11-27"
+    },
+    {
+      "id": "retire-rock-task-sync-functions-rollback",
+      "file": "supabase/migrations/rollback/20261028010000_retire_rock_task_sync_functions.down.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed function-body findings only (2026-10-28): the rollback restores, verbatim, the two service-role-only functions recompute_rock_milestone_from_tasks() and apply_rock_task_sync_event() from 20261027130000_rock_task_sync.sql (bodies byte-identical, md5 ced27d69... and bba588e8..., and equal to the bodies currently in production). The flagged INSERT, UPDATE and DELETE statements are inside those function bodies and execute only if the functions are later called by service_role; applying the rollback changes no rows. It also clears two table comments. Use only if the retirement migration must be reverted. See docs/audit-log/entries/2026-10-28-retire-rock-task-sync.md.",
+      "expires": "2026-11-28"
     }
   ]
 }

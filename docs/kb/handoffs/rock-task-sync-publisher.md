@@ -1,5 +1,7 @@
 # Handoff: build the ComplyHub-side publisher for the Rock task sync
 
+> **WITHDRAWN (2026-10-28). Do not build, enable or run this.** Carl decided not to automate the GitHub-to-Unicorn sync and to reconcile by hand. The Unicorn receiver is retired. This brief is kept only as a record of what was planned; see [the audit entry](../../audit-log/entries/2026-10-28-retire-rock-task-sync.md).
+
 > **Last updated:** 2026-10-27 · **Reconsider by:** 2027-01-27 · **Audience:** Codex and Khian, implementing in `ComplyHub-ai/rto-compass-hub` · **Owner of the integration:** Carl · **Confidence:** high on the Unicorn receiver (built, deployed, verified); medium on the ComplyHub-side details, which were read from the repository on 27 October 2026 and should be re-checked against `main` before you start.
 
 This brief is self-contained. You do not need the conversation it came from. It tells you what already exists on the Unicorn side, what you are building, the exact contract, how to test it without guessing, and what you must not do.
