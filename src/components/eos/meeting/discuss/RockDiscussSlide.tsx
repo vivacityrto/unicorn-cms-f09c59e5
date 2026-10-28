@@ -307,6 +307,7 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
             rockId={rock.id}
             suggestion={suggestion}
             existing={issuesQuery.data ?? []}
+            existingState={issuesQuery.isError ? 'error' : issuesQuery.isLoading || issuesQuery.data === undefined ? 'loading' : 'ready'}
             raisedNow={outcomes.includes('raised')}
             meeting={meeting}
             onRaised={() => onOutcome(rock.id, 'raised')}

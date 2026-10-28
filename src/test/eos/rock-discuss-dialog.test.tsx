@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   raise: vi.fn(),
   milestones: [] as unknown[],
   issues: [] as unknown[],
+  issuesQuery: { data: [] as unknown, isLoading: false, isError: false } as { data: unknown; isLoading: boolean; isError: boolean },
   blockers: [] as unknown[],
 }));
 
@@ -18,7 +19,7 @@ vi.mock('@/hooks/useRockDiscussion', () => ({
   useSetRockStatus: () => ({ mutateAsync: state.setStatus, isPending: false, variables: undefined }),
   useRaiseRockIssue: () => ({ mutateAsync: state.raise, isPending: false }),
   useRockMilestones: () => ({ data: state.milestones, isLoading: false, isError: false }),
-  useRockLinkedIssues: () => ({ data: state.issues }),
+  useRockLinkedIssues: () => state.issuesQuery,
   useOpenIssueRockIds: () => ({ data: [] }),
 }));
 vi.mock('@/hooks/useRockBlockers', () => ({
@@ -78,6 +79,7 @@ beforeEach(() => {
   state.raise.mockReset().mockResolvedValue({ id: 'issue-1' });
   state.milestones = [];
   state.issues = [];
+  state.issuesQuery = { data: [], isLoading: false, isError: false };
   state.blockers = [];
 });
 
@@ -290,7 +292,7 @@ describe('RockDiscussDialog: raising an issue for IDS', () => {
   });
 
   it('shows what is already waiting for IDS and asks for a deliberate second issue', () => {
-    state.issues = [
+    state.issuesQuery.data = [
       { id: 'i1', title: 'Hiring plan is late', status: 'Open', created_at: '2026-10-20T00:00:00Z', meeting_id: null },
       { id: 'i2', title: 'Old, solved thing', status: 'Solved', created_at: '2026-09-20T00:00:00Z', meeting_id: null },
     ];
@@ -301,6 +303,30 @@ describe('RockDiscussDialog: raising an issue for IDS', () => {
     expect(within(panel).queryByLabelText('Issue')).toBeNull();
     fireEvent.click(within(panel).getByRole('button', { name: 'Raise another issue' }));
     expect(within(panel).getByLabelText('Issue')).toBeInTheDocument();
+  });
+
+  it('does not open the form, or invite a duplicate, while the existing-issue lookup is still loading', () => {
+    state.issuesQuery = { data: undefined, isLoading: true, isError: false };
+    renderDialog([RB]);
+    const panel = screen.getByRole('region', { name: 'Raise an issue' });
+    expect(within(panel).getByText('Checking for issues already raised…')).toBeInTheDocument();
+    expect(within(panel).queryByLabelText('Issue')).toBeNull();
+    expect(within(panel).getByRole('button', { name: 'Raise it for IDS' })).toBeDisabled();
+  });
+
+  it('warns, and waits for a deliberate click, when the existing-issue lookup failed', () => {
+    state.issuesQuery = { data: undefined, isLoading: false, isError: true };
+    renderDialog([RB]);
+    const panel = screen.getByRole('region', { name: 'Raise an issue' });
+    expect(within(panel).getByRole('alert')).toHaveTextContent('Could not check for issues already raised');
+    expect(within(panel).queryByLabelText('Issue')).toBeNull();
+    fireEvent.click(within(panel).getByRole('button', { name: 'Raise it for IDS' }));
+    expect(within(panel).getByLabelText('Issue')).toBeInTheDocument();
+  });
+
+  it('opens by itself once the lookup has answered that there is nothing open', () => {
+    renderDialog([RB]);
+    expect(screen.getByLabelText('Issue')).toBeInTheDocument();
   });
 
   it('puts a blocker reason in the title and the blocker facts in the description', async () => {

@@ -43,6 +43,14 @@ describe('discussionDeck', () => {
     expect(discussionDeck(cascade(['company', 'individual']).roots)).toEqual(['c1', 'i1', 'i2', 'c2', 'c4']);
   });
 
+  it('never includes a completed Rock, even a completed child at a reviewed level', () => {
+    const withDone = [...rocks, rock('i3', 'Finished child', 'complete', { rock_level: 'individual', parent_rock_id: 'c1' })];
+    const roots = buildMeetingRocksCascade(withDone, ['company', 'individual'], owners, NOW).roots;
+    expect(nodesById(roots).has('i3')).toBe(true); // still shown as context under its parent
+    expect(discussionDeck(roots)).toEqual(['c1', 'i1', 'i2', 'c2', 'c4']);
+    expect(discussionDeck(roots, { attentionOnly: true })).not.toContain('i3');
+  });
+
   it('can keep only Rocks that need the room, including a Company Rock whose Individual Rock is stuck', () => {
     expect(discussionDeck(cascade(['company']).roots, { attentionOnly: true })).toEqual(['c1', 'c2']);
   });

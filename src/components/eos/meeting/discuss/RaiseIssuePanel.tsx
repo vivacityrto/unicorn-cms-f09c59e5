@@ -14,6 +14,8 @@ interface RaiseIssuePanelProps {
   suggestion: IssueSuggestion;
   draft: IssueDraftInput;
   existing: LinkedIssue[];
+  /** Whether the lookup of issues already raised for this Rock has answered. Until it has, nothing is assumed about duplicates. */
+  existingState: 'loading' | 'error' | 'ready';
   /** Raised from this view in this meeting. */
   raisedNow: boolean;
   meeting?: { id?: string; segmentId?: string; type?: string | null };
@@ -31,10 +33,14 @@ const HEADLINE: Record<IssueSuggestion, string> = {
  * and linked to the Rock and the meeting, so it lands in the IDS queue ready to discuss. A Rock
  * that already has an open issue shows it first and asks for a deliberate second one.
  */
-export function RaiseIssuePanel({ rockId, suggestion, draft, existing, raisedNow, meeting, onRaised }: RaiseIssuePanelProps) {
+export function RaiseIssuePanel({ rockId, suggestion, draft, existing, existingState, raisedNow, meeting, onRaised }: RaiseIssuePanelProps) {
   const raise = useRaiseRockIssue();
   const open = existing.filter(issue => isOpenIssue(issue.status));
-  const [expanded, setExpanded] = useState(suggestion === 'strong' && open.length === 0);
+  // Open on its own only once we know there is no open issue already; before that, or if the lookup failed,
+  // it waits for a deliberate click so a duplicate is never invited by a slow or failed query.
+  const [choice, setChoice] = useState<'open' | 'closed' | null>(null);
+  const expanded = choice ? choice === 'open' : existingState === 'ready' && suggestion === 'strong' && open.length === 0 && !raisedNow;
+  const setExpanded = (value: boolean) => setChoice(value ? 'open' : 'closed');
   const [note, setNote] = useState('');
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
 
@@ -75,6 +81,11 @@ export function RaiseIssuePanel({ rockId, suggestion, draft, existing, raisedNow
         </p>
       )}
 
+      {existingState === 'loading' && <p role="status" className="text-xs text-muted-foreground">Checking for issues already raised…</p>}
+      {existingState === 'error' && (
+        <p role="alert" className="text-xs text-amber-800 dark:text-amber-300">Could not check for issues already raised. Look in IDS before raising another.</p>
+      )}
+
       {open.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">Already waiting for IDS</p>
@@ -90,7 +101,7 @@ export function RaiseIssuePanel({ rockId, suggestion, draft, existing, raisedNow
       )}
 
       {!expanded ? (
-        <Button type="button" variant={suggestion === 'strong' && open.length === 0 ? 'default' : 'outline'} className="h-10 w-full gap-2" onClick={() => setExpanded(true)}>
+        <Button type="button" variant={suggestion === 'strong' && open.length === 0 && existingState === 'ready' ? 'default' : 'outline'} className="h-10 w-full gap-2" disabled={existingState === 'loading'} onClick={() => setExpanded(true)}>
           <Plus className="h-4 w-4" aria-hidden />
           {open.length > 0 || raisedNow ? 'Raise another issue' : 'Raise it for IDS'}
         </Button>

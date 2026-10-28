@@ -9,12 +9,16 @@ import { getStatusConfig, dbToUiStatus } from '@/utils/rockStatusUtils';
  * problem to IDS with its facts attached. Nothing here tries to solve anything.
  */
 
-/** Every Rock the segment reviews, in cascade order: a Company Rock, then what cascades from it. */
+/**
+ * Every Rock the segment reviews, in cascade order: a Company Rock, then what cascades from it.
+ * A completed Rock is never in the deck, whatever level it is at: the segment does not review it
+ * (its top level already leaves it out) and the view's status buttons would reopen it.
+ */
 export function discussionDeck(roots: readonly RockCascadeNode[], options: { attentionOnly?: boolean } = {}): string[] {
   const ids: string[] = [];
   const walk = (nodes: readonly RockCascadeNode[]) => {
     for (const node of nodes) {
-      if (node.reviewable && (!options.attentionOnly || node.needsAttention)) ids.push(node.rock.id);
+      if (node.reviewable && dbToUiStatus(node.rock.status) !== 'complete' && (!options.attentionOnly || node.needsAttention)) ids.push(node.rock.id);
       walk(node.children);
     }
   };
