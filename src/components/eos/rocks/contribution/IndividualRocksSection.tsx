@@ -54,7 +54,7 @@ function CarriedBlock({ carried, onOpenRock }: { carried: CarriedTarget[]; onOpe
     <div className="space-y-1.5 rounded-md border border-dashed bg-muted/20 p-2.5">
       {carried.map(c => (
         <div key={c.carryoverId} className="space-y-1 text-xs">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <CornerUpRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
             <span className="font-medium">Carried forward to</span>
             {c.rock ? (
@@ -72,7 +72,7 @@ function CarriedBlock({ carried, onOpenRock }: { carried: CarriedTarget[]; onOpe
             ) : (
               <span className="text-muted-foreground">a Rock you cannot see</span>
             )}
-          </p>
+          </div>
           {c.milestones.length > 0 && (
             <ul className="ml-5 list-disc space-y-0.5 text-muted-foreground">
               {c.milestones.map((m, index) => (
@@ -113,7 +113,7 @@ function IndividualRow({
           aria-controls={panelId}
           aria-label={`${open ? 'Collapse' : 'Expand'} ${item.rock.title}`}
           onClick={() => setOpen(value => !value)}
-          className="inline-flex min-w-0 flex-1 items-start gap-1.5 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-w-[12rem] flex-1 items-start gap-1.5 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {open ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
           <span className="min-w-0 break-words text-sm font-medium leading-snug">{item.rock.title}</span>
@@ -253,12 +253,12 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
           setOpen(value => !value);
         }}
         onKeyDown={event => event.stopPropagation()}
-        className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md px-1 py-1 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {open ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
         <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="font-semibold">Individual Rocks</span>
-        <span className="min-w-0 truncate text-xs text-muted-foreground">{summary}</span>
+        <span className="min-w-0 text-xs text-muted-foreground">{summary}</span>
       </button>
 
       {open && (

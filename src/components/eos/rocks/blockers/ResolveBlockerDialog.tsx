@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import { useReturnFocus } from '@/hooks/useReturnFocus';
 import { useResolveBlocker } from '@/hooks/useRockBlockers';
 import { defaultResumeStatus, resumeOptions, type BlockerRow, type BlockerSubject } from '@/utils/rockBlocker';
 
@@ -24,6 +25,7 @@ interface ResolveBlockerDialogProps {
  */
 export function ResolveBlockerDialog({ open, onOpenChange, subject, subjectId, subjectLabel, blocker }: ResolveBlockerDialogProps) {
   const resolve = useResolveBlocker();
+  const returnFocus = useReturnFocus(open);
   const [status, setStatus] = useState('');
   const [note, setNote] = useState('');
 
@@ -45,7 +47,7 @@ export function ResolveBlockerDialog({ open, onOpenChange, subject, subjectId, s
 
   return (
     <Dialog open={open} onOpenChange={next => !resolve.isPending && onOpenChange(next)}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onCloseAutoFocus={returnFocus}>
         <DialogHeader>
           <DialogTitle>Resolve this blocker</DialogTitle>
           <DialogDescription className="break-words">

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useReturnFocus } from '@/hooks/useReturnFocus';
 import { useSetBlocker } from '@/hooks/useRockBlockers';
 import { todayLocalIso } from '@/utils/localDate';
 import {
@@ -60,6 +61,7 @@ export function BlockerDialog({
   milestoneOptions,
 }: BlockerDialogProps) {
   const save = useSetBlocker();
+  const returnFocus = useReturnFocus(open);
   const [form, setForm] = useState<BlockerForm>(emptyBlockerForm);
   const [showErrors, setShowErrors] = useState(false);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
@@ -100,7 +102,7 @@ export function BlockerDialog({
 
   return (
     <Dialog open={open} onOpenChange={next => !save.isPending && onOpenChange(next)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl" onCloseAutoFocus={returnFocus}>
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit blocker' : 'Mark as blocked'}</DialogTitle>
           <DialogDescription className="break-words">

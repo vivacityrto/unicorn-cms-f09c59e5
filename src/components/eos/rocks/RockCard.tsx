@@ -74,6 +74,9 @@ export function RockCard({
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
   const individualChildren = (rock.children ?? []).filter(child => child.rock_level === 'individual');
+  // What the count below is a count of. A Company Rock can cascade to Team Rocks, Individual Rocks or both.
+  const childLevels = new Set((rock.children ?? []).map(child => child.rock_level));
+  const cascadeLabel = childLevels.size === 1 && childLevels.has('individual') ? 'Individual' : childLevels.size === 1 && childLevels.has('team') ? 'Team' : rock.children?.length ? 'Cascaded' : rock.rock_level === 'company' ? 'Team' : 'Individual';
   const legacyMilestones = Array.isArray(rock.milestones) ? rock.milestones : [];
   const legacyCompleted = (legacyMilestones as unknown as { completed?: boolean }[]).filter((m) => m.completed).length;
   const milestoneTotal = rock.milestoneStats?.total ?? legacyMilestones.length;
@@ -284,7 +287,7 @@ export function RockCard({
               <div className="text-center">
                 <div className="text-lg font-semibold">{rock.childStats!.total}</div>
                 <div className="text-xs text-muted-foreground">
-                  {rock.rock_level === 'company' ? 'Team' : 'Individual'}
+                  {cascadeLabel}
                 </div>
               </div>
               <div className="h-8 w-px bg-border" />

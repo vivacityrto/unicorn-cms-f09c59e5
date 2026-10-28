@@ -237,3 +237,27 @@ describe('BlockerDetails', () => {
     expect(screen.queryByRole('link')).toBeNull();
   });
 });
+
+describe('keyboard focus', () => {
+  it('returns focus to the control that opened the dialog when it closes', async () => {
+    const { useState } = await import('react');
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>Open blocker</button>
+          <BlockerDialog open={open} onOpenChange={setOpen} subject="rock" subjectId="r1" subjectLabel="Grow revenue" existing={null} people={[]} rockOptions={[]} milestoneOptions={[]} />
+        </>
+      );
+    }
+    render(<Host />);
+    const opener = screen.getByRole('button', { name: 'Open blocker' });
+    opener.focus();
+    fireEvent.click(opener);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText(/What is blocking it/)).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(opener).toHaveFocus();
+  });
+});

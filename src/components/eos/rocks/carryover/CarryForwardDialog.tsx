@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import { useReturnFocus } from '@/hooks/useReturnFocus';
 import { useCarryForwardRock } from '@/hooks/useRockCarryover';
 import { useEditorRocks } from '@/hooks/useRockEditorData';
 import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
@@ -69,6 +70,7 @@ export function CarryForwardDialog({
   onOpenRock,
 }: CarryForwardDialogProps) {
   const carry = useCarryForwardRock();
+  const returnFocus = useReturnFocus(open);
   const rocksQuery = useEditorRocks(open);
   const source = { year: rock.quarterYear, quarter: rock.quarterNumber };
   const quarters = useMemo(() => destinationQuarters(source), [rock.quarterYear, rock.quarterNumber]);
@@ -177,7 +179,7 @@ export function CarryForwardDialog({
 
   return (
     <Dialog open={open} onOpenChange={next => !carry.isPending && onOpenChange(next)}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl" onCloseAutoFocus={returnFocus}>
         {done ? (
           <>
             <DialogHeader>
@@ -345,12 +347,12 @@ export function CarryForwardDialog({
                               <Label htmlFor={`carry-m-${c.id}`} className={disabled ? 'font-normal text-muted-foreground' : 'font-normal'}>
                                 <span className="break-words">{parsed.number !== null ? `M${parsed.number} · ${parsed.label}` : parsed.label}</span>
                               </Label>
-                              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                                 <Badge variant="outline" className={`border-transparent px-1.5 py-0 text-[10px] ${style.className}`}>{style.label}</Badge>
                                 {c.dueDate && <span>Was due {formatDate(c.dueDate, 'd MMM yyyy')}</span>}
                                 {c.state === 'completed' && <span>Complete. Stays in {formatQuarter(source)}, not copied.</span>}
                                 {c.state === 'carried' && <span>Already carried forward.</span>}
-                              </p>
+                              </div>
                               {checked && (
                                 <div className="flex flex-wrap items-center gap-2 pt-1">
                                   <Label htmlFor={`carry-d-${c.id}`} className="text-xs font-normal text-muted-foreground">New target date</Label>

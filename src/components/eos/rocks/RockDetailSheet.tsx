@@ -657,6 +657,7 @@ export function RockDetailSheet({
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => setBlockerTarget({ subject: 'rock', id: rock.id, label: rock.title, mode: 'record' })}
                 >
                   <Ban className="mr-2 h-4 w-4" aria-hidden />
@@ -664,7 +665,7 @@ export function RockDetailSheet({
                 </Button>
               )}
               {canManage && !isArchived && !rockIsComplete && (
-                <Button type="button" variant="outline" onClick={() => setCarryOpen(true)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setCarryOpen(true)}>
                   <CornerUpRight className="mr-2 h-4 w-4" aria-hidden />
                   Carry forward
                 </Button>
