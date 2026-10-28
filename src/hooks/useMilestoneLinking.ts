@@ -26,8 +26,10 @@ export function useLinkTargets(companyRockId: string | null | undefined, enabled
       return (data ?? []).map(m => ({ id: m.id, title: m.title, status: m.status, dueDate: m.due_date, tenantId: m.tenant_id }));
     },
     enabled: !!profile && enabled && !!companyRockId,
-    // The picker is filled from this, so it must be what the database holds now.
+    // The picker is filled from this, so it must be what the database holds now, never a cached copy.
     staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
@@ -45,7 +47,10 @@ export function useLinkedCompanyIds(individualMilestoneId: string | null | undef
       return (data ?? []).map(l => l.company_milestone_id);
     },
     enabled: !!profile && enabled && !!individualMilestoneId,
+    // The ticks start from this, so a stale copy would make a save delete links nobody unticked.
     staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

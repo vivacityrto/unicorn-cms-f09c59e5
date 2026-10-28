@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   raise: vi.fn(),
   milestones: [] as unknown[],
   issues: [] as unknown[],
+  sectionProps: [] as Array<Record<string, unknown>>,
   issuesQuery: { data: [] as unknown, isLoading: false, isError: false } as { data: unknown; isLoading: boolean; isError: boolean },
   blockers: [] as unknown[],
 }));
@@ -33,7 +34,10 @@ vi.mock('@/hooks/useRockLifecycle', () => ({ useRockHistory: () => ({ data: [], 
 vi.mock('@/hooks/useVivacityTeamUsers', () => ({ useVivacityTeamUsers: () => ({ data: [] }) }));
 vi.mock('@/components/eos/ClientBadge', () => ({ ClientBadge: () => null }));
 vi.mock('@/components/eos/rocks/contribution/IndividualRocksSection', () => ({
-  IndividualRocksSection: () => <div>Individual Rocks stub</div>,
+  IndividualRocksSection: (props: Record<string, unknown>) => {
+    state.sectionProps.push(props);
+    return <div>Individual Rocks stub</div>;
+  },
 }));
 
 const NOW = new Date('2026-10-28T00:00:00Z');
@@ -79,6 +83,7 @@ beforeEach(() => {
   state.raise.mockReset().mockResolvedValue({ id: 'issue-1' });
   state.milestones = [];
   state.issues = [];
+  state.sectionProps = [];
   state.issuesQuery = { data: [], isLoading: false, isError: false };
   state.blockers = [];
 });
@@ -231,6 +236,22 @@ describe('RockDiscussDialog: the status decision', () => {
     expect(screen.getByRole('button', { name: 'Resolve blocker…' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Set the status' })).toBeNull();
     expect(screen.getByText(/Resolving does not mark it complete/)).toBeInTheDocument();
+  });
+
+  it('offers mapping to a Company milestone on a Company Rock slide, but not on a Team Rock slide', () => {
+    const individual = rock('i', 'Individual thing', 'on_track', { rock_level: 'individual', parent_rock_id: 'a' });
+    renderDialog([RA, individual]);
+    expect(state.sectionProps.at(-1)?.canLink).toBe(true);
+
+    state.sectionProps = [];
+    const team = rock('t', 'Team thing', 'on_track', { rock_level: 'team', parent_rock_id: null });
+    const child = rock('ti', 'Under the team', 'on_track', { rock_level: 'individual', parent_rock_id: 't' });
+    render(
+      <RockDiscussDialog open onOpenChange={vi.fn()} roots={make([team, child], ['team'])} ownerNames={owners} quarterLabel="Q4 2026" onOpenDetails={vi.fn()} />,
+    );
+    // The Team Rock's own milestones are not Company milestones, so the picker would offer pairings the database refuses.
+    expect(state.sectionProps.length).toBeGreaterThan(0);
+    expect(state.sectionProps.at(-1)?.canLink).toBe(false);
   });
 
   it('shows a level that is not reviewed here read-only', () => {
