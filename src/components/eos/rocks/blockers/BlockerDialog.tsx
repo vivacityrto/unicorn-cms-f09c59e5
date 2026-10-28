@@ -39,6 +39,8 @@ interface BlockerDialogProps {
   rockOptions: PickOption[];
   /** Milestones on the same Rock this could depend on. */
   milestoneOptions: PickOption[];
+  /** Called once the blocker is saved, before the dialog closes. */
+  onSaved?: () => void;
 }
 
 const FIELD_ORDER: Array<keyof BlockerErrors> = ['reason', 'dependency', 'reviewDate', 'evidenceUrl', 'text'];
@@ -59,6 +61,7 @@ export function BlockerDialog({
   people,
   rockOptions,
   milestoneOptions,
+  onSaved,
 }: BlockerDialogProps) {
   const save = useSetBlocker();
   const returnFocus = useReturnFocus(open);
@@ -92,6 +95,7 @@ export function BlockerDialog({
     }
     try {
       await save.mutateAsync({ subject, id: subjectId, form });
+      onSaved?.();
       onOpenChange(false);
     } catch {
       // The mutation has already said what went wrong; the form stays so nothing typed is lost.

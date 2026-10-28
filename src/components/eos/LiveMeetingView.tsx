@@ -668,6 +668,13 @@ export const LiveMeetingView = () => {
             scope={rocksScope}
             ownerNames={rockOwners ?? EMPTY_OWNER_NAMES}
             onEditRock={(rock) => { setEditingRock(rock); setRockFormOpen(true); }}
+            meeting={{
+              id: meetingId,
+              segmentId: segment.id,
+              type: meeting?.meeting_type,
+              // Other attendees' IDS queues refresh when an issue is raised from the Discuss view.
+              onIssueRaised: () => broadcastChange('issue_change'),
+            }}
           />
         );
 

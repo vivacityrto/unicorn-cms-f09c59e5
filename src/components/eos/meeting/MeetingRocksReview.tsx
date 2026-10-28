@@ -7,6 +7,7 @@ import {
   GitBranch,
   ListTree,
   Pencil,
+  Presentation,
   Rows3,
   Target,
   TriangleAlert,
@@ -25,6 +26,7 @@ import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
 import { StatusBar, StatusLegend } from '@/components/eos/rocks/detail/StatusBar';
 import { OffTrackRockPrompt, RockReviewPrompt } from '@/components/eos/facilitator/FacilitatorPrompts';
 import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
+import { RockDiscussDialog } from '@/components/eos/meeting/discuss/RockDiscussDialog';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { cn } from '@/lib/utils';
 import {
@@ -44,6 +46,8 @@ interface MeetingRocksReviewProps {
   /** user_uuid -> display name, for owner labels and sorting. */
   ownerNames: Readonly<Record<string, string>>;
   onEditRock: (rock: RockWithHierarchy) => void;
+  /** The live meeting this review belongs to, so an issue raised from Discuss lands in its IDS queue. */
+  meeting?: { id?: string; segmentId?: string; type?: string | null; onIssueRaised?: () => void };
 }
 
 const LEVEL: Record<RockLevel, { label: string; icon: typeof Building2; className: string }> = {
@@ -341,12 +345,13 @@ function RockRow({ node, depth, ownerNames, showCascade, attentionOnly, isOpen, 
   );
 }
 
-export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRocksReviewProps) {
+export function MeetingRocksReview({ scope, ownerNames, onEditRock, meeting }: MeetingRocksReviewProps) {
   const { quarterRocks, isLoading, currentQuarter } = useEosRocksHierarchy();
   const [view, setView] = useState<'cascade' | 'list'>('cascade');
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [viewingRockId, setViewingRockId] = useState<string | null>(null);
+  const [discussOpen, setDiscussOpen] = useState(false);
 
   const { roots, reviewRocks, counts, milestoneTotals } = useMemo(
     () => buildMeetingRocksCascade(quarterRocks, scope, ownerNames),
@@ -393,6 +398,16 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
             <Button
               type="button"
               size="sm"
+              className="h-8 gap-1.5"
+              disabled={isLoading || reviewRocks.length === 0}
+              onClick={() => setDiscussOpen(true)}
+            >
+              <Presentation className="h-4 w-4" aria-hidden />
+              Discuss
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               variant={attentionOnly ? 'default' : 'outline'}
               aria-pressed={attentionOnly}
               className="h-8 gap-1.5"
@@ -428,7 +443,7 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Quick status update only - On Track or Off Track. No discussion.
+          Quick status update only - On Track or Off Track. No discussion. Press Discuss to step through the Rocks one at a time and raise anything that needs the room for IDS.
         </p>
       </div>
 
@@ -495,6 +510,17 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock }: MeetingRoc
               ))}
         </ul>
       )}
+
+      <RockDiscussDialog
+        open={discussOpen}
+        onOpenChange={setDiscussOpen}
+        roots={roots}
+        ownerNames={ownerNames}
+        quarterLabel={quarterLabel}
+        startAttentionOnly={attentionOnly}
+        meeting={meeting}
+        onOpenDetails={setViewingRockId}
+      />
 
       <RockDetailSheet
         rock={viewingRock}
