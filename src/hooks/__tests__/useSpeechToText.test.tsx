@@ -16,18 +16,31 @@ class FakeRecognition {
   onerror: ((e: { error: string }) => void) | null = null;
   onend: (() => void) | null = null;
   started = false;
+  /** Real browsers fire onend for an aborted session a moment later, not synchronously. */
+  pendingEnd = false;
+  startThrows = false;
+  stopFiresEnd = true;
   constructor() {
     FakeRecognition.instances.push(this);
   }
   start() {
+    if (this.startThrows) throw new Error('InvalidStateError');
     this.started = true;
   }
   stop() {
     this.started = false;
-    this.onend?.();
+    if (this.stopFiresEnd) this.onend?.();
   }
   abort() {
     this.started = false;
+    this.pendingEnd = true;
+  }
+  /** The late onend/onerror a browser delivers for a session that was aborted. */
+  deliverLateEvents() {
+    if (!this.pendingEnd) return;
+    this.pendingEnd = false;
+    this.onerror?.({ error: 'aborted' });
+    this.onend?.();
   }
   /** The browser ending the session by itself (pause, ~1 minute limit, ...). */
   browserEnds() {
@@ -159,5 +172,87 @@ describe('useSpeechToText', () => {
     }
 
     expect(result.current.isRecording).toBe(true);
+  });
+
+  it('switching to a new target leaves exactly one live session, and stop ends it', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { result } = renderHook(() => useSpeechToText());
+    act(() => result.current.startRecording(first, { keepListening: true }));
+    const old = latest();
+    act(() => result.current.startRecording(second, { keepListening: true }));
+    const current = latest();
+
+    // The browser reports the first session as aborted after the second has started.
+    act(() => old.deliverLateEvents());
+    act(() => void vi.advanceTimersByTime(1000));
+
+    expect(FakeRecognition.instances).toHaveLength(2); // no third session was spawned
+    expect(FakeRecognition.instances.filter(i => i.started)).toHaveLength(1);
+    expect(result.current.isRecording).toBe(true);
+
+    act(() => current.say('to the second'));
+    expect(second).toHaveBeenCalledWith('to the second');
+    expect(first).not.toHaveBeenCalled();
+
+    act(() => result.current.stopRecording());
+    act(() => void vi.advanceTimersByTime(2000));
+    expect(FakeRecognition.instances.filter(i => i.started)).toHaveLength(0);
+    expect(result.current.isRecording).toBe(false);
+  });
+
+  it('text from a discarded session never reaches the new callback', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { result } = renderHook(() => useSpeechToText());
+    act(() => result.current.startRecording(first, { keepListening: true }));
+    const old = latest();
+    act(() => result.current.startRecording(second, { keepListening: true }));
+
+    act(() => old.say('late words'));
+    expect(first).not.toHaveBeenCalled();
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  it('stop forces the session off when the browser never confirms the end', () => {
+    const { result } = renderHook(() => useSpeechToText());
+    act(() => result.current.startRecording(vi.fn(), { keepListening: true }));
+    latest().stopFiresEnd = false;
+
+    act(() => result.current.stopRecording());
+    expect(result.current.isRecording).toBe(true); // waiting for the browser
+    act(() => void vi.advanceTimersByTime(2000));
+
+    expect(result.current.isRecording).toBe(false);
+    expect(latest().pendingEnd).toBe(true); // it was aborted, not left running
+  });
+
+  it('a start() the browser refuses is not shown as listening (single-phrase mode)', () => {
+    class Refusing extends FakeRecognition {
+      startThrows = true;
+    }
+    (window as unknown as { SpeechRecognition: unknown }).SpeechRecognition = Refusing;
+    const { result } = renderHook(() => useSpeechToText());
+    act(() => result.current.startRecording(vi.fn()));
+    expect(result.current.isRecording).toBe(false);
+  });
+
+  it('a refused start() in keep-listening mode is retried once the browser is free', () => {
+    const { result } = renderHook(() => useSpeechToText());
+    const originalStart = FakeRecognition.prototype.start;
+    let calls = 0;
+    FakeRecognition.prototype.start = function (this: FakeRecognition) {
+      calls++;
+      if (calls === 1) throw new Error('InvalidStateError');
+      return originalStart.call(this);
+    };
+    try {
+      act(() => result.current.startRecording(vi.fn(), { keepListening: true }));
+      act(() => void vi.advanceTimersByTime(600));
+      expect(result.current.isRecording).toBe(true);
+      expect(latest().started).toBe(true);
+    } finally {
+      FakeRecognition.prototype.start = originalStart;
+    }
   });
 });

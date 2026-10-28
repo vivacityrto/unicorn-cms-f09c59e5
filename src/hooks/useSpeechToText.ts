@@ -18,6 +18,7 @@ interface SpeechRecognitionInstance extends EventTarget {
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -34,6 +35,26 @@ const getSpeechRecognitionClass = (): (new () => SpeechRecognitionInstance) | nu
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 };
 
+/** How long stop() waits for the browser to confirm the session ended before forcing it. */
+const STOP_GRACE_MS = 1500;
+
+/**
+ * Cut a session loose from the hook, then abort it. A browser fires onend/onerror for an
+ * aborted session some time later; those late events must not touch whichever session is
+ * current by then, so every handler is removed before the abort.
+ */
+function discard(recognition: SpeechRecognitionInstance) {
+  recognition.onresult = null;
+  recognition.onerror = null;
+  recognition.onend = null;
+  recognition.onstart = null;
+  try {
+    recognition.abort();
+  } catch {
+    // already finished
+  }
+}
+
 export function useSpeechToText() {
   const [isRecording, setIsRecording] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -46,6 +67,7 @@ export function useSpeechToText() {
   const restartTimesRef = useRef<number[]>([]);
   const lastResultAtRef = useRef(0);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isSupported = typeof window !== 'undefined' && getSpeechRecognitionClass() !== null;
 
@@ -55,8 +77,26 @@ export function useSpeechToText() {
       clearTimeout(restartTimerRef.current);
       restartTimerRef.current = null;
     }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    const current = recognitionRef.current;
+    if (current) {
+      // stop() lets the browser deliver the phrase it is still working on, then fire onend.
+      // If onend never comes the microphone could stay live while the UI says it is off, so
+      // after a short grace period the session is cut off and the state reset regardless.
+      try {
+        current.stop();
+      } catch {
+        // already finished
+      }
+      if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
+      stopTimerRef.current = setTimeout(() => {
+        stopTimerRef.current = null;
+        if (recognitionRef.current === current) {
+          discard(current);
+          recognitionRef.current = null;
+          setIsRecording(false);
+          setInterimTranscript('');
+        }
+      }, STOP_GRACE_MS);
     } else {
       setIsRecording(false);
       setInterimTranscript('');
@@ -67,12 +107,22 @@ export function useSpeechToText() {
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     if (!SpeechRecognitionClass) return;
 
+    // Never two live sessions: a second one would double every phrase and could not be stopped.
+    if (recognitionRef.current) {
+      discard(recognitionRef.current);
+      recognitionRef.current = null;
+    }
+
     const recognition = new SpeechRecognitionClass();
     recognition.lang = 'en-AU';
     recognition.interimResults = true;
     recognition.continuous = keepListeningRef.current;
 
+    // Only the session the hook currently holds may act. Anything else is a leftover.
+    const isCurrent = () => recognitionRef.current === recognition;
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      if (!isCurrent()) return;
       let interim = '';
       let final = '';
 
@@ -95,6 +145,7 @@ export function useSpeechToText() {
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (!isCurrent()) return;
       const fatal =
         event.error === 'not-allowed' ||
         event.error === 'service-not-allowed' ||
@@ -129,7 +180,12 @@ export function useSpeechToText() {
     };
 
     recognition.onend = () => {
+      if (!isCurrent()) return;
       recognitionRef.current = null;
+      if (stopTimerRef.current) {
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = null;
+      }
       if (wantListeningRef.current && keepListeningRef.current) {
         // Give up if sessions keep dying without producing any text (e.g. no network).
         const now = Date.now();
@@ -162,7 +218,20 @@ export function useSpeechToText() {
     try {
       recognition.start();
     } catch {
-      // start() throws if a session is already starting; the running one carries on.
+      // start() refused (a session is still winding down, or the browser is busy). Do not
+      // leave the UI saying it is listening when nothing is: drop this session and, in
+      // keep-listening mode, try once more shortly; otherwise report it as off.
+      recognitionRef.current = null;
+      if (wantListeningRef.current && keepListeningRef.current) {
+        restartTimerRef.current = setTimeout(() => {
+          restartTimerRef.current = null;
+          if (wantListeningRef.current && !recognitionRef.current) beginSession();
+        }, 500);
+      } else {
+        wantListeningRef.current = false;
+        setIsRecording(false);
+        setInterimTranscript('');
+      }
     }
   }, []);
 
@@ -183,9 +252,13 @@ export function useSpeechToText() {
         clearTimeout(restartTimerRef.current);
         restartTimerRef.current = null;
       }
+      if (stopTimerRef.current) {
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = null;
+      }
       wantListeningRef.current = false;
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        discard(recognitionRef.current);
         recognitionRef.current = null;
       }
 
@@ -194,8 +267,9 @@ export function useSpeechToText() {
       wantListeningRef.current = true;
       restartTimesRef.current = [];
       lastResultAtRef.current = Date.now();
-      beginSession();
       setIsRecording(true);
+      // A refused start() switches it back off inside beginSession, so this must come first.
+      beginSession();
     },
     [beginSession],
   );
@@ -205,8 +279,9 @@ export function useSpeechToText() {
     return () => {
       wantListeningRef.current = false;
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        discard(recognitionRef.current);
         recognitionRef.current = null;
       }
     };
