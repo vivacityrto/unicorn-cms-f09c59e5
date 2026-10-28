@@ -11,60 +11,59 @@ export function canRockLevelBeParent(parentLevel: string | null | undefined, chi
   return parentLevel == null;
 }
 
+/** How bad a progress status is. At risk (might slip) and off track (late against plan) are different things. */
+const PROGRESS_SEVERITY: Record<string, number> = { on_track: 0, at_risk: 1, off_track: 2 };
+const severityOf = (status: UiRockStatus) => PROGRESS_SEVERITY[status] ?? 0;
+const progressStatus = (severity: number): UiRockStatus => (severity >= 2 ? 'off_track' : severity === 1 ? 'at_risk' : 'on_track');
+
 /**
  * Compute the roll-up status for a rock based on its children's statuses.
  * Rules:
  * - A Rock that is itself blocked (it has its own recorded blocker) stays blocked,
  *   whatever its children say. Only a person resolving that blocker changes it.
- * - If any child is off_track or at_risk, parent is off_track
- * - A blocked child is neither: it does not turn the parent off track, and it
- *   does not count as complete. The parent keeps its own progress status and
- *   reports the blocked count (see getChildStats) so the cause stays visible.
- * - If every child that is not complete is blocked, the parent is blocked: no
+ * - If every child is complete, the parent shows complete.
+ * - Otherwise the parent shows the worse of its own status and its worst child's,
+ *   on the scale on track < at risk < off track. So one child at risk makes the
+ *   parent at risk (not off track), a child off track makes it off track, and a
+ *   parent is never shown better than its own status says.
+ * - A blocked child is neither at risk nor off track and does not count as
+ *   complete; the parent reports the blocked count (see getChildStats) instead.
+ *   If every child that is not complete is blocked, the parent is blocked: no
  *   remaining work can move.
- * - If all children are complete, parent can be complete
- * - Otherwise, parent is on_track
+ * - Otherwise, the parent is on_track.
  */
 export function computeRollupStatus(rock: EosRock, allRocks: EosRock[]): UiRockStatus {
   const children = allRocks.filter(r => r.parent_rock_id === rock.id && !r.archived_at);
-  
-  if (children.length === 0 || dbToUiStatus(rock.status) === 'blocked') {
-    return dbToUiStatus(rock.status);
-  }
-  
-  const hasOffTrack = children.some(c => {
-    const status = dbToUiStatus(c.status);
-    return status === 'off_track' || status === 'at_risk';
-  });
-  
-  if (hasOffTrack) return 'off_track';
-  
-  const allComplete = children.every(c => 
-    dbToUiStatus(c.status) === 'complete'
-  );
-  
-  if (allComplete) return 'complete';
+  const own = dbToUiStatus(rock.status);
 
-  const remaining = children.filter(c => dbToUiStatus(c.status) !== 'complete');
-  if (remaining.every(c => dbToUiStatus(c.status) === 'blocked')) return 'blocked';
-  
-  return 'on_track';
+  if (children.length === 0 || own === 'blocked') return own;
+
+  const childStatuses = children.map(c => dbToUiStatus(c.status));
+  if (childStatuses.every(s => s === 'complete')) return 'complete';
+
+  const childWorst = Math.max(...childStatuses.map(severityOf));
+  const worst = Math.max(childWorst, severityOf(own));
+  if (childWorst > 0) return progressStatus(worst);
+
+  if (childStatuses.filter(s => s !== 'complete').every(s => s === 'blocked')) return 'blocked';
+
+  return progressStatus(worst);
 }
 
 /**
- * Get statistics about a rock's children
+ * Get statistics about a rock's children. Off track and at risk are counted apart:
+ * they mean different things and the card shows them as different things.
  */
-export function getChildStats(rock: EosRock, allRocks: EosRock[]): { total: number; complete: number; offTrack: number; blocked: number } {
+export function getChildStats(rock: EosRock, allRocks: EosRock[]): { total: number; complete: number; offTrack: number; atRisk: number; blocked: number } {
   const children = allRocks.filter(r => r.parent_rock_id === rock.id && !r.archived_at);
-  
+  const countOf = (status: UiRockStatus) => children.filter(c => dbToUiStatus(c.status) === status).length;
+
   return {
     total: children.length,
-    complete: children.filter(c => dbToUiStatus(c.status) === 'complete').length,
-    offTrack: children.filter(c => {
-      const status = dbToUiStatus(c.status);
-      return status === 'off_track' || status === 'at_risk';
-    }).length,
-    blocked: children.filter(c => dbToUiStatus(c.status) === 'blocked').length,
+    complete: countOf('complete'),
+    offTrack: countOf('off_track'),
+    atRisk: countOf('at_risk'),
+    blocked: countOf('blocked'),
   };
 }
 
@@ -81,7 +80,7 @@ export function buildRockHierarchy(rocks: EosRock[]): RockWithHierarchy[] {
       children: [],
       parent: null,
       rollupStatus: dbToUiStatus(rock.status),
-      childStats: { total: 0, complete: 0, offTrack: 0, blocked: 0 },
+      childStats: { total: 0, complete: 0, offTrack: 0, atRisk: 0, blocked: 0 },
     });
   });
   

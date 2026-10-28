@@ -305,6 +305,15 @@ export function RockCard({
                   </div>
                 </>
               )}
+              {(rock.childStats!.atRisk ?? 0) > 0 && (
+                <>
+                  <div className="h-8 w-px bg-border" />
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-amber-600">{rock.childStats!.atRisk}</div>
+                    <div className="text-xs text-muted-foreground">At Risk</div>
+                  </div>
+                </>
+              )}
               {(rock.childStats!.blocked ?? 0) > 0 && (
                 <>
                   <div className="h-8 w-px bg-border" />

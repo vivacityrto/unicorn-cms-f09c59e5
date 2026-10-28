@@ -185,6 +185,7 @@ export interface RockWithHierarchy extends EosRock {
     total: number;
     complete: number;
     offTrack: number;
+    atRisk?: number;
     blocked?: number;
   };
   milestoneStats?: {
