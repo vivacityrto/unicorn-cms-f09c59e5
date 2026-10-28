@@ -27,6 +27,7 @@ import { StatusBar, StatusLegend } from '@/components/eos/rocks/detail/StatusBar
 import { OffTrackRockPrompt, RockReviewPrompt } from '@/components/eos/facilitator/FacilitatorPrompts';
 import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
 import { RockDiscussDialog } from '@/components/eos/meeting/discuss/RockDiscussDialog';
+import { RockNotesDictationProvider } from '@/components/eos/rocks/notes/RockNotesDictation';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { cn } from '@/lib/utils';
 import {
@@ -386,6 +387,7 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock, meeting }: M
   };
 
   return (
+    <RockNotesDictationProvider meetingId={meeting?.id}>
     <Card className="space-y-5 p-4 sm:p-6">
       <div className="space-y-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -538,5 +540,6 @@ export function MeetingRocksReview({ scope, ownerNames, onEditRock, meeting }: M
         onOpenRock={setViewingRockId}
       />
     </Card>
+    </RockNotesDictationProvider>
   );
 }

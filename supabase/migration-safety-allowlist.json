@@ -270,6 +270,15 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-28): the rollback for 20261028020000. It deletes the dd_rock_status lookup row 'blocked' and first moves any Rock still at status 'blocked' to 'at_risk' so no Rock keeps a status older screens do not know; it then drops the three new tables, which discards recorded blockers and carryover provenance. Use only if the migration must be reverted. Run inside a rolled-back transaction on unicorn-qa after the migration and verified to leave no table, function, status row or blocked Rock behind, with rock_delete_blockers() back to its earlier answers. See docs/audit-log/entries/2026-10-28-rock-blockers-and-carryover.md.",
       "expires": "2026-11-28"
+    },
+    {
+      "id": "rock-notes",
+      "file": "supabase/migrations/20261028120000_rock_notes.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-10-28): the migration runs no INSERT, UPDATE or DELETE when applied, and changes no existing row. The flagged INSERT is the statement inside add_rock_note(), which runs only when a signed-in staff user calls it (SECURITY DEFINER, empty search_path, is_vivacity_team_safe(auth.uid()) checked first, not executable by anon). The flagged UPDATE OR DELETE is the CREATE TRIGGER clause of the append-only guard, which REFUSES every update and delete (the one exception is a deleted meeting clearing meeting_id). The two new tables have select-only grants; summaries are written only by the service role. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted), including refusals, the snapshot, the duplicate guard, append-only, the delete guard and grants. See docs/audit-log/entries/2026-10-28-rock-notes.md.",
+      "expires": "2026-11-28"
     }
   ]
 }

@@ -466,3 +466,8 @@ verify_jwt = false
 # calendar PDF download. Auth is enforced in-function via requireCaller.
 [functions.addevent-calendar-events]
 verify_jwt = false
+
+# Writes an AI summary of a Rock's notes and suggests To-Dos for a person to confirm.
+# Auth is enforced in-function via requireCaller (staff.ai.use).
+[functions.summarise-rock-notes]
+verify_jwt = false

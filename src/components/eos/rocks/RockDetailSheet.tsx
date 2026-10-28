@@ -36,6 +36,7 @@ import { ResolveBlockerDialog } from '@/components/eos/rocks/blockers/ResolveBlo
 import { CarryForwardDialog } from '@/components/eos/rocks/carryover/CarryForwardDialog';
 import { CarryoverLinks } from '@/components/eos/rocks/carryover/CarryoverLinks';
 import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
+import { RockNotesPanel } from '@/components/eos/rocks/notes/RockNotesPanel';
 import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
@@ -570,6 +571,13 @@ export function RockDetailSheet({
               </>
             )}
           </section>
+
+          {canManage && (
+            <>
+              <Separator />
+              <RockNotesPanel key={rock.id} rock={{ id: rock.id, title: rock.title, tenant_id: rock.tenant_id }} />
+            </>
+          )}
 
           {isCompany && (
             <>

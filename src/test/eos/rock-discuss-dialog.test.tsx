@@ -15,6 +15,13 @@ const state = vi.hoisted(() => ({
   blockers: [] as unknown[],
 }));
 
+// The notes panel and its microphone controller have their own tests; these suites are about the deck.
+vi.mock('@/components/eos/rocks/notes/RockNotesPanel', () => ({ RockNotesPanel: () => null }));
+const notesController = vi.hoisted(() => ({ retarget: vi.fn(), flushAll: vi.fn().mockResolvedValue(undefined), provided: false }));
+vi.mock('@/components/eos/rocks/notes/RockNotesDictation', () => ({
+  RockNotesDictationProvider: ({ children }: { children: unknown }) => children,
+  useOptionalRockNotesDictation: () => (notesController.provided ? notesController : null),
+}));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'u1' } }) }));
 vi.mock('@/hooks/useRockDiscussion', () => ({
   useSetRockStatus: () => ({ mutateAsync: state.setStatus, isPending: false, variables: undefined }),
@@ -79,6 +86,9 @@ function renderDialog(rocks = [RA, RB, RC], props: Partial<React.ComponentProps<
 const heading = () => document.querySelector('[data-slide-heading]') as HTMLElement;
 
 beforeEach(() => {
+  notesController.provided = false;
+  notesController.retarget.mockClear();
+  notesController.flushAll.mockClear();
   state.setStatus.mockReset().mockResolvedValue(undefined);
   state.raise.mockReset().mockResolvedValue({ id: 'issue-1' });
   state.milestones = [];
@@ -86,6 +96,44 @@ beforeEach(() => {
   state.sectionProps = [];
   state.issuesQuery = { data: [], isLoading: false, isError: false };
   state.blockers = [];
+});
+
+describe('RockDiscussDialog: notes and the microphone', () => {
+  it('points the microphone at the Rock on screen as the room moves, including going back', () => {
+    notesController.provided = true;
+    renderDialog();
+    expect(notesController.retarget).toHaveBeenLastCalledWith('a');
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(notesController.retarget).toHaveBeenLastCalledWith('b');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    expect(notesController.retarget).toHaveBeenLastCalledWith('a');
+    expect(notesController.retarget.mock.calls.map(call => call[0])).toEqual(['a', 'b', 'a']);
+  });
+
+  it('does not retarget on the wrap-up, where there is no Rock', () => {
+    notesController.provided = true;
+    renderDialog();
+    notesController.retarget.mockClear();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Wrap-up' })[0]);
+    expect(notesController.retarget).not.toHaveBeenCalled();
+  });
+
+  it('stops the microphone and saves drafts when the view is closed, before it closes', async () => {
+    notesController.provided = true;
+    const order: string[] = [];
+    notesController.flushAll.mockImplementation(async () => { order.push('flush'); });
+    const { onOpenChange } = renderDialog();
+    onOpenChange.mockImplementation(() => order.push('close'));
+    await userEvent.keyboard('{Escape}');
+    expect(order).toEqual(['flush', 'close']);
+  });
+
+  it('works without a notes controller (the Rock panel brings its own)', async () => {
+    const { onOpenChange } = renderDialog();
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(notesController.retarget).not.toHaveBeenCalled();
+  });
 });
 
 describe('RockDiscussDialog: the deck', () => {
