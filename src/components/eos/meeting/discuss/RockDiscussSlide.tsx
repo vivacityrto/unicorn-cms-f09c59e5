@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { format } from 'date-fns';
 import { Ban, Building2, ExternalLink, History, Lightbulb, TriangleAlert, User, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import { BlockerDialog } from '@/components/eos/rocks/blockers/BlockerDialog';
 import { ResolveBlockerDialog } from '@/components/eos/rocks/blockers/ResolveBlockerDialog';
 import { CarryoverLinks } from '@/components/eos/rocks/carryover/CarryoverLinks';
 import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
-import { StatusBar, StatusLegend } from '@/components/eos/rocks/detail/StatusBar';
+import { StatusBar } from '@/components/eos/rocks/detail/StatusBar';
 import { RaiseIssuePanel } from '@/components/eos/meeting/discuss/RaiseIssuePanel';
 import { RockStatusDecision } from '@/components/eos/meeting/discuss/RockStatusDecision';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,16 @@ const LEVEL = {
 
 /** Most urgent first, so the first few rows are what the room should look at. */
 const URGENCY: Record<string, number> = { blocked: 0, off_track: 1, in_progress: 3, not_started: 4, deferred: 5, complete: 6 };
-const SHOWN = 6;
+/** Rows shown before "Show all": more when the list has the full width and runs in two columns, fewer on a short screen. */
+const SHOWN_BESIDE = 5;
+const SHOWN_FULL = 8;
+const SHORT_SCREEN = '(max-height: 820px)';
+const subscribeShort = (onChange: () => void) => {
+  const query = window.matchMedia(SHORT_SCREEN);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+};
+const isShort = () => window.matchMedia(SHORT_SCREEN).matches;
 
 interface RockDiscussSlideProps {
   node: RockCascadeNode;
@@ -100,7 +109,11 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
         .sort((a, b) => a.rank - b.rank || (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     [milestoneRows, todayIso],
   );
-  const visibleMilestones = showAll ? milestones : milestones.slice(0, SHOWN);
+  // With Individual Rocks or carryover to show, milestones share the row; otherwise they take the full width in two columns.
+  const hasSide = node.children.length > 0 || (carryoverQuery.data?.links.length ?? 0) > 0;
+  const shortScreen = useSyncExternalStore(subscribeShort, isShort, () => false);
+  const shown = shortScreen ? (hasSide ? 3 : 6) : hasSide ? SHOWN_BESIDE : SHOWN_FULL;
+  const visibleMilestones = showAll ? milestones : milestones.slice(0, shown);
   const breakdown = rock.milestoneBreakdown;
   const blockedMilestoneTitles = milestones.filter(m => m.status === 'blocked').map(m => parseMilestoneTitle(m.title).label);
 
@@ -120,11 +133,13 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
   const dueLabel = formatDate(rock.due_date);
 
   return (
-    <article aria-label={`Rock: ${rock.title}`} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+    <article aria-label={`Rock: ${rock.title}`} className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
       {/* On a wide screen the status and issue rail starts beside the title, so both stay in reach; on a narrow one it sits right after the question. */}
-      <header className="min-w-0 space-y-3 lg:col-start-1">
+      {/* On a narrow screen the wrapper below disappears (display: contents) so the rail can sit right after the question. */}
+      <div className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-4">
+      <header className="min-w-0 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={cn('inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold', level.className)}>
+          <span className={cn('inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold', level.className)}>
             <LevelIcon className="h-3.5 w-3.5" aria-hidden />
             {level.label}
           </span>
@@ -136,46 +151,57 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
             {statusConfig.label}
           </Badge>
         </div>
-        <h2 ref={headingRef} tabIndex={-1} data-slide-heading className="break-words text-2xl font-bold leading-tight outline-none sm:text-3xl lg:text-5xl">{rock.title}</h2>
-        <p className="flex flex-wrap items-center gap-x-5 gap-y-1 text-base text-muted-foreground">
+        <h2 ref={headingRef} tabIndex={-1} data-slide-heading className="break-words text-xl font-bold leading-tight outline-none sm:text-2xl lg:text-3xl [@media(min-height:821px)]:2xl:text-4xl">{rock.title}</h2>
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm text-muted-foreground lg:text-base">
           <span className={cn(!ownerName && 'font-medium text-amber-700 dark:text-amber-300')}>{ownerName ? `Owner: ${ownerName}` : 'Nobody owns it'}</span>
           <span>{dueLabel ? `Due ${dueLabel}` : 'No due date'}</span>
+          <button type="button" onClick={() => onOpenDetails(rock.id)} className="inline-flex items-center gap-1 rounded text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            Open the full Rock
+          </button>
           {rock.due_date && status !== 'complete' && rock.due_date.slice(0, 10) < todayIso && (
             <span className="font-medium text-destructive">{`${Math.max(1, Math.round((Date.parse(todayIso) - Date.parse(rock.due_date.slice(0, 10))) / 86400000))} days overdue`}</span>
           )}
         </p>
-        {rock.description?.trim() && <p className="line-clamp-3 max-w-4xl text-base text-muted-foreground">{rock.description}</p>}
+        {rock.description?.trim() && <p className="line-clamp-1 max-w-4xl text-sm text-muted-foreground" title={rock.description}>{rock.description}</p>}
       </header>
 
-      <section aria-label="Why we are looking at this" className="min-w-0 space-y-3 rounded-xl border-l-4 border-l-primary bg-muted/40 p-4 lg:col-start-1">
-        <div className="flex items-start gap-3">
-          <Lightbulb className="mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{cue.headline}</p>
-            <p className="text-lg font-medium leading-snug sm:text-xl lg:text-2xl">{cue.question}</p>
-          </div>
-        </div>
-        {reasons.length > 0 && (
-          <ul className="flex flex-wrap gap-2" aria-label="Flags">
-            {reasons.map(reason => (
-              <li key={reason.key} className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium', REASON_TONE[reason.tone])}>
-                <TriangleAlert className="h-3.5 w-3.5" aria-hidden />
-                {reason.text}
-              </li>
-            ))}
-          </ul>
-        )}
-        {change && (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <History className="h-4 w-4" aria-hidden />
-            {change.text} on {format(new Date(change.occurredAt), 'd MMM')}.
+      <section aria-label="Why we are looking at this" className="min-w-0 space-y-2 rounded-xl border-l-4 border-l-primary bg-muted/40 px-3 py-2.5">
+        <div className="flex items-start gap-2.5">
+          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+          <p className="min-w-0 text-base font-medium leading-snug lg:text-lg xl:text-xl">
+            <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{cue.headline}</span>
+            {cue.question}
           </p>
+        </div>
+        {(reasons.length > 0 || change) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            {reasons.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5" aria-label="Flags">
+                {reasons.map(reason => (
+                  <li key={reason.key} className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium sm:text-sm', REASON_TONE[reason.tone])}>
+                    <TriangleAlert className="h-3 w-3" aria-hidden />
+                    {reason.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {change && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                <History className="h-3.5 w-3.5" aria-hidden />
+                {change.text} on {format(new Date(change.occurredAt), 'd MMM')}.
+              </p>
+            )}
+          </div>
         )}
       </section>
 
-      <div className="order-2 min-w-0 space-y-6 lg:order-none lg:col-start-1">
+      <div className="order-2 min-w-0 space-y-4 lg:order-none xl:grid xl:grid-cols-2 xl:items-start xl:gap-x-5 xl:gap-y-4 xl:space-y-0">
           {rockBlocker && (
+            <div className="xl:col-span-2">
             <BlockerDetails
+              wide
+              compact
               blocker={rockBlocker}
               todayIso={todayIso}
               nameOf={nameOf}
@@ -184,50 +210,55 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
               onEdit={() => setBlockerMode('record')}
               onResolve={() => setBlockerMode('resolve')}
             />
+            </div>
           )}
 
-          <section aria-labelledby={`ms-${rock.id}`} className="space-y-3">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 id={`ms-${rock.id}`} className="text-lg font-semibold">Milestones</h3>
+          <section aria-labelledby={`ms-${rock.id}`} className={cn('min-w-0 space-y-2', !hasSide && 'xl:col-span-2')}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 id={`ms-${rock.id}`} className="text-base font-semibold">Milestones</h3>
               {breakdown && breakdown.total > 0 && (
-                <span className="text-sm tabular-nums text-muted-foreground"><span className="font-semibold text-foreground">{breakdown.complete}</span> of {breakdown.total} done</span>
+                <>
+                  <StatusBar size="md" className="w-28 shrink-0 sm:w-40" label="Milestones by status" counts={{ complete: breakdown.complete, inProgress: breakdown.inProgress, blocked: breakdown.blocked, offTrack: breakdown.offTrack, notStarted: breakdown.notStarted }} total={breakdown.total} />
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    <span className="font-semibold text-foreground">{breakdown.complete}</span> of {breakdown.total} done
+                    {breakdown.inProgress > 0 && <> · {breakdown.inProgress} in progress</>}
+                    {breakdown.blocked > 0 && <> · <span className="font-medium text-violet-700 dark:text-violet-300">{breakdown.blocked} blocked</span></>}
+                    {breakdown.offTrack > 0 && <> · <span className="font-medium text-orange-700 dark:text-orange-300">{breakdown.offTrack} off track</span></>}
+                  </span>
+                </>
               )}
             </div>
-            {breakdown && breakdown.total > 0 && (
-              <div className="space-y-2">
-                <StatusBar size="lg" label="Milestones by status" counts={{ complete: breakdown.complete, inProgress: breakdown.inProgress, blocked: breakdown.blocked, offTrack: breakdown.offTrack, notStarted: breakdown.notStarted }} total={breakdown.total} />
-                <StatusLegend counts={{ complete: breakdown.complete, inProgress: breakdown.inProgress, blocked: breakdown.blocked, offTrack: breakdown.offTrack, notStarted: breakdown.notStarted }} />
-              </div>
-            )}
             {milestonesQuery.isLoading ? (
-              <div className="space-y-2" aria-label="Loading milestones"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+              <div className="space-y-2" aria-label="Loading milestones"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /></div>
             ) : milestonesQuery.isError ? (
               <p role="alert" className="text-sm text-destructive">Milestones could not be loaded.</p>
             ) : milestones.length === 0 ? (
               <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No milestones have been added to this Rock yet.</p>
             ) : (
               <>
-                <ul className="space-y-2">
+                <ul className={cn('space-y-1.5', !hasSide && 'xl:grid xl:grid-cols-2 xl:gap-x-3 xl:gap-y-1.5 xl:space-y-0')}>
                   {visibleMilestones.map(m => {
                     const style = MILESTONE_STATUS[(m.status in MILESTONE_STATUS ? m.status : 'not_started') as RockMilestoneStatus];
                     const parsed = parseMilestoneTitle(m.title);
+                    // The Rock's owner is already in the header; name a milestone's owner only when it is someone else (or nobody).
+                    const ownerDiffers = (m.owner_id ?? null) !== (rock.owner_id ?? null);
                     const owner = m.owner_id ? ownerNames[m.owner_id] : null;
                     const blocker = openBlocker(blockers, 'milestone', m.id);
                     return (
-                      <li key={m.id} className={cn('rounded-lg border bg-card p-3', (m.status === 'blocked' || m.status === 'off_track') && 'border-l-4 border-l-violet-500')}>
+                      <li key={m.id} className={cn('rounded-lg border bg-card px-2.5 py-1.5', (m.status === 'blocked' || m.status === 'off_track') && 'border-l-4 border-l-violet-500')}>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <span className={cn('min-w-0 flex-1 basis-60 text-base font-medium', m.status === 'complete' && 'text-muted-foreground line-through')}>
+                          <span className={cn('min-w-0 flex-1 basis-44 text-sm font-medium lg:text-base', m.status === 'complete' && 'text-muted-foreground line-through')}>
                             {parsed.number !== null && <span className="mr-2 rounded bg-muted px-1.5 font-mono text-xs font-semibold">M{parsed.number}</span>}
                             {parsed.label}
                           </span>
-                          <Badge variant="outline" className={cn('border-transparent', style.className)}>{style.label}</Badge>
-                          <span className="text-sm text-muted-foreground">{owner ?? 'Unassigned'}</span>
-                          <span className={cn('text-sm tabular-nums', m.overdue ? 'font-medium text-destructive' : 'text-muted-foreground')}>
+                          <Badge variant="outline" className={cn('border-transparent px-1.5 py-0 text-[11px]', style.className)}>{style.label}</Badge>
+                          {ownerDiffers && <span className="text-xs text-muted-foreground sm:text-sm">{owner ?? 'Unassigned'}</span>}
+                          <span className={cn('text-xs tabular-nums sm:text-sm', m.overdue ? 'font-medium text-destructive' : 'text-muted-foreground')}>
                             {m.due_date ? `${m.overdue ? 'Overdue · ' : ''}${formatDate(m.due_date, 'd MMM')}` : 'No date'}
                           </span>
                         </div>
                         {blocker && (
-                          <p className="mt-2 flex items-start gap-2 text-sm text-violet-900 dark:text-violet-200">
+                          <p className="mt-1 flex items-start gap-1.5 text-xs text-violet-900 dark:text-violet-200 sm:text-sm">
                             <Ban className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                             <span className="break-words"><span className="font-medium">Blocked:</span> {blocker.reason}</span>
                           </p>
@@ -236,7 +267,7 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
                     );
                   })}
                 </ul>
-                {milestones.length > SHOWN && (
+                {milestones.length > shown && (
                   <Button type="button" variant="ghost" size="sm" onClick={() => setShowAll(value => !value)}>
                     {showAll ? 'Show fewer' : `Show all ${milestones.length}`}
                   </Button>
@@ -245,24 +276,24 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
             )}
           </section>
 
+          <div className="min-w-0 space-y-4">
           {node.children.length > 0 && (
             <IndividualRocksSection
               companyRockId={rock.id}
               getUserInfo={id => (ownerNames[id] ? { name: ownerNames[id] } : null)}
               onOpenRock={onOpenDetails}
               defaultOpen
+              hideCoverage
             />
           )}
 
           <CarryoverLinks data={carryoverQuery.data} isLoading={carryoverQuery.isLoading} isError={carryoverQuery.isError} nameOf={nameOf} onOpenRock={onOpenDetails} />
 
-          <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => onOpenDetails(rock.id)}>
-            <ExternalLink className="h-4 w-4" aria-hidden />
-            Open the full Rock
-          </Button>
+          </div>
         </div>
+      </div>
 
-        <div className="order-1 min-w-0 space-y-4 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-0 lg:max-h-[calc(100dvh-15rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
+        <div className="order-1 min-w-0 space-y-3 lg:order-none lg:sticky lg:top-0 lg:max-h-[calc(100dvh-9.5rem)] lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:pr-1 xl:w-96">
           <RockStatusDecision
             rock={rock}
             canChange={node.reviewable}

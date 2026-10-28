@@ -228,7 +228,7 @@ describe('RockDiscussDialog: the status decision', () => {
     expect(screen.getByRole('region', { name: 'Blocker' })).toHaveTextContent('Vendor has not issued access');
     expect(screen.getByRole('button', { name: 'Resolve blocker…' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Set the status' })).toBeNull();
-    expect(screen.getByText(/Resolving it does not mark it complete/)).toBeInTheDocument();
+    expect(screen.getByText(/Resolving does not mark it complete/)).toBeInTheDocument();
   });
 
   it('shows a level that is not reviewed here read-only', () => {

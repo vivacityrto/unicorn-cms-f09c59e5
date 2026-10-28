@@ -62,7 +62,7 @@ export function RaiseIssuePanel({ rockId, suggestion, draft, existing, raisedNow
   };
 
   return (
-    <section aria-label="Raise an issue" className={cn('space-y-3 rounded-xl border p-4', suggestion === 'strong' && !raisedNow ? 'border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20' : 'bg-card')}>
+    <section aria-label="Raise an issue" className={cn('space-y-2 rounded-xl border p-3', suggestion === 'strong' && !raisedNow ? 'border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20' : 'bg-card')}>
       <h3 className="flex items-center gap-2 text-sm font-semibold">
         <MessageSquareWarning className="h-4 w-4" aria-hidden />
         {HEADLINE[suggestion]}
@@ -90,13 +90,13 @@ export function RaiseIssuePanel({ rockId, suggestion, draft, existing, raisedNow
       )}
 
       {!expanded ? (
-        <Button type="button" variant={suggestion === 'strong' && open.length === 0 ? 'default' : 'outline'} className="h-11 w-full gap-2" onClick={() => setExpanded(true)}>
+        <Button type="button" variant={suggestion === 'strong' && open.length === 0 ? 'default' : 'outline'} className="h-10 w-full gap-2" onClick={() => setExpanded(true)}>
           <Plus className="h-4 w-4" aria-hidden />
           {open.length > 0 || raisedNow ? 'Raise another issue' : 'Raise it for IDS'}
         </Button>
       ) : (
         <form
-          className="space-y-3"
+          className="space-y-2"
           onSubmit={event => {
             event.preventDefault();
             void submit();
@@ -107,16 +107,15 @@ export function RaiseIssuePanel({ rockId, suggestion, draft, existing, raisedNow
             <Input id={`issue-title-${rockId}`} value={title} onChange={event => setEditedTitle(event.target.value)} maxLength={140} required aria-required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`issue-note-${rockId}`}>What does the room need to decide? (optional)</Label>
-            <Textarea id={`issue-note-${rockId}`} value={note} onChange={event => setNote(event.target.value)} rows={2} maxLength={500} placeholder="e.g. Do we add budget, or move the date?" />
+            <Label htmlFor={`issue-note-${rockId}`}>What does the room need to decide? (optional, the Rock’s facts are added for you)</Label>
+            <Textarea id={`issue-note-${rockId}`} value={note} onChange={event => setNote(event.target.value)} rows={1} maxLength={500} placeholder="e.g. Do we add budget, or move the date?" />
           </div>
-          <p className="text-xs text-muted-foreground">The Rock’s status, owner, milestones and blocker are added for you.</p>
           <div className="flex gap-2">
-            <Button type="submit" className="h-11 flex-1 gap-2" disabled={raise.isPending || !title.trim()}>
+            <Button type="submit" className="h-10 flex-1 gap-2" disabled={raise.isPending || !title.trim()}>
               {raise.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
               Add to IDS queue
             </Button>
-            <Button type="button" variant="ghost" className="h-11" onClick={() => setExpanded(false)} disabled={raise.isPending}>Not now</Button>
+            <Button type="button" variant="ghost" className="h-10" onClick={() => setExpanded(false)} disabled={raise.isPending}>Not now</Button>
           </div>
         </form>
       )}

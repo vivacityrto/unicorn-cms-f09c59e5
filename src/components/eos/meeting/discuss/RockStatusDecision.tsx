@@ -55,7 +55,7 @@ export function RockStatusDecision({ rock, canChange, confirmed, onOutcome, onBl
   }
 
   return (
-    <section aria-label="Status" className="space-y-3 rounded-xl border bg-card p-4">
+    <section aria-label="Status" className="space-y-2 rounded-xl border bg-card p-3">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold">Is it on track?</h3>
         {confirmed && (
@@ -68,12 +68,12 @@ export function RockStatusDecision({ rock, canChange, confirmed, onOutcome, onBl
 
       {blocked ? (
         <div className="space-y-3">
-          <p className="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-base font-semibold text-violet-900 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200">
+          <p className="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-base font-semibold text-violet-900 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200">
             <Ban className="h-5 w-5" aria-hidden />
             Blocked
           </p>
-          <p className="text-sm text-muted-foreground">A blocked Rock stays blocked until its blocker is resolved. Resolving it does not mark it complete.</p>
-          <Button type="button" className="h-11 w-full text-base" onClick={onResolve}>Resolve blocker…</Button>
+          <p className="text-xs text-muted-foreground">Stays blocked until its blocker is resolved. Resolving does not mark it complete.</p>
+          <Button type="button" className="h-10 w-full" onClick={onResolve}>Resolve blocker…</Button>
         </div>
       ) : (
         <>
@@ -87,7 +87,7 @@ export function RockStatusDecision({ rock, canChange, confirmed, onOutcome, onBl
                   variant={selected ? 'default' : 'outline'}
                   aria-pressed={selected}
                   disabled={setStatus.isPending}
-                  className={cn('h-12 gap-1.5 text-base', selected && choice.value === 'off_track' && 'bg-red-600 hover:bg-red-700', selected && choice.value === 'at_risk' && 'bg-amber-600 hover:bg-amber-700', selected && choice.value === 'on_track' && 'bg-green-600 hover:bg-green-700')}
+                  className={cn('h-10 gap-1 px-2 text-sm lg:text-base', selected && choice.value === 'off_track' && 'bg-red-600 hover:bg-red-700', selected && choice.value === 'at_risk' && 'bg-amber-600 hover:bg-amber-700', selected && choice.value === 'on_track' && 'bg-green-600 hover:bg-green-700')}
                   onClick={() => void choose(choice.value)}
                 >
                   {setStatus.isPending && setStatus.variables?.status === choice.value ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : selected && <Check className="h-4 w-4" aria-hidden />}
@@ -97,9 +97,9 @@ export function RockStatusDecision({ rock, canChange, confirmed, onOutcome, onBl
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            {current === 'not_started' ? 'Not started. Pick a status to record one.' : 'Press the current status to confirm it, or another to change it.'}
+            {current === 'not_started' ? 'Not started. Pick a status to record one.' : 'Press the current status to confirm it.'}
           </p>
-          <Button type="button" variant="outline" className="h-11 w-full gap-2 border-violet-300 text-violet-900 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-200 dark:hover:bg-violet-950/30" onClick={onBlock}>
+          <Button type="button" variant="outline" className="h-9 w-full gap-2 border-violet-300 text-violet-900 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-200 dark:hover:bg-violet-950/30" onClick={onBlock}>
             <Ban className="h-4 w-4" aria-hidden />
             It is blocked…
           </Button>

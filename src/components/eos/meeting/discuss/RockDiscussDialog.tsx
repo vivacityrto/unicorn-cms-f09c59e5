@@ -106,55 +106,54 @@ function DiscussDeck({ open, onOpenChange, roots, ownerNames, quarterLabel, star
         </DialogDescription>
         <div aria-live="polite" role="status" className="sr-only">{announcement}</div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3 pr-16 sm:px-6">
-          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Rock Review · {quarterLabel}</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b px-3 py-2 pr-14 sm:px-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rock Review · {quarterLabel}</p>
           <p className="text-sm tabular-nums" aria-hidden>
             {atWrapUp ? 'Wrap-up' : <><span className="font-semibold">{position + 1}</span> of {deck.length}</>}
           </p>
+          {deck.length > 0 && (
+            // One segment per Rock, squeezing to fit, so the strip never scrolls sideways however many Rocks there are.
+            <nav aria-label="Rocks in this review" className="order-last flex min-w-0 basis-full items-center gap-1 sm:order-none sm:flex-1 sm:basis-0">
+              {deck.map((id, index) => {
+                const n = nodes.get(id);
+                const status = n ? dbToUiStatus(n.rock.status) : 'on_track';
+                const done = (outcomes[id]?.length ?? 0) > 0;
+                const current = index === position;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-current={current ? 'step' : undefined}
+                    aria-label={`Rock ${index + 1}: ${n?.rock.title ?? ''}${done ? ' (done)' : ''}`}
+                    title={`${index + 1}. ${n?.rock.title ?? ''}`}
+                    onClick={() => go(index)}
+                    className={cn('flex h-4 min-w-[6px] max-w-10 flex-1 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1', RAIL_COLOUR[status], current ? 'ring-2 ring-primary ring-offset-1' : 'opacity-60 hover:opacity-100')}
+                  >
+                    {done && <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                aria-current={atWrapUp ? 'step' : undefined}
+                onClick={() => go(deck.length)}
+                className={cn('ml-1 h-5 shrink-0 rounded-full border px-2 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', atWrapUp ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted')}
+              >
+                Wrap-up
+              </button>
+            </nav>
+          )}
           <div role="group" aria-label="Which Rocks" className="ml-auto flex rounded-md border">
-            <button type="button" aria-pressed={!attentionOnly} onClick={() => changeFilter(false)} className={cn('rounded-l-md px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', !attentionOnly ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/50')}>
+            <button type="button" aria-pressed={!attentionOnly} onClick={() => changeFilter(false)} className={cn('rounded-l-md px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', !attentionOnly ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/50')}>
               All Rocks <span className="tabular-nums">{totalAll}</span>
             </button>
-            <button type="button" aria-pressed={attentionOnly} onClick={() => changeFilter(true)} className={cn('rounded-r-md px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', attentionOnly ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/50')}>
+            <button type="button" aria-pressed={attentionOnly} onClick={() => changeFilter(true)} className={cn('rounded-r-md px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', attentionOnly ? 'bg-muted font-medium' : 'text-muted-foreground hover:bg-muted/50')}>
               Needs the room <span className="tabular-nums">{totalAttention}</span>
             </button>
           </div>
         </div>
 
-        {deck.length > 0 && (
-          <nav aria-label="Rocks in this review" className="flex gap-1.5 overflow-x-auto border-b px-4 py-2 sm:px-6">
-            {deck.map((id, index) => {
-              const n = nodes.get(id);
-              const status = n ? dbToUiStatus(n.rock.status) : 'on_track';
-              const done = (outcomes[id]?.length ?? 0) > 0;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  aria-current={index === position ? 'step' : undefined}
-                  aria-label={`Rock ${index + 1}: ${n?.rock.title ?? ''}${done ? ' (done)' : ''}`}
-                  title={n?.rock.title}
-                  onClick={() => go(index)}
-                  className={cn('flex h-7 min-w-[1.75rem] items-center justify-center gap-1 rounded-full border px-2 text-xs font-medium tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', index === position ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted')}
-                >
-                  <span className={cn('h-2 w-2 rounded-full', RAIL_COLOUR[status])} aria-hidden />
-                  {index + 1}
-                  {done && <span aria-hidden>✓</span>}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              aria-current={atWrapUp ? 'step' : undefined}
-              onClick={() => go(deck.length)}
-              className={cn('flex h-7 items-center rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', atWrapUp ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted')}
-            >
-              Wrap-up
-            </button>
-          </nav>
-        )}
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5 lg:px-6">
           {deck.length === 0 ? (
             <div className="mx-auto max-w-xl space-y-4 py-16 text-center">
               <h2 tabIndex={-1} data-slide-heading className="text-2xl font-semibold outline-none">{attentionOnly ? 'Nothing needs the room' : 'No Rocks to review'}</h2>
@@ -187,18 +186,18 @@ function DiscussDeck({ open, onOpenChange, roots, ownerNames, quarterLabel, star
         </div>
 
         {deck.length > 0 && (
-          <div className="flex items-center justify-between gap-3 border-t bg-background px-4 py-3 sm:px-6">
-            <Button type="button" variant="outline" className="h-12 gap-2 px-5 text-base" disabled={position === 0} onClick={() => go(position - 1)}>
-              <ChevronLeft className="h-5 w-5" aria-hidden />
+          <div className="flex items-center justify-between gap-3 border-t bg-background px-3 py-2 sm:px-5">
+            <Button type="button" variant="outline" className="h-10 gap-1.5 px-4" disabled={position === 0} onClick={() => go(position - 1)}>
+              <ChevronLeft className="h-4 w-4" aria-hidden />
               Previous
             </Button>
-            <p className="hidden text-xs text-muted-foreground sm:block">Use the ← and → keys to move. Esc leaves.</p>
+            <p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>
             {atWrapUp ? (
-              <Button type="button" className="h-12 px-5 text-base" onClick={() => onOpenChange(false)}>Finish</Button>
+              <Button type="button" className="h-10 px-4" onClick={() => onOpenChange(false)}>Finish</Button>
             ) : (
-              <Button type="button" className="h-12 gap-2 px-5 text-base" onClick={() => go(position + 1)}>
+              <Button type="button" className="h-10 gap-1.5 px-4" onClick={() => go(position + 1)}>
                 {position === deck.length - 1 ? 'Wrap-up' : 'Next'}
-                <ChevronRight className="h-5 w-5" aria-hidden />
+                <ChevronRight className="h-4 w-4" aria-hidden />
               </Button>
             )}
           </div>
