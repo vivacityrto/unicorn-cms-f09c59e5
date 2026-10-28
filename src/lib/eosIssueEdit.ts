@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
+import { isEchoOf, speakerOf } from '@/lib/dictation';
 
 /**
  * Helpers for letting several attendees edit the same IDS issue at once.
@@ -61,8 +62,9 @@ export async function fetchIssueTextField(
 
 /**
  * Combines someone else's saved text with what this user typed so a conflict
- * never loses either side. If the saved text already contains what was typed
- * (e.g. the other person saved the same thing) nothing is duplicated.
+ * never loses either side. Nothing is duplicated: not when the saved text already contains
+ * what was typed, not for lines both sides share, and not for a dictated line that repeats
+ * what a saved line says.
  */
 export function mergeConflictingText(remote: string, local: string): string {
   const r = remote.trim();
@@ -71,7 +73,24 @@ export function mergeConflictingText(remote: string, local: string): string {
   if (!r) return local;
   if (r.includes(l)) return remote;
   if (l.includes(r)) return local;
-  return `${r}\n\n${l}`;
+  // Add only the lines that are really new. Both sides usually start from the same saved text,
+  // so repeating the typed side whole would repeat everything they share. When two people dictate
+  // on one call each microphone hears the other, so a labelled line that says what a saved line
+  // from a DIFFERENT labelled speaker already says is dropped too. Nothing else is judged by
+  // wording: a line you edited, or one of your own, is kept even when it resembles a saved one.
+  const savedLines = r.split('\n').map(line => line.trim()).filter(Boolean);
+  const added = l
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => {
+      if (!line || savedLines.includes(line)) return false;
+      const speaker = speakerOf(line);
+      return !(speaker && savedLines.some(saved => {
+        const savedSpeaker = speakerOf(saved);
+        return savedSpeaker !== null && savedSpeaker !== speaker && isEchoOf(line, saved);
+      }));
+    });
+  return added.length === 0 ? remote : `${r}\n\n${added.join('\n')}`;
 }
 
 /**

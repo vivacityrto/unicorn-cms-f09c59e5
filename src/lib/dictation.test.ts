@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendDictation, appendLabelledDictation } from './dictation';
+import { appendDictation, appendLabelledDictation, isEchoOf } from './dictation';
 
 describe('appendDictation', () => {
   it('capitalises the first chunk', () => {
@@ -73,3 +73,49 @@ describe('appendLabelledDictation', () => {
     expect(appendLabelledDictation('Nova: Hi', '   ', 'Nova')).toBe('Nova: Hi');
   });
 });
+
+describe('echo between two people dictating on one call', () => {
+  const ben = 'Ben: We should move the launch to the end of November';
+
+  it('drops a chunk that repeats what another person just dictated', () => {
+    expect(appendLabelledDictation(ben, 'we should move the launch to the end of november', 'Amy')).toBe(ben);
+  });
+
+  it('still drops it when recognition worded one word differently', () => {
+    expect(appendLabelledDictation(ben, 'we should move the launch to the end of the november', 'Amy')).toBe(ben);
+  });
+
+  it('keeps a different sentence', () => {
+    expect(appendLabelledDictation(ben, 'I will tell the client tomorrow', 'Amy')).toBe(`${ben}\nAmy: I will tell the client tomorrow`);
+  });
+
+  it('never drops short replies', () => {
+    expect(appendLabelledDictation('Ben: Agreed', 'agreed', 'Amy')).toBe('Ben: Agreed\nAmy: Agreed');
+  });
+
+  it('does not drop a person repeating their own words', () => {
+    const own = 'Amy: we should move the launch to the end of november';
+    expect(appendLabelledDictation(own, 'we should move the launch to the end of november', 'Amy')).toBe(
+      `${own} we should move the launch to the end of november`,
+    );
+  });
+
+  it('ignores the speaker label when comparing', () => {
+    expect(isEchoOf('Amy: we should move the launch', 'Ben: we should move the launch')).toBe(true);
+  });
+
+  it('is not fooled by common words that merely appear in a long line', () => {
+    expect(isEchoOf('we need to do that', 'Ben: we need to talk about the budget before friday and then we can do it')).toBe(false);
+  });
+
+  it('keeps a chunk that holds an earlier sentence plus new information', () => {
+    const chunk = 'we should move the launch to the end of november and I will tell the client tomorrow about the new plan';
+    expect(isEchoOf(chunk, 'Ben: We should move the launch to the end of November')).toBe(false);
+    expect(appendLabelledDictation('Ben: We should move the launch to the end of November', chunk, 'Amy')).toContain('Amy: ');
+  });
+
+  it('still drops a repeat of one sentence inside a longer line from someone else', () => {
+    expect(isEchoOf('we should move the launch to the end of november', 'Ben: Agreed. We should move the launch to the end of November. Then we tell the client.')).toBe(true);
+  });
+});
+
