@@ -28485,6 +28485,93 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_rock_note_summaries: {
+        Row: {
+          generated_at: string
+          generated_by: string | null
+          id: string
+          model: string | null
+          note_count: number
+          notes_through: string
+          rock_id: string
+          rocks_included: number
+          status_signal: string
+          suggested_todos: Json
+          summary: string
+          tenant_id: number
+        }
+        Insert: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          model?: string | null
+          note_count: number
+          notes_through: string
+          rock_id: string
+          rocks_included?: number
+          status_signal?: string
+          suggested_todos?: Json
+          summary: string
+          tenant_id: number
+        }
+        Update: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          model?: string | null
+          note_count?: number
+          notes_through?: string
+          rock_id?: string
+          rocks_included?: number
+          status_signal?: string
+          suggested_todos?: Json
+          summary?: string
+          tenant_id?: number
+        }
+        Relationships: []
+      }
+      eos_rock_notes: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          meeting_id: string | null
+          milestones_complete: number | null
+          milestones_total: number | null
+          rock_id: string
+          rock_status: string | null
+          source: string
+          tenant_id: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id?: string | null
+          milestones_complete?: number | null
+          milestones_total?: number | null
+          rock_id: string
+          rock_status?: string | null
+          source?: string
+          tenant_id: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id?: string | null
+          milestones_complete?: number | null
+          milestones_total?: number | null
+          rock_id?: string
+          rock_status?: string | null
+          source?: string
+          tenant_id?: number
+        }
+        Relationships: []
+      }
       eos_rock_milestone_task_links: {
         Row: {
           assignees: string[]
@@ -73561,6 +73648,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      add_rock_note: {
+        Args: { p_body: string; p_meeting_id?: string; p_rock_id: string; p_source?: string }
+        Returns: Json
       }
       set_blocker: {
         Args: { p_blocker: Json; p_id: string; p_subject: string }

@@ -36,6 +36,7 @@ status of every file here, not just these three):
 - **`rock-blockers-and-carryover.md`** — Rock blockers (reason, dependency, next action, review date), carryover into a later quarter, the `blocked` status and its roll-up rule, and the Company → Individual view. Built, not yet applied; release steps inside.
 - **`rock-hierarchy-and-linking.md`** — the Company / Team / Individual Rock rules (who can stand alone, who can serve whom), how milestones map up, what "unmapped" means, the Link action, and the open decisions.
 - **`rock-review-discuss.md`** — the Discuss view in the meeting's Rock Review: one Rock at a time, confirm or change status, record a blocker, raise an issue for IDS, wrap-up. No database change.
+- **`rock-notes.md`** — dated, append-only notes on a Rock (typed or dictated, with the status and progress at the time), "last time" at the next meeting, notes rolled up to Company and Team Rocks, an on-request AI summary with To-Dos a person confirms. Migration and Edge Function written, not yet applied or deployed.
 - **`rock-task-sync.md`** — GitHub `[task]` → Rock milestone sync. **Retired 2026-10-28** (reconciled by hand); the page records what was built and what remains (two kept tables).
 - **`route-inventory-by-role.md`** — generated route-by-guard-tier tables; regenerate with `node scripts/generate-route-manifest.mjs`, check drift with `node scripts/check-route-drift.mjs`.
 - **`super-admin-executive-academy-audit-2026-07-29.md`** — dated SuperAdmin/Executive/Academy Builder Playwright audit findings.

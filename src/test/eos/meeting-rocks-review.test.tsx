@@ -5,6 +5,12 @@ import type { RockWithHierarchy } from '@/types/eos';
 
 const hierarchy = vi.hoisted(() => ({ rocks: [] as unknown[], isLoading: false }));
 
+// The notes panel and its microphone controller have their own tests; these suites are about the deck.
+vi.mock('@/components/eos/rocks/notes/RockNotesPanel', () => ({ RockNotesPanel: () => null }));
+vi.mock('@/components/eos/rocks/notes/RockNotesDictation', () => ({
+  RockNotesDictationProvider: ({ children }: { children: unknown }) => children,
+  useOptionalRockNotesDictation: () => null,
+}));
 vi.mock('@/hooks/useEosRocksHierarchy', () => ({
   useEosRocksHierarchy: () => ({
     quarterRocks: hierarchy.rocks,

@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DiscussWrapUp } from '@/components/eos/meeting/discuss/DiscussWrapUp';
 import { RockDiscussSlide } from '@/components/eos/meeting/discuss/RockDiscussSlide';
 import { cn } from '@/lib/utils';
+import { useOptionalRockNotesDictation } from '@/components/eos/rocks/notes/RockNotesDictation';
 import { useOpenIssueRockIds } from '@/hooks/useRockDiscussion';
 import type { RockCascadeNode } from '@/utils/meetingRocksCascade';
 import { discussionDeck, nodesById, wrapUp, type DiscussionOutcome } from '@/utils/rockDiscussion';
@@ -37,7 +38,7 @@ const isTyping = (target: EventTarget | null) =>
  * The deck is fixed when it opens, so a Rock does not vanish from under the room when its
  * status changes. Rock Review stays a yes/no: anything needing a conversation is raised for IDS.
  */
-function DiscussDeck({ open, onOpenChange, roots, ownerNames, quarterLabel, startAttentionOnly = false, startAtRockId = null, meeting, onOpenDetails }: RockDiscussDialogProps) {
+function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, quarterLabel, startAttentionOnly = false, startAtRockId = null, meeting, onOpenDetails }: RockDiscussDialogProps) {
   const [attentionOnly, setAttentionOnly] = useState(startAttentionOnly);
   const [deck, setDeck] = useState<string[]>(() => discussionDeck(roots, { attentionOnly: startAttentionOnly }));
   const [position, setPosition] = useState(() => Math.max(0, deck.indexOf(startAtRockId ?? '')));
@@ -49,6 +50,18 @@ function DiscussDeck({ open, onOpenChange, roots, ownerNames, quarterLabel, star
   const atWrapUp = position >= deck.length;
   const currentId = atWrapUp ? null : deck[position];
   const node = currentId ? nodes.get(currentId) : undefined;
+
+  // Notes: the microphone follows the Rock on screen, and the Rock it leaves is saved. Closing the
+  // view stops it and saves every draft, so a note typed or dictated is never lost on the way out.
+  const notes = useOptionalRockNotesDictation();
+  const retarget = notes?.retarget;
+  useEffect(() => {
+    if (currentId) retarget?.(currentId);
+  }, [currentId, retarget]);
+  const onOpenChange = (next: boolean) => {
+    if (!next) void notes?.flushAll();
+    onOpenChangeProp(next);
+  };
 
   const openIssues = useOpenIssueRockIds(deck, open && atWrapUp);
   const summary = useMemo(

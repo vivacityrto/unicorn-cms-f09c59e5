@@ -13,6 +13,7 @@ import { IndividualRocksSection } from '@/components/eos/rocks/contribution/Indi
 import { StatusBar } from '@/components/eos/rocks/detail/StatusBar';
 import { RaiseIssuePanel } from '@/components/eos/meeting/discuss/RaiseIssuePanel';
 import { RockStatusDecision } from '@/components/eos/meeting/discuss/RockStatusDecision';
+import { RockNotesPanel } from '@/components/eos/rocks/notes/RockNotesPanel';
 import { cn } from '@/lib/utils';
 import { useRockBlockers } from '@/hooks/useRockBlockers';
 import { useRockCarryover } from '@/hooks/useRockCarryover';
@@ -305,6 +306,7 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
             onBlock={() => setBlockerMode('record')}
             onResolve={() => setBlockerMode('resolve')}
           />
+          <RockNotesPanel key={rock.id} rock={{ id: rock.id, title: rock.title, tenant_id: rock.tenant_id }} />
           <RaiseIssuePanel
             key={rock.id}
             rockId={rock.id}

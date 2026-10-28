@@ -1,4 +1,4 @@
-export type DeleteBlocker = 'children' | 'linked_issues' | 'milestone_progress' | 'task_links' | 'milestone_links' | 'outcomes';
+export type DeleteBlocker = 'children' | 'linked_issues' | 'milestone_progress' | 'task_links' | 'milestone_links' | 'outcomes' | 'carryover' | 'notes';
 
 /** What archiving or deleting a Rock would touch, as reported by the rock_impact function. */
 export interface RockImpact {
@@ -51,6 +51,12 @@ export function blockerSentences(impact: RockImpact): string[] {
         break;
       case 'outcomes':
         lines.push(`${plural(impact.outcomes, 'outcome has', 'outcomes have')} been recorded for it.`);
+        break;
+      case 'carryover':
+        lines.push('It is part of a carryover to or from another quarter.');
+        break;
+      case 'notes':
+        lines.push('Notes have been recorded on it, and notes are a permanent record.');
         break;
     }
   }

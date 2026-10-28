@@ -29,6 +29,13 @@ describe('blockerSentences', () => {
     ]);
   });
 
+  it('says why a Rock with a carryover or notes cannot be deleted, rather than giving no reason', () => {
+    expect(blockerSentences(impact({ blockers: ['carryover', 'notes'], can_delete: false }))).toEqual([
+      'It is part of a carryover to or from another quarter.',
+      'Notes have been recorded on it, and notes are a permanent record.',
+    ]);
+  });
+
   it('is empty when nothing blocks deletion', () => {
     expect(blockerSentences(impact())).toEqual([]);
   });
