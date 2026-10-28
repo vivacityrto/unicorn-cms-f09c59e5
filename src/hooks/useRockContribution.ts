@@ -38,7 +38,21 @@ export function useRockContribution(companyRockId: string | undefined, enabled: 
         .eq('parent_rock_id', companyRockId!)
         .is('archived_at', null);
       if (childrenError) throw childrenError;
-      const childRocks = (children ?? []) as ContributionRock[];
+      const direct = (children ?? []) as ContributionRock[];
+      // An Individual Rock can serve the Company Rock through a Team Rock (a client's Team Rock, say).
+      // The database counts those as serving the Company Rock for milestone links, so they belong here too.
+      const teamIds = direct.filter(r => r.rock_level === 'team').map(r => r.id);
+      let throughTeams: ContributionRock[] = [];
+      if (teamIds.length > 0) {
+        const { data: grand, error: grandError } = await supabase
+          .from('eos_rocks')
+          .select(ROCK_COLUMNS)
+          .in('parent_rock_id', teamIds)
+          .is('archived_at', null);
+        if (grandError) throw grandError;
+        throughTeams = (grand ?? []) as ContributionRock[];
+      }
+      const childRocks = [...direct, ...throughTeams];
       const rockIds = [companyRockId!, ...childRocks.map(r => r.id)];
 
       const { data: milestoneRows, error: milestonesError } = await supabase

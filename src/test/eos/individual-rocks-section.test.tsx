@@ -8,6 +8,10 @@ const state = vi.hoisted(() => ({
   enabledArgs: [] as boolean[],
 }));
 
+vi.mock('@/components/eos/rocks/linking/LinkMilestoneDialog', () => ({
+  LinkMilestoneDialog: ({ milestone, rockTitle }: { milestone: { id: string }; rockTitle?: string }) => <div role="dialog" aria-label="Link dialog">{`linking ${milestone.id} in ${rockTitle}`}</div>,
+}));
+
 vi.mock('@/hooks/useRockContribution', () => ({
   useRockContribution: (_id: string, enabled: boolean) => {
     state.enabledArgs.push(enabled);
@@ -216,5 +220,50 @@ describe('IndividualRocksSection: loading, empty and error', () => {
     renderSection({ defaultOpen: true });
     fireEvent.click(screen.getByRole('button', { name: /Expand Empty one/ }));
     expect(screen.getByText('This Individual Rock has no milestones yet.')).toBeInTheDocument();
+  });
+});
+
+describe('IndividualRocksSection: linking to a Company milestone', () => {
+  it('offers Link on an unmapped milestone and Change on a mapped one, only when linking is allowed', () => {
+    renderSection({ defaultOpen: true, canLink: true });
+    fireEvent.click(screen.getByRole('button', { name: /Expand Build the launch plan/ }));
+    const loose = screen.getByText('Loose end').closest('li') as HTMLElement;
+    expect(within(loose).getByRole('button', { name: 'Link to a Company milestone' })).toBeInTheDocument();
+    const mapped = screen.getByText('Draft plan').closest('li') as HTMLElement;
+    expect(within(mapped).getByRole('button', { name: 'Change' })).toBeInTheDocument();
+  });
+
+  it('offers nothing when linking is not allowed', () => {
+    renderSection({ defaultOpen: true });
+    fireEvent.click(screen.getByRole('button', { name: /Expand Build the launch plan/ }));
+    expect(screen.queryByRole('button', { name: 'Link to a Company milestone' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Change' })).toBeNull();
+  });
+
+  it('opens the link dialog for that milestone and Rock', () => {
+    renderSection({ defaultOpen: true, canLink: true });
+    fireEvent.click(screen.getByRole('button', { name: /Expand Build the launch plan/ }));
+    const loose = screen.getByText('Loose end').closest('li') as HTMLElement;
+    fireEvent.click(within(loose).getByRole('button', { name: 'Link to a Company milestone' }));
+    expect(screen.getByRole('dialog', { name: 'Link dialog' })).toHaveTextContent('linking i1b in Build the launch plan');
+  });
+
+  it('does not offer to link finished work that is not mapped', () => {
+    show(buildContribution(input({ childMilestones: [ms('i1a', 'i1', 'complete', 'Done thing')], links: [], blockers: [] })));
+    renderSection({ defaultOpen: true, canLink: true });
+    fireEvent.click(screen.getByRole('button', { name: /Expand Build the launch plan/ }));
+    const done = screen.getByText('Done thing').closest('li') as HTMLElement;
+    expect(within(done).queryByRole('button')).toBeNull();
+  });
+
+  it('shows an Individual Rock that serves the Company Rock through a Team Rock, naming the team', () => {
+    show(buildContribution(input({
+      childRocks: [rock('t1', { rock_level: 'team', title: 'Client Rock – EduCareer', parent_rock_id: 'co' }), rock('i9', { title: 'EduCareer College', parent_rock_id: 't1' })],
+      childMilestones: [ms('i9a', 'i9', 'not_started', 'Application submission')],
+      links: [], blockers: [],
+    })));
+    renderSection({ defaultOpen: true });
+    const row = screen.getByText('EduCareer College').closest('li') as HTMLElement;
+    expect(within(row).getByText('via the Team Rock “Client Rock – EduCareer”')).toBeInTheDocument();
   });
 });

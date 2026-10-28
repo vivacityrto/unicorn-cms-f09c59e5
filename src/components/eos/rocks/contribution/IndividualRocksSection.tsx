@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
-import { AlertTriangle, Ban, ChevronDown, ChevronRight, CornerUpRight, ExternalLink, Link2Off, Users } from 'lucide-react';
+import { AlertTriangle, Ban, ChevronDown, ChevronRight, CornerUpRight, ExternalLink, Link2, Link2Off, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 import { cn } from '@/lib/utils';
 import { useRockContribution } from '@/hooks/useRockContribution';
 import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
@@ -33,6 +34,8 @@ interface IndividualRocksSectionProps {
   hint?: { total: number; blocked?: number };
   /** Start expanded (the details panel); a card starts collapsed to stay scannable. */
   defaultOpen?: boolean;
+  /** Show the Link and Change actions on each Individual milestone. Off for someone who cannot edit Rocks. */
+  canLink?: boolean;
   /** Leave out the list of Company milestones and who delivers them (the presentation view is short of room; the rows and summary still flag unmapped work). */
   hideCoverage?: boolean;
   className?: string;
@@ -95,10 +98,13 @@ function IndividualRow({
   item,
   getUserInfo,
   onOpenRock,
+  onLink,
 }: {
   item: IndividualContribution;
   getUserInfo?: (userId: string) => UserInfo | null;
   onOpenRock?: (rockId: string) => void;
+  /** Present only when the viewer may change the mapping. */
+  onLink?: (milestone: { id: string; title: string }, rockTitle: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -118,7 +124,10 @@ function IndividualRow({
           className="inline-flex min-w-[12rem] flex-1 items-start gap-1.5 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {open ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /> : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
-          <span className="min-w-0 break-words text-sm font-medium leading-snug">{item.rock.title}</span>
+          <span className="min-w-0 break-words text-sm font-medium leading-snug">
+            {item.rock.title}
+            {item.viaTeam && <span className="block text-xs font-normal text-muted-foreground">via the Team Rock “{item.viaTeam}”</span>}
+          </span>
         </button>
         <div className="ml-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:ml-0">
           <span className={cn('text-muted-foreground', !owner && 'italic')}>{owner ?? 'Unassigned'}</span>
@@ -179,7 +188,7 @@ function IndividualRow({
                       <span className="text-muted-foreground">{ownerName ?? 'Unassigned'}</span>
                       <span className="tabular-nums text-muted-foreground">{view.milestone.due_date ? formatDate(view.milestone.due_date, 'd MMM') : 'No date'}</span>
                     </div>
-                    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
                       {mapped ? (
                         <>
                           <span>Supports</span>
@@ -198,7 +207,19 @@ function IndividualRow({
                       ) : (
                         <span>Not linked to a Company milestone</span>
                       )}
-                    </p>
+                      {onLink && (mapped || needsMapping) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto h-7 gap-1 px-2 text-xs"
+                          onClick={() => onLink({ id: view.milestone.id, title: view.milestone.title }, item.rock.title)}
+                        >
+                          <Link2 className="h-3 w-3" aria-hidden />
+                          {mapped ? 'Change' : 'Link to a Company milestone'}
+                        </Button>
+                      )}
+                    </div>
                     {view.blocker && (
                       <p className="mt-1.5 flex items-start gap-1.5 text-violet-900 dark:text-violet-200">
                         <Ban className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
@@ -230,8 +251,9 @@ function IndividualRow({
  * only fetched when the section is opened. The toggle is its own button, so it never
  * competes with whatever clicking the surrounding card does.
  */
-export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, hideCoverage = false, className }: IndividualRocksSectionProps) {
+export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, canLink = false, hideCoverage = false, className }: IndividualRocksSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const [linking, setLinking] = useState<{ id: string; title: string; rockTitle: string } | null>(null);
   const panelId = useId();
   const query = useRockContribution(companyRockId, open);
   const model = query.data;
@@ -283,7 +305,7 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
             <>
               <ul className="space-y-2">
                 {model.individuals.map(item => (
-                  <IndividualRow key={item.rock.id} item={item} getUserInfo={getUserInfo} onOpenRock={onOpenRock} />
+                  <IndividualRow key={item.rock.id} item={item} getUserInfo={getUserInfo} onOpenRock={onOpenRock} onLink={canLink ? (milestone, rockTitle) => setLinking({ ...milestone, rockTitle }) : undefined} />
                 ))}
               </ul>
 
@@ -320,6 +342,15 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
             </>
           )}
         </div>
+      )}
+      {linking && (
+        <LinkMilestoneDialog
+          open
+          onOpenChange={next => !next && setLinking(null)}
+          companyRockId={companyRockId}
+          milestone={{ id: linking.id, title: linking.title }}
+          rockTitle={linking.rockTitle}
+        />
       )}
     </section>
   );

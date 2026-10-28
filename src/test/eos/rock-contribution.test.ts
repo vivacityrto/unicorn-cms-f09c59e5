@@ -130,6 +130,20 @@ describe('buildContribution', () => {
     expect(model.companyCarriedTo[0].rock?.id).toBe('co-q1');
   });
 
+  it('includes an Individual Rock that serves the Company Rock through a Team Rock, and says which', () => {
+    const model = buildContribution(base({
+      childRocks: [rock('t1', { rock_level: 'team', title: 'Client Rock – EduCareer', parent_rock_id: 'co' }), rock('i3', { title: 'EduCareer College', parent_rock_id: 't1' }), rock('i1')],
+      childMilestones: [ms('i3a', 'i3', 'not_started'), ms('i1a', 'i1')],
+      links: [{ company_milestone_id: 'c1', individual_milestone_id: 'i3a' }],
+    }));
+    expect(model.individuals.map(i => i.rock.id).sort()).toEqual(['i1', 'i3']);
+    const viaTeam = model.individuals.find(i => i.rock.id === 'i3')!;
+    expect(viaTeam.viaTeam).toBe('Client Rock – EduCareer');
+    expect(viaTeam.milestones[0].supports.map(c => c.id)).toEqual(['c1']);
+    expect(model.individuals.find(i => i.rock.id === 'i1')!.viaTeam).toBeNull();
+    expect(model.coverage.find(c => c.milestone.id === 'c1')!.contributors.map(x => x.rock.id)).toEqual(['i3']);
+  });
+
   it('copes with a Company Rock that has no Individual Rocks', () => {
     const model = buildContribution(base({ childRocks: [], childMilestones: [], links: [] }));
     expect(model.individuals).toEqual([]);

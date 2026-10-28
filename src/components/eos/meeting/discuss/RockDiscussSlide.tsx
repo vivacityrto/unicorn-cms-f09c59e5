@@ -284,6 +284,7 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
               onOpenRock={onOpenDetails}
               defaultOpen
               hideCoverage
+              canLink={node.reviewable}
             />
           )}
 
