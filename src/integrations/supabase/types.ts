@@ -70367,10 +70367,6 @@ export type Database = {
         Args: { p_actor?: string; p_reason?: string; p_time_entry_id: string }
         Returns: undefined
       }
-      apply_rock_task_sync_event: {
-        Args: { p_event: Json; p_expected_tenant_id: number }
-        Returns: Json
-      }
       apply_stage_version_to_package: {
         Args: {
           p_package_id: number
@@ -72470,10 +72466,6 @@ export type Database = {
         }[]
       }
       reclaim_stale_cohort_locks: { Args: never; Returns: number }
-      recompute_rock_milestone_from_tasks: {
-        Args: { p_milestone_id: string }
-        Returns: Json
-      }
       record_bulk_document_item_outcome: {
         Args: {
           p_error?: string

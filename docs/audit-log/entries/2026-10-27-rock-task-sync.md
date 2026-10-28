@@ -1,5 +1,7 @@
 # Audit: 2026-10-27 — GitHub task sync for Rock milestones
 
+> **Superseded 2026-10-28: this sync was retired.** See [2026-10-28-retire-rock-task-sync.md](2026-10-28-retire-rock-task-sync.md). The text below is the record of what was built and applied on 27 Oct and is left as written.
+
 **Trigger:** ad-hoc (Carl's request to sync GitHub/Teams task state to Unicorn milestones; policy option 2 chosen 2026-10-27)
 **Scope:** two new tables, two `SECURITY DEFINER` functions and one new Edge Function (`rock-task-sync`), plus a read-only display of linked tasks in the Rock details panel. Target: `1. Unicorn 2.0-dev` (`yxkgdalkbrriasiyyrwk`). **The migration is applied and verified on `unicorn-qa` (2026-10-27, ledger version `20261027034437`) and on production (2026-10-27, ledger version `20261027035354`, name `rock_task_sync`, applied on Carl's explicit instruction). No event has been received, so no milestone has been changed by the sync.** Read-only preflight against production was limited to Rock and milestone counts and schema inspection.
 

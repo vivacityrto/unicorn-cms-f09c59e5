@@ -10,7 +10,10 @@ import {
 } from '@/utils/rockMilestoneTasks';
 import type { RockMilestoneStatus } from '@/types/eos';
 
-/** GitHub tasks linked to a milestone by the rock-task-sync webhook. */
+/**
+ * GitHub tasks linked to a milestone. These rows are static snapshots: the rock-task-sync
+ * webhook that kept them current was retired on 2026-10-28, so nothing updates them.
+ */
 export function MilestoneTasks({
   tasks,
   milestoneStatus,

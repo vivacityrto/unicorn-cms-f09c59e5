@@ -1,8 +1,15 @@
 # Rock task sync (GitHub tasks → Unicorn milestones)
 
-> **Last updated:** 2026-10-27 · **Reconsider by:** 2027-01-27 · **Confidence:** high on the database behaviour (dry-run in a rolled-back `unicorn-qa` transaction, 13 policy scenarios plus the human-block and restore cases); medium on the sender side, which is proposed and not yet built.
+> **Last updated:** 2026-10-28 · **Reconsider by:** 2027-01-28 · **Confidence:** high on what was retired and what was kept (read from the repository and the production database on 28 Oct 2026).
 >
-> **Status:** receiver, tables and Rock-panel display are written and tested. **The migration is applied to `unicorn-qa` and to production (both verified 2026-10-27); the Edge Function has no secret, and nothing sends events yet, so no milestone has been changed by the sync.** See "Rollout" below.
+> **Status: RETIRED (2026-10-28).** Carl decided not to automate this and to reconcile Rock milestones with GitHub tasks by hand. The receiver Edge Function, its payload parser and the two functions that applied events are removed (see [the audit entry](../../audit-log/entries/2026-10-28-retire-rock-task-sync.md)). **The rest of this page describes the sync as it was built, for the record; none of it runs.** What remains, and why, is in "What remains" below.
+
+## What remains after the retirement
+
+- **`eos_rock_milestone_task_links` (15 rows, 13 milestones).** Kept: the Rock details panel reads it, and `rock_impact()` and the delete guard count it. The rows are **static snapshots of task state from before the sync was switched off and are no longer updated**, so the panel's task counts and "Ready for review" are only as current as that snapshot. Who inserted them is not recorded.
+- **`eos_task_sync_events` (1 row).** Kept as audit evidence: one synthetic preflight for issue #999999 against the all-zero milestone, rejected as `unknown_milestone`. Nothing writes to it.
+- **Nothing changes a milestone's status from a task any more.** Milestone status is changed by people only.
+- To bring any of this back, start from the rollback file `supabase/migrations/rollback/20261028010000_retire_rock_task_sync_functions.down.sql` and the git history of `supabase/functions/rock-task-sync/` (merged in PR #1452), and re-decide the policy and the data flow from scratch.
 
 GitHub `[task]` issues in `ComplyHub-ai/rto-compass-hub` already carry `Linked: Unicorn milestone UUID <uuid>`. This sync turns that link into live progress on the Unicorn milestone. GitHub stays authoritative: the sync is one-way, and Unicorn never writes back.
 

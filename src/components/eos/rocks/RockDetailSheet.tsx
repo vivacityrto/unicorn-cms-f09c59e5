@@ -218,7 +218,7 @@ export function RockDetailSheet({
   const deliveryQuery = useMilestoneDelivery({ rockId, milestoneIds: normalizedIds, enabled: !!profile && open });
   const deliveryData = deliveryQuery.data;
 
-  // GitHub tasks linked by the rock-task-sync webhook. Tolerates the table not
+  // GitHub tasks linked to milestones (static snapshots since the rock-task-sync webhook was retired on 2026-10-28). Tolerates the table not
   // existing yet so the panel still opens if the frontend deploys first.
   const tasksQuery = useQuery({
     queryKey: ['eos-rock-milestone-tasks', rockId, normalizedIds],

@@ -1,6 +1,6 @@
 import type { RockMilestoneStatus } from '@/types/eos';
 
-/** A GitHub task linked to a milestone by the rock-task-sync webhook. */
+/** A GitHub task linked to a milestone (a snapshot; the rock-task-sync webhook that updated it was retired 2026-10-28). */
 export interface MilestoneTaskLink {
   id: string;
   milestone_id: string;
