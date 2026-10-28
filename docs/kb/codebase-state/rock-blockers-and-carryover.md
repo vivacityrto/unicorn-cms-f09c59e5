@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-28 · **Reconsider by:** 2027-01-28 · **Confidence:** high on the data model and the database rules (each rule was run against `unicorn-qa` in rolled-back transactions); medium on the screens (tested with mocked data and a throwaway browser harness, not with real Rock data).
 >
-> **Status: built, in a pull request. Migration applied and verified on `unicorn-qa` (`20261028061707`) and production (`20261028062039`), 28 Oct 2026. Frontend not yet deployed.** Release steps are at the end.
+> **Status: built, in a pull request. Migration applied and verified on `unicorn-qa` (`20261028061707`) and production (`20261028062039`), 28 Oct 2026. Code merged in PR #1462 (`045d7b200`) on 28 Oct 2026; frontend ships with the normal deploy.** Release steps are at the end.
 
 ## Plan (written before editing)
 
@@ -97,9 +97,9 @@ A blocked child is **neither off track nor complete**. It does not turn the Comp
 
 ## Release steps (not done)
 
-1. Review and merge the PR (merging does not apply the migration; migrations are applied through the Supabase MCP, not CI).
+1. ~~Review and merge the PR~~ done (#1462; merging does not apply migrations, which were applied through the Supabase MCP).
 2. ~~Apply the migration to `unicorn-qa` and production~~ done and verified 28 Oct 2026. Rollback: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql` (destroys recorded blockers and carryover provenance).
-3. Deploy the frontend. Until then, production runs the old screens against the new database: the old Rock editor and status selects can still choose Blocked, and saving that is refused with "A blocked Rock or milestone needs a reason. Record the blocker first." (the save is refused whole; nothing is corrupted).
+3. ~~Deploy the frontend~~ merged; confirm the deploy is live. Until it is, production runs the old screens against the new database: the old Rock editor and status selects can still choose Blocked, and saving that is refused with "A blocked Rock or milestone needs a reason. Record the blocker first." (the save is refused whole; nothing is corrupted).
 4. A real-data check in a browser: record and resolve a blocker, carry one Rock forward, open a Company Rock's Individual Rocks.
 
 Related: [audit entry](../../audit-log/entries/2026-10-28-rock-blockers-and-carryover.md), [rock-task-sync.md](rock-task-sync.md) (the retired task sync).
