@@ -2,7 +2,7 @@
 
 **Trigger:** feature work (Carl's request for a richer Rock detail and carryover workflow)
 **Scope:** one migration (`20261028020000_rock_blockers_and_carryover.sql`) that adds three tables, eight new functions (one more is replaced), seven triggers and a status value; the screens that use them. Design and data model: [rock-blockers-and-carryover.md](../../kb/codebase-state/rock-blockers-and-carryover.md).
-**Status: built and tested; NOT applied to `unicorn-qa` or production.** The migration was run only inside transactions that were deliberately rolled back. Applying it is a separate step, listed below.
+**Status: applied to `unicorn-qa` (version `20261028061707`, 28 Oct 2026, on Carl's instruction) and verified; NOT applied to production.** Before that it was run only inside transactions that were deliberately rolled back.
 
 ## What the migration does
 - **Adds** `eos_rock_blockers`, `eos_rock_carryovers`, `eos_rock_carryover_milestones` with row level security (select only, no write grants) and `SECURITY DEFINER` functions `set_blocker`, `resolve_blocker`, `carry_forward_rock` (staff only, empty `search_path`, not callable by `anon`).
@@ -27,8 +27,11 @@ Run 1 found a real defect in my first version: the deferred check judged the row
 - **Browser, faked data (throwaway harness, deleted):** the real screens at 1280px light and dark and 375px, no overflow, no console warnings after two fixes (invalid HTML nesting; focus not returned to the opener when a dialog closes). Keyboard-only walks of mark blocked, carry forward and resolve passed.
 - **Not covered:** a browser session on real data; the repository's live tenant-isolation suite (needs a service-role key). Production was not touched at all.
 
+## Applied to unicorn-qa (28 Oct 2026) and verified
+Applied through the Supabase MCP as version `20261028061707`. Checked afterwards: all three tables exist with row level security on and `SELECT` granted to `authenticated` only (none to `anon`); one select policy each; all seven triggers present on the right tables; all nine functions present, one overload each, `SECURITY DEFINER` with an empty `search_path`, executable by `authenticated` only for the three public ones and by no client for the six internal ones; bodies contain the commit-time status re-read, the `carryover` delete blocker and the refusal to resolve to complete; the `blocked` lookup row exists. QA has no Rock data (0 Rocks, 0 milestones) and none was written; the three new tables are empty. Note QA's `dd_rock_status` holds only that one row (QA has no lookup seeds). No browser check of the screens against QA was done.
+
 ## Human actions still needed
 1. Review the PR. **Merging does not apply the migration** (migrations go through the Supabase MCP).
-2. Apply the migration to `unicorn-qa`, verify, then production, verify (structure, grants, function bodies). Rollback file: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql`.
+2. Apply the migration to production, verify the same way (structure, grants, function bodies). Rollback file: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql`.
 3. Deploy the frontend; until the migration is applied in an environment, the new screens there show their error states.
 4. A real-data browser check (record and resolve a blocker, carry one Rock, open a Company Rock's Individual Rocks).

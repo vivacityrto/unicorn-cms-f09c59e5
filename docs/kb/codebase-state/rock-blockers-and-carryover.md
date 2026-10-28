@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-28 · **Reconsider by:** 2027-01-28 · **Confidence:** high on the data model and the database rules (each rule was run against `unicorn-qa` in rolled-back transactions); medium on the screens (tested with mocked data and a throwaway browser harness, not with real Rock data).
 >
-> **Status: built, in a pull request, not applied anywhere.** The migration has not been applied to `unicorn-qa` or production. Release steps are at the end.
+> **Status: built, in a pull request. Migration applied to `unicorn-qa` (version `20261028061707`, 28 Oct 2026) and verified; not applied to production.** Release steps are at the end.
 
 ## Plan (written before editing)
 
@@ -85,7 +85,7 @@ A blocked child is **neither off track nor complete**. It does not turn the Comp
 - `generate_rock_outcomes` still detects roll-forward by title; switching it to the new relation is a follow-up.
 - Meeting Rock review has no "Blocked" action yet; blocked Rocks appear in its counts and attention list.
 - Team-level Rocks are carried by the same function but the Company view lists Individual Rocks only, as specified.
-- Nothing was applied to `unicorn-qa` or production, and no data was written there beyond rolled-back test transactions.
+- Production is untouched. QA has the migration applied but no Rock data, so nothing there has been exercised beyond the checks above.
 
 ## Verification
 
@@ -98,7 +98,7 @@ A blocked child is **neither off track nor complete**. It does not turn the Comp
 ## Release steps (not done)
 
 1. Review and merge the PR (merging does not apply the migration; migrations are applied through the Supabase MCP, not CI).
-2. Apply `supabase/migrations/20261028020000_rock_blockers_and_carryover.sql` to `unicorn-qa`, verify (structure, grants, function bodies), then to production, verify the same way. Rollback: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql` (destroys recorded blockers and carryover provenance).
+2. ~~Apply to `unicorn-qa`~~ done 28 Oct 2026. Apply `supabase/migrations/20261028020000_rock_blockers_and_carryover.sql` to production, verify (structure, grants, function bodies). Rollback: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql` (destroys recorded blockers and carryover provenance).
 3. Deploy the frontend. Until step 2 is done in an environment, the new screens there will show their "could not be loaded" states, and Mark as blocked / Carry forward will fail with the database's own error.
 4. A real-data check in a browser: record and resolve a blocker, carry one Rock forward, open a Company Rock's Individual Rocks.
 
