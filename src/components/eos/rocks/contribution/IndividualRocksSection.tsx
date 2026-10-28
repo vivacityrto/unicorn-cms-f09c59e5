@@ -136,6 +136,19 @@ function IndividualRow({
             {status.label}
           </Badge>
           <span className="tabular-nums text-muted-foreground">{item.rock.due_date ? `Due ${formatDate(item.rock.due_date, 'd MMM')}` : 'No date'}</span>
+          {onOpenRock && (
+            // Same link, same wording and same place as on the Company Rock: in the header, so the
+            // details are one click away without expanding the row and scrolling past its milestones.
+            <button
+              type="button"
+              aria-label={`Open the full Rock: ${item.rock.title}`}
+              onClick={() => onOpenRock(item.rock.id)}
+              className="inline-flex items-center gap-1 rounded text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              Open the full Rock
+            </button>
+          )}
           <span className="inline-flex items-center gap-1.5 tabular-nums" title={`${item.progress.complete} of ${item.progress.total} milestones complete`}>
             <span className="h-1.5 w-14 overflow-hidden rounded-full bg-muted" aria-hidden>
               <span className="block h-full bg-green-500" style={{ width: `${pct}%` }} />
@@ -232,12 +245,6 @@ function IndividualRow({
             </ul>
           )}
           <CarriedBlock carried={item.carriedTo} onOpenRock={onOpenRock} />
-          {onOpenRock && (
-            <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => onOpenRock(item.rock.id)}>
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              Open {item.rock.title.length > 28 ? 'details' : `“${item.rock.title}”`}
-            </Button>
-          )}
         </div>
       )}
     </li>
