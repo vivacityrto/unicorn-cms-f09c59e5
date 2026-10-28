@@ -56,7 +56,7 @@ const FILTERS: ReadonlyArray<{ key: MilestoneFilter; label: string }> = [
 ];
 
 const COLUMNS =
-  'grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 lg:grid-cols-[2.75rem_minmax(0,1fr)_6rem_7.25rem_5.5rem_8.5rem] lg:items-center';
+  'grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 lg:grid-cols-[2.75rem_minmax(0,1fr)_6rem_10rem_5.5rem_8.5rem] lg:items-center';
 
 /** What the table needs to show and change milestone blockers. Absent for legacy (JSON) milestones, which have no ids to attach a blocker to. */
 export interface MilestoneBlockerSupport {
@@ -87,7 +87,9 @@ interface MilestoneTableProps {
 function OwnerCell({ name }: { name: string | null }) {
   if (!name) return <span className="text-xs text-muted-foreground">Unassigned</span>;
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
+    // A block-level flex box, not inline-flex: an inline box sizes to its text, so a long name
+    // would never truncate and would run into the Due column.
+    <span className="flex min-w-0 max-w-full items-center gap-1.5 text-xs" title={name}>
       <Avatar className="h-5 w-5 shrink-0">
         <AvatarFallback className="text-[9px]">
           {name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
