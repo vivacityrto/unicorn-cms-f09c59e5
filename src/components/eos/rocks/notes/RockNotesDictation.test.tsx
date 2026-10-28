@@ -127,6 +127,7 @@ describe('RockNotesDictationProvider', () => {
     act(() => result.current.setDraft('rock-a', 'agreed to move the date'));
     let saving: Promise<boolean> = Promise.resolve(false);
     act(() => { saving = result.current.saveDraft('rock-a'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(result.current.isSaving('rock-a')).toBe(true);
     expect(addNote).toHaveBeenCalledWith({ rockId: 'rock-a', body: 'agreed to move the date', meetingId: 'm1', source: 'typed' });
 
@@ -161,7 +162,11 @@ describe('RockNotesDictationProvider', () => {
     act(() => result.current.setDraft('rock-a', 'draft a'));
     act(() => result.current.startFor('rock-b'));
     act(() => mic().say('spoken for b'));
-    await act(async () => result.current.flushAll());
+    await act(async () => {
+      const flushing = result.current.flushAll();
+      await vi.advanceTimersByTimeAsync(2500);
+      await flushing;
+    });
     expect(result.current.isRecording).toBe(false);
     expect(addNote.mock.calls.map(call => [call[0].rockId, call[0].source]).sort()).toEqual([['rock-a', 'typed'], ['rock-b', 'dictated']]);
   });
@@ -175,4 +180,47 @@ describe('RockNotesDictationProvider', () => {
     expect(result.current.activeRockId).toBe('rock-b');
     expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'For a' }));
   });
+
+  it('closing while a phrase is still being recognised saves that phrase too', async () => {
+    const { result } = setup();
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('already heard'));
+    const session = mic();
+    session.stop = () => {
+      // The browser finishes the phrase a moment after stop, then ends the session.
+      setTimeout(() => {
+        session.say('and the last words');
+        session.started = false;
+        session.onend?.();
+      }, 100);
+    };
+    await act(async () => {
+      const flushing = result.current.flushAll();
+      await vi.advanceTimersByTimeAsync(2500);
+      await flushing;
+    });
+    expect(addNote).toHaveBeenCalledTimes(1);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Already heard and the last words' }));
+    expect(result.current.getDraft('rock-a')).toBe('');
+  });
+
+  it('closing during a save also saves the text added while it was in flight', async () => {
+    const { result } = setup();
+    const finishers: Array<() => void> = [];
+    addNote.mockImplementation(() => new Promise(resolve => { finishers.push(() => resolve({ note_id: 'n', created_at: 'x', duplicate: false })); }));
+
+    act(() => result.current.setDraft('rock-a', 'first part'));
+    act(() => void result.current.saveDraft('rock-a'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    act(() => result.current.setDraft('rock-a', 'first part and a second part'));
+
+    let flushing: Promise<void> = Promise.resolve();
+    act(() => { flushing = result.current.flushAll(); });
+    await act(async () => { finishers[0](); await vi.advanceTimersByTimeAsync(10); });
+    await act(async () => { finishers[1]?.(); await flushing; });
+
+    expect(addNote.mock.calls.map(call => call[0].body)).toEqual(['first part', 'and a second part']);
+    expect(result.current.getDraft('rock-a')).toBe('');
+  });
 });
+

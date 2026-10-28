@@ -28,6 +28,9 @@ export interface RockNotesDictationValue {
   markTodoCreated: (key: string) => void;
 }
 
+/** How long closing the view waits for the microphone to finish its last phrase before saving. */
+const FLUSH_WAIT_MS = 2000;
+
 const Context = createContext<RockNotesDictationValue | null>(null);
 
 /** The notes controller, or null when there is no provider (the Rock panel then supplies its own). */
@@ -70,12 +73,15 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     setDrafts(draftsRef.current);
   }, []);
 
-  const saveDraft = useCallback(async (rockId: string): Promise<boolean> => {
+  // Saves for one Rock run strictly one after another. A save requested while another is in
+  // flight waits for it, then re-reads the draft, so text added meanwhile is saved by the second
+  // call and the same text can never be sent twice.
+  const saveTailRef = useRef<Map<string, Promise<boolean>>>(new Map());
+
+  const saveNow = useCallback(async (rockId: string): Promise<boolean> => {
     const sent = draftsRef.current[rockId] ?? '';
     const body = sent.trim();
     if (!body) return true;
-    // One save per Rock at a time, so a double press or a flush during a save cannot add it twice.
-    if (savingRef.current.has(rockId)) return false;
     savingRef.current.add(rockId);
     setSavingIds(new Set(savingRef.current));
     const source = dictatedRef.current.has(rockId) ? 'dictated' : 'typed';
@@ -95,6 +101,16 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
       setSavingIds(new Set(savingRef.current));
     }
   }, [writeDraft]);
+
+  const saveDraft = useCallback((rockId: string): Promise<boolean> => {
+    const previous = saveTailRef.current.get(rockId) ?? Promise.resolve(true);
+    const next = previous.then(() => saveNow(rockId));
+    saveTailRef.current.set(rockId, next);
+    void next.finally(() => {
+      if (saveTailRef.current.get(rockId) === next) saveTailRef.current.delete(rockId);
+    });
+    return next;
+  }, [saveNow]);
 
   const startFor = useCallback((rockId: string) => {
     if (recordingRef.current && activeRef.current === rockId) return;
@@ -141,15 +157,29 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     }
   }, [isRecording]);
 
+  const unmountedRef = useRef(false);
+
   const flushAll = useCallback(async () => {
     stopRecording();
+    // The browser delivers the phrase it is still recognising after stop, so the draft is only
+    // complete once the session has really ended. Wait for that (bounded) before saving.
+    const deadline = Date.now() + FLUSH_WAIT_MS;
+    while (recordingRef.current && !unmountedRef.current && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
     await Promise.all(Object.keys(draftsRef.current).map(id => saveDraft(id)));
   }, [saveDraft, stopRecording]);
 
   // Leaving the meeting with text still in a draft: try to save it rather than drop it.
   const flushRef = useRef(flushAll);
   flushRef.current = flushAll;
-  useEffect(() => () => void flushRef.current(), []);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+      void flushRef.current();
+    };
+  }, []);
 
   const value = useMemo<RockNotesDictationValue>(() => ({
     meetingId,
