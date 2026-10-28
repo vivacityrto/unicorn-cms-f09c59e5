@@ -52,12 +52,13 @@ const LEVEL: Record<RockLevel, { label: string; icon: typeof Building2; classNam
   individual: { label: 'Individual', icon: User, className: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
 };
 
-const STATUS_ORDER: UiRockStatus[] = ['on_track', 'at_risk', 'off_track', 'not_started', 'complete'];
+const STATUS_ORDER: UiRockStatus[] = ['on_track', 'at_risk', 'off_track', 'blocked', 'not_started', 'complete'];
 
 const STATUS_BAR_COLOUR: Record<UiRockStatus, string> = {
   on_track: 'bg-green-500',
   at_risk: 'bg-amber-500',
   off_track: 'bg-red-500',
+  blocked: 'bg-violet-500',
   not_started: 'bg-gray-400 dark:bg-gray-500',
   complete: 'bg-blue-500',
 };
@@ -177,7 +178,7 @@ function AttentionChips({ breakdown, bubbled }: { breakdown?: MilestoneBreakdown
 function DescendantChips({ counts }: { counts: StatusCounts }) {
   if (counts.total === 0) return null;
   const dot: Record<UiRockStatus, string> = {
-    on_track: 'bg-green-500', at_risk: 'bg-amber-500', off_track: 'bg-red-500', not_started: 'bg-gray-400', complete: 'bg-blue-500',
+    on_track: 'bg-green-500', at_risk: 'bg-amber-500', off_track: 'bg-red-500', blocked: 'bg-violet-500', not_started: 'bg-gray-400', complete: 'bg-blue-500',
   };
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">

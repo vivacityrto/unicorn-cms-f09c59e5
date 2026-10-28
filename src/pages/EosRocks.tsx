@@ -35,6 +35,8 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useEosRockOwnerFilter } from '@/hooks/useEosRockOwnerFilter';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { RockCard } from '@/components/eos/rocks/RockCard';
 import { RockCascadeView } from '@/components/eos/rocks/RockCascadeView';
 import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
@@ -170,6 +172,33 @@ function RocksHierarchyContent() {
 
   const handleOpenRock = (rock: RockWithHierarchy) => {
     setViewingRockId(rock.id);
+  };
+
+  /**
+   * Open any Rock by id. The list only holds the quarter on screen, so a Rock in another
+   * quarter (the far side of a carryover, say) switches the quarter first.
+   */
+  const openRockById = async (rockId: string) => {
+    if (rocks?.some(r => r.id === rockId)) {
+      setViewingRockId(rockId);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('eos_rocks')
+      .select('quarter_year, quarter_number, archived_at')
+      .eq('id', rockId)
+      .maybeSingle();
+    if (error || !data) {
+      toast({ title: 'That Rock could not be opened', description: 'It may have been removed, or you may not have access.', variant: 'destructive' });
+      return;
+    }
+    if (data.archived_at) {
+      toast({ title: 'That Rock is archived', description: 'Restore it from the Archived tab to open it.' });
+      return;
+    }
+    setQuarterYear(data.quarter_year);
+    setQuarterNumber(data.quarter_number);
+    setViewingRockId(rockId);
   };
 
   // Resolve from the live list so the panel reflects edits and status changes after a refetch.
@@ -316,6 +345,7 @@ function RocksHierarchyContent() {
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="on_track">On Track</SelectItem>
               <SelectItem value="off_track">Off Track</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
               <SelectItem value="complete">Complete</SelectItem>
             </SelectContent>
            </Select>
@@ -500,6 +530,7 @@ function RocksHierarchyContent() {
                   key={rock.id}
                   rock={rock}
                   onOpen={handleOpenRock}
+                  onOpenRockById={openRockById}
                   onEdit={handleEditRock}
                   onArchive={handleArchiveRock}
                   onDelete={handleDeleteRock}
@@ -551,6 +582,7 @@ function RocksHierarchyContent() {
                           key={rock.id}
                           rock={rock}
                           onOpen={handleOpenRock}
+                          onOpenRockById={openRockById}
                           onEdit={handleEditRock}
                   onArchive={handleArchiveRock}
                   onDelete={handleDeleteRock}
@@ -593,6 +625,7 @@ function RocksHierarchyContent() {
                   key={rock.id}
                   rock={rock}
                   onOpen={handleOpenRock}
+                  onOpenRockById={openRockById}
                   onEdit={handleEditRock}
                   onArchive={handleArchiveRock}
                   onDelete={handleDeleteRock}
@@ -696,7 +729,7 @@ function RocksHierarchyContent() {
         onEdit={handleEditRock}
         onViewCascade={handleViewCascade}
         getUserInfo={getUserInfo}
-        onOpenRock={setViewingRockId}
+        onOpenRock={openRockById}
       />
 
       <RockEditorSheet

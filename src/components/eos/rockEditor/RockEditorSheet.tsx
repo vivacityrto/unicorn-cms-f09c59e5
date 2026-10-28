@@ -528,7 +528,10 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
                 <Label id="rock-status-label">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger aria-labelledby="rock-status-label"><SelectValue /></SelectTrigger>
-                  <SelectContent>{getStatusOptions().map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {status === 'blocked' && <SelectItem value="blocked" disabled>Blocked (resolve it from the Rock details)</SelectItem>}
+                    {getStatusOptions().map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
             )}

@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   Armchair,
+  Ban,
   Calendar,
   ChevronDown,
   ChevronRight,
+  CornerUpRight,
   Flag,
   GitBranch,
   Maximize2,
@@ -28,11 +30,21 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { BlockerDetails, ResolvedBlockerList, type DependencyTarget } from '@/components/eos/rocks/blockers/BlockerDetails';
+import { BlockerDialog } from '@/components/eos/rocks/blockers/BlockerDialog';
+import { ResolveBlockerDialog } from '@/components/eos/rocks/blockers/ResolveBlockerDialog';
+import { CarryForwardDialog } from '@/components/eos/rocks/carryover/CarryForwardDialog';
+import { CarryoverLinks } from '@/components/eos/rocks/carryover/CarryoverLinks';
+import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
 import { RockHistory } from '@/components/eos/rocks/detail/RockHistory';
 import { useAuth } from '@/hooks/useAuth';
 import { useMilestoneDelivery } from '@/hooks/useMilestoneDelivery';
+import { useRockBlockers } from '@/hooks/useRockBlockers';
+import { useRockCarryover } from '@/hooks/useRockCarryover';
+import { useEditorRocks } from '@/hooks/useRockEditorData';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { todayLocalIso } from '@/utils/localDate';
@@ -47,6 +59,8 @@ import {
 } from '@/utils/rockPanelMetrics';
 import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 import type { MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
+import { openBlocker, resolvedBlockers, type BlockerSubject } from '@/utils/rockBlocker';
+import { formatQuarter } from '@/utils/rockCarryover';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import type {
   EosRock,
@@ -191,6 +205,8 @@ export function RockDetailSheet({
   const rockId = rock?.id;
   const [wide, setWide] = useWidePreference();
   const [contextOpen, setContextOpen] = useState(false);
+  const [blockerTarget, setBlockerTarget] = useState<{ subject: BlockerSubject; id: string; label: string; mode: 'record' | 'resolve' } | null>(null);
+  const [carryOpen, setCarryOpen] = useState(false);
 
   const milestonesQuery = useQuery({
     queryKey: ['eos-rock-milestones', rockId],
@@ -236,7 +252,22 @@ export function RockDetailSheet({
     enabled: !!profile && open && normalizedIds.length > 0,
   });
 
+  const blockersQuery = useRockBlockers(rockId, normalizedIds, !!profile && open);
+  const carryoverQuery = useRockCarryover(rockId, open);
+  const { data: people } = useVivacityTeamUsers();
+  const editorRocksQuery = useEditorRocks(open && !!profile);
+
   if (!rock) return null;
+
+  // Recording, editing and resolving blockers and carrying work forward are changes, so they
+  // follow the same gate as editing the Rock. The database repeats the staff check.
+  const canManage = !!onEdit;
+  const nameOf = (userId: string | null) => (userId && getUserInfo ? getUserInfo(userId)?.name ?? null : null);
+  const blockers = blockersQuery.data ?? [];
+  const rockBlocker = openBlocker(blockers, 'rock', rock.id);
+  const rockResolved = resolvedBlockers(blockers, 'rock', rock.id);
+  const isArchived = !!rock.archived_at;
+  const rockIsComplete = dbToUiStatus(rock.status) === 'complete';
 
   const hasRows = !!normalized && normalized.length > 0;
   const milestones: PanelMilestone[] = hasRows
@@ -254,6 +285,31 @@ export function RockDetailSheet({
         }),
       )
     : legacyMilestones(rock);
+
+  const dependencyFor = (blocker: { depends_on_rock_id: string | null; depends_on_milestone_id: string | null }): DependencyTarget | null => {
+    if (blocker.depends_on_rock_id) {
+      const target = editorRocksQuery.data?.find(r => r.id === blocker.depends_on_rock_id);
+      return {
+        kind: 'Rock',
+        label: target ? `${target.title} (${formatQuarter({ year: target.quarterYear, quarter: target.quarterNumber })})` : 'Another Rock',
+        onOpen: onOpenRock ? () => onOpenRock(blocker.depends_on_rock_id as string) : undefined,
+      };
+    }
+    if (blocker.depends_on_milestone_id) {
+      const target = milestones.find(m => m.id === blocker.depends_on_milestone_id);
+      return { kind: 'Milestone', label: target ? target.label : 'A milestone on another Rock' };
+    }
+    return null;
+  };
+  const personOptions = (people ?? []).map(u => ({
+    id: u.user_uuid,
+    label: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email,
+  }));
+  const rockPickOptions = (editorRocksQuery.data ?? [])
+    .filter(r => r.id !== rock.id && !r.archived)
+    .map(r => ({ id: r.id, label: `${formatQuarter({ year: r.quarterYear, quarter: r.quarterNumber })} · ${r.title}` }));
+  const milestonePickOptions = (excludeId?: string) =>
+    milestones.filter(m => m.id !== excludeId).map(m => ({ id: m.id, label: m.label }));
 
   const tasks = tasksQuery.data ?? [];
   const tasksByMilestone = new Map<string, MilestoneTaskLink[]>();
@@ -373,6 +429,50 @@ export function RockDetailSheet({
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:px-6">
+          {rockBlocker ? (
+            <BlockerDetails
+              blocker={rockBlocker}
+              todayIso={todayLocalIso()}
+              nameOf={nameOf}
+              dependency={dependencyFor(rockBlocker)}
+              canManage={canManage}
+              onEdit={() => setBlockerTarget({ subject: 'rock', id: rock.id, label: rock.title, mode: 'record' })}
+              onResolve={() => setBlockerTarget({ subject: 'rock', id: rock.id, label: rock.title, mode: 'resolve' })}
+            />
+          ) : dbToUiStatus(rock.status) === 'blocked' && !blockersQuery.isLoading ? (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-300 bg-violet-50 p-3 text-sm dark:border-violet-800 dark:bg-violet-950/30">
+              <span className="flex items-center gap-2 text-violet-900 dark:text-violet-200">
+                <Ban className="h-4 w-4" aria-hidden />
+                This Rock is blocked, but no reason was recorded.
+              </span>
+              {canManage && (
+                <Button type="button" size="sm" onClick={() => setBlockerTarget({ subject: 'rock', id: rock.id, label: rock.title, mode: 'record' })}>
+                  Record the reason
+                </Button>
+              )}
+            </div>
+          ) : null}
+          {blockersQuery.isError && <p className="text-xs text-muted-foreground">Blocker details could not be loaded.</p>}
+          {rockResolved.length > 0 && (
+            <Collapsible className="space-y-2">
+              <CollapsibleTrigger className="flex items-center gap-1 rounded text-xs font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                Past blockers ({rockResolved.length})
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ResolvedBlockerList blockers={rockResolved} nameOf={nameOf} />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          <CarryoverLinks
+            data={carryoverQuery.data}
+            isLoading={carryoverQuery.isLoading}
+            isError={carryoverQuery.isError}
+            nameOf={nameOf}
+            onOpenRock={onOpenRock}
+          />
+
           <section className="space-y-4" aria-labelledby="rock-milestones-heading">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 id="rock-milestones-heading" className="flex items-center gap-2 text-base font-semibold">
@@ -434,10 +534,34 @@ export function RockDetailSheet({
                   todayIso={todayIso}
                   getUserInfo={getUserInfo}
                   onOpenRock={onOpenRock}
+                  blockerSupport={
+                    hasRows
+                      ? {
+                          blockers,
+                          canManage,
+                          nameOf,
+                          dependencyFor,
+                          onRecord: (id, label) => setBlockerTarget({ subject: 'milestone', id, label, mode: 'record' }),
+                          onResolve: (id, label) => setBlockerTarget({ subject: 'milestone', id, label, mode: 'resolve' }),
+                        }
+                      : undefined
+                  }
                 />
               </>
             )}
           </section>
+
+          {isCompany && (
+            <>
+              <Separator />
+              <IndividualRocksSection
+                companyRockId={rock.id}
+                getUserInfo={getUserInfo}
+                onOpenRock={onOpenRock}
+                defaultOpen
+              />
+            </>
+          )}
 
           {hasNarrative && (
             <>
@@ -515,7 +639,7 @@ export function RockDetailSheet({
         </div>
 
         {(onEdit || (onViewCascade && rock.rock_level !== 'individual')) && (
-          <SheetFooter className="flex-row items-center justify-between gap-2 space-x-0 border-t px-4 py-3 sm:space-x-0 sm:px-6">
+          <SheetFooter className="flex-row flex-wrap items-center justify-between gap-2 space-x-0 border-t px-4 py-3 sm:space-x-0 sm:px-6">
             {onViewCascade && rock.rock_level !== 'individual' ? (
               <Button
                 variant="ghost"
@@ -528,15 +652,73 @@ export function RockDetailSheet({
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             ) : <span />}
-            {onEdit && (
-              <Button onClick={() => onEdit(rock)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Rock
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {canManage && !isArchived && !rockIsComplete && !rockBlocker && dbToUiStatus(rock.status) !== 'blocked' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setBlockerTarget({ subject: 'rock', id: rock.id, label: rock.title, mode: 'record' })}
+                >
+                  <Ban className="mr-2 h-4 w-4" aria-hidden />
+                  Mark as blocked
+                </Button>
+              )}
+              {canManage && !isArchived && !rockIsComplete && (
+                <Button type="button" variant="outline" onClick={() => setCarryOpen(true)}>
+                  <CornerUpRight className="mr-2 h-4 w-4" aria-hidden />
+                  Carry forward
+                </Button>
+              )}
+              {onEdit && (
+                <Button onClick={() => onEdit(rock)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Rock
+                </Button>
+              )}
+            </div>
           </SheetFooter>
         )}
       </SheetContent>
+
+      {blockerTarget && blockerTarget.mode === 'record' && (
+        <BlockerDialog
+          open
+          onOpenChange={next => !next && setBlockerTarget(null)}
+          subject={blockerTarget.subject}
+          subjectId={blockerTarget.id}
+          subjectLabel={blockerTarget.label}
+          existing={openBlocker(blockers, blockerTarget.subject, blockerTarget.id)}
+          people={personOptions}
+          rockOptions={rockPickOptions}
+          milestoneOptions={milestonePickOptions(blockerTarget.subject === 'milestone' ? blockerTarget.id : undefined)}
+        />
+      )}
+      {blockerTarget && blockerTarget.mode === 'resolve' && (
+        <ResolveBlockerDialog
+          open
+          onOpenChange={next => !next && setBlockerTarget(null)}
+          subject={blockerTarget.subject}
+          subjectId={blockerTarget.id}
+          subjectLabel={blockerTarget.label}
+          blocker={openBlocker(blockers, blockerTarget.subject, blockerTarget.id)}
+        />
+      )}
+      <CarryForwardDialog
+        open={carryOpen}
+        onOpenChange={setCarryOpen}
+        rock={{
+          id: rock.id,
+          title: rock.title,
+          level: rock.rock_level ?? null,
+          quarterYear: rock.quarter_year,
+          quarterNumber: rock.quarter_number,
+          parentRockId: rock.parent_rock_id ?? null,
+        }}
+        milestones={hasRows ? milestones.map(m => ({ id: m.id, title: m.title, status: m.status, dueDate: m.dueDate })) : []}
+        carriedMilestoneIds={new Set(carryoverQuery.data?.carriedSourceMilestoneIds ?? [])}
+        carriedToRockIds={new Set(carryoverQuery.data?.carriedToRockIds ?? [])}
+        onOpenRock={onOpenRock}
+      />
     </Sheet>
   );
 }

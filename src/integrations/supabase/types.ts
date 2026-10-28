@@ -28257,6 +28257,138 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_rock_blockers: {
+        Row: {
+          depends_on_milestone_id: string | null
+          depends_on_rock_id: string | null
+          dependency_note: string | null
+          evidence_url: string | null
+          id: string
+          milestone_id: string | null
+          next_action: string | null
+          next_action_owner_id: string | null
+          reason: string
+          recorded_at: string
+          recorded_by: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_date: string | null
+          rock_id: string | null
+          status_before: string | null
+          tenant_id: number
+        }
+        Insert: {
+          depends_on_milestone_id?: string | null
+          depends_on_rock_id?: string | null
+          dependency_note?: string | null
+          evidence_url?: string | null
+          id?: string
+          milestone_id?: string | null
+          next_action?: string | null
+          next_action_owner_id?: string | null
+          reason: string
+          recorded_at?: string
+          recorded_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_date?: string | null
+          rock_id?: string | null
+          status_before?: string | null
+          tenant_id: number
+        }
+        Update: {
+          depends_on_milestone_id?: string | null
+          depends_on_rock_id?: string | null
+          dependency_note?: string | null
+          evidence_url?: string | null
+          id?: string
+          milestone_id?: string | null
+          next_action?: string | null
+          next_action_owner_id?: string | null
+          reason?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_date?: string | null
+          rock_id?: string | null
+          status_before?: string | null
+          tenant_id?: number
+        }
+        Relationships: []
+      }
+      eos_rock_carryover_milestones: {
+        Row: {
+          carryover_id: string
+          created_at: string
+          destination_milestone_id: string | null
+          id: string
+          new_due_date: string | null
+          source_due_date: string | null
+          source_milestone_id: string | null
+          source_status: string
+          source_title: string
+          tenant_id: number
+        }
+        Insert: {
+          carryover_id: string
+          created_at?: string
+          destination_milestone_id?: string | null
+          id?: string
+          new_due_date?: string | null
+          source_due_date?: string | null
+          source_milestone_id?: string | null
+          source_status: string
+          source_title: string
+          tenant_id: number
+        }
+        Update: {
+          carryover_id?: string
+          created_at?: string
+          destination_milestone_id?: string | null
+          id?: string
+          new_due_date?: string | null
+          source_due_date?: string | null
+          source_milestone_id?: string | null
+          source_status?: string
+          source_title?: string
+          tenant_id?: number
+        }
+        Relationships: []
+      }
+      eos_rock_carryovers: {
+        Row: {
+          carried_at: string
+          carried_by: string | null
+          destination_rock_id: string
+          id: string
+          reason: string
+          source_rock_id: string
+          tenant_id: number
+        }
+        Insert: {
+          carried_at?: string
+          carried_by?: string | null
+          destination_rock_id: string
+          id?: string
+          reason: string
+          source_rock_id: string
+          tenant_id: number
+        }
+        Update: {
+          carried_at?: string
+          carried_by?: string | null
+          destination_rock_id?: string
+          id?: string
+          reason?: string
+          source_rock_id?: string
+          tenant_id?: number
+        }
+        Relationships: []
+      }
       eos_rock_events: {
         Row: {
           action: string
@@ -73429,6 +73561,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_blocker: {
+        Args: { p_blocker: Json; p_id: string; p_subject: string }
+        Returns: Json
+      }
+      resolve_blocker: {
+        Args: { p_id: string; p_new_status?: string; p_note?: string; p_subject: string }
+        Returns: Json
+      }
+      carry_forward_rock: {
+        Args: { p_destination: Json; p_milestones: Json; p_reason: string; p_source_rock_id: string }
+        Returns: Json
       }
       archive_rock: {
         Args: { p_include_children?: boolean; p_rock_id: string }

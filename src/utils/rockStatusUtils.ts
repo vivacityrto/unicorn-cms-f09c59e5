@@ -3,7 +3,12 @@
  * 
  * Status values are lowercase snake_case text stored in eos_rocks.status,
  * sourced from the dd_rock_status lookup table.
- * Values: not_started, on_track, at_risk, off_track, complete
+ * Values: not_started, on_track, at_risk, off_track, blocked, complete
+ *
+ * 'blocked' means the Rock cannot move until something outside it changes. It is
+ * not a kind of off track (late against plan) or at risk (might slip), and it is
+ * never complete. A Rock only becomes blocked through set_blocker(), which
+ * records the reason; the editor does not offer it as a plain choice.
  */
 
 // Default status values (fallback when dd_rock_status hasn't loaded yet)
@@ -12,13 +17,14 @@ export const DB_ROCK_STATUS = {
   ON_TRACK: 'on_track',
   AT_RISK: 'at_risk',
   OFF_TRACK: 'off_track',
+  BLOCKED: 'blocked',
   COMPLETE: 'complete',
 } as const;
 
 export type DbRockStatus = string;
 
 // UI-friendly status values (now identical to DB values)
-export type UiRockStatus = 'not_started' | 'on_track' | 'at_risk' | 'off_track' | 'complete';
+export type UiRockStatus = 'not_started' | 'on_track' | 'at_risk' | 'off_track' | 'blocked' | 'complete';
 
 // Status display configuration
 export interface StatusConfig {
@@ -59,6 +65,13 @@ const FALLBACK_STATUS_CONFIG: Record<UiRockStatus, StatusConfig> = {
     bgColor: 'bg-red-100 dark:bg-red-900/30',
     borderColor: 'border-red-300',
   },
+  blocked: {
+    value: 'blocked',
+    label: 'Blocked',
+    color: 'text-violet-700 dark:text-violet-300',
+    bgColor: 'bg-violet-100 dark:bg-violet-900/30',
+    borderColor: 'border-violet-300',
+  },
   complete: {
     value: 'complete',
     label: 'Complete',
@@ -89,6 +102,7 @@ export function dbToUiStatus(dbStatus: string | null | undefined): UiRockStatus 
     'atrisk': 'at_risk',
     'off_track': 'off_track',
     'offtrack': 'off_track',
+    'blocked': 'blocked',
     'complete': 'complete',
     'completed': 'complete',
   };
@@ -116,6 +130,9 @@ export function getStatusConfig(status: string | null | undefined): StatusConfig
 /**
  * Get all available status options for select dropdowns (fallback/static).
  * Prefer useRockStatusOptions() hook for dynamic data from dd_rock_status.
+ *
+ * 'blocked' is deliberately absent: choosing it needs a recorded reason, which
+ * the plain status select cannot collect. Use "Mark as blocked" on the Rock.
  */
 export function getStatusOptions(): { value: string; label: string }[] {
   return [

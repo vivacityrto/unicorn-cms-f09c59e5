@@ -1,5 +1,5 @@
 import { useMemo, useState, type MouseEvent } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Search } from 'lucide-react';
+import { Ban, ChevronDown, ChevronRight, ExternalLink, Search } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import {
   CompanyMilestoneDeliveryBlock,
   SupportedMilestonesBlock,
 } from '@/components/eos/rocks/MilestoneDelivery';
+import { BlockerDetails, type DependencyTarget } from '@/components/eos/rocks/blockers/BlockerDetails';
 import { MilestoneTasks } from '@/components/eos/rocks/detail/MilestoneTasks';
 import { StatusBar } from '@/components/eos/rocks/detail/StatusBar';
 import {
@@ -31,6 +32,8 @@ import {
   type PanelMilestone,
 } from '@/utils/rockPanelMetrics';
 import { summarizeMilestoneTasks, type MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
+import { openBlocker, type BlockerRow } from '@/utils/rockBlocker';
+import { todayLocalIso } from '@/utils/localDate';
 
 interface UserInfo {
   name: string;
@@ -55,6 +58,16 @@ const FILTERS: ReadonlyArray<{ key: MilestoneFilter; label: string }> = [
 const COLUMNS =
   'grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 lg:grid-cols-[2.75rem_minmax(0,1fr)_6rem_7.25rem_5.5rem_8.5rem] lg:items-center';
 
+/** What the table needs to show and change milestone blockers. Absent for legacy (JSON) milestones, which have no ids to attach a blocker to. */
+export interface MilestoneBlockerSupport {
+  blockers: BlockerRow[];
+  canManage: boolean;
+  nameOf: (userId: string | null) => string | null;
+  dependencyFor: (blocker: BlockerRow) => DependencyTarget | null;
+  onRecord: (milestoneId: string, label: string) => void;
+  onResolve: (milestoneId: string, label: string) => void;
+}
+
 interface MilestoneTableProps {
   milestones: PanelMilestone[];
   /** Milestones to discuss: the metrics' own, plus delivery problems for a Company Rock. */
@@ -68,6 +81,7 @@ interface MilestoneTableProps {
   todayIso: string;
   getUserInfo?: (userId: string) => UserInfo | null;
   onOpenRock?: (rockId: string) => void;
+  blockerSupport?: MilestoneBlockerSupport;
 }
 
 function OwnerCell({ name }: { name: string | null }) {
@@ -95,6 +109,7 @@ export function MilestoneTable({
   todayIso,
   getUserInfo,
   onOpenRock,
+  blockerSupport,
 }: MilestoneTableProps) {
   const [filter, setFilter] = useState<MilestoneFilter>('all');
   const [query, setQuery] = useState('');
@@ -222,6 +237,7 @@ export function MilestoneTable({
             const supported = hasRows && isIndividual && deliveryData ? supportedCompanyMilestones(milestone.id, deliveryData) : [];
             const supportRefs = supported.map(s => milestoneRef({ ...parseMilestoneTitle(s.milestone.title) }));
             const detailsId = `milestone-details-${milestone.id}`;
+            const blocker = blockerSupport ? openBlocker(blockerSupport.blockers, 'milestone', milestone.id) : null;
 
             const onRowClick = (event: MouseEvent<HTMLDivElement>) => {
               if (event.target instanceof Element && event.target.closest('button, a, input')) return;
@@ -266,6 +282,12 @@ export function MilestoneTable({
                       )}
                       {supportRefs.length > 0 && <span>Supports {supportRefs.join(' · ')}</span>}
                     </p>
+                    {blocker && (
+                      <p className="ml-[1.375rem] mt-1 flex items-start gap-1.5 text-[11px] text-violet-900 dark:text-violet-200">
+                        <Ban className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                        <span className="min-w-0 break-words"><span className="font-medium">Blocked:</span> {blocker.reason}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="col-span-2 ml-[2.75rem] flex flex-wrap items-center gap-x-3 gap-y-1.5 lg:contents">
@@ -350,6 +372,29 @@ export function MilestoneTable({
                       )}
                     </div>
                     <div className="space-y-2">
+                      {blocker && blockerSupport ? (
+                        <BlockerDetails
+                          compact
+                          blocker={blocker}
+                          todayIso={todayLocalIso()}
+                          nameOf={blockerSupport.nameOf}
+                          dependency={blockerSupport.dependencyFor(blocker)}
+                          canManage={blockerSupport.canManage}
+                          onEdit={() => blockerSupport.onRecord(milestone.id, milestone.label)}
+                          onResolve={() => blockerSupport.onResolve(milestone.id, milestone.label)}
+                        />
+                      ) : blockerSupport?.canManage && milestone.status !== 'complete' ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => blockerSupport.onRecord(milestone.id, milestone.label)}
+                        >
+                          <Ban className="mr-1 h-3 w-3" aria-hidden />
+                          {milestone.status === 'blocked' ? 'Record the reason' : 'Mark as blocked'}
+                        </Button>
+                      ) : null}
                       {delivery && <CompanyMilestoneDeliveryBlock delivery={delivery} getUserInfo={getUserInfo} className="" />}
                       {isIndividual && hasRows && <SupportedMilestonesBlock supported={supported} onOpenRock={onOpenRock} className="" />}
                       <MilestoneTasks tasks={tasks} milestoneStatus={milestone.status} />

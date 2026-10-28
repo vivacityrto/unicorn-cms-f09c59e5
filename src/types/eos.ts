@@ -7,7 +7,7 @@ export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'closed'
 export type MeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Same_Page' | 'Focus_Day' | 'Custom';
 export type RockType = 'company' | 'team' | 'individual';
 export type RockLevel = 'company' | 'team' | 'individual';
-export type RockStatus = 'on_track' | 'off_track' | 'complete' | 'at_risk' | 'not_started';
+export type RockStatus = 'on_track' | 'off_track' | 'complete' | 'at_risk' | 'not_started' | 'blocked';
 export type IssueStatus = 'open' | 'discussing' | 'solved' | 'archived';
 export type IssuePriority = 'high' | 'medium' | 'low';
 export type IssueCategory = 'weekly' | 'quarterly' | 'annual';
@@ -185,6 +185,7 @@ export interface RockWithHierarchy extends EosRock {
     total: number;
     complete: number;
     offTrack: number;
+    blocked?: number;
   };
   milestoneStats?: {
     total: number;

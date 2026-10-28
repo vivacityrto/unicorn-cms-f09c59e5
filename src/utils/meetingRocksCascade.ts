@@ -8,6 +8,7 @@ export type StatusCounts = Record<UiRockStatus, number> & { total: number };
 /** Why a Rock is worth discussing in the meeting. */
 export type AttentionReason =
   | 'off_track'
+  | 'blocked'
   | 'at_risk'
   | 'blocked_milestones'
   | 'overdue_milestones'
@@ -39,7 +40,7 @@ export interface MeetingRocksCascade {
 const LEVEL_ORDER: Record<string, number> = { company: 0, team: 1, individual: 2 };
 
 export function emptyCounts(): StatusCounts {
-  return { not_started: 0, on_track: 0, at_risk: 0, off_track: 0, complete: 0, total: 0 };
+  return { not_started: 0, on_track: 0, at_risk: 0, off_track: 0, blocked: 0, complete: 0, total: 0 };
 }
 
 /** An empty scope means "all levels", matching the Configuration's behaviour. */
@@ -57,6 +58,7 @@ function mergeInto(target: StatusCounts, source: StatusCounts) {
   target.on_track += source.on_track;
   target.at_risk += source.at_risk;
   target.off_track += source.off_track;
+  target.blocked += source.blocked;
   target.complete += source.complete;
   target.total += source.total;
 }
@@ -71,6 +73,7 @@ export function attentionReasons(rock: RockWithHierarchy, now: Date = new Date()
   if (status === 'complete') return [];
   const reasons: AttentionReason[] = [];
   if (status === 'off_track') reasons.push('off_track');
+  if (status === 'blocked') reasons.push('blocked');
   if (status === 'at_risk') reasons.push('at_risk');
   const m = rock.milestoneBreakdown;
   if (m && (m.blocked > 0 || m.offTrack > 0)) reasons.push('blocked_milestones');

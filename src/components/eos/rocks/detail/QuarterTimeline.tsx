@@ -6,7 +6,7 @@ import type { TimelineModel, TimelinePoint } from '@/utils/rockPanelMetrics';
 const DOT: Record<TimelinePoint['status'], string> = {
   complete: 'bg-green-500 border-green-600',
   in_progress: 'bg-blue-500 border-blue-600',
-  blocked: 'bg-red-500 border-red-600',
+  blocked: 'bg-violet-500 border-violet-600',
   off_track: 'bg-orange-500 border-orange-600',
   not_started: 'bg-card border-muted-foreground/60',
   deferred: 'bg-muted border-muted-foreground/30',

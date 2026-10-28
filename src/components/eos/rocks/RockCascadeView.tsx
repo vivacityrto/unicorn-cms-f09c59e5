@@ -14,7 +14,8 @@ import {
   TrendingUp,
   TrendingDown,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Ban,
 } from 'lucide-react';
 import type { RockWithHierarchy } from '@/types/eos';
 import { normalizeStatus } from '@/utils/rockRollup';
@@ -78,6 +79,7 @@ export function RockCascadeView({
       on_track: { icon: TrendingUp, className: 'text-green-600' },
       off_track: { icon: TrendingDown, className: 'text-red-600' },
       at_risk: { icon: AlertCircle, className: 'text-amber-600' },
+      blocked: { icon: Ban, className: 'text-violet-700 dark:text-violet-300' },
       complete: { icon: CheckCircle, className: 'text-blue-600' },
     };
     return configs[s] || configs.on_track;
