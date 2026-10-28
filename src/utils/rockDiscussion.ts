@@ -14,11 +14,18 @@ import { getStatusConfig, dbToUiStatus } from '@/utils/rockStatusUtils';
  * A completed Rock is never in the deck, whatever level it is at: the segment does not review it
  * (its top level already leaves it out) and the view's status buttons would reopen it.
  */
-export function discussionDeck(roots: readonly RockCascadeNode[], options: { attentionOnly?: boolean } = {}): string[] {
+export function discussionDeck(
+  roots: readonly RockCascadeNode[],
+  options: {
+    attentionOnly?: boolean;
+    /** Rocks that need the room for a reason the cascade cannot see (an overdue To-Do linked to them). */
+    extraAttentionIds?: ReadonlySet<string>;
+  } = {},
+): string[] {
   const ids: string[] = [];
   const walk = (nodes: readonly RockCascadeNode[]) => {
     for (const node of nodes) {
-      if (node.reviewable && dbToUiStatus(node.rock.status) !== 'complete' && (!options.attentionOnly || node.needsAttention)) ids.push(node.rock.id);
+      if (node.reviewable && dbToUiStatus(node.rock.status) !== 'complete' && (!options.attentionOnly || node.needsAttention || options.extraAttentionIds?.has(node.rock.id))) ids.push(node.rock.id);
       walk(node.children);
     }
   };
@@ -50,7 +57,7 @@ export interface DiscussionReason {
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** Why this Rock needs the room, in words (never only a colour), most serious first. */
-export function discussionReasons(node: RockCascadeNode): DiscussionReason[] {
+export function discussionReasons(node: RockCascadeNode, extras: { overdueTodos?: number } = {}): DiscussionReason[] {
   const { rock, attention, descendants } = node;
   const status = dbToUiStatus(rock.status);
   const out: DiscussionReason[] = [];
@@ -66,6 +73,7 @@ export function discussionReasons(node: RockCascadeNode): DiscussionReason[] {
   if (descendants.at_risk > 0) out.push({ key: 'below_at_risk', text: `${plural(descendants.at_risk, 'Rock below it is', 'Rocks below it are')} at risk`, tone: 'warn' });
   if (attention.includes('rock_overdue')) out.push({ key: 'rock_overdue', text: 'Past its due date', tone: 'warn' });
   if (b && b.overdue > 0) out.push({ key: 'overdue_milestones', text: `${plural(b.overdue, 'milestone is', 'milestones are')} overdue`, tone: 'warn' });
+  if (extras.overdueTodos && extras.overdueTodos > 0) out.push({ key: 'overdue_todos', text: `${plural(extras.overdueTodos, 'To-Do linked to it is', 'To-Dos linked to it are')} overdue`, tone: 'warn' });
   if (attention.includes('no_owner')) out.push({ key: 'no_owner', text: 'Nobody owns it', tone: 'warn' });
   return out;
 }

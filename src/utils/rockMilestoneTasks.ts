@@ -1,4 +1,5 @@
 import type { RockMilestoneStatus } from '@/types/eos';
+import { summarizeTodos, type RockTodo } from '@/utils/rockTodos';
 
 /** A GitHub task linked to a milestone (a snapshot; the rock-task-sync webhook that updated it was retired 2026-10-28). */
 export interface MilestoneTaskLink {
@@ -20,6 +21,8 @@ export interface MilestoneTaskSummary {
   closed: number;
   open: number;
   blocked: number;
+  /** Open To-Dos linked to the milestone that are past their due date. */
+  overdue: number;
   /** Every linked task is closed, so a person can review the milestone and mark it complete. */
   readyForReview: boolean;
 }
@@ -34,16 +37,21 @@ const isClosed = (task: MilestoneTaskLink) => task.task_state === 'closed';
 export function summarizeMilestoneTasks(
   tasks: readonly MilestoneTaskLink[],
   milestoneStatus: RockMilestoneStatus,
+  todos: readonly RockTodo[] = [],
+  todayIso = '',
 ): MilestoneTaskSummary {
-  const closed = tasks.filter(isClosed).length;
-  const open = tasks.length - closed;
+  const todo = summarizeTodos(todos, todayIso);
+  const closed = tasks.filter(isClosed).length + todo.done;
+  const total = tasks.length + todo.total;
+  const open = total - closed;
   const blocked = tasks.filter(t => !isClosed(t) && t.task_status === 'blocked').length;
   return {
-    total: tasks.length,
+    total,
     closed,
     open,
     blocked,
-    readyForReview: tasks.length > 0 && open === 0 && milestoneStatus !== 'complete' && milestoneStatus !== 'deferred',
+    overdue: todayIso ? todo.overdue : 0,
+    readyForReview: total > 0 && open === 0 && milestoneStatus !== 'complete' && milestoneStatus !== 'deferred',
   };
 }
 

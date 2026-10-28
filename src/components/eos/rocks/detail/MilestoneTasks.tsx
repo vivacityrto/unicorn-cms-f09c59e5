@@ -11,8 +11,10 @@ import {
 import type { RockMilestoneStatus } from '@/types/eos';
 
 /**
- * GitHub tasks linked to a milestone. These rows are static snapshots: the rock-task-sync
- * webhook that kept them current was retired on 2026-10-28, so nothing updates them.
+ * Tasks from an outside tracker linked to a milestone (GitHub). These rows are static snapshots:
+ * the rock-task-sync webhook that kept them current was retired on 2026-10-28, so nothing updates
+ * them. The box says so and shows how old the snapshot is. Live work belongs in To-Dos
+ * (see RockTodoList).
  */
 export function MilestoneTasks({
   tasks,
@@ -25,12 +27,15 @@ export function MilestoneTasks({
 }) {
   if (tasks.length === 0) return null;
   const summary = summarizeMilestoneTasks(tasks, milestoneStatus);
+  const snapshotAt = tasks.map(t => t.last_synced_at).filter(Boolean).sort().pop();
+  const snapshotLabel = formatDate(snapshotAt, 'd MMM');
   return (
     <div className={cn('space-y-1.5 rounded-md border bg-muted/30 p-2', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="inline-flex items-center gap-1 font-medium text-foreground">
           <ListChecks className="h-3.5 w-3.5" aria-hidden />
-          Tasks · {summary.closed} of {summary.total} closed
+          Linked tasks · {summary.closed} of {summary.total} closed
+          {snapshotLabel && <span className="font-normal text-muted-foreground" title="These were copied from the outside tracker and are no longer kept up to date.">· snapshot as of {snapshotLabel}</span>}
         </span>
         <span className="inline-flex items-center gap-1.5">
           {summary.blocked > 0 && (

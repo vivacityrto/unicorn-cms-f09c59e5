@@ -9,11 +9,19 @@ import type { badgeVariants } from '@/components/ui/badge';
 import { useEosTodos } from '@/hooks/useEos';
 import { format } from 'date-fns';
 import { usePermission } from '@/hooks/usePermission';
+import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
+import { TodoRockLink } from '@/components/eos/rocks/todos/TodoRockLink';
+import { useTodoRockLinks } from '@/hooks/useRockTodos';
 
 export default function EosTodos() {
   const { todos, isLoading, updateTodo } = useEosTodos();
   const canAssignOthers = usePermission('eos.todos.others');
   const [filter, setFilter] = useState<'all' | string>('all');
+  const { profile } = useAuth();
+  const isStaff = isVivacityStaffRole(profile?.unicorn_role);
+  // Which Rock (if any) each To-Do is for. Staff can point a standalone To-Do at one from here.
+  const rockLinks = useTodoRockLinks((todos ?? []).map(t => t.id));
 
   const handleToggleComplete = (id: string, currentStatus: string) => {
     const newStatus = currentStatus?.toLowerCase() === 'complete' ? 'Open' : 'Complete';
@@ -197,6 +205,7 @@ export default function EosTodos() {
                           </span>
                         </>
                       )}
+                      <TodoRockLink todoId={todo.id} link={rockLinks.data?.[todo.id]} canManage={isStaff} />
                       {todo.completed_date && (
                         <>
                           <span>•</span>

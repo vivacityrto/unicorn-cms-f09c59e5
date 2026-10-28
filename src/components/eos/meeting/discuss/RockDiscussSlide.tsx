@@ -13,6 +13,7 @@ import { IndividualRocksSection } from '@/components/eos/rocks/contribution/Indi
 import { StatusBar } from '@/components/eos/rocks/detail/StatusBar';
 import { RaiseIssuePanel } from '@/components/eos/meeting/discuss/RaiseIssuePanel';
 import { RockStatusDecision } from '@/components/eos/meeting/discuss/RockStatusDecision';
+import { useOverdueTodoCountsByRock } from '@/hooks/useRockTodos';
 import { RockNotesPanel } from '@/components/eos/rocks/notes/RockNotesPanel';
 import { cn } from '@/lib/utils';
 import { useRockBlockers } from '@/hooks/useRockBlockers';
@@ -75,7 +76,8 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
   const level = LEVEL[rock.rock_level ?? 'company'];
   const LevelIcon = level.icon;
   const ownerName = rock.owner_id ? ownerNames[rock.owner_id] : undefined;
-  const reasons = useMemo(() => discussionReasons(node), [node]);
+  const overdueTodos = useOverdueTodoCountsByRock([rock.id], true);
+  const reasons = useMemo(() => discussionReasons(node, { overdueTodos: overdueTodos.data?.[rock.id] ?? 0 }), [node, overdueTodos.data, rock.id]);
   const cue = facilitatorCue(node);
   const suggestion = issueSuggestion(node);
   const todayIso = todayLocalIso();

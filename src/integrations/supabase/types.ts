@@ -28572,6 +28572,36 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_rock_todo_links: {
+        Row: {
+          id: string
+          linked_at: string
+          linked_by: string | null
+          milestone_id: string | null
+          rock_id: string
+          tenant_id: number
+          todo_id: string
+        }
+        Insert: {
+          id?: string
+          linked_at?: string
+          linked_by?: string | null
+          milestone_id?: string | null
+          rock_id: string
+          tenant_id: number
+          todo_id: string
+        }
+        Update: {
+          id?: string
+          linked_at?: string
+          linked_by?: string | null
+          milestone_id?: string | null
+          rock_id?: string
+          tenant_id?: number
+          todo_id?: string
+        }
+        Relationships: []
+      }
       eos_rock_milestone_task_links: {
         Row: {
           assignees: string[]
@@ -73651,6 +73681,18 @@ export type Database = {
       }
       add_rock_note: {
         Args: { p_body: string; p_meeting_id?: string; p_rock_id: string; p_source?: string }
+        Returns: Json
+      }
+      add_rock_todo: {
+        Args: { p_due_date?: string; p_meeting_id?: string; p_milestone_id?: string; p_owner_id?: string; p_rock_id: string; p_title: string }
+        Returns: Json
+      }
+      link_todo_to_rock: {
+        Args: { p_milestone_id?: string; p_rock_id: string; p_todo_id: string }
+        Returns: Json
+      }
+      unlink_todo_from_rock: {
+        Args: { p_todo_id: string }
         Returns: Json
       }
       set_blocker: {

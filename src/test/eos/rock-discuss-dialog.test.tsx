@@ -17,6 +17,10 @@ const state = vi.hoisted(() => ({
 
 // The notes panel and its microphone controller have their own tests; these suites are about the deck.
 vi.mock('@/components/eos/rocks/notes/RockNotesPanel', () => ({ RockNotesPanel: () => null }));
+const todoState = vi.hoisted(() => ({ overdue: {} as Record<string, number> }));
+vi.mock('@/hooks/useRockTodos', () => ({
+  useOverdueTodoCountsByRock: () => ({ data: todoState.overdue }),
+}));
 const notesController = vi.hoisted(() => ({ retarget: vi.fn(), flushAll: vi.fn().mockResolvedValue(undefined), provided: false }));
 vi.mock('@/components/eos/rocks/notes/RockNotesDictation', () => ({
   RockNotesDictationProvider: ({ children }: { children: unknown }) => children,
@@ -86,6 +90,7 @@ function renderDialog(rocks = [RA, RB, RC], props: Partial<React.ComponentProps<
 const heading = () => document.querySelector('[data-slide-heading]') as HTMLElement;
 
 beforeEach(() => {
+  todoState.overdue = {};
   notesController.provided = false;
   notesController.retarget.mockClear();
   notesController.flushAll.mockClear();
@@ -96,6 +101,40 @@ beforeEach(() => {
   state.sectionProps = [];
   state.issuesQuery = { data: [], isLoading: false, isError: false };
   state.blockers = [];
+});
+
+describe('RockDiscussDialog: overdue To-Dos', () => {
+  it('says in words that To-Dos linked to the Rock are overdue', () => {
+    todoState.overdue = { a: 2 };
+    renderDialog();
+    expect(within(screen.getByRole('list', { name: 'Flags' })).getByText('2 To-Dos linked to it are overdue')).toBeInTheDocument();
+  });
+
+  it('uses the singular for one', () => {
+    todoState.overdue = { a: 1 };
+    renderDialog();
+    expect(screen.getByText('1 To-Do linked to it is overdue')).toBeInTheDocument();
+  });
+
+  it('adds a Rock that looks fine to "Needs the room" when it has an overdue To-Do', () => {
+    todoState.overdue = { c: 1 }; // Charlie is on track with nothing else flagged; Bravo is off track
+    renderDialog();
+    expect(screen.getByRole('button', { name: /Needs the room\s*2/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Needs the room/ }));
+    expect(screen.getByText(/of 2/)).toHaveTextContent('1 of 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(heading()).toHaveTextContent('Charlie portal');
+  });
+
+  it('leaves a clean Rock out of "Needs the room" when nothing is overdue', () => {
+    renderDialog();
+    expect(screen.getByRole('button', { name: /Needs the room\s*1/ })).toBeInTheDocument();
+  });
+
+  it('shows no To-Do flag when nothing is overdue', () => {
+    renderDialog();
+    expect(screen.queryByText(/To-Dos? linked to it/)).toBeNull();
+  });
 });
 
 describe('RockDiscussDialog: notes and the microphone', () => {
