@@ -33,6 +33,8 @@ interface IndividualRocksSectionProps {
   hint?: { total: number; blocked?: number };
   /** Start expanded (the details panel); a card starts collapsed to stay scannable. */
   defaultOpen?: boolean;
+  /** Leave out the list of Company milestones and who delivers them (the presentation view is short of room; the rows and summary still flag unmapped work). */
+  hideCoverage?: boolean;
   className?: string;
 }
 
@@ -228,7 +230,7 @@ function IndividualRow({
  * only fetched when the section is opened. The toggle is its own button, so it never
  * competes with whatever clicking the surrounding card does.
  */
-export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, className }: IndividualRocksSectionProps) {
+export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, hideCoverage = false, className }: IndividualRocksSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
   const query = useRockContribution(companyRockId, open);
@@ -285,7 +287,7 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
                 ))}
               </ul>
 
-              {model.coverage.length > 0 && (
+              {!hideCoverage && model.coverage.length > 0 && (
                 <div className="space-y-1.5">
                   <h5 className="text-xs font-semibold">Company milestones and who delivers them</h5>
                   <ul className="space-y-1">

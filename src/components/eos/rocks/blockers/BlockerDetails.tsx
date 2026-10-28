@@ -22,6 +22,8 @@ interface BlockerDetailsProps {
   onResolve?: () => void;
   /** Smaller type and spacing, for use inside a milestone row. */
   compact?: boolean;
+  /** Lay the details out in two columns on a wide screen (the presentation view, where height is scarce). */
+  wide?: boolean;
   className?: string;
 }
 
@@ -30,9 +32,9 @@ const REVIEW_BADGE: Record<'today' | 'overdue', string> = {
   overdue: 'Check overdue',
 };
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, full = false, stacked = false }: { label: string; children: React.ReactNode; full?: boolean; stacked?: boolean }) {
   return (
-    <div className="grid gap-0.5 sm:grid-cols-[8.5rem_1fr] sm:gap-3">
+    <div className={cn('grid gap-0.5', !stacked && 'sm:grid-cols-[7rem_1fr] sm:gap-3', full && 'sm:col-span-2 xl:col-span-3')}>
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="min-w-0 break-words text-sm">{children}</dd>
     </div>
@@ -52,6 +54,7 @@ export function BlockerDetails({
   onEdit,
   onResolve,
   compact = false,
+  wide = false,
   className,
 }: BlockerDetailsProps) {
   const review = reviewState(blocker.review_date, todayIso);
@@ -97,12 +100,12 @@ export function BlockerDetails({
         )}
       </div>
 
-      <dl className="space-y-1.5">
-        <Row label="What is blocking it">
+      <dl className={wide ? 'grid gap-x-6 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-1.5'}>
+        <Row label="What is blocking it" full stacked={wide}>
           <span className="whitespace-pre-wrap">{blocker.reason}</span>
         </Row>
         {(dependency || blocker.dependency_note) && (
-          <Row label="Depends on">
+          <Row label="Depends on" stacked={wide}>
             {dependency && (
               <span className="inline-flex flex-wrap items-center gap-1.5">
                 <Link2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
@@ -124,7 +127,7 @@ export function BlockerDetails({
           </Row>
         )}
         {(blocker.next_action || owner) && (
-          <Row label="Next action">
+          <Row label="Next action" stacked={wide}>
             {blocker.next_action && <span className="whitespace-pre-wrap">{blocker.next_action}</span>}
             {owner && (
               <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -135,7 +138,7 @@ export function BlockerDetails({
           </Row>
         )}
         {blocker.review_date && (
-          <Row label="Next check">
+          <Row label="Next check" stacked={wide}>
             <span className="inline-flex items-center gap-1.5">
               <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
               {formatDate(blocker.review_date)}
@@ -143,7 +146,7 @@ export function BlockerDetails({
           </Row>
         )}
         {evidenceHref && (
-          <Row label="Evidence">
+          <Row label="Evidence" stacked={wide}>
             <a
               href={evidenceHref}
               target="_blank"

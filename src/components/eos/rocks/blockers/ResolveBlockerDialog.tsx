@@ -16,6 +16,8 @@ interface ResolveBlockerDialogProps {
   subjectId: string;
   subjectLabel: string;
   blocker: BlockerRow | null;
+  /** Called once the blocker is resolved, before the dialog closes. */
+  onSaved?: () => void;
 }
 
 /**
@@ -23,7 +25,7 @@ interface ResolveBlockerDialogProps {
  * state the work resumes in; Complete is never offered, so clearing a blocker
  * cannot mark work done.
  */
-export function ResolveBlockerDialog({ open, onOpenChange, subject, subjectId, subjectLabel, blocker }: ResolveBlockerDialogProps) {
+export function ResolveBlockerDialog({ open, onOpenChange, subject, subjectId, subjectLabel, blocker, onSaved }: ResolveBlockerDialogProps) {
   const resolve = useResolveBlocker();
   const returnFocus = useReturnFocus(open);
   const [status, setStatus] = useState('');
@@ -39,6 +41,7 @@ export function ResolveBlockerDialog({ open, onOpenChange, subject, subjectId, s
   const confirm = async () => {
     try {
       await resolve.mutateAsync({ subject, id: subjectId, status, note });
+      onSaved?.();
       onOpenChange(false);
     } catch {
       // The mutation has already said what went wrong; stay open so the choice is not lost.
