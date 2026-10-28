@@ -2,7 +2,7 @@
 
 **Trigger:** feature work (Carl's request for a richer Rock detail and carryover workflow)
 **Scope:** one migration (`20261028020000_rock_blockers_and_carryover.sql`) that adds three tables, eight new functions (one more is replaced), seven triggers and a status value; the screens that use them. Design and data model: [rock-blockers-and-carryover.md](../../kb/codebase-state/rock-blockers-and-carryover.md).
-**Status: applied to `unicorn-qa` (version `20261028061707`, 28 Oct 2026, on Carl's instruction) and verified; NOT applied to production.** Before that it was run only inside transactions that were deliberately rolled back.
+**Status: applied to `unicorn-qa` (version `20261028061707`) and to production (version `20261028062039`), both on 28 Oct 2026 on Carl's instruction, and verified.** Before that it was run only inside transactions that were deliberately rolled back. The frontend is not deployed yet (see the caution under Production).
 
 ## What the migration does
 - **Adds** `eos_rock_blockers`, `eos_rock_carryovers`, `eos_rock_carryover_milestones` with row level security (select only, no write grants) and `SECURITY DEFINER` functions `set_blocker`, `resolve_blocker`, `carry_forward_rock` (staff only, empty `search_path`, not callable by `anon`).
@@ -30,8 +30,12 @@ Run 1 found a real defect in my first version: the deferred check judged the row
 ## Applied to unicorn-qa (28 Oct 2026) and verified
 Applied through the Supabase MCP as version `20261028061707`. Checked afterwards: all three tables exist with row level security on and `SELECT` granted to `authenticated` only (none to `anon`); one select policy each; all seven triggers present on the right tables; all nine functions present, one overload each, `SECURITY DEFINER` with an empty `search_path`, executable by `authenticated` only for the three public ones and by no client for the six internal ones; bodies contain the commit-time status re-read, the `carryover` delete blocker and the refusal to resolve to complete; the `blocked` lookup row exists. QA has no Rock data (0 Rocks, 0 milestones) and none was written; the three new tables are empty. Note QA's `dd_rock_status` holds only that one row (QA has no lookup seeds). No browser check of the screens against QA was done.
 
+## Applied to production (28 Oct 2026) and verified
+Applied to `yxkgdalkbrriasiyyrwk` through the Supabase MCP as version `20261028062039`. Before: none of the new objects existed; every prerequisite function and table was present; `dd_rock_status` held codes 0 to 4. After: the same structure, grants, policies, triggers and function checks as QA, all passing (three tables with row level security and `SELECT` to `authenticated` only; seven triggers; nine functions, one overload each, empty `search_path`, the three public ones executable by `authenticated` only, none by `anon`; commit-time status re-read, `carryover` delete blocker and refuse-to-complete present; `blocked` lookup row at code 5). **Data unchanged:** 163 Rocks (none blocked; statuses 3 at risk, 78 complete, 69 on track, 6 off track, 7 not started), 523 milestones, 61 Company-to-Individual links, all exactly as before; the three new tables are empty.
+
+**Caution until the frontend is deployed.** Two production milestones were already `blocked` with no reason recorded (their rows are untouched and are not re-judged; the new screens offer "Record the reason"). The currently deployed frontend predates this change: its Rock editor still lets someone choose Blocked for a milestone, and its plain status selects now list Blocked as a Rock status (the lookup row exists). Choosing it there will be refused at save with "A blocked Rock or milestone needs a reason. Record the blocker first." Nothing is corrupted by that (the whole save is refused), but the message is unfriendly until the new frontend ships.
+
 ## Human actions still needed
-1. Review the PR. **Merging does not apply the migration** (migrations go through the Supabase MCP).
-2. Apply the migration to production, verify the same way (structure, grants, function bodies). Rollback file: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql`.
+1. Review and merge the PR, then deploy the frontend. **Merging does not apply the migration**; it is already applied. Rollback file: `supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql`.
 3. Deploy the frontend; until the migration is applied in an environment, the new screens there show their error states.
 4. A real-data browser check (record and resolve a blocker, carry one Rock, open a Company Rock's Individual Rocks).
