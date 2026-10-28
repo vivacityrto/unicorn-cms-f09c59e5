@@ -92,6 +92,43 @@ describe('mergeConflictingText', () => {
     expect(mergeConflictingText('ship it', 'ship it on Friday')).toBe('ship it on Friday');
   });
 
+  it('does not repeat the text both sides started from', () => {
+    const base = 'Agreed scope for Q4';
+    expect(mergeConflictingText(`${base}\nBen: block is the supplier delay`, `${base}\nAmy: need to chase the supplier`)).toBe(
+      `${base}\nBen: block is the supplier delay\n\nAmy: need to chase the supplier`,
+    );
+  });
+
+  it('drops a dictated line that repeats what the other person already saved (two microphones, one sentence)', () => {
+    expect(
+      mergeConflictingText(
+        'Ben: We should move the launch to the end of November',
+        'Amy: we should move the launch to the end of november',
+      ),
+    ).toBe('Ben: We should move the launch to the end of November');
+  });
+
+  it('keeps a genuinely different dictated line next to a repeated one', () => {
+    expect(
+      mergeConflictingText(
+        'Ben: We should move the launch to the end of November',
+        'Amy: we should move the launch to the end of november\nAmy: and I will tell the client tomorrow',
+      ),
+    ).toBe('Ben: We should move the launch to the end of November\n\nAmy: and I will tell the client tomorrow');
+  });
+
+  it('keeps your own edit of a line even when it resembles the saved version (no cross-speaker echo)', () => {
+    expect(
+      mergeConflictingText('Ship it on Friday for the whole team\nBen: noted', 'Ship it on Friday for the whole team today\nBen: noted'),
+    ).toBe('Ship it on Friday for the whole team\nBen: noted\n\nShip it on Friday for the whole team today');
+  });
+
+  it('keeps a line from the same speaker even when it resembles one they already saved', () => {
+    expect(
+      mergeConflictingText('Ben: We should move the launch to the end of November', 'Ben: we should move the launch to the end of november today'),
+    ).toBe('Ben: We should move the launch to the end of November\n\nBen: we should move the launch to the end of november today');
+  });
+
   it('handles an empty side without adding blank lines', () => {
     expect(mergeConflictingText('', 'mine')).toBe('mine');
     expect(mergeConflictingText('theirs', '')).toBe('theirs');
