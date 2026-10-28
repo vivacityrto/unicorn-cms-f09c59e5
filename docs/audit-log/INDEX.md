@@ -7,7 +7,7 @@ Newest first.
 
 ---
 
-- [2026-10-28 — Rock notes](entries/2026-10-28-rock-notes.md) — migration applied to `unicorn-qa` only (29 Oct 2026), Edge Function NOT deployed: append-only notes on a Rock (`eos_rock_notes`, `add_rock_note()`), AI summaries (`eos_rock_note_summaries`, `summarise-rock-notes`), `notes` added to the Rock delete guard. Verified in a rolled-back transaction on `unicorn-qa` only.
+- [2026-10-28 — Rock notes](entries/2026-10-28-rock-notes.md) — migration applied to `unicorn-qa` and production (29 Oct 2026), Edge Function deploys on merge: append-only notes on a Rock (`eos_rock_notes`, `add_rock_note()`), AI summaries (`eos_rock_note_summaries`, `summarise-rock-notes`), `notes` added to the Rock delete guard. Verified in a rolled-back transaction on `unicorn-qa` only.
 - [2026-10-28 — Rock blockers, carryover and the Company → Individual view](entries/2026-10-28-rock-blockers-and-carryover.md) — migration (not yet applied anywhere): three tables, `set_blocker`/`resolve_blocker`/`carry_forward_rock`, a `blocked` Rock status, a deferred check that a blocked item has a reason. Verified in rolled-back transactions on `unicorn-qa` only, including the rollback script.
 - [2026-10-28 — Retire the GitHub task sync for Rock milestones](entries/2026-10-28-retire-rock-task-sync.md) — Carl decided to reconcile by hand. Removed the `rock-task-sync` Edge Function source and payload parser (PR #1460), and the signing secret and deployed function were removed (verified: 404). The migration dropping the two service-role functions that applied events was applied to `unicorn-qa` and production and verified. Kept: the 15 task-link rows and the one audit row, which the Rock panel and the delete guard still use; no milestone or progress changed.
 
