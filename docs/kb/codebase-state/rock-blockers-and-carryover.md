@@ -83,7 +83,7 @@ A blocked child is **neither off track nor complete**. It does not turn the Comp
 
 - The Rock editor does **not** offer Blocked as a plain status (Rock or milestone), because it cannot collect a reason. An already-blocked item still shows as blocked there, and changing it to anything else closes its blocker.
 - `generate_rock_outcomes` still detects roll-forward by title; switching it to the new relation is a follow-up.
-- Meeting Rock review has no "Blocked" action yet; blocked Rocks appear in its counts and attention list.
+- The meeting Rock review's list has no inline "Blocked" action; the Discuss view ([rock-review-discuss.md](rock-review-discuss.md)) has one, and blocked Rocks appear in the list's counts and attention list.
 - Team-level Rocks are carried by the same function but the Company view lists Individual Rocks only, as specified.
 - Production has the migration applied but no blocker or carryover has been recorded, so the screens have not been exercised against real Rock data. Two milestones that were already blocked before this change have no recorded reason.
 

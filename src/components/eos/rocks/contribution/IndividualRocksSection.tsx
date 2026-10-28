@@ -36,6 +36,8 @@ interface IndividualRocksSectionProps {
   defaultOpen?: boolean;
   /** Show the Link and Change actions on each Individual milestone. Off for someone who cannot edit Rocks. */
   canLink?: boolean;
+  /** Leave out the list of Company milestones and who delivers them (the presentation view is short of room; the rows and summary still flag unmapped work). */
+  hideCoverage?: boolean;
   className?: string;
 }
 
@@ -249,7 +251,7 @@ function IndividualRow({
  * only fetched when the section is opened. The toggle is its own button, so it never
  * competes with whatever clicking the surrounding card does.
  */
-export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, canLink = false, className }: IndividualRocksSectionProps) {
+export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, canLink = false, hideCoverage = false, className }: IndividualRocksSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [linking, setLinking] = useState<{ id: string; title: string; rockTitle: string } | null>(null);
   const panelId = useId();
@@ -307,7 +309,7 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
                 ))}
               </ul>
 
-              {model.coverage.length > 0 && (
+              {!hideCoverage && model.coverage.length > 0 && (
                 <div className="space-y-1.5">
                   <h5 className="text-xs font-semibold">Company milestones and who delivers them</h5>
                   <ul className="space-y-1">
