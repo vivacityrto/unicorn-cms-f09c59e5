@@ -39,21 +39,29 @@ function bigramContainment(part: string[], whole: string[]): number {
 const ECHO_MIN_WORDS = 4;
 const ECHO_THRESHOLD = 0.7;
 
+/** A candidate this much longer than the text it is compared with carries more than a repeat. */
+const ECHO_MAX_LENGTH_RATIO = 1.25;
+
 /**
- * Whether two pieces of dictated text say the same thing. When two people on one call both
+ * Whether `candidate` only repeats what `existing` already says. When two people on one call both
  * dictate, each microphone also hears the other person (through the speakers), so the same
  * sentence is transcribed twice with small differences in wording. Comparing consecutive word
  * pairs, not single words, keeps a chunk made of common words ("we need to do that") from being
- * mistaken for an echo of a long line that happens to contain them. Needs at least four words on
- * the shorter side, so short replies like "yes, agreed" are never dropped.
+ * mistaken for an echo of a long line that happens to contain them. The candidate needs at least
+ * four words, so short replies like "yes, agreed" are never dropped. It may be shorter than the
+ * existing text (a line that has grown to hold several sentences) but not much longer: a chunk
+ * that holds the earlier sentence plus new information is not a repeat and must be kept.
  */
-export function isEchoOf(a: string, b: string): boolean {
-  const wordsA = wordsOf(a);
-  const wordsB = wordsOf(b);
-  const [shorter, longer] = wordsA.length <= wordsB.length ? [wordsA, wordsB] : [wordsB, wordsA];
-  if (shorter.length < ECHO_MIN_WORDS) return false;
-  return bigramContainment(shorter, longer) >= ECHO_THRESHOLD;
+export function isEchoOf(candidate: string, existing: string): boolean {
+  const words = wordsOf(candidate);
+  const reference = wordsOf(existing);
+  if (words.length < ECHO_MIN_WORDS) return false;
+  if (words.length > reference.length * ECHO_MAX_LENGTH_RATIO) return false;
+  return bigramContainment(words, reference) >= ECHO_THRESHOLD;
 }
+
+/** The "Name" in a leading "Name: " speaker label, or null for an unlabelled line. */
+export const speakerOf = (line: string): string | null => /^([^:\n]{1,40}):\s+/.exec(line)?.[1].trim().toLowerCase() ?? null;
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 

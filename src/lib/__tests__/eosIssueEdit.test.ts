@@ -117,6 +117,18 @@ describe('mergeConflictingText', () => {
     ).toBe('Ben: We should move the launch to the end of November\n\nAmy: and I will tell the client tomorrow');
   });
 
+  it('keeps your own edit of a line even when it resembles the saved version (no cross-speaker echo)', () => {
+    expect(
+      mergeConflictingText('Ship it on Friday for the whole team\nBen: noted', 'Ship it on Friday for the whole team today\nBen: noted'),
+    ).toBe('Ship it on Friday for the whole team\nBen: noted\n\nShip it on Friday for the whole team today');
+  });
+
+  it('keeps a line from the same speaker even when it resembles one they already saved', () => {
+    expect(
+      mergeConflictingText('Ben: We should move the launch to the end of November', 'Ben: we should move the launch to the end of november today'),
+    ).toBe('Ben: We should move the launch to the end of November\n\nBen: we should move the launch to the end of november today');
+  });
+
   it('handles an empty side without adding blank lines', () => {
     expect(mergeConflictingText('', 'mine')).toBe('mine');
     expect(mergeConflictingText('theirs', '')).toBe('theirs');

@@ -107,4 +107,15 @@ describe('echo between two people dictating on one call', () => {
   it('is not fooled by common words that merely appear in a long line', () => {
     expect(isEchoOf('we need to do that', 'Ben: we need to talk about the budget before friday and then we can do it')).toBe(false);
   });
+
+  it('keeps a chunk that holds an earlier sentence plus new information', () => {
+    const chunk = 'we should move the launch to the end of november and I will tell the client tomorrow about the new plan';
+    expect(isEchoOf(chunk, 'Ben: We should move the launch to the end of November')).toBe(false);
+    expect(appendLabelledDictation('Ben: We should move the launch to the end of November', chunk, 'Amy')).toContain('Amy: ');
+  });
+
+  it('still drops a repeat of one sentence inside a longer line from someone else', () => {
+    expect(isEchoOf('we should move the launch to the end of november', 'Ben: Agreed. We should move the launch to the end of November. Then we tell the client.')).toBe(true);
+  });
 });
+

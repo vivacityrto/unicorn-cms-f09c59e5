@@ -255,4 +255,19 @@ describe('useSpeechToText', () => {
       FakeRecognition.prototype.start = originalStart;
     }
   });
+
+  it('gives up, and says so, when the browser keeps refusing to start in keep-listening mode', () => {
+    class Refusing extends FakeRecognition {
+      startThrows = true;
+    }
+    (window as unknown as { SpeechRecognition: unknown }).SpeechRecognition = Refusing;
+    const { result } = renderHook(() => useSpeechToText());
+    act(() => result.current.startRecording(vi.fn(), { keepListening: true }));
+    for (let i = 0; i < 10; i++) act(() => void vi.advanceTimersByTime(500));
+
+    expect(result.current.isRecording).toBe(false);
+    expect(FakeRecognition.instances).toHaveLength(5); // the first try plus four retries, then it stops
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Dictation could not start' }));
+  });
 });
+

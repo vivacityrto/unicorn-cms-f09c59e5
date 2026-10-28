@@ -37,6 +37,8 @@ const getSpeechRecognitionClass = (): (new () => SpeechRecognitionInstance) | nu
 
 /** How long stop() waits for the browser to confirm the session ended before forcing it. */
 const STOP_GRACE_MS = 1500;
+/** How many times in a row a refused start() is retried before giving up. */
+const MAX_START_RETRIES = 4;
 
 /**
  * Cut a session loose from the hook, then abort it. A browser fires onend/onerror for an
@@ -68,6 +70,7 @@ export function useSpeechToText() {
   const lastResultAtRef = useRef(0);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startFailuresRef = useRef(0);
 
   const isSupported = typeof window !== 'undefined' && getSpeechRecognitionClass() !== null;
 
@@ -220,9 +223,10 @@ export function useSpeechToText() {
     } catch {
       // start() refused (a session is still winding down, or the browser is busy). Do not
       // leave the UI saying it is listening when nothing is: drop this session and, in
-      // keep-listening mode, try once more shortly; otherwise report it as off.
+      // keep-listening mode, try again a few times; then give up and say so.
       recognitionRef.current = null;
-      if (wantListeningRef.current && keepListeningRef.current) {
+      startFailuresRef.current += 1;
+      if (wantListeningRef.current && keepListeningRef.current && startFailuresRef.current <= MAX_START_RETRIES) {
         restartTimerRef.current = setTimeout(() => {
           restartTimerRef.current = null;
           if (wantListeningRef.current && !recognitionRef.current) beginSession();
@@ -231,8 +235,17 @@ export function useSpeechToText() {
         wantListeningRef.current = false;
         setIsRecording(false);
         setInterimTranscript('');
+        if (startFailuresRef.current > MAX_START_RETRIES) {
+          toast({
+            title: 'Dictation could not start',
+            description: 'The browser would not start listening. Check the microphone and press the mic to try again.',
+            variant: 'destructive',
+          });
+        }
       }
+      return;
     }
+    startFailuresRef.current = 0;
   }, []);
 
   const startRecording = useCallback(
@@ -266,6 +279,7 @@ export function useSpeechToText() {
       keepListeningRef.current = options?.keepListening ?? false;
       wantListeningRef.current = true;
       restartTimesRef.current = [];
+      startFailuresRef.current = 0;
       lastResultAtRef.current = Date.now();
       setIsRecording(true);
       // A refused start() switches it back off inside beginSession, so this must come first.
