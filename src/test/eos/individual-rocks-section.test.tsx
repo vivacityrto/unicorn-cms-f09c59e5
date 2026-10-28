@@ -138,11 +138,23 @@ describe('IndividualRocksSection: each Individual Rock', () => {
     expect(screen.getAllByText(/Vendor has not issued access/)).not.toHaveLength(0);
   });
 
-  it('opens the full Individual Rock from the expanded row', () => {
+  it('opens the full Individual Rock from its header, without expanding the row', () => {
     const { onOpenRock } = renderSection({ defaultOpen: true });
-    fireEvent.click(screen.getByRole('button', { name: /Expand Build the launch plan/ }));
-    fireEvent.click(screen.getByRole('button', { name: /^Open/ }));
+    expect(screen.queryByRole('button', { name: /Collapse Build the launch plan/ })).toBeNull(); // still collapsed
+    fireEvent.click(screen.getByRole('button', { name: 'Open the full Rock: Build the launch plan' }));
     expect(onOpenRock).toHaveBeenCalledWith('i1');
+  });
+
+  it('puts the link in the header only: expanding the row adds no second one', () => {
+    renderSection({ defaultOpen: true });
+    const before = screen.getAllByRole('button', { name: /^Open the full Rock/ }).length;
+    fireEvent.click(screen.getByRole('button', { name: /Expand Build the launch plan/ }));
+    expect(screen.getAllByRole('button', { name: /^Open the full Rock/ })).toHaveLength(before);
+  });
+
+  it('shows no open link when nothing can open a Rock', () => {
+    renderSection({ defaultOpen: true, onOpenRock: undefined });
+    expect(screen.queryByRole('button', { name: /^Open the full Rock/ })).toBeNull();
   });
 
   it('says what is linked from the other side too: Company milestones and who delivers them', () => {
