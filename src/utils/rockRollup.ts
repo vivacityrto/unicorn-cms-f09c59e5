@@ -14,6 +14,8 @@ export function canRockLevelBeParent(parentLevel: string | null | undefined, chi
 /**
  * Compute the roll-up status for a rock based on its children's statuses.
  * Rules:
+ * - A Rock that is itself blocked (it has its own recorded blocker) stays blocked,
+ *   whatever its children say. Only a person resolving that blocker changes it.
  * - If any child is off_track or at_risk, parent is off_track
  * - A blocked child is neither: it does not turn the parent off track, and it
  *   does not count as complete. The parent keeps its own progress status and
@@ -26,7 +28,7 @@ export function canRockLevelBeParent(parentLevel: string | null | undefined, chi
 export function computeRollupStatus(rock: EosRock, allRocks: EosRock[]): UiRockStatus {
   const children = allRocks.filter(r => r.parent_rock_id === rock.id && !r.archived_at);
   
-  if (children.length === 0) {
+  if (children.length === 0 || dbToUiStatus(rock.status) === 'blocked') {
     return dbToUiStatus(rock.status);
   }
   

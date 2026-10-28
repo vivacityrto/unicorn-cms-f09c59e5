@@ -41,6 +41,7 @@ export interface RockCarryoverData {
 const REFRESH = [
   ['eos-rock-carryover'],
   ['eos-rock-milestones'],
+  ['eos-rock-milestone-progress'],
   ['eos-rocks-hierarchy'],
   ['eos-rocks'],
   ['eos-rock-editor-rocks'],

@@ -9,6 +9,7 @@ import { blockerPayload, type BlockerForm, type BlockerRow, type BlockerSubject 
 const REFRESH = [
   ['eos-rock-blockers'],
   ['eos-rock-milestones'],
+  ['eos-rock-milestone-progress'],
   ['eos-rocks-hierarchy'],
   ['eos-rocks'],
   ['eos-rock-editor-rocks'],

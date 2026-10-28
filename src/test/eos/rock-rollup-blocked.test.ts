@@ -68,6 +68,15 @@ describe('How a blocked Individual Rock affects the Company Rock', () => {
     expect(built?.childStats).toEqual({ total: 3, complete: 1, offTrack: 1, blocked: 1 });
   });
 
+  it('keeps a Company Rock that is itself blocked blocked, whatever its children say', () => {
+    const blockedCompany = rock('company', 'blocked', { rock_level: 'company', parent_rock_id: null });
+    expect(computeRollupStatus(blockedCompany, [blockedCompany, rock('a', 'on_track'), rock('b', 'on_track')])).toBe('blocked');
+    expect(computeRollupStatus(blockedCompany, [blockedCompany, rock('a', 'complete'), rock('b', 'complete')])).toBe('blocked');
+    expect(computeRollupStatus(blockedCompany, [blockedCompany, rock('a', 'off_track')])).toBe('blocked');
+    const built = buildRockHierarchy([blockedCompany, rock('a', 'complete')]).find(r => r.id === 'company');
+    expect(built?.rollupStatus).toBe('blocked');
+  });
+
   it('leaves a Rock with no children on its own status', () => {
     expect(computeRollupStatus(rock('solo', 'blocked', { parent_rock_id: null }), [])).toBe('blocked');
   });
