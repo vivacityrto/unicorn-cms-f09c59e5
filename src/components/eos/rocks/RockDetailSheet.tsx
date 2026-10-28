@@ -36,6 +36,7 @@ import { ResolveBlockerDialog } from '@/components/eos/rocks/blockers/ResolveBlo
 import { CarryForwardDialog } from '@/components/eos/rocks/carryover/CarryForwardDialog';
 import { CarryoverLinks } from '@/components/eos/rocks/carryover/CarryoverLinks';
 import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
+import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
 import { RockHistory } from '@/components/eos/rocks/detail/RockHistory';
@@ -61,6 +62,7 @@ import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 import type { MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
 import { openBlocker, resolvedBlockers, type BlockerSubject } from '@/utils/rockBlocker';
 import { formatQuarter } from '@/utils/rockCarryover';
+import { companyRootFor } from '@/utils/rockLinking';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import type {
   EosRock,
@@ -207,6 +209,7 @@ export function RockDetailSheet({
   const [contextOpen, setContextOpen] = useState(false);
   const [blockerTarget, setBlockerTarget] = useState<{ subject: BlockerSubject; id: string; label: string; mode: 'record' | 'resolve' } | null>(null);
   const [carryOpen, setCarryOpen] = useState(false);
+  const [linkTarget, setLinkTarget] = useState<{ id: string; title: string } | null>(null);
 
   const milestonesQuery = useQuery({
     queryKey: ['eos-rock-milestones', rockId],
@@ -262,6 +265,13 @@ export function RockDetailSheet({
   // Recording, editing and resolving blockers and carrying work forward are changes, so they
   // follow the same gate as editing the Rock. The database repeats the staff check.
   const canManage = !!onEdit;
+  // Which Company Rock this Rock serves, so its milestones can be mapped up (Individual Rocks only).
+  const linkRoot = rock.rock_level === 'individual'
+    ? companyRootFor(
+        { id: rock.id, title: rock.title, level: rock.rock_level ?? null, parentId: rock.parent_rock_id ?? null },
+        new Map((editorRocksQuery.data ?? []).map(r => [r.id, { id: r.id, title: r.title, level: r.level, parentId: r.parentId }])),
+      )
+    : null;
   const nameOf = (userId: string | null) => (userId && getUserInfo ? getUserInfo(userId)?.name ?? null : null);
   const blockers = blockersQuery.data ?? [];
   const rockBlocker = openBlocker(blockers, 'rock', rock.id);
@@ -534,6 +544,16 @@ export function RockDetailSheet({
                   todayIso={todayIso}
                   getUserInfo={getUserInfo}
                   onOpenRock={onOpenRock}
+                  linkSupport={
+                    hasRows && rock.rock_level === 'individual'
+                      ? {
+                          canManage,
+                          root: linkRoot,
+                          onLink: (id, title) => setLinkTarget({ id, title }),
+                          onEditRock: onEdit ? () => onEdit(rock) : undefined,
+                        }
+                      : undefined
+                  }
                   blockerSupport={
                     hasRows
                       ? {
@@ -558,6 +578,7 @@ export function RockDetailSheet({
                 companyRockId={rock.id}
                 getUserInfo={getUserInfo}
                 onOpenRock={onOpenRock}
+                canLink={canManage}
                 defaultOpen
               />
             </>
@@ -702,6 +723,15 @@ export function RockDetailSheet({
           subjectId={blockerTarget.id}
           subjectLabel={blockerTarget.label}
           blocker={openBlocker(blockers, blockerTarget.subject, blockerTarget.id)}
+        />
+      )}
+      {linkTarget && linkRoot?.status === 'ok' && (
+        <LinkMilestoneDialog
+          open
+          onOpenChange={next => !next && setLinkTarget(null)}
+          companyRockId={linkRoot.companyRockId}
+          milestone={linkTarget}
+          rockTitle={rock.title}
         />
       )}
       <CarryForwardDialog

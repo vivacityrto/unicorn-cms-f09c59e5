@@ -74,6 +74,7 @@ export function RockCard({
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
   const individualChildren = (rock.children ?? []).filter(child => child.rock_level === 'individual');
+  const teamChildren = (rock.children ?? []).filter(child => child.rock_level === 'team');
   // What the count below is a count of. A Company Rock can cascade to Team Rocks, Individual Rocks or both.
   const childLevels = new Set((rock.children ?? []).map(child => child.rock_level));
   const cascadeLabel = childLevels.size === 1 && childLevels.has('individual') ? 'Individual' : childLevels.size === 1 && childLevels.has('team') ? 'Team' : rock.children?.length ? 'Cascaded' : rock.rock_level === 'company' ? 'Team' : 'Individual';
@@ -327,15 +328,17 @@ export function RockCard({
         )}
 
         {/* A Company Rock's Individual Rocks: one collapsed line until opened, loaded on demand */}
-        {rock.rock_level === 'company' && showChildren && individualChildren.length > 0 && (
+        {rock.rock_level === 'company' && showChildren && (individualChildren.length > 0 || teamChildren.length > 0) && (
           <IndividualRocksSection
             companyRockId={rock.id}
             getUserInfo={getUserInfo}
             onOpenRock={onOpenRockById}
-            hint={{
+            canLink={!!onEdit}
+            // With only Team Rocks below, how many Individual Rocks sit under them is not known until it is opened.
+            hint={individualChildren.length > 0 ? {
               total: individualChildren.length,
               blocked: individualChildren.filter(child => dbToUiStatus(child.status) === 'blocked').length,
-            }}
+            } : undefined}
           />
         )}
 

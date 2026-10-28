@@ -49,7 +49,7 @@ export interface ContributionCarry {
 export interface ContributionInput {
   companyRock: ContributionRock;
   companyMilestones: ContributionMilestone[];
-  /** Child Rocks of the Company Rock. Only Individual-level ones are shown. */
+  /** Child Rocks of the Company Rock, and Individual Rocks under its Team Rocks. Only Individual-level ones are shown. */
   childRocks: ContributionRock[];
   /** Milestones of the child Rocks. */
   childMilestones: ContributionMilestone[];
@@ -84,6 +84,8 @@ export interface IndividualMilestoneView {
 
 export interface IndividualContribution {
   rock: ContributionRock;
+  /** The Team Rock it serves the Company Rock through, if it does not serve it directly. */
+  viaTeam: string | null;
   milestones: IndividualMilestoneView[];
   progress: { complete: number; total: number };
   blocker: ContributionBlocker | null;
@@ -161,8 +163,10 @@ export function buildContribution(input: ContributionInput): ContributionModel {
       supports: supportsByIndividual.get(m.id) ?? [],
       blocker: blockerForMilestone(m.id),
     }));
+    const parent = rock.parent_rock_id ? input.childRocks.find(r => r.id === rock.parent_rock_id) : undefined;
     return {
       rock,
+      viaTeam: parent && parent.rock_level === 'team' ? parent.title : null,
       milestones: views,
       progress: progressOf(own),
       blocker: blockerForRock(rock.id),

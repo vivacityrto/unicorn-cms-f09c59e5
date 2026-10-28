@@ -1,5 +1,5 @@
 import { useMemo, useState, type MouseEvent } from 'react';
-import { Ban, ChevronDown, ChevronRight, ExternalLink, Search } from 'lucide-react';
+import { Ban, ChevronDown, ChevronRight, ExternalLink, Link2, Search } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import {
 } from '@/utils/rockPanelMetrics';
 import { summarizeMilestoneTasks, type MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
 import { openBlocker, type BlockerRow } from '@/utils/rockBlocker';
+import type { LinkRoot } from '@/utils/rockLinking';
 import { todayLocalIso } from '@/utils/localDate';
 
 interface UserInfo {
@@ -68,6 +69,14 @@ export interface MilestoneBlockerSupport {
   onResolve: (milestoneId: string, label: string) => void;
 }
 
+/** The mapping of an Individual Rock's milestones to Company milestones: the action, or why there is none. */
+export interface MilestoneLinkSupport {
+  canManage: boolean;
+  root: LinkRoot | null;
+  onLink: (milestoneId: string, title: string) => void;
+  onEditRock?: () => void;
+}
+
 interface MilestoneTableProps {
   milestones: PanelMilestone[];
   /** Milestones to discuss: the metrics' own, plus delivery problems for a Company Rock. */
@@ -82,6 +91,7 @@ interface MilestoneTableProps {
   getUserInfo?: (userId: string) => UserInfo | null;
   onOpenRock?: (rockId: string) => void;
   blockerSupport?: MilestoneBlockerSupport;
+  linkSupport?: MilestoneLinkSupport;
 }
 
 function OwnerCell({ name }: { name: string | null }) {
@@ -112,6 +122,7 @@ export function MilestoneTable({
   getUserInfo,
   onOpenRock,
   blockerSupport,
+  linkSupport,
 }: MilestoneTableProps) {
   const [filter, setFilter] = useState<MilestoneFilter>('all');
   const [query, setQuery] = useState('');
@@ -399,6 +410,21 @@ export function MilestoneTable({
                       ) : null}
                       {delivery && <CompanyMilestoneDeliveryBlock delivery={delivery} getUserInfo={getUserInfo} className="" />}
                       {isIndividual && hasRows && <SupportedMilestonesBlock supported={supported} onOpenRock={onOpenRock} className="" />}
+                      {isIndividual && hasRows && linkSupport?.canManage && linkSupport.root && (
+                        linkSupport.root.status === 'ok' ? (
+                          <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => linkSupport.onLink(milestone.id, milestone.title)}>
+                            <Link2 className="h-3 w-3" aria-hidden />
+                            {supported.length > 0 ? 'Change the Company milestones it supports' : 'Link to a Company milestone'}
+                          </Button>
+                        ) : (
+                          <div className="space-y-1.5 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
+                            <p>{linkSupport.root.message}</p>
+                            {linkSupport.onEditRock && (
+                              <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={linkSupport.onEditRock}>Edit this Rock</Button>
+                            )}
+                          </div>
+                        )
+                      )}
                       <MilestoneTasks tasks={tasks} milestoneStatus={milestone.status} />
                     </div>
                   </div>

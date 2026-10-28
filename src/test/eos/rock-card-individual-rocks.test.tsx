@@ -54,8 +54,15 @@ describe('RockCard: Company Rock with Individual Rocks', () => {
     expect(screen.getByText('Blocked')).toBeInTheDocument();
   });
 
-  it('counts only Individual-level children, and shows no section when there are none', () => {
+  it('shows the section for a Company Rock with only Team Rocks below it, because their Individual Rocks are listed too', () => {
     render(<RockCard rock={company({ children: [child('t1', 'on_track', 'team')], childStats: { total: 1, complete: 0, offTrack: 0, blocked: 0 } })} />);
+    const toggle = screen.getByRole('button', { name: /Individual Rocks/ });
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).not.toHaveTextContent('1 Individual Rock'); // how many sit under the Team Rock is not known until it is opened
+  });
+
+  it('shows no section when nothing is below the Company Rock', () => {
+    render(<RockCard rock={company({ children: [], childStats: undefined })} />);
     expect(screen.queryByRole('button', { name: /Individual Rocks/ })).toBeNull();
   });
 

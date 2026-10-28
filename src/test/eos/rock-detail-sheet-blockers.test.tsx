@@ -26,6 +26,11 @@ vi.mock('@/hooks/useRockCarryover', () => ({
   useCarryForwardRock: () => ({ mutateAsync: state.carry, isPending: false }),
 }));
 vi.mock('@/hooks/useRockContribution', () => ({ useRockContribution: () => state.contribution }));
+vi.mock('@/hooks/useMilestoneLinking', () => ({
+  useLinkTargets: () => ({ data: [{ id: 'c1', title: 'M1 - Beta', status: 'in_progress', dueDate: null, tenantId: 6372 }], isLoading: false, isError: false }),
+  useLinkedCompanyIds: () => ({ data: [], isLoading: false, isError: false }),
+  useSetMilestoneLinks: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock('@/hooks/useVivacityTeamUsers', () => ({
   VIVACITY_TENANT_ID: 6372,
   useVivacityTeamUsers: () => ({ data: [{ user_uuid: 'u-khian', first_name: 'Khian', last_name: 'Sismundo', email: 'k@example.com' }] }),
@@ -270,5 +275,39 @@ describe('RockDetailSheet: Company Rock', () => {
   it('is not shown on an Individual Rock', () => {
     renderSheet();
     expect(screen.queryByRole('button', { name: /Individual Rocks/ })).toBeNull();
+  });
+});
+
+describe('RockDetailSheet: mapping an Individual milestone to a Company milestone', () => {
+  const milestone = { id: 'm-9', rock_id: 'rock-1', title: 'M2 - Application submission', status: 'not_started', priority: 'medium', owner_id: null, due_date: null, exit_criteria: null, evidence_url: null, sort_order: 1, tenant_id: 6372 };
+
+  const expandFirstMilestone = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: /Application submission/, expanded: false }));
+    return document.getElementById('milestone-details-m-9') as HTMLElement;
+  };
+
+  it('offers Link in the milestone details when the Rock serves a Company Rock, and opens the picker', async () => {
+    state.milestones = [milestone];
+    renderSheet({ rock: { ...baseRock, parent_rock_id: 'rock-vendor' } });
+    const details = await expandFirstMilestone();
+    fireEvent.click(within(details).getByRole('button', { name: 'Link to a Company milestone' }));
+    expect(await screen.findByRole('dialog', { name: 'Which Company milestones does this support?' })).toBeInTheDocument();
+  });
+
+  it('explains why there is nothing to link to when the Rock serves no Company Rock, and offers to edit it', async () => {
+    state.milestones = [milestone];
+    const { onEdit } = renderSheet();
+    const details = await expandFirstMilestone();
+    expect(within(details).getByText(/does not serve a Company or Team Rock yet/)).toBeInTheDocument();
+    expect(within(details).queryByRole('button', { name: 'Link to a Company milestone' })).toBeNull();
+    fireEvent.click(within(details).getByRole('button', { name: 'Edit this Rock' }));
+    expect(onEdit).toHaveBeenCalled();
+  });
+
+  it('offers nothing to someone who cannot edit', async () => {
+    state.milestones = [milestone];
+    renderSheet({ rock: { ...baseRock, parent_rock_id: 'rock-vendor' }, onEdit: undefined });
+    const details = await expandFirstMilestone();
+    expect(within(details).queryByRole('button', { name: /Company milestone/ })).toBeNull();
   });
 });
