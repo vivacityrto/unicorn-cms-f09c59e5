@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RockDetailSheet } from '@/components/eos/rocks/RockDetailSheet';
@@ -303,6 +303,56 @@ describe('RockDetailSheet', () => {
     });
   });
 
+  describe('To-Dos linked to the Rock and its milestones', () => {
+    const milestoneRows = [m('1', 'rock-1', 'Milestone 1 - Draft the pipeline plan', 'in_progress', { due_date: FUTURE })];
+    const seed = () => {
+      tableData.rows.eos_rock_milestones = milestoneRows;
+      tableData.rows.eos_rock_todo_links = [
+        { id: 'l-1', todo_id: 'td-1', rock_id: 'rock-1', milestone_id: '1' },
+        { id: 'l-2', todo_id: 'td-2', rock_id: 'rock-1', milestone_id: '1' },
+        { id: 'l-3', todo_id: 'td-3', rock_id: 'rock-1', milestone_id: null },
+      ];
+      tableData.rows.eos_todos = [
+        { id: 'td-1', title: 'Chase the supplier', status: 'Open', due_date: '2020-01-01', owner_id: null },
+        { id: 'td-2', title: 'Book the check-in', status: 'Complete', due_date: '2020-01-02', owner_id: null },
+        { id: 'td-3', title: 'Send the plan to legal', status: 'Open', due_date: FUTURE, owner_id: null },
+      ];
+    };
+
+    it('counts a milestone\'s To-Dos on its row, flags the overdue one, and lists them when expanded', async () => {
+      seed();
+      renderSheet({ onEdit: vi.fn() });
+      const region = await screen.findByRole('region', { name: 'Milestone list' });
+      expect(await within(region).findByText('1/2 tasks')).toBeInTheDocument();
+      expect(within(region).getAllByText('1 overdue').length).toBeGreaterThan(0);
+
+      fireEvent.click(within(region).getByRole('button', { name: /Draft the pipeline plan/ }));
+      expect(within(region).getByText(/To-Dos · 1 of 2 done/)).toBeInTheDocument();
+      expect(within(region).getByText('Chase the supplier')).toBeInTheDocument();
+      expect(within(region).queryByText('Send the plan to legal')).toBeNull(); // that one is for the whole Rock
+    });
+
+    it('shows To-Dos for the whole Rock in their own section, with the controls for someone who can manage the Rock', async () => {
+      seed();
+      renderSheet({ onEdit: vi.fn() });
+      expect(await screen.findByText('Send the plan to legal')).toBeInTheDocument();
+      expect(screen.getByText('To-Dos for this Rock · 0 of 1 done')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Add a To-Do/ }).length).toBeGreaterThan(0);
+    });
+
+    it('is read-only for someone who cannot manage the Rock, and hides an empty section', async () => {
+      seed();
+      renderSheet();
+      expect(await screen.findByText('Send the plan to legal')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Add a To-Do/ })).toBeNull();
+      cleanup();
+      tableData.rows.eos_rock_todo_links = [];
+      renderSheet();
+      await screen.findByRole('region', { name: 'Milestone list' });
+      expect(screen.queryByText(/To-Dos for this Rock/)).toBeNull();
+    });
+  });
+
   describe('linked GitHub tasks', () => {
     const milestoneRows = [m('1', 'rock-1', 'Milestone 1 - Draft the pipeline plan', 'in_progress', { due_date: FUTURE })];
     const task = (overrides: Record<string, unknown>) => ({
@@ -325,7 +375,7 @@ describe('RockDetailSheet', () => {
       expect(tile('Needs attention')).toHaveTextContent('1blocked tasks');
 
       fireEvent.click(within(region).getByRole('button', { name: /Draft the pipeline plan/ }));
-      expect(within(region).getByText(/Tasks · 0 of 2 closed/)).toBeInTheDocument();
+      expect(within(region).getByText(/Linked tasks · 0 of 2 closed/)).toBeInTheDocument();
       const link = within(region).getByRole('link', { name: 'Build the fixtures' });
       expect(link).toHaveAttribute('href', 'https://github.com/ComplyHub-ai/rto-compass-hub/issues/1');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -346,7 +396,7 @@ describe('RockDetailSheet', () => {
       fireEvent.click(await within(region).findByRole('button', { name: /Draft the pipeline plan/ }));
 
       expect(await within(region).findByText('Ready for review')).toBeInTheDocument();
-      expect(within(region).getByText(/Tasks · 2 of 2 closed/)).toBeInTheDocument();
+      expect(within(region).getByText(/Linked tasks · 2 of 2 closed/)).toBeInTheDocument();
       expect(within(region).getByText(/mark this milestone complete in Unicorn/)).toBeInTheDocument();
       // The milestone itself is still In progress: a person completes it.
       expect(within(region).getAllByText('In progress').length).toBeGreaterThan(0);
@@ -361,7 +411,7 @@ describe('RockDetailSheet', () => {
 
       fireEvent.click(await within(region).findByRole('button', { name: /Draft the pipeline plan/ }));
 
-      expect(await within(region).findByText(/Tasks · 1 of 1 closed/)).toBeInTheDocument();
+      expect(await within(region).findByText(/Linked tasks · 1 of 1 closed/)).toBeInTheDocument();
       expect(within(region).queryByText('Ready for review')).toBeNull();
     });
 

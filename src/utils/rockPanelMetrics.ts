@@ -1,5 +1,6 @@
 import type { RockMilestoneStatus } from '@/types/eos';
 import type { MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
+import { isOverdueTodo, isTodoCancelled, isTodoDone, type RockTodo } from '@/utils/rockTodos';
 
 /**
  * View-model logic for the Rock details panel's milestone section: short
@@ -79,10 +80,16 @@ export function milestoneMetrics(
   milestones: readonly PanelMilestone[],
   tasks: readonly MilestoneTaskLink[],
   todayIso: string,
+  todos: readonly RockTodo[] = [],
 ): MilestoneMetrics {
   const blockedTaskMilestones = new Set(
     tasks.filter(t => t.task_state !== 'closed' && t.task_status === 'blocked').map(t => t.milestone_id),
   );
+  // A milestone with an overdue To-Do needs a look, like one with a blocked task.
+  const overdueTodoMilestones = new Set(
+    todos.filter(t => t.milestoneId && isOverdueTodo(t, todayIso)).map(t => t.milestoneId as string),
+  );
+  const countedTodos = todos.filter(t => t.milestoneId && !isTodoCancelled(t));
   const attention = new Set<string>();
   let nextDue: MilestoneMetrics['nextDue'] = null;
   const counts = { complete: 0, inProgress: 0, blocked: 0, offTrack: 0, notStarted: 0, deferred: 0, overdue: 0 };
@@ -97,7 +104,7 @@ export function milestoneMetrics(
 
     const overdue = isOverdueMilestone(m, todayIso);
     if (overdue) counts.overdue += 1;
-    if (m.status === 'blocked' || m.status === 'off_track' || overdue || blockedTaskMilestones.has(m.id)) {
+    if (m.status === 'blocked' || m.status === 'off_track' || overdue || blockedTaskMilestones.has(m.id) || overdueTodoMilestones.has(m.id)) {
       if (isOpen(m.status)) attention.add(m.id);
     }
 
@@ -110,7 +117,7 @@ export function milestoneMetrics(
   }
 
   const active = milestones.length - counts.deferred;
-  const closed = tasks.filter(isClosedTask).length;
+  const closed = tasks.filter(isClosedTask).length + countedTodos.filter(isTodoDone).length;
   return {
     total: milestones.length,
     active,
@@ -118,7 +125,7 @@ export function milestoneMetrics(
     percentComplete: active > 0 ? Math.round((counts.complete / active) * 100) : null,
     nextDue,
     tasks: {
-      total: tasks.length,
+      total: tasks.length + countedTodos.length,
       closed,
       blocked: tasks.filter(t => !isClosedTask(t) && t.task_status === 'blocked').length,
     },

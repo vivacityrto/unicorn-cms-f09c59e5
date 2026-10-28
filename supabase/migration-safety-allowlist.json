@@ -279,6 +279,15 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-28): the migration runs no INSERT, UPDATE or DELETE when applied, and changes no existing row. The flagged INSERT is the statement inside add_rock_note(), which runs only when a signed-in staff user calls it (SECURITY DEFINER, empty search_path, is_vivacity_team_safe(auth.uid()) checked first, not executable by anon). The flagged UPDATE OR DELETE is the CREATE TRIGGER clause of the append-only guard, which REFUSES every update and delete (the one exception is a deleted meeting clearing meeting_id). The two new tables have select-only grants; summaries are written only by the service role. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted), including refusals, the snapshot, the duplicate guard, append-only, the delete guard and grants. See docs/audit-log/entries/2026-10-28-rock-notes.md.",
       "expires": "2026-11-28"
+    },
+    {
+      "id": "rock-todo-links",
+      "file": "supabase/migrations/20261029030000_rock_todo_links.sql",
+      "categories": ["data-mutation", "destructive-mutation"],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-10-29): the migration runs no INSERT, UPDATE or DELETE when applied, creates one new table, and changes no existing row (no To-Do, Rock or milestone is touched). Every flagged INSERT, DELETE or UPDATE is inside a function body (add_rock_todo, link_todo_to_rock, unlink_todo_from_rock) or is part of the CREATE TRIGGER clause of a validation trigger, and runs only when a signed-in staff user calls the function: each is SECURITY DEFINER with an empty search_path, checks is_vivacity_team_safe(auth.uid()) before any write, and is not executable by anon. The one DELETE removes only the link row and never a To-Do. The new table has select-only grants. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted). See docs/audit-log/entries/2026-10-29-rock-todo-links.md.",
+      "expires": "2026-11-28"
     }
   ]
 }

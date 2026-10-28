@@ -37,6 +37,9 @@ import { CarryForwardDialog } from '@/components/eos/rocks/carryover/CarryForwar
 import { CarryoverLinks } from '@/components/eos/rocks/carryover/CarryoverLinks';
 import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
 import { RockNotesPanel } from '@/components/eos/rocks/notes/RockNotesPanel';
+import { RockTodoList } from '@/components/eos/rocks/todos/RockTodoList';
+import { useRockTodos } from '@/hooks/useRockTodos';
+import { splitTodosByMilestone } from '@/utils/rockTodos';
 import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
@@ -240,6 +243,10 @@ export function RockDetailSheet({
 
   // GitHub tasks linked to milestones (static snapshots since the rock-task-sync webhook was retired on 2026-10-28). Tolerates the table not
   // existing yet so the panel still opens if the frontend deploys first.
+  // To-Dos linked to the Rock or its milestones: live, unlike the outside-tracker snapshots below.
+  // (A hook, so it stays above the early return.)
+  const todosQuery = useRockTodos(rockId, open);
+
   const tasksQuery = useQuery({
     queryKey: ['eos-rock-milestone-tasks', rockId, normalizedIds],
     queryFn: async () => {
@@ -322,6 +329,8 @@ export function RockDetailSheet({
   const milestonePickOptions = (excludeId?: string) =>
     milestones.filter(m => m.id !== excludeId).map(m => ({ id: m.id, label: m.label }));
 
+  const { byMilestone: todosByMilestone, rockLevel: rockLevelTodos } = splitTodosByMilestone(todosQuery.data ?? []);
+
   const tasks = tasksQuery.data ?? [];
   const tasksByMilestone = new Map<string, MilestoneTaskLink[]>();
   for (const task of tasks) {
@@ -331,7 +340,7 @@ export function RockDetailSheet({
   }
 
   const todayIso = todayLocalIso();
-  const metrics = milestoneMetrics(milestones, tasks, todayIso);
+  const metrics = milestoneMetrics(milestones, tasks, todayIso, todosQuery.data ?? []);
   const isCompany = rock.rock_level === 'company';
   const companyDelivery = isCompany && deliveryData && hasRows
     ? {
@@ -538,6 +547,8 @@ export function RockDetailSheet({
                   milestones={milestones}
                   attentionIds={attentionIds}
                   tasksByMilestone={tasksByMilestone}
+                  todosByMilestone={todosByMilestone}
+                  todoSupport={hasRows ? { rock: { id: rock.id, title: rock.title }, canManage } : undefined}
                   deliveryData={deliveryData}
                   rockLevel={rock.rock_level}
                   hasRows={hasRows}
@@ -571,6 +582,13 @@ export function RockDetailSheet({
               </>
             )}
           </section>
+
+          {(canManage || rockLevelTodos.length > 0) && (
+            <>
+              <Separator />
+              <RockTodoList rock={{ id: rock.id, title: rock.title }} todos={rockLevelTodos} canManage={canManage} />
+            </>
+          )}
 
           {canManage && (
             <>

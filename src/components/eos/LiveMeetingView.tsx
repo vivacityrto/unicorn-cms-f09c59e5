@@ -39,6 +39,8 @@ import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
 import { TodoDueDateButton } from '@/components/eos/TodoDueDateButton';
 import { TodoIssueTag } from '@/components/eos/TodoIssueTag';
+import { TodoRockLink } from '@/components/eos/rocks/todos/TodoRockLink';
+import { useTodoRockLinks } from '@/hooks/useRockTodos';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
@@ -511,6 +513,8 @@ export const LiveMeetingView = () => {
       return ad.localeCompare(bd);
     });
   }, [todos]);
+  // Which Rock (if any) each To-Do is for, so the list can show it and let staff change it.
+  const todoRockLinks = useTodoRockLinks(sortedTodos.map(t => t.id));
 
   const liveSelectedIssue = useMemo(
     () => issues?.find((i) => i.id === selectedIssue?.id) ?? selectedIssue,
@@ -802,6 +806,7 @@ export const LiveMeetingView = () => {
                           </span>
                         )}
                         <TodoIssueTag issueTitle={todo.issue?.title} />
+                        <TodoRockLink todoId={todo.id} link={todoRockLinks.data?.[todo.id]} canManage />
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Assigned to: {todo.owner_id ? (todoOwners?.[todo.owner_id] ?? 'Unassigned') : 'Unassigned'}

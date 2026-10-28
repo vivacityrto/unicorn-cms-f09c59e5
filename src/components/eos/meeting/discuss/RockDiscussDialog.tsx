@@ -7,6 +7,7 @@ import { RockDiscussSlide } from '@/components/eos/meeting/discuss/RockDiscussSl
 import { cn } from '@/lib/utils';
 import { useOptionalRockNotesDictation } from '@/components/eos/rocks/notes/RockNotesDictation';
 import { useOpenIssueRockIds } from '@/hooks/useRockDiscussion';
+import { useOverdueTodoCountsByRock } from '@/hooks/useRockTodos';
 import type { RockCascadeNode } from '@/utils/meetingRocksCascade';
 import { discussionDeck, nodesById, wrapUp, type DiscussionOutcome } from '@/utils/rockDiscussion';
 import { dbToUiStatus } from '@/utils/rockStatusUtils';
@@ -40,6 +41,10 @@ const isTyping = (target: EventTarget | null) =>
  */
 function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, quarterLabel, startAttentionOnly = false, startAtRockId = null, meeting, onOpenDetails }: RockDiscussDialogProps) {
   const [attentionOnly, setAttentionOnly] = useState(startAttentionOnly);
+  const allRockIds = useMemo(() => discussionDeck(roots), [roots]);
+  // Rocks with an overdue To-Do linked to them need the room even when their own status looks fine.
+  const overdueByRock = useOverdueTodoCountsByRock(allRockIds, open);
+  const overdueIds = useMemo(() => new Set(Object.keys(overdueByRock.data ?? {})), [overdueByRock.data]);
   const [deck, setDeck] = useState<string[]>(() => discussionDeck(roots, { attentionOnly: startAttentionOnly }));
   const [position, setPosition] = useState(() => Math.max(0, deck.indexOf(startAtRockId ?? '')));
   const [outcomes, setOutcomes] = useState<Record<string, DiscussionOutcome[]>>({});
@@ -82,7 +87,7 @@ function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, 
   };
 
   const changeFilter = (only: boolean) => {
-    const next = discussionDeck(roots, { attentionOnly: only });
+    const next = discussionDeck(roots, { attentionOnly: only, extraAttentionIds: overdueIds });
     setAttentionOnly(only);
     setDeck(next);
     setPosition(Math.max(0, next.indexOf(currentId ?? '')));
@@ -99,7 +104,7 @@ function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, 
   };
 
   const totalAll = useMemo(() => discussionDeck(roots).length, [roots]);
-  const totalAttention = useMemo(() => discussionDeck(roots, { attentionOnly: true }).length, [roots]);
+  const totalAttention = useMemo(() => discussionDeck(roots, { attentionOnly: true, extraAttentionIds: overdueIds }).length, [roots, overdueIds]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -11,6 +11,8 @@ import {
 } from '@/components/eos/rocks/MilestoneDelivery';
 import { BlockerDetails, type DependencyTarget } from '@/components/eos/rocks/blockers/BlockerDetails';
 import { MilestoneTasks } from '@/components/eos/rocks/detail/MilestoneTasks';
+import { RockTodoList } from '@/components/eos/rocks/todos/RockTodoList';
+import type { RockTodo } from '@/utils/rockTodos';
 import { StatusBar } from '@/components/eos/rocks/detail/StatusBar';
 import {
   companyMilestoneDelivery,
@@ -82,6 +84,10 @@ interface MilestoneTableProps {
   /** Milestones to discuss: the metrics' own, plus delivery problems for a Company Rock. */
   attentionIds: ReadonlySet<string>;
   tasksByMilestone: ReadonlyMap<string, MilestoneTaskLink[]>;
+  /** To-Dos linked to each milestone (live), shown above the outside-tracker snapshot. */
+  todosByMilestone?: ReadonlyMap<string, RockTodo[]>;
+  /** Present when the milestone rows are real and To-Dos can be shown and managed. */
+  todoSupport?: { rock: { id: string; title: string }; canManage: boolean };
   deliveryData?: DeliveryData;
   rockLevel: string | undefined;
   /** True when milestones come from the milestone table, so links and tasks can apply. */
@@ -114,6 +120,8 @@ export function MilestoneTable({
   milestones,
   attentionIds,
   tasksByMilestone,
+  todosByMilestone,
+  todoSupport,
   deliveryData,
   rockLevel,
   hasRows,
@@ -245,7 +253,8 @@ export function MilestoneTable({
             const days = milestone.dueDate && isOpen(milestone.status) ? daysBetween(todayIso, milestone.dueDate.slice(0, 10)) : null;
             const evidenceHref = milestone.evidenceUrl ? safeExternalUrl(milestone.evidenceUrl) : null;
             const tasks = tasksByMilestone.get(milestone.id) ?? [];
-            const taskSummary = summarizeMilestoneTasks(tasks, milestone.status);
+            const todos = todosByMilestone?.get(milestone.id) ?? [];
+            const taskSummary = summarizeMilestoneTasks(tasks, milestone.status, todos, todayIso);
             const delivery = hasRows && isCompany && deliveryData ? companyMilestoneDelivery(milestone.id, deliveryData) : null;
             const supported = hasRows && isIndividual && deliveryData ? supportedCompanyMilestones(milestone.id, deliveryData) : [];
             const supportRefs = supported.map(s => milestoneRef({ ...parseMilestoneTitle(s.milestone.title) }));
@@ -351,6 +360,7 @@ export function MilestoneTable({
                           <span className="tabular-nums">
                             {taskSummary.closed}/{taskSummary.total} tasks
                             {taskSummary.blocked > 0 && <span className="ml-1.5 font-medium text-destructive">{taskSummary.blocked} blocked</span>}
+                            {taskSummary.overdue > 0 && <span className="ml-1.5 font-medium text-destructive">{taskSummary.overdue} overdue</span>}
                           </span>
                         </div>
                       ) : (
@@ -424,6 +434,14 @@ export function MilestoneTable({
                             )}
                           </div>
                         )
+                      )}
+                      {todoSupport && hasRows && (
+                        <RockTodoList
+                          rock={todoSupport.rock}
+                          milestone={{ id: milestone.id, title: milestone.title }}
+                          todos={todos}
+                          canManage={todoSupport.canManage}
+                        />
                       )}
                       <MilestoneTasks tasks={tasks} milestoneStatus={milestone.status} />
                     </div>

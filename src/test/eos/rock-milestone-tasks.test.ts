@@ -13,7 +13,7 @@ describe('summarizeMilestoneTasks', () => {
       [task({ id: '1', task_status: 'blocked' }), task({ id: '2', task_state: 'closed', task_status: 'completed' }), task({ id: '3' })],
       'in_progress',
     );
-    expect(summary).toEqual({ total: 3, closed: 1, open: 2, blocked: 1, readyForReview: false });
+    expect(summary).toEqual({ total: 3, closed: 1, open: 2, blocked: 1, overdue: 0, readyForReview: false });
   });
 
   it('does not count a closed task as blocked, whatever its last status was', () => {
