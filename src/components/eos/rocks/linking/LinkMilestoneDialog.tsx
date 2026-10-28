@@ -37,18 +37,23 @@ export function LinkMilestoneDialog({ open, onOpenChange, companyRockId, milesto
   const returnFocus = useReturnFocus(open);
   const [selected, setSelected] = useState<string[] | null>(null);
 
+  // Trust only what was fetched since this dialog opened. A cached copy from an earlier opening can be
+  // out of date (a link added or removed elsewhere), and ticks built from it would make a save delete
+  // links the person never unticked.
+  const fresh = !!linked.isFetchedAfterMount && !!targets.isFetchedAfterMount;
+
   // Fill the ticks from what the database holds once, each time the dialog opens.
   useEffect(() => {
     if (!open) setSelected(null);
-    else if (selected === null && linked.data) setSelected(linked.data);
+    else if (selected === null && fresh && linked.data) setSelected(linked.data);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, linked.data]);
+  }, [open, fresh, linked.data]);
 
   const current = linked.data ?? [];
   const chosen = selected ?? current;
   const { add, remove } = diffLinks(current, chosen);
   const changed = add.length + remove.length > 0;
-  const loading = targets.isLoading || linked.isLoading || selected === null;
+  const loading = targets.isLoading || linked.isLoading || !fresh || selected === null;
   const failed = targets.isError || linked.isError;
   const label = parseMilestoneTitle(milestone.title).label;
 

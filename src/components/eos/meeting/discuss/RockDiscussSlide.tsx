@@ -284,7 +284,9 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
               onOpenRock={onOpenDetails}
               defaultOpen
               hideCoverage
-              canLink={node.reviewable}
+              // Milestones map up to a Company Rock's milestones, so only a Company Rock's slide can offer it; the
+              // picker would list a Team Rock's own milestones, which the database refuses.
+              canLink={node.reviewable && rock.rock_level === 'company'}
             />
           )}
 

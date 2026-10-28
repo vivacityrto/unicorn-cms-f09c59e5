@@ -344,13 +344,17 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
         </div>
       )}
       {linking && (
-        <LinkMilestoneDialog
-          open
-          onOpenChange={next => !next && setLinking(null)}
-          companyRockId={companyRockId}
-          milestone={{ id: linking.id, title: linking.title }}
-          rockTitle={linking.rockTitle}
-        />
+        // Events from a dialog bubble through React to whatever surrounds this section. On a Rock card that is
+        // the card's own click handler, which would open the Rock behind the picker, so stop them here.
+        <div onClick={event => event.stopPropagation()}>
+          <LinkMilestoneDialog
+            open
+            onOpenChange={next => !next && setLinking(null)}
+            companyRockId={companyRockId}
+            milestone={{ id: linking.id, title: linking.title }}
+            rockTitle={linking.rockTitle}
+          />
+        </div>
       )}
     </section>
   );

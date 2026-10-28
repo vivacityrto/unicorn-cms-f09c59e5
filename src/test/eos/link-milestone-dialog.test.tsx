@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 
 const state = vi.hoisted(() => ({
-  targets: { data: undefined as unknown, isLoading: false, isError: false },
-  linked: { data: undefined as unknown, isLoading: false, isError: false },
+  targets: { data: undefined as unknown, isLoading: false, isError: false, isFetchedAfterMount: true },
+  linked: { data: undefined as unknown, isLoading: false, isError: false, isFetchedAfterMount: true },
   save: vi.fn(),
   pending: false,
 }));
@@ -24,8 +24,8 @@ function renderDialog() {
 }
 
 beforeEach(() => {
-  state.targets = { data: [target('c1', 'M1 - Beta with five clients'), target('c2', 'M2 - Support trained', 'not_started', null)], isLoading: false, isError: false };
-  state.linked = { data: [], isLoading: false, isError: false };
+  state.targets = { data: [target('c1', 'M1 - Beta with five clients'), target('c2', 'M2 - Support trained', 'not_started', null)], isLoading: false, isError: false, isFetchedAfterMount: true };
+  state.linked = { data: [], isLoading: false, isError: false, isFetchedAfterMount: true };
   state.save.mockReset().mockResolvedValue(undefined);
   state.pending = false;
 });
@@ -41,14 +41,14 @@ describe('LinkMilestoneDialog', () => {
   });
 
   it('starts from what is already linked', () => {
-    state.linked = { data: ['c2'], isLoading: false, isError: false };
+    state.linked = { data: ['c2'], isLoading: false, isError: false, isFetchedAfterMount: true };
     renderDialog();
     expect(screen.getByRole('checkbox', { name: /M2.*Support trained/ })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: /M1/ })).not.toBeChecked();
   });
 
   it('saves only what changed, for the right milestone and tenant, and closes', async () => {
-    state.linked = { data: ['c2'], isLoading: false, isError: false };
+    state.linked = { data: ['c2'], isLoading: false, isError: false, isFetchedAfterMount: true };
     const { onOpenChange } = renderDialog();
     fireEvent.click(screen.getByRole('checkbox', { name: /M1/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /M2/ }));
@@ -76,7 +76,7 @@ describe('LinkMilestoneDialog', () => {
   });
 
   it('can unlink everything', async () => {
-    state.linked = { data: ['c1'], isLoading: false, isError: false };
+    state.linked = { data: ['c1'], isLoading: false, isError: false, isFetchedAfterMount: true };
     renderDialog();
     fireEvent.click(screen.getByRole('checkbox', { name: /M1/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Save mapping' }));
@@ -94,18 +94,18 @@ describe('LinkMilestoneDialog', () => {
   });
 
   it('says so when the Company Rock has no milestones', () => {
-    state.targets = { data: [], isLoading: false, isError: false };
+    state.targets = { data: [], isLoading: false, isError: false, isFetchedAfterMount: true };
     renderDialog();
     expect(screen.getByText(/Company Rock has no milestones yet/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save mapping' })).toBeDisabled();
   });
 
   it('shows loading, and an error without offering to save', () => {
-    state.targets = { data: undefined, isLoading: true, isError: false };
+    state.targets = { data: undefined, isLoading: true, isError: false, isFetchedAfterMount: false };
     const { unmount } = render(<LinkMilestoneDialog open onOpenChange={vi.fn()} companyRockId="co" milestone={{ id: 'x', title: 'X' }} />);
     expect(screen.getByLabelText('Loading Company milestones')).toBeInTheDocument();
     unmount();
-    state.targets = { data: undefined, isLoading: false, isError: true };
+    state.targets = { data: undefined, isLoading: false, isError: true, isFetchedAfterMount: true };
     render(<LinkMilestoneDialog open onOpenChange={vi.fn()} companyRockId="co" milestone={{ id: 'x', title: 'X' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('could not be loaded');
     expect(screen.getAllByRole('button', { name: 'Save mapping' }).every(b => (b as HTMLButtonElement).disabled)).toBe(true);
