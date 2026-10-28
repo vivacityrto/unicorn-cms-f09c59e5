@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-28 · **Reconsider by:** 2027-01-28 · **Confidence:** high on the database rules (run against `unicorn-qa` in a rolled-back transaction) and the screens (unit tests plus a browser walk with faked data); the AI summary's wording quality is not provable offline and has not been used in a real meeting.
 >
-> **Status: built, in a pull request. The migration is not applied to any hosted database and the Edge Function is not deployed.**
+> **Status: built, in a pull request. The migration is applied to `unicorn-qa` (29 Oct 2026) but not to production, and the Edge Function is not deployed.**
 
 ## Why it exists
 
