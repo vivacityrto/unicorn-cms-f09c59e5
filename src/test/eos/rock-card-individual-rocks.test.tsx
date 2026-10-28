@@ -72,6 +72,20 @@ describe('RockCard: Company Rock with Individual Rocks', () => {
   });
 });
 
+describe('RockCard: at risk and off track are counted apart', () => {
+  it('shows an At Risk count and no Off Track count when children are only at risk', () => {
+    render(<RockCard rock={company({ children: [child('i1', 'at_risk'), child('i2', 'at_risk'), child('i3', 'on_track')], childStats: { total: 3, complete: 0, offTrack: 0, atRisk: 2, blocked: 0 } })} />);
+    expect(screen.getByText('At Risk')).toBeInTheDocument();
+    expect(screen.queryByText('Off Track')).toBeNull();
+  });
+
+  it('shows both, each with its own count, when both exist', () => {
+    render(<RockCard rock={company({ childStats: { total: 3, complete: 0, offTrack: 1, atRisk: 2, blocked: 0 } })} />);
+    expect(screen.getByText('At Risk').previousElementSibling).toHaveTextContent('2');
+    expect(screen.getByText('Off Track').previousElementSibling).toHaveTextContent('1');
+  });
+});
+
 describe('RockCard: blocked status', () => {
   it('is shown as Blocked, not as off track or at risk', () => {
     render(<RockCard rock={company({ status: 'blocked', children: [], childStats: undefined })} />);

@@ -151,7 +151,8 @@ function RocksHierarchyContent() {
   const stats = {
     total: rocks?.length || 0,
     onTrack: rocks?.filter(r => dbToUiStatus(r.status) === 'on_track').length || 0,
-    offTrack: rocks?.filter(r => ['off_track', 'at_risk'].includes(dbToUiStatus(r.status))).length || 0,
+    // Off track only: at risk is a different status, and this tile filters to Off Track when clicked.
+    offTrack: rocks?.filter(r => dbToUiStatus(r.rollupStatus || r.status) === 'off_track').length || 0,
     complete: rocks?.filter(r => dbToUiStatus(r.status) === 'complete').length || 0,
   };
 
@@ -344,6 +345,7 @@ function RocksHierarchyContent() {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="on_track">On Track</SelectItem>
+              <SelectItem value="at_risk">At Risk</SelectItem>
               <SelectItem value="off_track">Off Track</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
               <SelectItem value="complete">Complete</SelectItem>
