@@ -2,7 +2,7 @@
 
 **Trigger:** feature work (Carl: the milestone Tasks box must work for Rocks not tracked in GitHub, and a To-Do, including a standalone one, must be able to link to a Rock from its own side)
 **Scope:** one migration (`20261029030000_rock_todo_links.sql`): one table, one validation trigger, three functions; the screens that use them. Design: [rock-todo-links.md](../../kb/codebase-state/rock-todo-links.md).
-**Status: applied to `unicorn-qa` (version `20261028234756`) on 29 Oct 2026 on Carl's instruction, and verified. NOT applied to production.** Before that it was run only in a rolled-back transaction. Production is a separate step that needs Carl's instruction.
+**Status: applied to `unicorn-qa` (version `20261028234756`) and to production (`yxkgdalkbrriasiyyrwk`), both on 29 Oct 2026 on Carl's instruction, and verified.** Before that it was run only in a rolled-back transaction.
 
 ## What the migration does
 - **Adds** `eos_rock_todo_links` (one link per To-Do at most, to a Rock and optionally one of its milestones), with row level security (select only for `authenticated`, behind the same policy tests as the other Rock tables) and no write grants.
@@ -25,7 +25,12 @@ Fixtures (Rocks, milestones, a meeting, lookup rows QA lacks) were created insid
 ## Applied to unicorn-qa (29 Oct 2026) and verified
 Applied through the Supabase MCP as version `20261028234756`. Before: none of the new objects existed and every prerequisite function (4 of 4) and table (4 of 4) was present. After: `eos_rock_todo_links` exists with row level security on and one select policy; `authenticated` holds `SELECT` only and `anon`/`PUBLIC` nothing; the validation trigger is present; one unique constraint (one link per To-Do); the three functions are `SECURITY DEFINER` with an empty `search_path`, executable by `authenticated` and not `anon`, one overload each; the trigger function is executable by neither. QA has no data (0 Rocks, 0 To-Dos) and none was written; the new table is empty. No browser check of the screens against QA was done.
 
+## Applied to production (29 Oct 2026) and verified
+Applied through the Supabase MCP. Before: none of the new objects existed; every prerequisite function (4 of 4) and table (4 of 4) was present; the To-Do status lookup held Open, Complete and Cancelled. After: the same structure, grants, policy, trigger and function checks as QA, all passing (row level security on, one select policy, `authenticated` holds `SELECT` only and `anon`/`PUBLIC` nothing, the validation trigger present, one unique constraint, the three functions `SECURITY DEFINER` with an empty `search_path`, executable by `authenticated` and not `anon`, one overload each). **Data unchanged:** 165 Rocks (including the two `[TEST]` sandbox Rocks), 529 milestones, 34 To-Dos and the 15 GitHub task rows exactly as before; the new table is empty (0 links). The security advisor's only mention of the new objects is that `authenticated` can call the three staff-gated functions, which is intended.
+
+**Until the frontend deploys (on merge):** the live frontend does not use the new objects, so nothing changes for users.
+
 ## Human actions still needed
-1. Review and approve; QA is done. Apply to production (Supabase MCP, not CI), then merge (the frontend works without the table only as an error state: the To-Do boxes would show no links).
+1. Review and approve the PR. Both databases are done; merge ships the screens (the frontend works without the table only as an error state: the To-Do boxes would show no links).
 2. After it is live: clear the 15 stale GitHub task rows (Carl asked for this), with a backup first.
 3. Rollback file: `supabase/migrations/rollback/20261029030000_rock_todo_links.down.sql` (drops only the links; To-Dos are untouched).

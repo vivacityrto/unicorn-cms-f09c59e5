@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-29 · **Reconsider by:** 2027-01-29 · **Confidence:** high on the database rules (run against `unicorn-qa` in a rolled-back transaction) and the logic (unit tests); medium on the screens (tests plus a browser walk of the new components with faked data, not the full panel on real data).
 >
-> **Status: built, in a pull request. The migration is applied to `unicorn-qa` (29 Oct 2026) but not to production.**
+> **Status: built, in a pull request. The migration is applied to `unicorn-qa` and production (29 Oct 2026); the screens ship when the PR merges.**
 
 ## Why it exists
 
