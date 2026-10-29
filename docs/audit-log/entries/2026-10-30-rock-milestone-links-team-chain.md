@@ -2,7 +2,7 @@
 
 **Trigger:** feature work (Carl: can an individual Rock link to a team Rock, "like the milestones and everything"? Carl chose the full chain: Individual milestone to Team milestone to Company milestone).
 **Scope:** one migration (`20261030010000_rock_milestone_links_team_chain.sql`): one function body replaced; the screens and the Rock editor that use it. Design and rules: [rock-hierarchy-and-linking.md](../../kb/codebase-state/rock-hierarchy-and-linking.md).
-**Status: written and behaviourally verified on `unicorn-qa` in a rolled-back transaction (30 Oct 2026, on Carl's instruction); not applied to `unicorn-qa` or production.** Applying it is a separate instruction (see "Human actions still needed").
+**Status: written and behaviourally verified on `unicorn-qa` in a rolled-back transaction (30 Oct 2026, on Carl's instruction); applied to `unicorn-qa` (version `20261029235848`, 30 Oct 2026, on Carl's instruction); not applied to production.** Applying it to production is a separate instruction (see "Human actions still needed").
 
 ## What the migration does
 - **Replaces** the body of `validate_eos_rock_milestone_link()` (the `BEFORE INSERT OR UPDATE` trigger on `eos_rock_milestone_links`). Allowed pairings, supported milestone first: Company ← Individual (the Individual Rock serves that Company Rock directly or through a Team Rock that serves it, **unchanged**), Team ← Individual (the Individual Rock serves that Team Rock), Company ← Team (the Team Rock serves that Company Rock). Anything else is refused with a message naming the rule.
@@ -33,10 +33,13 @@ One anonymous `DO` block that ended in a deliberate `RAISE EXCEPTION`, so the fi
 - **Function properties after the change:** `SECURITY DEFINER`, empty `search_path`, not executable by `anon` or `PUBLIC`, one overload.
 - **After the run:** QA again held 0 Rocks, milestones and links, no `ZZ-TEST` Rock, one function overload, and the old function body.
 
+## Applied to unicorn-qa (30 Oct 2026) and verified
+Applied through the Supabase MCP as version `20261029235848` (`rock_milestone_links_team_chain`), with the SQL exactly as committed. Before: the old function body (read in the earlier check), 0 Rocks, milestones and links. After: the function carries the new rule, is `SECURITY DEFINER` with an empty `search_path`, is not executable by `anon` or `PUBLIC`, has one overload, and the `validate_eos_rock_milestone_link` trigger on `eos_rock_milestone_links` is enabled. QA still holds 0 Rocks and 0 links; no data was written. No browser check of the screens against QA was done.
+
 ## Checks run
 30 Oct 2026, on the branch head before commit: `tsc` for the app and Node projects, 0 errors; ESLint on all 25 changed TypeScript files, 0 errors and 0 warnings; `npm run test:frontend`, 162 files passed (6 skipped by design), 1541 tests passed (43 skipped); `npm run test:edge`, passed. The package scripts for lint ratchet and typecheck could not start in this worktree (its `node_modules` holds only caches, so the scripts' relative paths to `eslint` and `tsc` fail), so the same tools were run directly from the main checkout's install with the same configuration; the ratchet's diff-scoped comparison itself was not run. Hosted CI will run the real scripts.
 
 ## Human actions still needed
-1. Decide whether to apply the migration to `unicorn-qa` and then production (separate instructions; nothing has been applied). The rule was verified on QA in a rolled-back transaction only.
+1. Decide whether to apply the migration to production (a separate instruction; QA is done). Production holds real Rocks, so apply it before merging the frontend and read back the same properties afterwards.
 2. Confirm or revert the three provisional choices in the KB page (a Team-only link counts as mapped; no automatic roll-up through the chain; Team milestones are never flagged as unmapped).
-3. Review and approve the PR. The frontend deploys on merge; until the migration is applied, ticking a Team milestone in the picker is refused by the database with the old message.
+3. Review and approve the PR. The frontend deploys on merge; until the migration is applied to production, ticking a Team milestone in the picker there is refused by the database with the old message.
