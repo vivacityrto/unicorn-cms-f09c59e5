@@ -331,5 +331,55 @@ describe('RockNotesDictationProvider', () => {
     expect(FakeRecognition.instances).toHaveLength(2);
     expect(result.current.getDraft('rock-a')).toBe('Note for a');
   });
+
+  it('Stop, then Next pressed again and again before the session ends: the microphone still stays off', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.retarget('rock-c'));
+    act(() => result.current.retarget('rock-b'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.isRecording).toBe(false);
+    expect(addNote).toHaveBeenCalledTimes(1);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a' }));
+  });
+
+  it('Next, then Stop during the hand-over, then more navigation: the microphone still stays off', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-c'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.isRecording).toBe(false);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a' }));
+  });
+
+  it('pressing Dictate after a Stop is explicit: it does restart, on the Rock where it was pressed', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.startFor('rock-b'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(result.current.activeRockId).toBe('rock-b');
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a' }));
+  });
 });
 

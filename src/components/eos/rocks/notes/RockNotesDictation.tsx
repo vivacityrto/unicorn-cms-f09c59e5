@@ -159,14 +159,18 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
 
   // Ask the running session to finish. It delivers its last phrase and ends; the effect below then
   // saves the Rock that owned the microphone and carries out whatever comes next.
-  const handOver = useCallback((to: string | null) => {
+  const handOver = useCallback((to: string | null, explicit = false) => {
+    // Pressing Dictate is an explicit request and overrides an earlier Stop. Navigation is not:
+    // once Stop has been pressed the microphone stays off however many times the slide moves.
+    if (explicit) stopPendingRef.current = false;
+    const destination = !explicit && stopPendingRef.current ? null : to;
     if (handOverRef.current === undefined) {
       setHandingOverFrom(activeRef.current);
-      handOverRef.current = to;
+      handOverRef.current = destination;
       stopRecording();
     } else {
       // Already handing over (Next pressed again, or Previous): only the destination changes.
-      handOverRef.current = to;
+      handOverRef.current = destination;
     }
   }, [stopRecording]);
 
@@ -174,7 +178,7 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     if (recordingRef.current && activeRef.current) {
       // Dictate pressed again right after Stop restarts it; otherwise already listening here is a no-op.
       if (handOverRef.current === undefined && !stopPendingRef.current && activeRef.current === rockId) return;
-      handOver(rockId);
+      handOver(rockId, true);
       return;
     }
     begin(rockId);
@@ -184,8 +188,8 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     // If a hand-over is under way the Rock being finished is still saved, and the microphone then
     // stays off. Otherwise the text stays in the draft for review. Either way the target is kept until
     // the session really ends, so the phrase the browser is still finishing lands in the right draft.
+    if (recordingRef.current) stopPendingRef.current = true;
     if (handOverRef.current !== undefined) handOverRef.current = null;
-    else if (recordingRef.current) stopPendingRef.current = true;
     stopRecording();
   }, [stopRecording]);
 
@@ -193,11 +197,11 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     const left = screenRockRef.current;
     screenRockRef.current = next;
     if (recordingRef.current && activeRef.current) {
-      if (stopPendingRef.current && handOverRef.current === undefined) {
-        // Stop was pressed and the session is still finishing its last phrase. Moving on saves the Rock
-        // that owns it once it ends, and the microphone stays off.
+      if (stopPendingRef.current) {
+        // Stop was pressed and the session is still finishing its last phrase. Moving on, once or
+        // repeatedly, saves the Rock that owns it when it ends, and the microphone stays off.
+        if (handOverRef.current === undefined) setHandingOverFrom(activeRef.current);
         handOverRef.current = null;
-        setHandingOverFrom(activeRef.current);
         return;
       }
       if (handOverRef.current === undefined && activeRef.current === next) return;
