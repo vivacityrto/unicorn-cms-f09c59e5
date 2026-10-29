@@ -10,6 +10,7 @@ import { useEosHeadlines } from '@/hooks/useEosHeadlines';
 import { useEosSegueShares } from '@/hooks/useEosSegueShares';
 import { useMeetingIssues } from '@/hooks/useMeetingIssues';
 import { useMeetingTodos } from '@/hooks/useMeetingTodos';
+import { useTodoToggleWithUndo } from '@/hooks/useTodoToggleWithUndo';
 import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
 import { useOnePhraseCloses } from '@/hooks/useOnePhraseCloses';
 import { useMeetingAttendance } from '@/hooks/useMeetingAttendance';
@@ -528,15 +529,8 @@ export const LiveMeetingView = () => {
     setIdsDialogOpen(true);
   };
 
-  const handleToggleTodo = async (todo: EosTodo) => {
-    const newStatus = todo.status === 'Complete' ? 'Open' : 'Complete';
-    await updateTodo.mutateAsync({
-      id: todo.id,
-      status: newStatus,
-      completed_at: newStatus === 'Complete' ? new Date().toISOString() : null
-    });
-    broadcastChange('todo_change');
-  };
+  // Clicking a row toggles it, so a slip is easy: the change is saved at once and an Undo is offered.
+  const handleToggleTodo = useTodoToggleWithUndo(updateTodo, () => broadcastChange('todo_change'));
 
   // Bring a past (completed or cancelled) to-do back, so it joins the list to review.
   const handleReopenTodo = async (todo: { id: string }) => {
