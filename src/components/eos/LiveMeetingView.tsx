@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
-  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2, Pencil
+  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2, Pencil, History
 } from 'lucide-react';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
@@ -39,6 +39,7 @@ import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
 import { TodoDueDateButton } from '@/components/eos/TodoDueDateButton';
 import { TodoIssueTag } from '@/components/eos/TodoIssueTag';
+import { PastTodosPanel } from '@/components/eos/PastTodosPanel';
 import { TodoRockLink } from '@/components/eos/rocks/todos/TodoRockLink';
 import { useTodoRockLinks } from '@/hooks/useRockTodos';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
@@ -102,6 +103,7 @@ export const LiveMeetingView = () => {
   const { segueShares, createSegueShare, deleteSegueShare } = useEosSegueShares(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId, meeting?.tenant_id);
+  const [showPastTodos, setShowPastTodos] = useState(false);
   const { ratings, saveRating, getUserRating } = useMeetingOutcomes(meetingId);
   const { closes: onePhraseCloses, saveOnePhraseClose, getUserPhrase } = useOnePhraseCloses(meetingId);
   const myExistingPhrase = profile?.user_uuid ? getUserPhrase(profile.user_uuid) : undefined;
@@ -536,6 +538,12 @@ export const LiveMeetingView = () => {
     broadcastChange('todo_change');
   };
 
+  // Bring a past (completed or cancelled) to-do back, so it joins the list to review.
+  const handleReopenTodo = async (todo: { id: string }) => {
+    await updateTodo.mutateAsync({ id: todo.id, status: 'Open', completed_at: null });
+    broadcastChange('todo_change');
+  };
+
   // Re-date a to-do during review (carried-over items included).
   const handleChangeTodoDueDate = async (todo: EosTodo, dueDate: string) => {
     if (dueDate === todo.due_date) return;
@@ -834,6 +842,25 @@ export const LiveMeetingView = () => {
                   broadcastChange('todo_change');
                 }}
               />
+            </div>
+
+            <div className="mt-4 border-t pt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-xs"
+                aria-expanded={showPastTodos}
+                onClick={() => setShowPastTodos(value => !value)}
+              >
+                <History className="h-3.5 w-3.5" aria-hidden />
+                {showPastTodos ? 'Hide past To-Dos' : 'Show past To-Dos (completed and cancelled)'}
+              </Button>
+              {showPastTodos && (
+                <div className="mt-2">
+                  <PastTodosPanel meetingId={meetingId} tenantId={meeting?.tenant_id} onReopen={handleReopenTodo} busy={updateTodo.isPending} />
+                </div>
+              )}
             </div>
           </Card>
         );
