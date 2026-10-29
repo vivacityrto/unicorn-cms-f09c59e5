@@ -79,4 +79,19 @@ describe('useTodoToggleWithUndo', () => {
     await pressUndo();
     expect(shown.some(t => t.title === 'Undone')).toBe(false);
   });
+
+  it('Undo of a cancelled To-Do that was toggled puts it back to Cancelled, not Open', async () => {
+    const { toggle, mutate } = setup();
+    await toggle({ id: 't1', title: 'Dropped idea', status: 'Cancelled', completed_at: null });
+    await pressUndo();
+    expect(mutate).toHaveBeenLastCalledWith({ id: 't1', status: 'Cancelled', completed_at: null, quiet: true });
+  });
+
+  it('a To-Do with no status is treated as open and restored as open', async () => {
+    const { toggle, mutate } = setup();
+    await toggle({ id: 't1', title: 'x', status: null, completed_at: null });
+    await pressUndo();
+    expect(mutate).toHaveBeenLastCalledWith({ id: 't1', status: 'Open', completed_at: null, quiet: true });
+  });
 });
+

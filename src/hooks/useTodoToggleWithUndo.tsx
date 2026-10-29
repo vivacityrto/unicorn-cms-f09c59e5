@@ -11,7 +11,7 @@ interface ToggleableTodo {
 
 interface TodoUpdate {
   id: string;
-  status: 'Open' | 'Complete';
+  status: string;
   completed_at: string | null;
   quiet: boolean;
 }
@@ -32,7 +32,8 @@ export function useTodoToggleWithUndo(
   return useCallback(
     async (todo: ToggleableTodo) => {
       const markingDone = todo.status !== 'Complete';
-      const before = { status: (todo.status === 'Complete' ? 'Complete' : 'Open') as 'Open' | 'Complete', completed_at: todo.completed_at ?? null };
+      // Exactly what was there, whatever it was (Open, Complete or Cancelled), so Undo never reactivates a cancelled To-Do.
+      const before = { status: todo.status ?? 'Open', completed_at: todo.completed_at ?? null };
 
       await updateTodo.mutateAsync({
         id: todo.id,
