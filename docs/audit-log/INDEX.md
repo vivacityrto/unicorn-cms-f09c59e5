@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-10-29 — Removed the test data from production](entries/2026-10-29-remove-test-data.md) — data only: the `[TEST]` meeting and the two `[TEST]` sandbox Rocks (with their 6 milestones, 2 notes, 1 summary) deleted at Carl's instruction; the append-only trigger was lifted once, inside one guarded transaction, after a local backup. Counts are back to before testing.
 - [2026-10-29 — Cleared the 15 stale GitHub task rows from production](entries/2026-10-29-clear-github-task-snapshots.md) — data only: all 15 rows of `eos_rock_milestone_task_links` deleted at Carl's instruction after a field-for-field checked local backup; nothing else changed.
 - [2026-10-29 — To-Dos linked to Rocks and milestones](entries/2026-10-29-rock-todo-links.md) — migration applied to `unicorn-qa` and production (29 Oct 2026): `eos_rock_todo_links` and `add_rock_todo`/`link_todo_to_rock`/`unlink_todo_from_rock`, so a milestone's Tasks box and a To-Do's own row can show the link both ways. Verified in a rolled-back transaction on `unicorn-qa` only.
 - [2026-10-28 — Rock notes](entries/2026-10-28-rock-notes.md) — migration applied to `unicorn-qa` and production (29 Oct 2026), Edge Function deploys on merge: append-only notes on a Rock (`eos_rock_notes`, `add_rock_note()`), AI summaries (`eos_rock_note_summaries`, `summarise-rock-notes`), `notes` added to the Rock delete guard. Verified in a rolled-back transaction on `unicorn-qa` only.
