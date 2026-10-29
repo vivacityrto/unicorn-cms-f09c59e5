@@ -9,6 +9,7 @@ import { useRockContribution } from '@/hooks/useRockContribution';
 import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
 import { formatDate } from '@/utils/rockPanelFormat';
 import { milestoneRef, parseMilestoneTitle } from '@/utils/rockPanelMetrics';
+import type { LinkTargetRock } from '@/utils/rockLinking';
 import { formatQuarter } from '@/utils/rockCarryover';
 import {
   contributionSummaryText,
@@ -39,6 +40,12 @@ interface IndividualRocksSectionProps {
   /** Leave out the list of Company milestones and who delivers them (the presentation view is short of room; the rows and summary still flag unmapped work). */
   hideCoverage?: boolean;
   className?: string;
+}
+
+/** The Rocks an Individual Rock's milestones can support: the Team Rock it serves through (if any), then the Company Rock. */
+function linkTargetsFor(item: IndividualContribution, companyRock: { id: string; title: string }): LinkTargetRock[] {
+  const company: LinkTargetRock = { id: companyRock.id, title: companyRock.title, level: 'company' };
+  return item.viaTeamId && item.viaTeam ? [{ id: item.viaTeamId, title: item.viaTeam, level: 'team' }, company] : [company];
 }
 
 const mStatus = (status: string) => MILESTONE_STATUS[(status in MILESTONE_STATUS ? status : 'not_started') as RockMilestoneStatus];
@@ -104,7 +111,7 @@ function IndividualRow({
   getUserInfo?: (userId: string) => UserInfo | null;
   onOpenRock?: (rockId: string) => void;
   /** Present only when the viewer may change the mapping. */
-  onLink?: (milestone: { id: string; title: string }, rockTitle: string) => void;
+  onLink?: (milestone: { id: string; title: string }, item: IndividualContribution) => void;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -190,7 +197,7 @@ function IndividualRow({
             <ul className="space-y-1.5">
               {item.milestones.map(view => {
                 const style = mStatus(view.milestone.status);
-                const mapped = view.supports.length > 0;
+                const mapped = view.supports.length > 0 || view.teamSupports.length > 0;
                 const needsMapping = !mapped && view.milestone.status !== 'complete' && view.milestone.status !== 'deferred';
                 const ownerName = view.milestone.owner_id && getUserInfo ? getUserInfo(view.milestone.owner_id)?.name ?? null : null;
                 return (
@@ -205,17 +212,18 @@ function IndividualRow({
                       {mapped ? (
                         <>
                           <span>Supports</span>
-                          {view.supports.map(company => (
-                            <span key={company.id} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5">
-                              <MilestoneLabel milestone={company} />
-                              <span className="text-[10px]">({mStatus(company.status).label.toLowerCase()}{company.due_date ? `, due ${formatDate(company.due_date, 'd MMM')}` : ''})</span>
+                          {[...view.teamSupports.map(m => ({ m, level: 'Team' })), ...view.supports.map(m => ({ m, level: null }))].map(({ m: target, level }) => (
+                            <span key={target.id} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5">
+                              {level && <span className="text-[10px] font-medium uppercase">{level}</span>}
+                              <MilestoneLabel milestone={target} />
+                              <span className="text-[10px]">({mStatus(target.status).label.toLowerCase()}{target.due_date ? `, due ${formatDate(target.due_date, 'd MMM')}` : ''})</span>
                             </span>
                           ))}
                         </>
                       ) : needsMapping ? (
                         <span className="inline-flex items-center gap-1 font-medium text-amber-800 dark:text-amber-300">
                           <AlertTriangle className="h-3 w-3" aria-hidden />
-                          Not linked to any Company milestone
+                          {item.viaTeamId ? 'Not linked to any Team or Company milestone' : 'Not linked to any Company milestone'}
                         </span>
                       ) : (
                         <span>Not linked to a Company milestone</span>
@@ -226,10 +234,10 @@ function IndividualRow({
                           variant="outline"
                           size="sm"
                           className="ml-auto h-7 gap-1 px-2 text-xs"
-                          onClick={() => onLink({ id: view.milestone.id, title: view.milestone.title }, item.rock.title)}
+                          onClick={() => onLink({ id: view.milestone.id, title: view.milestone.title }, item)}
                         >
                           <Link2 className="h-3 w-3" aria-hidden />
-                          {mapped ? 'Change' : 'Link to a Company milestone'}
+                          {mapped ? 'Change' : item.viaTeamId ? 'Link to a Team or Company milestone' : 'Link to a Company milestone'}
                         </Button>
                       )}
                     </div>
@@ -260,7 +268,7 @@ function IndividualRow({
  */
 export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock, hint, defaultOpen = false, canLink = false, hideCoverage = false, className }: IndividualRocksSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
-  const [linking, setLinking] = useState<{ id: string; title: string; rockTitle: string } | null>(null);
+  const [linking, setLinking] = useState<{ id: string; title: string; rockTitle: string; targetRocks: LinkTargetRock[] } | null>(null);
   const panelId = useId();
   const query = useRockContribution(companyRockId, open);
   const model = query.data;
@@ -312,7 +320,7 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
             <>
               <ul className="space-y-2">
                 {model.individuals.map(item => (
-                  <IndividualRow key={item.rock.id} item={item} getUserInfo={getUserInfo} onOpenRock={onOpenRock} onLink={canLink ? (milestone, rockTitle) => setLinking({ ...milestone, rockTitle }) : undefined} />
+                  <IndividualRow key={item.rock.id} item={item} getUserInfo={getUserInfo} onOpenRock={onOpenRock} onLink={canLink && model ? (milestone, item) => setLinking({ ...milestone, rockTitle: item.rock.title, targetRocks: linkTargetsFor(item, model.companyRock) }) : undefined} />
                 ))}
               </ul>
 
@@ -357,7 +365,7 @@ export function IndividualRocksSection({ companyRockId, getUserInfo, onOpenRock,
           <LinkMilestoneDialog
             open
             onOpenChange={next => !next && setLinking(null)}
-            companyRockId={companyRockId}
+            targetRocks={linking.targetRocks}
             milestone={{ id: linking.id, title: linking.title }}
             rockTitle={linking.rockTitle}
           />

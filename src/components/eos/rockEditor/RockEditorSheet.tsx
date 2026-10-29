@@ -22,6 +22,7 @@ import { isDirty, milestonesFromRows, originalOf, valuesFromRock } from '@/utils
 import { findLikelyDuplicates } from '@/utils/rockEditor/duplicates';
 import { clearDraft, draftKey, isMeaningful, loadDraft, saveDraft, type RockDraft } from '@/utils/rockEditor/draft';
 import { candidateParents, hasErrors, LEVEL_LABEL, validateRockEditor } from '@/utils/rockEditor/rules';
+import { linkTargetNoun } from '@/utils/rockLinking';
 import type { RockEditorValues } from '@/utils/rockEditor/types';
 import { LevelPicker } from './LevelPicker';
 import { ParentPicker } from './ParentPicker';
@@ -176,14 +177,16 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
     const current = values.parentId ? rocks.find(r => r.id === values.parentId) : undefined;
     return current && !list.some(c => c.id === current.id) ? [current, ...list] : list;
   }, [values.level, values.parentId, values.quarterYear, values.quarterNumber, rocks]); // eslint-disable-line react-hooks/exhaustive-deps
-  const companyMilestoneIds = useMemo(() => new Set(data.companyMilestones.map(m => m.id)), [data.companyMilestones]);
+  const linkableMilestoneIds = useMemo(() => new Set(data.linkOptions.flatMap(g => g.milestones.map(m => m.id))), [data.linkOptions]);
+  const linkNoun = useMemo(() => linkTargetNoun(data.linkOptions.map(g => g.rock)), [data.linkOptions]);
   const validation = useMemo(
     () => validateRockEditor(values, {
       rocks,
-      companyMilestoneIds: data.companyRootId ? companyMilestoneIds : undefined,
+      linkableMilestoneIds: data.linkOptions.length > 0 ? linkableMilestoneIds : undefined,
+      linkNoun,
       original: loaded ? originalOf(loaded) : undefined,
     }),
-    [values, rocks, companyMilestoneIds, data.companyRootId, loaded],
+    [values, rocks, linkableMilestoneIds, linkNoun, data.linkOptions.length, loaded],
   );
   const duplicates = useMemo(() => findLikelyDuplicates(values.title, quarter, rocks, { limit: 3, excludeId: rock?.id }), [values.title, values.quarterYear, values.quarterNumber, rocks, rock?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -544,8 +547,7 @@ export function RockEditorSheet({ open, onOpenChange, initialLevel = 'company', 
             showErrors={showErrors}
             rockOwnerLabel={values.ownerId ? personName(values.ownerId) : 'the owner'}
             rockDueLabel={values.dueDate || 'not set'}
-            companyMilestones={data.companyMilestones}
-            isIndividual={values.level === 'individual'}
+            linkOptions={data.linkOptions}
           />
 
           <section className="rounded-md border">

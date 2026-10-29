@@ -150,3 +150,58 @@ describe('buildContribution', () => {
     expect(contributionSummaryText(model.summary)).toMatch(/^0 Individual Rocks/);
   });
 });
+
+describe('buildContribution: Individual milestones that support a Team Rock’s milestones', () => {
+  const team = rock('tm', { rock_level: 'team', parent_rock_id: 'co' });
+  const viaTeam = (over: Partial<ContributionInput> = {}) => base({
+    childRocks: [team, rock('i1', { parent_rock_id: 'tm' })],
+    childMilestones: [ms('t1', 'tm', 'in_progress', 'M1 - Onboard'), ms('i1a', 'i1'), ms('i1b', 'i1')],
+    links: [],
+    ...over,
+  });
+
+  it('counts a link to a Team milestone as mapped, and keeps it apart from the Company ones', () => {
+    const model = buildContribution(viaTeam({ links: [{ company_milestone_id: 't1', individual_milestone_id: 'i1a' }] }));
+    const view = model.individuals[0].milestones.find(v => v.milestone.id === 'i1a')!;
+    expect(view.teamSupports.map(m => m.id)).toEqual(['t1']);
+    expect(view.supports).toEqual([]);
+    expect(model.individuals[0].unmappedCount).toBe(1); // i1b still supports nothing
+  });
+
+  it('names the Team Rock the Individual Rock serves through, by id as well as title', () => {
+    const [item] = buildContribution(viaTeam()).individuals;
+    expect(item.viaTeam).toBe('tm');
+    expect(item.viaTeamId).toBe('tm');
+  });
+
+  it('shows Team and Company support side by side for one milestone', () => {
+    const model = buildContribution(viaTeam({
+      links: [
+        { company_milestone_id: 't1', individual_milestone_id: 'i1a' },
+        { company_milestone_id: 'c1', individual_milestone_id: 'i1a' },
+      ],
+    }));
+    const view = model.individuals[0].milestones.find(v => v.milestone.id === 'i1a')!;
+    expect(view.teamSupports.map(m => m.id)).toEqual(['t1']);
+    expect(view.supports.map(m => m.id)).toEqual(['c1']);
+  });
+
+  it('counts a Team milestone that supports a Company milestone as coverage, not as an Individual mapping', () => {
+    const model = buildContribution(viaTeam({ links: [{ company_milestone_id: 'c2', individual_milestone_id: 't1' }] }));
+    const coverage = model.coverage.find(c => c.milestone.id === 'c2')!;
+    expect(coverage.contributors.map(x => [x.rock.id, x.milestone.id])).toEqual([['tm', 't1']]);
+    expect(model.summary.uncoveredCompanyMilestones).toBe(1); // c1 is still unsupported; c2 is covered by the Team milestone
+    expect(model.individuals[0].milestones.every(v => v.supports.length === 0)).toBe(true);
+  });
+
+  it('ignores a link whose supported milestone is in neither this Company Rock nor a Team Rock under it', () => {
+    const model = buildContribution(viaTeam({ links: [{ company_milestone_id: 'elsewhere', individual_milestone_id: 'i1a' }] }));
+    const view = model.individuals[0].milestones.find(v => v.milestone.id === 'i1a')!;
+    expect(view.supports).toEqual([]);
+    expect(view.teamSupports).toEqual([]);
+  });
+
+  it('carries the Company Rock so a picker can name it', () => {
+    expect(buildContribution(base()).companyRock.id).toBe('co');
+  });
+});

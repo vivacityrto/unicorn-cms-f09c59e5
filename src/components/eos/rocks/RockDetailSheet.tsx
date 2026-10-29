@@ -66,7 +66,7 @@ import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 import type { MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
 import { openBlocker, resolvedBlockers, type BlockerSubject } from '@/utils/rockBlocker';
 import { formatQuarter } from '@/utils/rockCarryover';
-import { companyRootFor } from '@/utils/rockLinking';
+import { linkTargetRocksFor } from '@/utils/rockLinking';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import type {
   EosRock,
@@ -273,9 +273,9 @@ export function RockDetailSheet({
   // Recording, editing and resolving blockers and carrying work forward are changes, so they
   // follow the same gate as editing the Rock. The database repeats the staff check.
   const canManage = !!onEdit;
-  // Which Company Rock this Rock serves, so its milestones can be mapped up (Individual Rocks only).
-  const linkRoot = rock.rock_level === 'individual'
-    ? companyRootFor(
+  // Which Rocks above this one its milestones can be mapped up to: the Team and/or Company Rock (Individual and Team Rocks only).
+  const linkRoot = rock.rock_level === 'individual' || rock.rock_level === 'team'
+    ? linkTargetRocksFor(
         { id: rock.id, title: rock.title, level: rock.rock_level ?? null, parentId: rock.parent_rock_id ?? null },
         new Map((editorRocksQuery.data ?? []).map(r => [r.id, { id: r.id, title: r.title, level: r.level, parentId: r.parentId }])),
       )
@@ -557,7 +557,7 @@ export function RockDetailSheet({
                   getUserInfo={getUserInfo}
                   onOpenRock={onOpenRock}
                   linkSupport={
-                    hasRows && rock.rock_level === 'individual'
+                    hasRows && (rock.rock_level === 'individual' || rock.rock_level === 'team')
                       ? {
                           canManage,
                           root: linkRoot,
@@ -755,7 +755,7 @@ export function RockDetailSheet({
         <LinkMilestoneDialog
           open
           onOpenChange={next => !next && setLinkTarget(null)}
-          companyRockId={linkRoot.companyRockId}
+          targetRocks={linkRoot.rocks}
           milestone={linkTarget}
           rockTitle={rock.title}
         />

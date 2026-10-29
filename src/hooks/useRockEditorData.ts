@@ -6,16 +6,24 @@ import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import type { RockLevel } from '@/types/eos';
 import type { ParentCandidate } from '@/utils/rockEditor/types';
 import type { StoredLink, StoredMilestone } from '@/utils/rockEditor/fromRock';
+import { linkTargetRocksFor, type LinkTargetRock } from '@/utils/rockLinking';
 
 export interface EditorRock extends ParentCandidate {
   archived: boolean;
 }
 
+/** A milestone of a Team or Company Rock that a milestone below it can support. */
 export interface CompanyMilestoneOption {
   id: string;
   title: string;
   status: string;
   dueDate: string | null;
+}
+
+/** One Rock above the Rock being edited, with the milestones of its that can be supported. */
+export interface LinkOptionGroup {
+  rock: LinkTargetRock;
+  milestones: CompanyMilestoneOption[];
 }
 
 /** Every Rock in the Vivacity tenant, lightly shaped. Shared by the editor, the blocker dependency picker and the carryover destination picker. */
@@ -48,8 +56,8 @@ export function useEditorRocks(enabled: boolean) {
 
 /**
  * What the Rock editor needs to know about everything else: every Rock (to pick a
- * parent and spot duplicates), the teams, and the Company milestones an Individual
- * Rock's milestones can support.
+ * parent and spot duplicates), the teams, and the Team and Company milestones an Individual
+ * Rock's milestones can support (a Team Rock's can support Company milestones).
  */
 export function useRockEditorData(options: {
   enabled: boolean;
@@ -82,31 +90,32 @@ export function useRockEditorData(options: {
   });
 
   const rocks = rocksQuery.data;
-  /** The Company Rock an Individual Rock ultimately serves, directly or through a Team Rock. */
-  const companyRootId = useMemo(() => {
-    if (options.level !== 'individual' || !options.parentId || !rocks) return null;
-    const parent = rocks.find(r => r.id === options.parentId);
-    if (parent?.level === 'company') return parent.id;
-    if (parent?.level === 'team') {
-      const grand = rocks.find(r => r.id === parent.parentId);
-      return grand?.level === 'company' ? grand.id : null;
-    }
-    return null;
-  }, [options.level, options.parentId, rocks]);
+  /** The Rocks above this one whose milestones its own can support: its Team Rock and/or Company Rock. */
+  const linkRocks = useMemo(() => {
+    if ((options.level !== 'individual' && options.level !== 'team') || !options.parentId || !rocks) return [];
+    const byId = new Map(rocks.map(r => [r.id, { id: r.id, title: r.title, level: r.level, parentId: r.parentId }]));
+    const result = linkTargetRocksFor({ id: options.rockId ?? 'new', title: '', level: options.level, parentId: options.parentId }, byId);
+    return result.status === 'ok' ? result.rocks : [];
+  }, [options.level, options.parentId, options.rockId, rocks]);
+  const linkRockKey = linkRocks.map(r => r.id).join(',');
 
-  const companyMilestonesQuery = useQuery({
-    queryKey: ['eos-rock-company-milestones', companyRootId],
-    queryFn: async (): Promise<CompanyMilestoneOption[]> => {
+  const linkMilestonesQuery = useQuery({
+    queryKey: ['eos-rock-link-options', linkRockKey],
+    queryFn: async (): Promise<Array<CompanyMilestoneOption & { rockId: string }>> => {
       const { data, error } = await supabase
         .from('eos_rock_milestones')
-        .select('id, title, status, due_date')
-        .eq('rock_id', companyRootId as string)
+        .select('id, rock_id, title, status, due_date')
+        .in('rock_id', linkRocks.map(r => r.id))
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return (data || []).map(m => ({ id: m.id, title: m.title, status: m.status, dueDate: m.due_date }));
+      return (data || []).map(m => ({ id: m.id, rockId: m.rock_id, title: m.title, status: m.status, dueDate: m.due_date }));
     },
-    enabled: enabled && !!companyRootId,
+    enabled: enabled && linkRocks.length > 0,
   });
+  const linkOptions = useMemo<LinkOptionGroup[]>(
+    () => linkRocks.map(rock => ({ rock, milestones: (linkMilestonesQuery.data ?? []).filter(m => m.rockId === rock.id) })),
+    [linkRocks, linkMilestonesQuery.data],
+  );
 
   const rockId = options.rockId ?? null;
   const milestonesQuery = useQuery({
@@ -128,7 +137,8 @@ export function useRockEditorData(options: {
   });
   const milestoneIds = useMemo(() => (milestonesQuery.data || []).map(m => m.id), [milestonesQuery.data]);
 
-  const needsLinks = !!rockId && (options.savedLevel ?? options.level) === 'individual' && milestoneIds.length > 0;
+  const savedLevel = options.savedLevel ?? options.level;
+  const needsLinks = !!rockId && (savedLevel === 'individual' || savedLevel === 'team') && milestoneIds.length > 0;
 
   const linksQuery = useQuery({
     queryKey: ['eos-rock-editor-links', rockId, milestoneIds],
@@ -172,7 +182,6 @@ export function useRockEditorData(options: {
     rocksLoading: rocksQuery.isLoading,
     rocksError: rocksQuery.error as Error | null,
     functions: functionsQuery.data ?? [],
-    companyMilestones: companyRootId ? companyMilestonesQuery.data ?? [] : [],
-    companyRootId,
+    linkOptions,
   };
 }

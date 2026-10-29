@@ -66,8 +66,10 @@ export function clientForParent(level: RockLevel, parent: ParentCandidate | null
 export interface ValidationContext {
   /** Every Rock the form knows about, for looking a parent up. */
   rocks: readonly ParentCandidate[];
-  /** Company milestone ids an Individual milestone may support. */
-  companyMilestoneIds?: ReadonlySet<string>;
+  /** Milestone ids (of the Team and Company Rocks above) that an Individual or Team Rock's milestone may support. */
+  linkableMilestoneIds?: ReadonlySet<string>;
+  /** "Company", "Team" or "Team or Company": what the unlinked warning names. */
+  linkNoun?: string;
   /** When editing: how the Rock stood before, so an unchanged hierarchy is not re-judged. */
   original?: { level: RockLevel; parentId: string | null; quarterYear: number; quarterNumber: number };
   now?: Date;
@@ -132,16 +134,18 @@ export function validateRockEditor(values: RockEditorValues, ctx: ValidationCont
     }
   }
 
-  const companyIds = ctx.companyMilestoneIds ?? new Set<string>();
+  const linkableIds = ctx.linkableMilestoneIds ?? new Set<string>();
+  const canLink = values.level === 'individual' || values.level === 'team';
   for (const m of values.milestones) {
     if (!m.title.trim()) continue; // blank rows are ignored when saving
     if (m.title.trim().length > MAX_TITLE) errors[`milestone:${m.id}`] = `Keep the milestone under ${MAX_TITLE} characters.`;
     else if (m.dueDate && !isValidIsoDate(m.dueDate)) errors[`milestone:${m.id}`] = 'That milestone due date is not valid.';
-    else if (values.level === 'individual' && m.supports.some(id => !companyIds.has(id))) {
-      errors[`milestone:${m.id}`] = 'It supports a Company milestone that is not part of this Rock’s Company Rock.';
+    else if (canLink && m.supports.some(id => !linkableIds.has(id))) {
+      errors[`milestone:${m.id}`] = 'It supports a milestone that is not part of the Rock this one serves.';
     }
-    if (values.level === 'individual' && companyIds.size > 0 && m.supports.length === 0 && !errors[`milestone:${m.id}`]) {
-      warnings[`milestone:${m.id}:link`] = 'Not linked to a Company milestone yet.';
+    // Only an Individual milestone is flagged: a Team Rock's milestones can stand on their own.
+    if (values.level === 'individual' && linkableIds.size > 0 && m.supports.length === 0 && !errors[`milestone:${m.id}`]) {
+      warnings[`milestone:${m.id}:link`] = `Not linked to a ${ctx.linkNoun ?? 'Company'} milestone yet.`;
     }
   }
 
