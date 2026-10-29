@@ -67,7 +67,8 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
   });
 
   const updateTodo = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<EosTodo> & { id: string }) => {
+    // `quiet` skips the generic success toast, for callers that show their own (such as one with Undo).
+    mutationFn: async ({ id, quiet: _quiet, ...updates }: Partial<EosTodo> & { id: string; quiet?: boolean }) => {
       const updateData: Record<string, unknown> = {};
       Object.keys(updates).forEach(key => {
         if (updates[key as keyof typeof updates] !== undefined) {
@@ -85,10 +86,10 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['meeting-todos', meetingId] });
       queryClient.invalidateQueries({ queryKey: ['eos-issue-todos'] });
-      toast({ title: 'To-do updated successfully' });
+      if (!variables.quiet) toast({ title: 'To-do updated successfully' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating to-do', description: error.message, variant: 'destructive' });
