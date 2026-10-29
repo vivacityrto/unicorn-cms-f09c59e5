@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-30 · **Reconsider by:** 2027-01-28 · **Confidence:** high on the rules (read from the migrations and the editor code, and checked against production data on 28 Oct 2026).
 >
-> **Status:** the Link action under "What changed" is merged (PR 1466). Linking through a Team Rock (30 Oct 2026, Carl chose the full chain) is built in a pull request; its migration is **not applied anywhere yet**. The "Open decisions" below are updated for it.
+> **Status:** the Link action under "What changed" is merged (PR 1466). Linking through a Team Rock (30 Oct 2026, Carl chose the full chain) is built in a pull request; its migration is **not applied anywhere yet**, but the rule was checked on `unicorn-qa` in a rolled-back transaction (17 pairings, old rule and new, all as expected; see the audit entry). The "Open decisions" below are updated for it.
 
 ## The rules, in one place
 
