@@ -10,14 +10,26 @@ export interface RockNotesDictationValue {
   interimTranscript: string;
   /** The Rock the microphone is currently writing to, or null when it is off. */
   activeRockId: string | null;
+  /**
+   * Set while the microphone is handing over to another Rock: the Rock being finished. Until the
+   * browser has delivered its last phrase and the note is saved, that Rock still owns the microphone.
+   */
+  handingOverFromRockId: string | null;
+  /** The most recent note saved from a draft, for a short confirmation. Cleared after a few seconds. */
+  lastSaved: { rockId: string; at: number } | null;
   getDraft: (rockId: string) => string;
   setDraft: (rockId: string, text: string) => void;
-  /** Turn the microphone on for this Rock. If it is already on for another Rock, it moves here. */
+  /** Turn the microphone on for this Rock. If it is already on for another Rock, it hands over to this one. */
   startFor: (rockId: string) => void;
   /** Turn the microphone off. What was dictated stays in the draft until it is added. */
   stopMic: () => void;
-  /** The Rock on screen changed. If the microphone is on it follows, and the Rock it leaves is saved. */
-  retarget: (rockId: string) => void;
+  /**
+   * The Rock on screen changed (null: none, as at the wrap-up). If the microphone is on, the Rock
+   * being left receives everything said up to now, including the phrase still being recognised, and
+   * is saved; then the microphone starts for the new Rock (or turns off for null). If it is off, the
+   * note being written for the Rock being left is saved.
+   */
+  retarget: (rockId: string | null) => void;
   /** Save the draft for a Rock as a note. Resolves true when nothing is left unsaved. */
   saveDraft: (rockId: string) => Promise<boolean>;
   /** Stop the microphone and save every draft. Used when the view closes. */
@@ -46,8 +58,13 @@ export function useRockNotesDictation(): RockNotesDictationValue {
  * One microphone and one set of note drafts for everything that shows Rock notes at the same
  * time: the Discuss slide, the Rock details panel opened over it, and the next Rock. Because it
  * sits above all of them, opening the panel or moving between Rocks never restarts the microphone
- * or loses text. The microphone writes to whichever Rock is current when a phrase arrives; moving
- * to another Rock saves the one it leaves, so nothing is lost and nothing lands on the wrong Rock.
+ * or loses text.
+ *
+ * Moving to another Rock is a hand-over, not an instant switch. A speech recogniser delivers its last
+ * phrase a moment AFTER you stop speaking, so pointing the microphone at the next Rock straight away
+ * would put the end of the old note on the new one. Instead the Rock being left keeps the microphone
+ * until the browser has really ended the session (which delivers that last phrase), is saved, and only
+ * then does a fresh session start for the next Rock.
  */
 export function RockNotesDictationProvider({ meetingId, children }: { meetingId?: string; children: ReactNode }) {
   const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
@@ -66,6 +83,14 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
   const [savingIds, setSavingIds] = useState<ReadonlySet<string>>(new Set());
   const activeRef = useRef<string | null>(null);
   const [activeRockId, setActiveRockId] = useState<string | null>(null);
+  // The Rock the slide is showing, as last reported by retarget().
+  const screenRockRef = useRef<string | null>(null);
+  // A hand-over in progress: undefined = none; a Rock id = start there when the session ends;
+  // null = turn the microphone off when the session ends.
+  const handOverRef = useRef<string | null | undefined>(undefined);
+  const [handingOverFrom, setHandingOverFrom] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<{ rockId: string; at: number } | null>(null);
+  const lastSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [createdTodoKeys, setCreatedTodoKeys] = useState<ReadonlySet<string>>(new Set());
 
   const writeDraft = useCallback((rockId: string, next: string) => {
@@ -87,6 +112,9 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     const source = dictatedRef.current.has(rockId) ? 'dictated' : 'typed';
     try {
       await addNoteRef.current({ rockId, body, meetingId: meetingIdRef.current, source });
+      setLastSaved({ rockId, at: Date.now() });
+      if (lastSavedTimerRef.current) clearTimeout(lastSavedTimerRef.current);
+      lastSavedTimerRef.current = setTimeout(() => setLastSaved(null), 4000);
       // Keep anything typed or dictated while the save was in flight.
       const current = draftsRef.current[rockId] ?? '';
       const remaining = current.startsWith(sent) ? current.slice(sent.length).trim() : current;
@@ -112,54 +140,90 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     return next;
   }, [saveNow]);
 
-  const startFor = useCallback((rockId: string) => {
-    if (recordingRef.current && activeRef.current === rockId) return;
-    if (recordingRef.current && activeRef.current) {
-      // Already listening for another Rock: keep the same session and just point it here.
-      const previous = activeRef.current;
-      activeRef.current = rockId;
-      setActiveRockId(rockId);
-      void saveDraft(previous);
-      return;
-    }
+  // What the microphone does with each phrase: it goes to the Rock that owns the microphone right now.
+  const onSpeech = useCallback((text: string) => {
+    const target = activeRef.current;
+    if (!target) return;
+    dictatedRef.current.add(target);
+    writeDraft(target, appendDictation(draftsRef.current[target] ?? '', text));
+  }, [writeDraft]);
+
+  const begin = useCallback((rockId: string) => {
     activeRef.current = rockId;
     setActiveRockId(rockId);
-    startRecording(
-      text => {
-        const target = activeRef.current;
-        if (!target) return;
-        dictatedRef.current.add(target);
-        writeDraft(target, appendDictation(draftsRef.current[target] ?? '', text));
-      },
-      { keepListening: true },
-    );
-  }, [saveDraft, startRecording, writeDraft]);
+    startRecording(onSpeech, { keepListening: true });
+  }, [onSpeech, startRecording]);
+
+  // Ask the running session to finish. It delivers its last phrase and ends; the effect below then
+  // saves the Rock that owned the microphone and carries out whatever comes next.
+  const handOver = useCallback((to: string | null) => {
+    if (handOverRef.current === undefined) {
+      setHandingOverFrom(activeRef.current);
+      handOverRef.current = to;
+      stopRecording();
+    } else {
+      // Already handing over (Next pressed again, or Previous): only the destination changes.
+      handOverRef.current = to;
+    }
+  }, [stopRecording]);
+
+  const startFor = useCallback((rockId: string) => {
+    if (recordingRef.current && activeRef.current) {
+      if (handOverRef.current === undefined && activeRef.current === rockId) return;
+      handOver(rockId);
+      return;
+    }
+    begin(rockId);
+  }, [begin, handOver]);
 
   const stopMic = useCallback(() => {
-    // The target is kept until the session really ends, so the phrase the browser is still
-    // finishing lands in the right draft.
+    // If a hand-over is under way the Rock being finished is still saved, and the microphone then
+    // stays off. Otherwise the text stays in the draft for review. Either way the target is kept until
+    // the session really ends, so the phrase the browser is still finishing lands in the right draft.
+    if (handOverRef.current !== undefined) handOverRef.current = null;
     stopRecording();
   }, [stopRecording]);
 
-  const retarget = useCallback((rockId: string) => {
-    const previous = activeRef.current;
-    if (!recordingRef.current || !previous || previous === rockId) return;
-    activeRef.current = rockId;
-    setActiveRockId(rockId);
-    void saveDraft(previous);
-  }, [saveDraft]);
+  const retarget = useCallback((next: string | null) => {
+    const left = screenRockRef.current;
+    screenRockRef.current = next;
+    if (recordingRef.current && activeRef.current) {
+      if (handOverRef.current === undefined && activeRef.current === next) return;
+      handOver(next);
+      return;
+    }
+    // The microphone is off: Next still saves the note that was being written for the Rock being left.
+    if (left && left !== next) void saveDraft(left);
+  }, [handOver, saveDraft]);
 
-  // The session ended (stopped, or the browser could not keep going): nothing is writing any more.
+  // The session ended: stopped, handed over, or the browser could not keep going.
   useEffect(() => {
-    if (!isRecording && activeRef.current) {
+    if (isRecording) return;
+    const ended = activeRef.current;
+    const pending = handOverRef.current;
+    handOverRef.current = undefined;
+    setHandingOverFrom(null);
+    if (!ended) return;
+    if (pending === undefined) {
+      activeRef.current = null;
+      setActiveRockId(null);
+      return;
+    }
+    // By now the browser has delivered the last phrase, and it went to the Rock that owned the microphone.
+    if (pending !== ended) void saveDraft(ended);
+    if (pending) begin(pending);
+    else {
       activeRef.current = null;
       setActiveRockId(null);
     }
-  }, [isRecording]);
+  }, [isRecording, begin, saveDraft]);
 
   const unmountedRef = useRef(false);
 
   const flushAll = useCallback(async () => {
+    // Closing: finish the Rock that owns the microphone and do not start another session.
+    if (handOverRef.current !== undefined) handOverRef.current = null;
+    screenRockRef.current = null;
     stopRecording();
     // The browser delivers the phrase it is still recognising after stop, so the draft is only
     // complete once the session has really ended. Wait for that (bounded) before saving.
@@ -177,6 +241,7 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     unmountedRef.current = false;
     return () => {
       unmountedRef.current = true;
+      if (lastSavedTimerRef.current) clearTimeout(lastSavedTimerRef.current);
       void flushRef.current();
     };
   }, []);
@@ -187,6 +252,8 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     isRecording,
     interimTranscript,
     activeRockId,
+    handingOverFromRockId: handingOverFrom,
+    lastSaved,
     getDraft: rockId => drafts[rockId] ?? '',
     setDraft: writeDraft,
     startFor,
@@ -197,7 +264,7 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     isSaving: rockId => savingIds.has(rockId),
     createdTodoKeys,
     markTodoCreated: key => setCreatedTodoKeys(current => new Set(current).add(key)),
-  }), [meetingId, isSupported, isRecording, interimTranscript, activeRockId, drafts, writeDraft, startFor, stopMic, retarget, saveDraft, flushAll, savingIds, createdTodoKeys]);
+  }), [meetingId, isSupported, isRecording, interimTranscript, activeRockId, handingOverFrom, lastSaved, drafts, writeDraft, startFor, stopMic, retarget, saveDraft, flushAll, savingIds, createdTodoKeys]);
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

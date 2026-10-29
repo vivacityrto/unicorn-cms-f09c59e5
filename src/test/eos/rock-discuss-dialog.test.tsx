@@ -21,7 +21,17 @@ const todoState = vi.hoisted(() => ({ overdue: {} as Record<string, number> }));
 vi.mock('@/hooks/useRockTodos', () => ({
   useOverdueTodoCountsByRock: () => ({ data: todoState.overdue }),
 }));
-const notesController = vi.hoisted(() => ({ retarget: vi.fn(), flushAll: vi.fn().mockResolvedValue(undefined), provided: false }));
+const notesController = vi.hoisted(() => ({
+  retarget: vi.fn(),
+  flushAll: vi.fn().mockResolvedValue(undefined),
+  stopMic: vi.fn(),
+  getDraft: (_rockId: string) => '',
+  isRecording: false,
+  activeRockId: null as string | null,
+  handingOverFromRockId: null as string | null,
+  lastSaved: null as { rockId: string; at: number } | null,
+  provided: false,
+}));
 vi.mock('@/components/eos/rocks/notes/RockNotesDictation', () => ({
   RockNotesDictationProvider: ({ children }: { children: unknown }) => children,
   useOptionalRockNotesDictation: () => (notesController.provided ? notesController : null),
@@ -92,6 +102,11 @@ const heading = () => document.querySelector('[data-slide-heading]') as HTMLElem
 beforeEach(() => {
   todoState.overdue = {};
   notesController.provided = false;
+  notesController.isRecording = false;
+  notesController.activeRockId = null;
+  notesController.handingOverFromRockId = null;
+  notesController.lastSaved = null;
+  notesController.getDraft = () => '';
   notesController.retarget.mockClear();
   notesController.flushAll.mockClear();
   state.setStatus.mockReset().mockResolvedValue(undefined);
@@ -149,12 +164,12 @@ describe('RockDiscussDialog: notes and the microphone', () => {
     expect(notesController.retarget.mock.calls.map(call => call[0])).toEqual(['a', 'b', 'a']);
   });
 
-  it('does not retarget on the wrap-up, where there is no Rock', () => {
+  it('tells the notes controller there is no Rock at the wrap-up, so the microphone finishes and turns off', () => {
     notesController.provided = true;
     renderDialog();
     notesController.retarget.mockClear();
     fireEvent.click(screen.getAllByRole('button', { name: 'Wrap-up' })[0]);
-    expect(notesController.retarget).not.toHaveBeenCalled();
+    expect(notesController.retarget).toHaveBeenCalledWith(null);
   });
 
   it('stops the microphone and saves drafts when the view is closed, before it closes', async () => {
@@ -165,6 +180,15 @@ describe('RockDiscussDialog: notes and the microphone', () => {
     onOpenChange.mockImplementation(() => order.push('close'));
     await userEvent.keyboard('{Escape}');
     expect(order).toEqual(['flush', 'close']);
+  });
+
+  it('shows the dictation strip beside Next when the microphone is on, naming the Rock it writes to', () => {
+    notesController.provided = true;
+    notesController.isRecording = true;
+    notesController.activeRockId = 'a';
+    renderDialog();
+    expect(screen.getByText(/Listening · notes go to “Alpha tidy-up”/)).toBeInTheDocument();
+    expect(screen.queryByText(/Use the ← and → keys/)).toBeNull();
   });
 
   it('works without a notes controller (the Rock panel brings its own)', async () => {

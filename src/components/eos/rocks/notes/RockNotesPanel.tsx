@@ -149,7 +149,8 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
   const draft = ctx.getDraft(rock.id);
   const saving = ctx.isSaving(rock.id);
   const listeningHere = ctx.isRecording && ctx.activeRockId === rock.id;
-  const listeningElsewhere = ctx.isRecording && ctx.activeRockId !== null && ctx.activeRockId !== rock.id;
+  const handingOver = ctx.handingOverFromRockId !== null && ctx.handingOverFromRockId !== rock.id;
+  const listeningElsewhere = !handingOver && ctx.isRecording && ctx.activeRockId !== null && ctx.activeRockId !== rock.id;
 
   const data = notesQuery.data;
   const ordered = useMemo(() => withStatusChanges(data?.notes ?? []), [data?.notes]);
@@ -177,6 +178,13 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
           {listeningHere ? <><Square className="h-3.5 w-3.5 fill-current" aria-hidden />Stop</> : <><Mic className="h-3.5 w-3.5" aria-hidden />Dictate</>}
         </Button>
       </div>
+
+      {handingOver && (
+        <p role="status" className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          Saving the note for the Rock you just left. The microphone moves here in a moment.
+        </p>
+      )}
 
       {listeningElsewhere && (
         <div className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
