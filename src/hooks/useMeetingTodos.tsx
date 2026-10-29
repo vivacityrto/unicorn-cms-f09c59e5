@@ -119,12 +119,13 @@ export interface PastTodo {
  * Past To-Dos: the completed and cancelled ones of this tenant, newest first, apart from this meeting's
  * own (those are already in the meeting's list). The meeting's list only carries open To-Dos forward, so
  * without this a finished To-Do disappears from view the moment its meeting is over. Loaded only when asked.
- * Keyed under 'meeting-todos' so reopening one refreshes it like every other To-Do list.
+ * Its key starts with ['meeting-todos', meetingId], the prefix the To-Do mutations invalidate, so reopening or
+ * editing a To-Do refreshes this list like every other To-Do list.
  */
 export const usePastTodos = (meetingId: string | undefined, tenantId: number | undefined, enabled: boolean) => {
   const { profile } = useAuth();
   return useQuery({
-    queryKey: ['meeting-todos', 'past', meetingId, tenantId],
+    queryKey: ['meeting-todos', meetingId, tenantId, 'past'],
     queryFn: async (): Promise<PastTodo[]> => {
       const { data, error } = await supabase
         .from('eos_todos')

@@ -57,4 +57,20 @@ describe('usePastTodos', () => {
     const none = renderHook(() => usePastTodos(undefined, undefined, true), { wrapper });
     expect(none.result.current.fetchStatus).toBe('idle');
   });
+
+  it('is refreshed by the same invalidation the To-Do mutations use, so a reopened To-Do leaves the list', async () => {
+    rows.todos = [row('1')];
+    rows.users = [];
+    const client = new QueryClient();
+    const wrap = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const { result } = renderHook(() => usePastTodos('m1', 6372, true), { wrapper: wrap });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.map(t => t.id)).toEqual(['1']);
+
+    // What updateTodo and createTodo do on success in useMeetingTodos:
+    rows.todos = [];
+    await client.invalidateQueries({ queryKey: ['meeting-todos', 'm1'] });
+    await waitFor(() => expect(result.current.data).toEqual([]));
+  });
 });
+
