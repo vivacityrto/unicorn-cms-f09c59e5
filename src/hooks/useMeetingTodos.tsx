@@ -102,3 +102,60 @@ export const useMeetingTodos = (meetingId?: string, tenantId?: number) => {
     updateTodo,
   };
 };
+
+export interface PastTodo {
+  id: string;
+  title: string;
+  status: string | null;
+  due_date: string | null;
+  owner_id: string | null;
+  ownerName: string | null;
+  /** When it was completed (or, for a cancelled one, last changed). */
+  closedAt: string | null;
+  issueTitle: string | null;
+}
+
+/**
+ * Past To-Dos: the completed and cancelled ones of this tenant, newest first, apart from this meeting's
+ * own (those are already in the meeting's list). The meeting's list only carries open To-Dos forward, so
+ * without this a finished To-Do disappears from view the moment its meeting is over. Loaded only when asked.
+ * Its key starts with ['meeting-todos', meetingId], the prefix the To-Do mutations invalidate, so reopening or
+ * editing a To-Do refreshes this list like every other To-Do list.
+ */
+export const usePastTodos = (meetingId: string | undefined, tenantId: number | undefined, enabled: boolean) => {
+  const { profile } = useAuth();
+  return useQuery({
+    queryKey: ['meeting-todos', meetingId, tenantId, 'past'],
+    queryFn: async (): Promise<PastTodo[]> => {
+      const { data, error } = await supabase
+        .from('eos_todos')
+        .select('id, title, status, due_date, owner_id, completed_at, updated_at, meeting_id, issue:eos_issues!eos_todos_issue_id_fkey(title)')
+        .eq('tenant_id', tenantId!)
+        .in('status', ['Complete', 'Cancelled'])
+        .order('updated_at', { ascending: false })
+        .limit(150);
+      if (error) throw error;
+      const rows = ((data ?? []) as unknown as Array<{
+        id: string; title: string; status: string | null; due_date: string | null; owner_id: string | null;
+        completed_at: string | null; updated_at: string | null; meeting_id: string | null; issue: { title: string } | null;
+      }>).filter(row => row.meeting_id !== meetingId);
+      const ownerIds = Array.from(new Set(rows.map(r => r.owner_id).filter((id): id is string => !!id)));
+      const names: Record<string, string> = {};
+      if (ownerIds.length > 0) {
+        const { data: people } = await supabase.from('users').select('user_uuid, first_name, last_name').in('user_uuid', ownerIds);
+        for (const person of people ?? []) names[person.user_uuid] = [person.first_name, person.last_name].filter(Boolean).join(' ') || 'Unknown';
+      }
+      return rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        due_date: row.due_date,
+        owner_id: row.owner_id,
+        ownerName: row.owner_id ? names[row.owner_id] ?? null : null,
+        closedAt: row.completed_at ?? row.updated_at,
+        issueTitle: row.issue?.title ?? null,
+      }));
+    },
+    enabled: !!profile && enabled && !!meetingId && !!tenantId,
+  });
+};

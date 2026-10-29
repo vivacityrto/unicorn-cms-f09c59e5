@@ -17,6 +17,10 @@ A milestone's Tasks box only ever held snapshots of GitHub issues, so a Rock who
 
 Progress never completes a milestone: "ready for review" is only a hint and a person decides.
 
+## Past To-Dos in the meeting's To-Do list
+
+The live To-Do List segment shows this meeting's To-Dos (any status) plus every still-open To-Do carried over from earlier meetings, so a finished To-Do vanished from view as soon as its meeting was over. A **Show past To-Dos (completed and cancelled)** button under the list now opens a read-only list of the tenant's completed and cancelled To-Dos from earlier meetings, newest first (up to 150, with a search box once there are more than five), each showing when it was completed or cancelled, the owner, the IDS issue it came from and the Rock it is linked to (changeable). Nothing in it changes by clicking a row: a past To-Do is put back to Open only with its **Reopen** button, after which it joins the list to review. There is no "archived" state on a To-Do; completed and cancelled are the past states. Code: `usePastTodos` in `src/hooks/useMeetingTodos.tsx`, `src/components/eos/PastTodosPanel.tsx`.
+
 ## Where the code is
 
 Migration `supabase/migrations/20261029030000_rock_todo_links.sql` (rollback in `rollback/`): `eos_rock_todo_links` (select only for clients; a validation trigger holds "milestone belongs to the Rock" and the Rock's tenant), `add_rock_todo()`, `link_todo_to_rock()`, `unlink_todo_from_rock()` (all staff only, `SECURITY DEFINER`, empty `search_path`). Frontend: `src/utils/rockTodos.ts`, `src/hooks/useRockTodos.ts`, `src/components/eos/rocks/todos/` (`RockTodoList`, `TodoRockLink`), wired in `RockDetailSheet`, `MilestoneTable`, `LiveMeetingView`, `pages/EosTodos.tsx`, `rockDiscussion.ts` and the Discuss dialog and slide.
