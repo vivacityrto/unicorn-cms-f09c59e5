@@ -67,22 +67,25 @@ describe('RockNotesDictationProvider', () => {
     expect(result.current.isRecording).toBe(true);
   });
 
-  it('keeps one live microphone when moving to the next Rock, saves the Rock it leaves, and writes new phrases to the new Rock', async () => {
+  it('hands the microphone over on Next: the Rock left is saved, a new session starts for the next Rock, and only one is ever live', async () => {
     const { result } = setup();
     act(() => result.current.startFor('rock-a'));
     act(() => mic().say('about the first rock'));
 
-    await act(async () => result.current.retarget('rock-b'));
+    await act(async () => {
+      result.current.retarget('rock-b');
+      await vi.advanceTimersByTimeAsync(50);
+    });
     expect(addNote).toHaveBeenCalledTimes(1);
     expect(addNote).toHaveBeenCalledWith({ rockId: 'rock-a', body: 'About the first rock', meetingId: 'm1', source: 'dictated' });
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(FakeRecognition.instances.filter(i => i.started)).toHaveLength(1);
+    expect(result.current.activeRockId).toBe('rock-b');
+    expect(result.current.handingOverFromRockId).toBeNull();
 
     act(() => mic().say('about the second rock'));
     expect(result.current.getDraft('rock-b')).toBe('About the second rock');
     expect(result.current.getDraft('rock-a')).toBe('');
-    expect(result.current.activeRockId).toBe('rock-b');
-
-    expect(FakeRecognition.instances).toHaveLength(1);
-    expect(FakeRecognition.instances.filter(i => i.started)).toHaveLength(1);
   });
 
   it('does nothing on a Rock change when the microphone is off', async () => {
@@ -171,56 +174,212 @@ describe('RockNotesDictationProvider', () => {
     expect(addNote.mock.calls.map(call => [call[0].rockId, call[0].source]).sort()).toEqual([['rock-a', 'typed'], ['rock-b', 'dictated']]);
   });
 
-  it('pressing Dictate on another Rock while listening moves the same session there', async () => {
+  it('pressing Dictate on another Rock while listening hands over to it the same way', async () => {
     const { result } = setup();
     act(() => result.current.startFor('rock-a'));
     act(() => mic().say('for a'));
-    await act(async () => result.current.startFor('rock-b'));
-    expect(FakeRecognition.instances).toHaveLength(1);
+    await act(async () => {
+      result.current.startFor('rock-b');
+      await vi.advanceTimersByTimeAsync(50);
+    });
     expect(result.current.activeRockId).toBe('rock-b');
+    expect(FakeRecognition.instances.filter(i => i.started)).toHaveLength(1);
     expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'For a' }));
   });
 
-  it('closing while a phrase is still being recognised saves that phrase too', async () => {
+  it('while handing over, the Rock being left keeps the microphone and is named so the screen can say so', async () => {
     const { result } = setup();
     act(() => result.current.startFor('rock-a'));
-    act(() => mic().say('already heard'));
     const session = mic();
-    session.stop = () => {
-      // The browser finishes the phrase a moment after stop, then ends the session.
-      setTimeout(() => {
-        session.say('and the last words');
-        session.started = false;
-        session.onend?.();
-      }, 100);
-    };
-    await act(async () => {
-      const flushing = result.current.flushAll();
-      await vi.advanceTimersByTimeAsync(2500);
-      await flushing;
-    });
-    expect(addNote).toHaveBeenCalledTimes(1);
-    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Already heard and the last words' }));
-    expect(result.current.getDraft('rock-a')).toBe('');
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 400); };
+    act(() => result.current.retarget('rock-b'));
+    expect(result.current.handingOverFromRockId).toBe('rock-a');
+    expect(result.current.activeRockId).toBe('rock-a');
+    await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+    expect(result.current.handingOverFromRockId).toBeNull();
+    expect(result.current.activeRockId).toBe('rock-b');
   });
 
-  it('closing during a save also saves the text added while it was in flight', async () => {
+  it('Stop pressed during the hand-over still saves the Rock left, and nothing is written to the next one', async () => {
     const { result } = setup();
-    const finishers: Array<() => void> = [];
-    addNote.mockImplementation(() => new Promise(resolve => { finishers.push(() => resolve({ note_id: 'n', created_at: 'x', duplicate: false })); }));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.say('late tail'); session.started = false; session.onend?.(); }, 200); };
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.stopMic());
+    await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Note for a late tail' }));
+    expect(result.current.isRecording).toBe(false);
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.getDraft('rock-b')).toBe('');
+  });
 
-    act(() => result.current.setDraft('rock-a', 'first part'));
-    act(() => void result.current.saveDraft('rock-a'));
-    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
-    act(() => result.current.setDraft('rock-a', 'first part and a second part'));
+  it('Next twice in a row skips the Rock in between: A is saved, the microphone ends up on C, B never gets text', async () => {
+    const { result } = setup();
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.say('tail of a'); session.started = false; session.onend?.(); }, 200); };
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.retarget('rock-c'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+    expect(result.current.activeRockId).toBe('rock-c');
+    expect(addNote).toHaveBeenCalledTimes(1);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Note for a tail of a' }));
+    expect(result.current.getDraft('rock-b')).toBe('');
+  });
 
-    let flushing: Promise<void> = Promise.resolve();
-    act(() => { flushing = result.current.flushAll(); });
-    await act(async () => { finishers[0](); await vi.advanceTimersByTimeAsync(10); });
-    await act(async () => { finishers[1]?.(); await flushing; });
+  it('going back to the same Rock during the hand-over restarts it without saving or losing anything', async () => {
+    const { result } = setup();
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.retarget('rock-a'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    expect(addNote).not.toHaveBeenCalled();
+    expect(result.current.activeRockId).toBe('rock-a');
+    expect(result.current.getDraft('rock-a')).toBe('Note for a');
+  });
 
-    expect(addNote.mock.calls.map(call => call[0].body)).toEqual(['first part', 'and a second part']);
-    expect(result.current.getDraft('rock-a')).toBe('');
+  it('with the microphone off, Next still saves the note that was being written for the Rock left (typed or dictated)', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.setDraft('rock-a', 'typed note for a'));
+    await act(async () => { result.current.retarget('rock-b'); await vi.advanceTimersByTimeAsync(10); });
+    expect(addNote).toHaveBeenCalledWith({ rockId: 'rock-a', body: 'typed note for a', meetingId: 'm1', source: 'typed' });
+  });
+
+  it('with nothing written, moving on saves nothing', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    await act(async () => { result.current.retarget('rock-b'); await vi.advanceTimersByTimeAsync(10); });
+    expect(addNote).not.toHaveBeenCalled();
+  });
+
+  it('at the wrap-up (no Rock) the last note is saved and the microphone turns off', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('last note'));
+    await act(async () => { result.current.retarget(null); await vi.advanceTimersByTimeAsync(50); });
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Last note' }));
+    expect(result.current.isRecording).toBe(false);
+    expect(result.current.activeRockId).toBeNull();
+  });
+
+  it('confirms a save briefly, then clears the confirmation', async () => {
+    const { result } = setup();
+    act(() => result.current.setDraft('rock-a', 'a note'));
+    await act(async () => { await result.current.saveDraft('rock-a'); });
+    expect(result.current.lastSaved?.rockId).toBe('rock-a');
+    await act(async () => { await vi.advanceTimersByTimeAsync(4500); });
+    expect(result.current.lastSaved).toBeNull();
+  });
+
+  it('REPRO: a phrase the browser finishes after Next belongs to the Rock you left, not the next one', async () => {
+    const { result } = setup();
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('first thing about A'));
+    const session = mic();
+    session.stop = () => {
+      // The browser delivers the phrase it was still recognising a moment after stop, then ends.
+      setTimeout(() => {
+        session.say('and the tail of A');
+        session.started = false;
+        session.onend?.();
+      }, 150);
+    };
+    await act(async () => {
+      result.current.retarget('rock-b');
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'First thing about A and the tail of A', source: 'dictated' }));
+    expect(result.current.getDraft('rock-b')).toBe('');
+  });
+
+  it('Stop, then Next before the session has ended: the microphone stays off, the Rock left is saved, the next Rock gets nothing', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.say('tail of a'); session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-b'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.isRecording).toBe(false);
+    expect(result.current.activeRockId).toBeNull();
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Note for a tail of a' }));
+    expect(result.current.getDraft('rock-b')).toBe('');
+  });
+
+  it('Stop, then Dictate again on the same Rock before the session has ended, restarts it without saving', async () => {
+    const { result } = setup();
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.startFor('rock-a'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(addNote).not.toHaveBeenCalled();
+    expect(result.current.activeRockId).toBe('rock-a');
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(result.current.getDraft('rock-a')).toBe('Note for a');
+  });
+
+  it('Stop, then Next pressed again and again before the session ends: the microphone still stays off', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.retarget('rock-c'));
+    act(() => result.current.retarget('rock-b'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.isRecording).toBe(false);
+    expect(addNote).toHaveBeenCalledTimes(1);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a' }));
+  });
+
+  it('Next, then Stop during the hand-over, then more navigation: the microphone still stays off', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-c'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.isRecording).toBe(false);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a' }));
+  });
+
+  it('pressing Dictate after a Stop is explicit: it does restart, on the Rock where it was pressed', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-b'));
+    act(() => result.current.startFor('rock-b'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(result.current.activeRockId).toBe('rock-b');
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a' }));
   });
 });
 

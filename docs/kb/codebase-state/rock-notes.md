@@ -19,11 +19,20 @@ Rock Review is a yes/no, so what was said about a Rock ("the supplier slipped, t
 
 ## Dictation across the screens
 
-One microphone and one set of drafts live in `RockNotesDictationProvider`, above the Discuss view and the Rock details panel. Opening the panel, moving through milestones or pressing Next therefore never restarts the microphone or loses text. The microphone writes to whichever Rock is on screen when a phrase arrives; moving to another Rock **saves the Rock it leaves** as a note and points the same session at the new one. Stopping the microphone keeps the text as a draft to review; closing the Discuss view stops it and saves every draft. A save that fails keeps the text.
+One microphone and one set of drafts live in `RockNotesDictationProvider`, above the Discuss view and the Rock details panel. Opening the panel or moving through milestones never restarts the microphone or loses text.
+
+**Moving to another Rock is a hand-over, not an instant switch** (fixed 29 Oct 2026 after a real test showed the end of one Rock's note landing on the next). A speech recogniser delivers its last phrase a moment *after* you stop speaking, so pointing the microphone at the next Rock straight away put that tail on the wrong Rock. Now, when you press Next, jump on the rail, change the filter or reach the wrap-up:
+1. The Rock you are leaving keeps the microphone while the browser finishes the phrase it is recognising and ends the session (about a second at most).
+2. That Rock's note is saved, dictated or typed. The footer strip says "Saving your note for ‘…’", and the new Rock's panel says the microphone moves there in a moment.
+3. A fresh session starts for the new Rock, so everything said from then on goes to it. At the wrap-up there is no Rock, so the last note is saved and the microphone turns off.
+
+Pressing Next twice quickly skips the Rock in between (it never gets text). Pressing Stop during the hand-over still saves the Rock you left and leaves the microphone off. Going back to the same Rock during the hand-over simply restarts it. With the microphone off, **Next still saves the note being written** (typed notes included). Stopping the microphone on a slide keeps the text as a draft to review; closing the Discuss view stops it and saves every draft; a failed save keeps the text. Words spoken in the roughly half-second between the old session ending and the new one starting can be missed, as at any browser restart.
+
+A fixed strip in the Discuss footer, beside Next, always says where the microphone is writing ("Listening · notes go to ‘…’", with a Stop button), says when it is saving the Rock just left, confirms each save ("Saved your note for ‘…’") for a few seconds, and warns of an unsaved note ("Next saves it").
 
 ## Where the code is
 
-Migration `supabase/migrations/20261028120000_rock_notes.sql` (rollback in `rollback/`): `eos_rock_notes`, `eos_rock_note_summaries`, `add_rock_note()` (staff only, `SECURITY DEFINER`, empty `search_path`; a repeat within 30 seconds returns the first), and `rock_delete_blockers()` extended with `notes`. Edge Function `supabase/functions/summarise-rock-notes/` with its pure helpers in `_shared/rock-notes-summary.ts` (prompt, output validation). Frontend: `src/utils/rockNotes.ts`, `src/hooks/useRockNotes.ts`, `src/components/eos/rocks/notes/` (`RockNotesDictation` provider, `RockNotesPanel`), wired in `RockDiscussSlide`, `RockDiscussDialog` (follows the Rock on screen and flushes on close), `MeetingRocksReview` (hosts the provider) and `RockDetailSheet`.
+Migration `supabase/migrations/20261028120000_rock_notes.sql` (rollback in `rollback/`): `eos_rock_notes`, `eos_rock_note_summaries`, `add_rock_note()` (staff only, `SECURITY DEFINER`, empty `search_path`; a repeat within 30 seconds returns the first), and `rock_delete_blockers()` extended with `notes`. Edge Function `supabase/functions/summarise-rock-notes/` with its pure helpers in `_shared/rock-notes-summary.ts` (prompt, output validation). Frontend: `src/utils/rockNotes.ts`, `src/hooks/useRockNotes.ts`, `src/components/eos/rocks/notes/` (`RockNotesDictation` provider, `RockNotesPanel`), wired in `RockDiscussSlide`, `RockDiscussDialog` (reports the Rock on screen, which triggers the hand-over, and flushes on close), `DictationStatusBar` (the footer strip), `MeetingRocksReview` (hosts the provider) and `RockDetailSheet`.
 
 ## Rules worth knowing
 

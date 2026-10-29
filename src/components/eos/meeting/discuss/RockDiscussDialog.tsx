@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DiscussWrapUp } from '@/components/eos/meeting/discuss/DiscussWrapUp';
 import { RockDiscussSlide } from '@/components/eos/meeting/discuss/RockDiscussSlide';
+import { DictationStatusBar } from '@/components/eos/meeting/discuss/DictationStatusBar';
 import { cn } from '@/lib/utils';
 import { useOptionalRockNotesDictation } from '@/components/eos/rocks/notes/RockNotesDictation';
 import { useOpenIssueRockIds } from '@/hooks/useRockDiscussion';
@@ -61,7 +62,8 @@ function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, 
   const notes = useOptionalRockNotesDictation();
   const retarget = notes?.retarget;
   useEffect(() => {
-    if (currentId) retarget?.(currentId);
+    // null at the wrap-up: there is no Rock to write to, so the microphone finishes the last note and turns off.
+    retarget?.(currentId ?? null);
   }, [currentId, retarget]);
   const onOpenChange = (next: boolean) => {
     if (!next) void notes?.flushAll();
@@ -209,7 +211,11 @@ function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, 
               <ChevronLeft className="h-4 w-4" aria-hidden />
               Previous
             </Button>
-            <p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>
+            <DictationStatusBar
+              currentRockId={currentId}
+              titleOf={id => nodes.get(id)?.rock.title ?? 'this Rock'}
+              fallback={<p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>}
+            />
             {atWrapUp ? (
               <Button type="button" className="h-10 px-4" onClick={() => onOpenChange(false)}>Finish</Button>
             ) : (
