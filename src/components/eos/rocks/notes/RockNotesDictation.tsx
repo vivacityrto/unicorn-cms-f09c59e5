@@ -88,6 +88,9 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
   // A hand-over in progress: undefined = none; a Rock id = start there when the session ends;
   // null = turn the microphone off when the session ends.
   const handOverRef = useRef<string | null | undefined>(undefined);
+  // The person pressed Stop and the session has not ended yet. Moving to another Rock in that window
+  // must not start the microphone again: Stop is explicit.
+  const stopPendingRef = useRef(false);
   const [handingOverFrom, setHandingOverFrom] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<{ rockId: string; at: number } | null>(null);
   const lastSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,7 +172,8 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
 
   const startFor = useCallback((rockId: string) => {
     if (recordingRef.current && activeRef.current) {
-      if (handOverRef.current === undefined && activeRef.current === rockId) return;
+      // Dictate pressed again right after Stop restarts it; otherwise already listening here is a no-op.
+      if (handOverRef.current === undefined && !stopPendingRef.current && activeRef.current === rockId) return;
       handOver(rockId);
       return;
     }
@@ -181,6 +185,7 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     // stays off. Otherwise the text stays in the draft for review. Either way the target is kept until
     // the session really ends, so the phrase the browser is still finishing lands in the right draft.
     if (handOverRef.current !== undefined) handOverRef.current = null;
+    else if (recordingRef.current) stopPendingRef.current = true;
     stopRecording();
   }, [stopRecording]);
 
@@ -188,6 +193,13 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     const left = screenRockRef.current;
     screenRockRef.current = next;
     if (recordingRef.current && activeRef.current) {
+      if (stopPendingRef.current && handOverRef.current === undefined) {
+        // Stop was pressed and the session is still finishing its last phrase. Moving on saves the Rock
+        // that owns it once it ends, and the microphone stays off.
+        handOverRef.current = null;
+        setHandingOverFrom(activeRef.current);
+        return;
+      }
       if (handOverRef.current === undefined && activeRef.current === next) return;
       handOver(next);
       return;
@@ -202,6 +214,7 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
     const ended = activeRef.current;
     const pending = handOverRef.current;
     handOverRef.current = undefined;
+    stopPendingRef.current = false;
     setHandingOverFrom(null);
     if (!ended) return;
     if (pending === undefined) {
@@ -223,6 +236,7 @@ export function RockNotesDictationProvider({ meetingId, children }: { meetingId?
   const flushAll = useCallback(async () => {
     // Closing: finish the Rock that owns the microphone and do not start another session.
     if (handOverRef.current !== undefined) handOverRef.current = null;
+    else if (recordingRef.current) stopPendingRef.current = true;
     screenRockRef.current = null;
     stopRecording();
     // The browser delivers the phrase it is still recognising after stop, so the draft is only

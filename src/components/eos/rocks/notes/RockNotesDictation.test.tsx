@@ -299,5 +299,37 @@ describe('RockNotesDictationProvider', () => {
     expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'First thing about A and the tail of A', source: 'dictated' }));
     expect(result.current.getDraft('rock-b')).toBe('');
   });
+
+  it('Stop, then Next before the session has ended: the microphone stays off, the Rock left is saved, the next Rock gets nothing', async () => {
+    const { result } = setup();
+    act(() => result.current.retarget('rock-a'));
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.say('tail of a'); session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.retarget('rock-b'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(FakeRecognition.instances).toHaveLength(1);
+    expect(result.current.isRecording).toBe(false);
+    expect(result.current.activeRockId).toBeNull();
+    expect(addNote).toHaveBeenCalledWith(expect.objectContaining({ rockId: 'rock-a', body: 'Note for a tail of a' }));
+    expect(result.current.getDraft('rock-b')).toBe('');
+  });
+
+  it('Stop, then Dictate again on the same Rock before the session has ended, restarts it without saving', async () => {
+    const { result } = setup();
+    act(() => result.current.startFor('rock-a'));
+    act(() => mic().say('note for a'));
+    const session = mic();
+    session.stop = () => { setTimeout(() => { session.started = false; session.onend?.(); }, 300); };
+    act(() => result.current.stopMic());
+    act(() => result.current.startFor('rock-a'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(addNote).not.toHaveBeenCalled();
+    expect(result.current.activeRockId).toBe('rock-a');
+    expect(FakeRecognition.instances).toHaveLength(2);
+    expect(result.current.getDraft('rock-a')).toBe('Note for a');
+  });
 });
 
