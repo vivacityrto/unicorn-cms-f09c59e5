@@ -23,7 +23,7 @@
 - **Frontend:** unit and component tests for the link-target rules, the picker (grouped Team and Company milestones, both ticked at once), the Individual Rocks view (Team support shown, Team-or-Company button, picker targets), the Rock details (a Team Rock links up; an Individual Rock under a standalone Team Rock links to it instead of hitting a dead end), the contribution model, the editor rules and the editor data hook; a static test of the migration and its rollback.
 - **Checks:** see "Checks run" below.
 - **Database (unicorn-qa, `qfpxvumcrnzrjyvqkicq`, one rolled-back run, nothing persisted):** see "Behavioural check on unicorn-qa" below.
-- **Not run:** a browser check of the screens on real data.
+- **Not run by me:** a browser check of the screens on real data (Carl said on 30 Oct 2026 he will do this himself).
 
 ## Behavioural check on unicorn-qa (30 Oct 2026, Carl's instruction)
 One anonymous `DO` block that ended in a deliberate `RAISE EXCEPTION`, so the fixtures, the replaced function and the links were all rolled back. QA held 0 Rocks, 0 milestones and 0 links before; fixtures were two Company Rocks, three Team Rocks (one standalone), four Individual Rocks and a Company Rock in another tenant, each with one milestone, written with triggers temporarily off (QA has no owners or functions for Team Rocks) and with triggers back on before any link was tested.
@@ -44,5 +44,5 @@ Applied through the Supabase MCP as version `20261029235956` (`rock_milestone_li
 
 ## Human actions still needed
 1. Nothing for the database: QA and production are both done. Rollback file: `supabase/migrations/rollback/20261030010000_rock_milestone_links_team_chain.down.sql` (restores the old rule and deletes nothing; the optional cleanup of Team links is a commented query inside it).
-2. Confirm or revert the three provisional choices in the KB page (a Team-only link counts as mapped; no automatic roll-up through the chain; Team milestones are never flagged as unmapped).
+2. ~~Confirm or revert the three provisional choices~~ **Confirmed by Carl, 30 Oct 2026** (a Team-only link counts as mapped; no automatic roll-up through the chain; Team milestones are never flagged as unmapped). Carl is doing the browser check of the screens on real data himself.
 3. Review and approve the PR. Both databases are done, so merge ships the screens. Until it merges, nothing changes for users: the live frontend does not offer Team milestones.
