@@ -31,6 +31,7 @@ const INVALIDATE = [
   ['eos-rock-editor-rocks'],
   ['eos-rock-milestones'],
   ['eos-rock-milestone-progress'],
+  ['quarterly-rocks'],
   ['eos-rock-milestone-links'],
   ['eos-rock-company-milestones'],
   ['eos-rock-editor-milestones'],

@@ -6,6 +6,7 @@ import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { FlightPlan, MonthFocus } from '@/types/flightPlan';
 import { getQuarterDueDate } from '@/types/flightPlan';
 import type { TablesInsert } from '@/integrations/supabase/types';
+import { milestoneCompletionPercent, rollupMilestones } from '@/utils/rockMilestoneRollup';
 
 const defaultMonthFocus: MonthFocus = { items: [], indicators: [], notes: '' };
 
@@ -116,9 +117,7 @@ export function useQuarterlyRocks(quarter: number, year: number) {
       let query = supabase
         .from('eos_rocks')
         .select('*')
-        .eq('quarter_number', quarter)
-        .eq('quarter_year', year)
-        .order('priority', { ascending: true });
+        .is('archived_at', null);
       
       // Vivacity Team sees all; client users filter by tenant
       if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
@@ -128,7 +127,23 @@ export function useQuarterlyRocks(quarter: number, year: number) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data;
+      const hierarchy = data ?? [];
+      if (hierarchy.length === 0) return [];
+
+      const { data: milestones, error: milestonesError } = await supabase
+        .from('eos_rock_milestones')
+        .select('rock_id, status, due_date')
+        .in('rock_id', hierarchy.map(rock => rock.id));
+      if (milestonesError) throw milestonesError;
+
+      const progress = rollupMilestones(hierarchy, milestones ?? []);
+      return hierarchy
+        .filter(rock => rock.quarter_number === quarter && rock.quarter_year === year)
+        .sort((a, b) => (a.priority ?? Number.MAX_SAFE_INTEGER) - (b.priority ?? Number.MAX_SAFE_INTEGER))
+        .map(rock => ({
+          ...rock,
+          completion_percentage: milestoneCompletionPercent(progress.get(rock.id)),
+        }));
     },
     enabled: (isSuper || isVivacityTeam || !!profile?.tenant_id) && !!quarter && !!year,
   });
