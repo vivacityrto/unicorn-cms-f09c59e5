@@ -46,6 +46,7 @@ import { groupedEventHref } from "@/hooks/portfolioTimelineGrouping";
 import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from "@/components/client/TimelineEventCard";
 import type { TimelineEventType } from "@/types/timeline";
 import { LegacyStageHealthUnavailable } from "@/components/client-health/LegacyStageHealthUnavailable";
+import { milestoneCompletionPercent, rollupMilestones } from "@/utils/rockMilestoneRollup";
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -86,7 +87,9 @@ type ClientMessage = {
   subject: string;
   created_at: string | null;
 };
-type EosRockRow = Pick<Tables<"eos_rocks">, "id" | "title" | "status" | "due_date" | "completion_percentage">;
+type EosRockRow = Pick<Tables<"eos_rocks">, "id" | "title" | "status" | "due_date"> & {
+  completion_percentage: number | null;
+};
 type CalendarEventRow = Pick<Tables<"calendar_events">, "id" | "title" | "start_at" | "end_at" | "organizer_email" | "organiser_email" | "attendees" | "user_id">;
 
 function normalizePriority(p: unknown): "high" | "medium" | "low" | null {
@@ -561,16 +564,35 @@ export default function MainDashboard() {
     // Rocks (current quarter only)
     (async () => {
       const q = getCurrentQuarter();
-      const { data } = await supabase
+      const { data: quarterRocks } = await supabase
         .from("eos_rocks")
-        .select("id, title, status, due_date, completion_percentage")
-        .is("archived_at", null)
-        .eq("level", "company")
-        .eq("quarter_year", q.year)
-        .eq("quarter_number", q.quarter)
-        .order("due_date", { ascending: true, nullsFirst: false })
-        .limit(20);
-      const rows = data ?? [];
+        .select("id, title, status, due_date, level, rock_level, parent_rock_id, quarter_year, quarter_number")
+        .is("archived_at", null);
+      const rocks = quarterRocks ?? [];
+      const rockIds = rocks.map((rock) => rock.id);
+      const { data: milestoneRows } = rockIds.length > 0
+        ? await supabase
+            .from("eos_rock_milestones")
+            .select("rock_id, status, due_date")
+            .in("rock_id", rockIds)
+        : { data: [] };
+      const progress = rollupMilestones(rocks, milestoneRows ?? []);
+      const rows = rocks
+        .filter((rock) => rock.level === "company" && rock.quarter_year === q.year && rock.quarter_number === q.quarter)
+        .sort((a, b) => {
+          if (!a.due_date && !b.due_date) return 0;
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return a.due_date.localeCompare(b.due_date);
+        })
+        .slice(0, 20)
+        .map((rock) => ({
+          id: rock.id,
+          title: rock.title,
+          status: rock.status,
+          due_date: rock.due_date,
+          completion_percentage: milestoneCompletionPercent(progress.get(rock.id)),
+        }));
       const onTrack = rows.filter((r) => {
         const s = (r.status ?? "").toLowerCase();
         return s === "on_track" || s === "on track";
@@ -984,18 +1006,7 @@ export default function MainDashboard() {
                     const badgeColor = `hsl(var(${stateVar}))`;
                     const badgeTint = `hsl(var(${stateVar}) / 0.14)`;
                     const label = (r.status ?? "unknown").replace(/_/g, " ");
-                    const pct =
-                      typeof r.completion_percentage === "number"
-                        ? Math.max(0, Math.min(100, r.completion_percentage))
-                        : s === "done" || s === "complete"
-                        ? 100
-                        : s === "on_track"
-                        ? 60
-                        : s === "at_risk"
-                        ? 40
-                        : s === "off_track"
-                        ? 20
-                        : 0;
+                    const pct = r.completion_percentage ?? 0;
                     return (
                       <li key={r.id} className="py-0.5">
                         <div className="flex items-center gap-2">
