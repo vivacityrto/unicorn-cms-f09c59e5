@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-10-30 · **Reconsider by:** 2027-01-28 · **Confidence:** high on the rules (read from the migrations and the editor code, and checked against production data on 28 Oct 2026).
 >
-> **Status:** the Link action under "What changed" is merged (PR 1466). Linking through a Team Rock (30 Oct 2026, Carl chose the full chain) is built in a pull request; its migration is **applied to `unicorn-qa` (30 Oct 2026) and not yet to production**; the rule was also checked on `unicorn-qa` in a rolled-back transaction (17 pairings, old rule and new, all as expected; see the audit entry). The "Open decisions" below are updated for it.
+> **Status:** the Link action under "What changed" is merged (PR 1466). Linking through a Team Rock (30 Oct 2026, Carl chose the full chain) is built in a pull request; its migration is **applied to `unicorn-qa` and production (30 Oct 2026)**; the rule was also checked on `unicorn-qa` in a rolled-back transaction (17 pairings, old rule and new, all as expected; see the audit entry). The "Open decisions" below are updated for it.
 
 ## The rules, in one place
 
@@ -14,8 +14,8 @@
 | Which Rock can an Individual Rock serve? | A **Company or Team** Rock, in the **same quarter**, in the same tenant, not archived, and (for a client Rock) the same client. | `upsert_rock_with_parenting` |
 | Which Rock can a Team Rock serve? | A **Company** Rock, same quarter. | same |
 | Can an Individual milestone be linked to a milestone above it? | **To a Company Rock's milestone, yes.** The Individual Rock must serve that Company Rock directly, or through a Team Rock that serves it. | `validate_eos_rock_milestone_link` (trigger on `eos_rock_milestone_links`) |
-| To a **Team** Rock's milestone? | **Yes, from 30 Oct 2026 (once the migration is applied to production).** The Individual Rock must serve that Team Rock directly. | same trigger |
-| Can a **Team** Rock's milestones be linked up to a Company milestone? | **Yes, from 30 Oct 2026 (once the migration is applied to production).** The Team Rock must serve that Company Rock. | same trigger |
+| To a **Team** Rock's milestone? | **Yes, from 30 Oct 2026 (the migration is applied; the screens ship when the pull request merges).** The Individual Rock must serve that Team Rock directly. | same trigger |
+| Can a **Team** Rock's milestones be linked up to a Company milestone? | **Yes, from 30 Oct 2026 (the migration is applied; the screens ship when the pull request merges).** The Team Rock must serve that Company Rock. | same trigger |
 | Any other pairing (Individual to Individual, Team to Team, anything downward, a Rock that does not serve the other)? | **No.** The database refuses it. | same trigger |
 | Can one Individual milestone support several Company milestones? | **Yes**, and a Company milestone can have several Individual milestones behind it (many to many). | primary key `(company_milestone_id, individual_milestone_id)` |
 
