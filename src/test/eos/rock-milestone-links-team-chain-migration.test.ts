@@ -44,9 +44,10 @@ describe('validate_eos_rock_milestone_link (Team chain)', () => {
 });
 
 describe('the rollback', () => {
-  it('removes only links with a Team Rock milestone at either end before restoring the original rule', () => {
-    expect(down.indexOf('DELETE FROM public.eos_rock_milestone_links')).toBeGreaterThan(-1);
-    expect(down.indexOf('DELETE FROM')).toBeLessThan(down.indexOf('CREATE OR REPLACE FUNCTION'));
+  it('changes no data: the cleanup of Team links is a comment for a person to run, not a statement (the migration audit blocks any DELETE)', () => {
+    const code = down.split('\n').filter(line => !line.trimStart().startsWith('--')).join('\n');
+    expect(code).not.toMatch(/\b(delete|update|insert|truncate|drop)\b/i);
+    expect(down).toMatch(/--\s+DELETE FROM public\.eos_rock_milestone_links l/);
     expect(down.replace(/\s+/g, ' ')).toContain("r.rock_level = 'team'");
   });
 

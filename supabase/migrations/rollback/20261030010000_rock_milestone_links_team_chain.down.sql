@@ -1,15 +1,18 @@
 -- Rollback for 20261030010000_rock_milestone_links_team_chain.sql.
 -- Restores the original validation (the supported milestone must be a Company Rock's, supported by an
 -- Individual Rock under it, directly or through a Team Rock).
--- Destructive: first deletes every link with a Team Rock milestone at either end, because the restored
--- rule would refuse them if they were ever re-saved. Links between Individual and Company milestones
--- are not touched.
-
-DELETE FROM public.eos_rock_milestone_links l
-USING public.eos_rock_milestones m, public.eos_rocks r
-WHERE r.id = m.rock_id
-  AND r.rock_level = 'team'
-  AND m.id IN (l.company_milestone_id, l.individual_milestone_id);
+--
+-- Deletes nothing. Restoring the rule does not touch links already stored, so any Individual-to-Team or
+-- Team-to-Company links made while the Team chain was live stay in the table. The restored rule only checks
+-- a link when it is inserted or updated, so they are harmless to leave, but the old screens do not offer
+-- them. To remove them deliberately, review and then run this by hand (it is a comment so the migration
+-- safety audit, which blocks any DELETE in a changed migration file, does not treat it as part of the rollback):
+--
+--   DELETE FROM public.eos_rock_milestone_links l
+--   USING public.eos_rock_milestones m, public.eos_rocks r
+--   WHERE r.id = m.rock_id
+--     AND r.rock_level = 'team'
+--     AND m.id IN (l.company_milestone_id, l.individual_milestone_id);
 
 CREATE OR REPLACE FUNCTION public.validate_eos_rock_milestone_link()
 RETURNS trigger
