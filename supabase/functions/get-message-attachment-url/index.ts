@@ -6,6 +6,41 @@ import { corsHeaders } from "../_shared/cors.ts";
 const BUCKET = "message-attachments";
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
+// Broadcast attachments are uploaded once and shared by every recipient tenant,
+// so they live under `broadcast/{campaign_id}/...` rather than `{tenant_id}/...`.
+// The first path segment is therefore not a tenant id; access is granted when
+// the caller belongs to a tenant that actually received a message carrying
+// this exact storage_path.
+const BROADCAST_SEGMENT = "broadcast";
+
+async function allowBroadcastRecipient(
+  svc: ReturnType<typeof createClient>,
+  userId: string,
+  storagePath: string,
+): Promise<boolean> {
+  const { data: attRows } = await svc
+    .from("tenant_message_attachments")
+    .select("message_id")
+    .eq("storage_path", storagePath);
+  const messageIds = (attRows ?? []).map((r) => r.message_id as string);
+  if (messageIds.length === 0) return false;
+
+  const { data: msgRows } = await svc
+    .from("tenant_messages")
+    .select("tenant_id")
+    .in("id", messageIds);
+  const tenantIds = [...new Set((msgRows ?? []).map((r) => r.tenant_id as number))];
+  if (tenantIds.length === 0) return false;
+
+  const { data: memberRows } = await svc
+    .from("tenant_users")
+    .select("id")
+    .eq("user_id", userId)
+    .in("tenant_id", tenantIds)
+    .limit(1);
+  return (memberRows ?? []).length > 0;
+}
+
 function json(req: Request, status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -51,16 +86,13 @@ Deno.serve(async (req) => {
     unauthorizedMessage: "Missing Authorization header",
     forbiddenMessage: "Not authorised to access this attachment",
     orAllow: async ({ userId, admin: svc }) => {
+      if (tenantSegment === BROADCAST_SEGMENT) {
+        return allowBroadcastRecipient(svc, userId, storage_path);
+      }
       if (Number.isFinite(tenantIdNum)) {
         return allowTenantMember(svc, userId, tenantIdNum);
       }
-      const { data: memberRow } = await svc
-        .from("tenant_users")
-        .select("user_id")
-        .eq("user_id", userId)
-        .eq("tenant_id", tenantSegment)
-        .maybeSingle();
-      return !!memberRow;
+      return false;
     },
   });
   if (!caller.ok) return caller.response;

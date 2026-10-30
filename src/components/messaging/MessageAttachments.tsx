@@ -95,7 +95,7 @@ export function MessageAttachments({ attachments }: Props) {
               key={a.id}
               type="button"
               onClick={() => handleOpenLazy(a)}
-              className="inline-flex max-w-full min-w-0 items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background hover:bg-muted text-xs"
+              className="inline-flex max-w-full min-w-0 items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background text-foreground hover:bg-muted text-xs"
             >
               <FileText className="h-3.5 w-3.5 text-red-600" />
               <span className="truncate max-w-[200px]">{a.filename}</span>
@@ -112,7 +112,7 @@ export function MessageAttachments({ attachments }: Props) {
               key={a.id}
               type="button"
               onClick={() => handleDownload(a)}
-              className="inline-flex max-w-full min-w-0 items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background hover:bg-muted text-xs"
+              className="inline-flex max-w-full min-w-0 items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background text-foreground hover:bg-muted text-xs"
             >
               <Icon className={`h-3.5 w-3.5 ${isExcel ? "text-green-600" : "text-blue-600"}`} />
               <span className="truncate max-w-[200px]">{a.filename}</span>
@@ -127,7 +127,7 @@ export function MessageAttachments({ attachments }: Props) {
             key={a.id}
             type="button"
             onClick={() => handleDownload(a)}
-              className="inline-flex max-w-full min-w-0 items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background hover:bg-muted text-xs"
+              className="inline-flex max-w-full min-w-0 items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background text-foreground hover:bg-muted text-xs"
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="truncate max-w-[200px]">{a.filename}</span>
