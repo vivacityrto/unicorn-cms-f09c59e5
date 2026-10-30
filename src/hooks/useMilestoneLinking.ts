@@ -5,27 +5,30 @@ import { toast } from '@/hooks/use-toast';
 
 export interface LinkTarget {
   id: string;
+  /** The Rock the milestone belongs to: a Team or Company Rock above the milestone being linked. */
+  rockId: string;
   title: string;
   status: string;
   dueDate: string | null;
   tenantId: number;
 }
 
-/** The Company Rock's milestones: what an Individual milestone can be mapped to. */
-export function useLinkTargets(companyRockId: string | null | undefined, enabled = true) {
+/** The milestones of the Rocks above: what a milestone can be mapped to. */
+export function useLinkTargets(rockIds: readonly string[], enabled = true) {
   const { profile } = useAuth();
+  const key = rockIds.join(',');
   return useQuery({
-    queryKey: ['eos-rock-link-targets', companyRockId],
+    queryKey: ['eos-rock-link-targets', key],
     queryFn: async (): Promise<LinkTarget[]> => {
       const { data, error } = await supabase
         .from('eos_rock_milestones')
-        .select('id, title, status, due_date, tenant_id')
-        .eq('rock_id', companyRockId!)
+        .select('id, rock_id, title, status, due_date, tenant_id')
+        .in('rock_id', [...rockIds])
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return (data ?? []).map(m => ({ id: m.id, title: m.title, status: m.status, dueDate: m.due_date, tenantId: m.tenant_id }));
+      return (data ?? []).map(m => ({ id: m.id, rockId: m.rock_id, title: m.title, status: m.status, dueDate: m.due_date, tenantId: m.tenant_id }));
     },
-    enabled: !!profile && enabled && !!companyRockId,
+    enabled: !!profile && enabled && rockIds.length > 0,
     // The picker is filled from this, so it must be what the database holds now, never a cached copy.
     staleTime: 0,
     gcTime: 0,
@@ -33,7 +36,7 @@ export function useLinkTargets(companyRockId: string | null | undefined, enabled
   });
 }
 
-/** Which Company milestones an Individual milestone currently supports. */
+/** Which milestones above (Team or Company) a milestone currently supports. */
 export function useLinkedCompanyIds(individualMilestoneId: string | null | undefined, enabled = true) {
   const { profile } = useAuth();
   return useQuery({
@@ -63,9 +66,9 @@ const REFRESH = [
 ];
 
 /**
- * Change which Company milestones an Individual milestone supports. The database checks every
- * link (same tenant, a Company Rock's milestone, an Individual Rock serving it directly or through a
- * Team Rock), so a bad pairing is refused whatever the screen offers. Additions go in first, then
+ * Change which milestones above a milestone supports. The database checks every link (same tenant;
+ * Individual to the Team Rock it serves or the Company Rock above it, Team to the Company Rock it
+ * serves), so a bad pairing is refused whatever the screen offers. Additions go in first, then
  * removals, so a failure part-way never leaves a milestone with fewer links than it started with.
  */
 export function useSetMilestoneLinks() {

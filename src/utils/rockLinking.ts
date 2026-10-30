@@ -47,6 +47,61 @@ export function companyRootFor(rock: RockRef, byId: ReadonlyMap<string, RockRef>
   return { status: 'none', reason: 'parent_not_found', message: 'The Rock this one serves is not a Company or Team Rock, so its milestones cannot be mapped.' };
 }
 
+export interface LinkTargetRock {
+  id: string;
+  title: string;
+  level: 'team' | 'company';
+}
+
+export type LinkTargets =
+  | { status: 'ok'; rocks: LinkTargetRock[] }
+  | { status: 'none'; reason: 'not_linkable' | 'no_parent' | 'parent_not_found'; message: string };
+
+/**
+ * The Rocks whose milestones a Rock's milestones can support (`validate_eos_rock_milestone_link`):
+ * an Individual Rock's milestones can support those of the Team Rock it serves and of the Company Rock
+ * above (directly or through that Team Rock); a Team Rock's milestones can support those of the Company
+ * Rock it serves. Team Rocks come first, nearest Rock first.
+ */
+export function linkTargetRocksFor(rock: RockRef, byId: ReadonlyMap<string, RockRef>): LinkTargets {
+  if (rock.level !== 'individual' && rock.level !== 'team') {
+    return { status: 'none', reason: 'not_linkable', message: 'Only Individual and Team Rocks’ milestones link up.' };
+  }
+  const subject = rock.level === 'team' ? 'Team' : 'Individual';
+  if (!rock.parentId) {
+    return {
+      status: 'none',
+      reason: 'no_parent',
+      message: `This ${subject} Rock does not serve a ${rock.level === 'team' ? 'Company' : 'Company or Team'} Rock yet, so its milestones have nothing to map to. Edit the Rock to choose what it serves.`,
+    };
+  }
+  const parent = byId.get(rock.parentId);
+  if (!parent) {
+    return { status: 'none', reason: 'parent_not_found', message: 'The Rock this one serves could not be found, so its milestones cannot be mapped.' };
+  }
+  if (parent.level === 'company') return { status: 'ok', rocks: [{ id: parent.id, title: parent.title, level: 'company' }] };
+  if (rock.level === 'individual' && parent.level === 'team') {
+    const rocks: LinkTargetRock[] = [{ id: parent.id, title: parent.title, level: 'team' }];
+    const grand = parent.parentId ? byId.get(parent.parentId) : undefined;
+    if (grand?.level === 'company') rocks.push({ id: grand.id, title: grand.title, level: 'company' });
+    return { status: 'ok', rocks };
+  }
+  return { status: 'none', reason: 'parent_not_found', message: 'The Rock this one serves is not a Company or Team Rock, so its milestones cannot be mapped.' };
+}
+
+/** "Company", "Team" or "Team or Company": which milestones a link can reach, for button and heading text. */
+export function linkTargetNoun(rocks: readonly LinkTargetRock[]): string {
+  const levels = new Set(rocks.map(r => r.level));
+  if (levels.has('team') && levels.has('company')) return 'Team or Company';
+  return levels.has('team') ? 'Team' : 'Company';
+}
+
+/** The text on the button that opens the link picker. */
+export function linkButtonLabel(rocks: readonly LinkTargetRock[], hasLinks: boolean): string {
+  const noun = linkTargetNoun(rocks);
+  return hasLinks ? `Change the ${noun} milestones it supports` : `Link to a ${noun} milestone`;
+}
+
 /** What has to be added and removed to turn the current links into the chosen set. */
 export function diffLinks(current: readonly string[], selected: readonly string[]): { add: string[]; remove: string[] } {
   const have = new Set(current);
