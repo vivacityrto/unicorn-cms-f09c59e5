@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Static checks on the Rock notes migration, the cheap half of the oracle. The behavioural half
- * (staff-only writes, the snapshot, the duplicate guard, append-only, the delete guard, grants)
+ * (staff-only creation, the snapshot, the duplicate guard, append-only baseline, the delete guard, grants)
  * was run against unicorn-qa in a rolled-back transaction and is recorded in docs/audit-log;
  * these checks stop a later edit from quietly removing a rule or loosening a grant.
  */
