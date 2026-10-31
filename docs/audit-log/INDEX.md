@@ -7,7 +7,7 @@ Newest first.
 
 ---
 
-- [2026-10-31 — Rock notes CRUD extension](entries/2026-10-31-rock-notes-crud.md) — local documentation draft for an uncommitted migration and UI enabling note-author edits and confirmed deletes under staff/Super Admin RLS; no migration or note data was changed in any Supabase project.
+- [2026-10-31 — Rock notes CRUD extension](entries/2026-10-31-rock-notes-crud.md) — implementation merged in PR #1485 with staff-author/Super Admin edit and delete controls, summary refresh fixes, and passing migration-safety CI; its hosted CRUD migration remains unapplied.
 - [2026-10-30 — Milestones link through a Team Rock](entries/2026-10-30-rock-milestone-links-team-chain.md) — migration applied to `unicorn-qa` and production (30 Oct 2026): `validate_eos_rock_milestone_link` now also allows Individual to Team and Team to Company milestone links (Individual to Company unchanged); picker, Rock details, Individual Rocks view and the Rock editor updated to match
 - [2026-10-29 — Removed the test data from production](entries/2026-10-29-remove-test-data.md) — data only: the `[TEST]` meeting and the two `[TEST]` sandbox Rocks (with their 6 milestones, 2 notes, 1 summary) deleted at Carl's instruction; the append-only trigger was lifted once, inside one guarded transaction, after a local backup. Counts are back to before testing.
 - [2026-10-29 — Cleared the 15 stale GitHub task rows from production](entries/2026-10-29-clear-github-task-snapshots.md) — data only: all 15 rows of `eos_rock_milestone_task_links` deleted at Carl's instruction after a field-for-field checked local backup; nothing else changed.
