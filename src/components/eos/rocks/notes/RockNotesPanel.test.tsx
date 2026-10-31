@@ -166,6 +166,8 @@ describe('RockNotesPanel', () => {
     expect(screen.getByText('Steady progress.')).toBeTruthy();
     expect(screen.getByText(/1 newer note not included/)).toBeTruthy();
     expect(screen.getByText(/Written by AI from the notes only/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(summarise).toHaveBeenCalledWith({ rockId: 'r1', force: true });
   });
 
   it('creates a To-Do only when asked, once, and shows it as created', async () => {

@@ -172,7 +172,7 @@ function SummaryBlock({ rock, noteCount, notes }: { rock: NotesRock; noteCount: 
           size="sm"
           className="h-7 px-2 text-xs"
           disabled={summarise.isPending}
-          onClick={() => summarise.mutate({ rockId: rock.id, force: !!summary && newer === 0 })}
+          onClick={() => summarise.mutate({ rockId: rock.id, force: !!summary })}
         >
           {summarise.isPending ? <><Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden />Writing…</> : summary ? 'Refresh' : 'Write a summary'}
         </Button>

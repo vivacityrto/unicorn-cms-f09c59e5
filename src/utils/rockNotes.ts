@@ -30,6 +30,7 @@ export interface RockNoteSummary {
 }
 
 export const NOTE_MAX_CHARS = 4000;
+export const ROCK_NOTE_SUMMARY_LIMIT = 200;
 const TIME_ZONE = 'Australia/Sydney';
 
 /** "Today, 3:40 pm AEDT", "Yesterday, ...", or "Tue 14 Oct, 3:40 pm AEDT". Always Sydney time. */
@@ -110,9 +111,11 @@ export function notesSinceSummary(
     new Date(note.created_at).getTime() > through
     || (note.edited_at !== null && new Date(note.edited_at).getTime() > generated),
   ).length;
-  // A deleted note no longer appears in the list, so the count mismatch signals that a summary
-  // may still contain it. Keep the stale marker visible until a new summary is written.
-  return Math.max(changed, notes.length === summary.note_count ? 0 : 1);
+  // The summariser intentionally caps its input at 200 notes while the panel can load 300.
+  // Only use count mismatch to detect deletions when the summary was below that cap and therefore
+  // included every note; at the cap, timestamps and explicit refresh are the reliable signals.
+  const missingNote = summary.note_count < ROCK_NOTE_SUMMARY_LIMIT && notes.length !== summary.note_count;
+  return Math.max(changed, missingNote ? 1 : 0);
 }
 
 export const SIGNAL_LABEL: Record<string, string> = {

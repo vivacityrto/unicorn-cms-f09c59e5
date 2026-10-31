@@ -83,6 +83,15 @@ describe('notesSinceSummary', () => {
     expect(notesSinceSummary([note('old', '2026-10-01T00:00:00Z', { edited_at: '2026-10-06T00:00:00Z' }), note('new', '2026-10-04T00:00:00Z')], summary)).toBe(1);
     expect(notesSinceSummary([note('remaining', '2026-10-04T00:00:00Z')], summary)).toBe(1);
   });
+
+  it('does not treat the summary input cap as a deleted note when the panel loads more notes', () => {
+    const notes = Array.from({ length: 300 }, (_, index) => note(`n${index}`, '2026-10-04T00:00:00Z'));
+    expect(notesSinceSummary(notes, {
+      notes_through: '2026-10-05T00:00:00Z',
+      generated_at: '2026-10-05T00:01:00Z',
+      note_count: 200,
+    })).toBe(0);
+  });
 });
 
 describe('formatNoteTime', () => {
