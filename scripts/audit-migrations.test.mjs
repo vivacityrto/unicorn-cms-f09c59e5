@@ -23,6 +23,24 @@ test("scans hosted URLs, cron, HTTP, DML, IDs, tags, and replay risk", () => {
   assert.equal(report.replaySafety, "unsafe-without-review");
 });
 
+test("does not classify trigger event declarations as migration-time DML", () => {
+  const report = scanMigration(
+    "supabase/migrations/20990101000002_trigger_event_keywords.sql",
+    `CREATE FUNCTION public.update_sample() RETURNS trigger LANGUAGE plpgsql AS $$
+     BEGIN
+       UPDATE public.sample SET value = NEW.value WHERE id = NEW.id;
+       RETURN NEW;
+     END;
+     $$;
+     CREATE TRIGGER sample_update_guard
+       BEFORE UPDATE OR DELETE ON public.sample
+       FOR EACH ROW EXECUTE FUNCTION public.update_sample();`,
+  );
+
+  assert.deepEqual(report.findings.filter((finding) => finding.category === "destructive-mutation").map((finding) => finding.operation), ["update"]);
+  assert.equal(report.findings.find((finding) => finding.category === "destructive-mutation").line, 3);
+});
+
 test("requires concrete, short-lived allowlist entries", () => {
   const now = new Date("2026-09-07T00:00:00Z");
   const errors = validateAllowlist([
