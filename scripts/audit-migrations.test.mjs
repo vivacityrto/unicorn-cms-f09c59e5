@@ -28,6 +28,7 @@ test("does not classify trigger event declarations as migration-time DML", () =>
     "supabase/migrations/20990101000002_trigger_event_keywords.sql",
     `CREATE FUNCTION public.update_sample() RETURNS trigger LANGUAGE plpgsql AS $$
      BEGIN
+       RAISE NOTICE 'CREATE TRIGGER BEFORE';
        UPDATE public.sample SET value = NEW.value WHERE id = NEW.id;
        RETURN NEW;
      END;
@@ -38,7 +39,7 @@ test("does not classify trigger event declarations as migration-time DML", () =>
   );
 
   assert.deepEqual(report.findings.filter((finding) => finding.category === "destructive-mutation").map((finding) => finding.operation), ["update"]);
-  assert.equal(report.findings.find((finding) => finding.category === "destructive-mutation").line, 3);
+  assert.equal(report.findings.find((finding) => finding.category === "destructive-mutation").line, 4);
 });
 
 test("requires concrete, short-lived allowlist entries", () => {

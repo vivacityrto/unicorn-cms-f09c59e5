@@ -111,9 +111,9 @@ function maskSqlComments(content) {
 
 function maskTriggerEvents(content) {
   const chars = content.split("");
-  const triggerHeader = /\bcreate\s+(?:constraint\s+)?trigger\b[\s\S]*?\b(?:before|after|instead\s+of)\b([\s\S]*?)\bon\b/gi;
+  const triggerHeader = /\bcreate\s+(?:constraint\s+)?trigger\b[^;]*?\b(?:before|after|instead\s+of)\b([^;]*?)\bon\b/gi;
   for (const match of content.matchAll(triggerHeader)) {
-    const eventStart = match.index + match[0].indexOf(match[1]);
+    const eventStart = match.index + match[0].lastIndexOf(match[1]);
     for (let i = eventStart; i < eventStart + match[1].length; i += 1) {
       if (chars[i] !== "\n" && chars[i] !== "\r") chars[i] = " ";
     }
