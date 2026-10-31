@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import type { RockNote, RockNoteSummary } from '@/utils/rockNotes';
 
-const NOTE_COLUMNS = 'id, rock_id, meeting_id, body, source, rock_status, milestones_complete, milestones_total, created_by, created_at';
+const NOTE_COLUMNS = 'id, rock_id, meeting_id, body, source, rock_status, milestones_complete, milestones_total, created_by, created_at, edited_at';
 
 export interface RockNotesData {
   notes: RockNote[];
@@ -104,6 +104,50 @@ export function useAddRockNote() {
     },
     // No success toast: the note appears in the list, and a toast would take the first Escape press in the Discuss view.
     onError: error => toast({ title: 'Could not save the note', description: messageOf(error, 'The note was not saved. Your text is still in the box.'), variant: 'destructive' }),
+  });
+}
+
+/** Edits only the body; RLS limits this to the author or a Super Admin. */
+export function useUpdateRockNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { noteId: string; body: string }) => {
+      const { data, error } = await supabase
+        .from('eos_rock_notes')
+        .update({ body: input.body.trim() })
+        .eq('id', input.noteId)
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-notes'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-note-summary'] });
+    },
+    onError: error => toast({ title: 'Could not edit the note', description: messageOf(error, 'The note was not changed.'), variant: 'destructive' }),
+  });
+}
+
+/** Deletes a note; RLS limits this to the author or a Super Admin. */
+export function useDeleteRockNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (noteId: string) => {
+      const { data, error } = await supabase
+        .from('eos_rock_notes')
+        .delete()
+        .eq('id', noteId)
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-notes'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rock-note-summary'] });
+    },
+    onError: error => toast({ title: 'Could not delete the note', description: messageOf(error, 'The note was not deleted.'), variant: 'destructive' }),
   });
 }
 
