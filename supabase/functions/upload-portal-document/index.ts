@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireCaller, FeatureKeys, allowTenantMember } from "../_shared/requireCaller.ts";
+import { requireCaller, FeatureKeys } from "../_shared/requireCaller.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { checkLinkedIds, type LinkLookupClient } from "./linked-ids.ts";
 
 
 const MAX_BYTES = 50 * 1024 * 1024;
@@ -46,6 +47,22 @@ function optionalNumber(form: FormData, key: string): number | null {
   if (s === null) return null;
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
+}
+
+/** Member of the tenant with full access; academy_only users are not portal uploaders. */
+async function allowFullScopeTenantMember(
+  svc: ReturnType<typeof createClient>,
+  userId: string,
+  tenantId: number,
+): Promise<boolean> {
+  const { data } = await svc
+    .from("tenant_users")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("tenant_id", tenantId)
+    .eq("access_scope", "full")
+    .limit(1);
+  return !!data && data.length > 0;
 }
 
 Deno.serve(async (req) => {
@@ -126,11 +143,28 @@ Deno.serve(async (req) => {
         : "Not authorised to upload for this tenant",
       orAllow: async ({ userId, admin: svc }) => {
         if (STAFF_ONLY_DIRECTIONS.has(direction)) return false;
-        return allowTenantMember(svc, userId, tenantIdNum);
+        return allowFullScopeTenantMember(svc, userId, tenantIdNum);
       },
     });
     if (!caller.ok) return caller.response;
     const uid = caller.user.id;
+
+    // Validate before mutating: every linked id must belong to this tenant, checked server-side.
+    const linkCheck = await checkLinkedIds(
+      admin as unknown as LinkLookupClient,
+      tenantIdNum,
+      {
+        stageId: linkedStageId,
+        packageId: linkedPackageId,
+        taskId: linkedTaskId,
+        evidenceItemId: evidenceRequestItemId,
+        categoryId,
+      },
+      caller.via === "fallback",
+    );
+    if (!linkCheck.ok) {
+      return json(req, linkCheck.status, { error: linkCheck.message });
+    }
 
     const safeName = sanitiseFilename(file.name);
     const storage_path =
