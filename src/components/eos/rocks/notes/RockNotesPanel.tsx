@@ -1,15 +1,27 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Check, ListPlus, Loader2, Mic, Sparkles, Square } from 'lucide-react';
+import { ArrowRight, Check, ListPlus, Loader2, Mic, Pencil, Sparkles, Square, Trash2, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
+import { useAuth } from '@/hooks/useAuth';
 import {
   RockNotesDictationProvider,
   useOptionalRockNotesDictation,
   useRockNotesDictation,
 } from '@/components/eos/rocks/notes/RockNotesDictation';
-import { useCreateTodoFromNote, useRockNoteSummary, useRockNotes, useSummariseRockNotes } from '@/hooks/useRockNotes';
+import { useCreateTodoFromNote, useDeleteRockNote, useRockNoteSummary, useRockNotes, useSummariseRockNotes, useUpdateRockNote } from '@/hooks/useRockNotes';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import {
   NOTE_MAX_CHARS,
@@ -40,12 +52,39 @@ function StatusChip({ status }: { status: string | null }) {
   return <span className={cn('rounded-full border px-1.5 py-px text-[11px] font-medium', config.bgColor, config.color)}>{config.label}</span>;
 }
 
-function NoteItem({ note, authorName, rockTitle }: { note: NoteWithChange; authorName?: string; rockTitle?: string }) {
+function NoteItem({
+  note,
+  authorName,
+  rockTitle,
+  canManage,
+  editing,
+  editBody,
+  isSaving,
+  onEdit,
+  onEditBodyChange,
+  onSave,
+  onCancel,
+  onDelete,
+}: {
+  note: NoteWithChange;
+  authorName?: string;
+  rockTitle?: string;
+  canManage: boolean;
+  editing: boolean;
+  editBody: string;
+  isSaving: boolean;
+  onEdit: () => void;
+  onEditBodyChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}) {
   const progress = progressText(note);
   return (
     <li className="space-y-1 border-l-2 border-muted pl-3">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
         <time dateTime={note.created_at}>{formatNoteTime(note.created_at)}</time>
+        {note.edited_at && <span>· edited {formatNoteTime(note.edited_at)}</span>}
         {authorName && <span>· {authorName}</span>}
         {note.source === 'dictated' && (
           <span title="Dictated" className="inline-flex items-center"><Mic className="h-3 w-3" aria-label="Dictated" /></span>
@@ -64,7 +103,40 @@ function NoteItem({ note, authorName, rockTitle }: { note: NoteWithChange; autho
         {progress && <span className="text-muted-foreground">{progress}</span>}
         {rockTitle && <Badge variant="outline" className="max-w-[14rem] truncate text-[11px] font-normal">{rockTitle}</Badge>}
       </div>
-      <p className="whitespace-pre-wrap break-words text-sm">{note.body}</p>
+      {editing ? (
+        <div className="space-y-2">
+          <Textarea
+            aria-label={`Edit note ${note.id}`}
+            value={editBody}
+            rows={3}
+            maxLength={NOTE_MAX_CHARS}
+            className="min-h-[76px] resize-y text-sm"
+            onChange={event => onEditBodyChange(event.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="ghost" className="h-7" disabled={isSaving} onClick={onCancel}>
+              <X className="mr-1 h-3.5 w-3.5" aria-hidden />Cancel
+            </Button>
+            <Button type="button" size="sm" className="h-7" disabled={!editBody.trim() || editBody.trim() === note.body || isSaving} onClick={onSave}>
+              {isSaving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden />Saving…</> : 'Save changes'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="whitespace-pre-wrap break-words text-sm">{note.body}</p>
+          {canManage && (
+            <div className="flex justify-end gap-1">
+              <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" aria-label="Edit note" onClick={onEdit}>
+                <Pencil className="mr-1 h-3 w-3" aria-hidden />Edit
+              </Button>
+              <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive hover:text-destructive" aria-label="Delete note" onClick={onDelete}>
+                <Trash2 className="mr-1 h-3 w-3" aria-hidden />Delete
+              </Button>
+            </div>
+          )}
+        </>
+      )}
     </li>
   );
 }
@@ -143,8 +215,14 @@ function SummaryBlock({ rock, noteCount, notes }: { rock: NotesRock; noteCount: 
 
 function NotesPanelBody({ rock }: { rock: NotesRock }) {
   const ctx = useRockNotesDictation();
+  const { profile } = useAuth();
   const notesQuery = useRockNotes(rock.id);
+  const updateNote = useUpdateRockNote();
+  const deleteNote = useDeleteRockNote();
   const [showAll, setShowAll] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
+  const [deleteCandidate, setDeleteCandidate] = useState<NoteWithChange | null>(null);
 
   const draft = ctx.getDraft(rock.id);
   const saving = ctx.isSaving(rock.id);
@@ -156,8 +234,36 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
   const ordered = useMemo(() => withStatusChanges(data?.notes ?? []), [data?.notes]);
   const lastTime = useMemo(() => lastTimeNotes(data?.notes ?? [], ctx.meetingId), [data?.notes, ctx.meetingId]);
   const shown = showAll ? ordered : ordered.slice(0, INITIAL_SHOWN);
+  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+  const isStaff = isVivacityStaffRole(profile?.unicorn_role);
 
   const add = () => void ctx.saveDraft(rock.id);
+  const beginEdit = (note: NoteWithChange) => {
+    setEditingNoteId(note.id);
+    setEditBody(note.body);
+  };
+  const cancelEdit = () => {
+    setEditingNoteId(null);
+    setEditBody('');
+  };
+  const saveEdit = async (note: NoteWithChange) => {
+    try {
+      await updateNote.mutateAsync({ noteId: note.id, body: editBody });
+      cancelEdit();
+    } catch {
+      // The mutation already reports the failure; keep the draft available for correction.
+    }
+  };
+  const confirmDelete = async () => {
+    if (!deleteCandidate) return;
+    try {
+      await deleteNote.mutateAsync(deleteCandidate.id);
+      if (editingNoteId === deleteCandidate.id) cancelEdit();
+      setDeleteCandidate(null);
+    } catch {
+      // The mutation already reports the failure; leave the confirmation open for a retry.
+    }
+  };
 
   return (
     <section aria-label="Notes" className="space-y-3 rounded-xl border bg-card p-4">
@@ -217,7 +323,7 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
         )}
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
-            {draft.trim() ? (draft.length > NOTE_MAX_CHARS - 500 ? `${draft.length} of ${NOTE_MAX_CHARS} characters` : 'Not saved yet') : 'Dated and kept. Notes cannot be edited later.'}
+            {draft.trim() ? (draft.length > NOTE_MAX_CHARS - 500 ? `${draft.length} of ${NOTE_MAX_CHARS} characters` : 'Not saved yet') : 'Dated and kept with the Rock snapshot from when they were added.'}
           </p>
           <Button type="button" size="sm" className="h-8" disabled={!draft.trim() || saving} onClick={add}>
             {saving ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />Saving…</> : 'Add note'}
@@ -248,6 +354,15 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
               note={note}
               authorName={note.created_by ? data?.authorNames[note.created_by] : undefined}
               rockTitle={data?.includesDescendants && note.rock_id !== rock.id ? data.rockTitles[note.rock_id] : undefined}
+              canManage={isStaff && (!!profile?.user_uuid && note.created_by === profile.user_uuid || isSuperAdmin)}
+              editing={editingNoteId === note.id}
+              editBody={editBody}
+              isSaving={updateNote.isPending}
+              onEdit={() => beginEdit(note)}
+              onEditBodyChange={setEditBody}
+              onSave={() => void saveEdit(note)}
+              onCancel={cancelEdit}
+              onDelete={() => setDeleteCandidate(note)}
             />
           ))}
         </ol>
@@ -257,6 +372,20 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
           {showAll ? 'Show fewer' : `Show all ${ordered.length} notes`}
         </Button>
       )}
+      <AlertDialog open={!!deleteCandidate} onOpenChange={open => !open && setDeleteCandidate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this Rock note?</AlertDialogTitle>
+            <AlertDialogDescription>This permanently removes the note. Its Rock status and milestone snapshot will be removed with it.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteNote.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteNote.isPending} onClick={event => { event.preventDefault(); void confirmDelete(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteNote.isPending ? 'Deleting…' : 'Delete note'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

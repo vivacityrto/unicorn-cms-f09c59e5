@@ -1,5 +1,5 @@
 /**
- * Rock notes: short, dated, append-only records of what was said about a Rock. These helpers
+ * Rock notes: short, dated records of what was said about a Rock. These helpers
  * only arrange notes for display; nothing here writes anything.
  */
 
@@ -14,6 +14,7 @@ export interface RockNote {
   milestones_total: number | null;
   created_by: string | null;
   created_at: string;
+  edited_at: string | null;
 }
 
 export interface RockNoteSummary {
@@ -98,10 +99,20 @@ export function lastTimeNotes(notes: readonly RockNote[], currentMeetingId: stri
 }
 
 /** How many notes were written after the summary last looked. */
-export function notesSinceSummary(notes: readonly RockNote[], summary: Pick<RockNoteSummary, 'notes_through'> | null | undefined): number {
+export function notesSinceSummary(
+  notes: readonly RockNote[],
+  summary: Pick<RockNoteSummary, 'notes_through' | 'generated_at' | 'note_count'> | null | undefined,
+): number {
   if (!summary) return notes.length;
   const through = new Date(summary.notes_through).getTime();
-  return notes.filter(note => new Date(note.created_at).getTime() > through).length;
+  const generated = new Date(summary.generated_at).getTime();
+  const changed = notes.filter(note =>
+    new Date(note.created_at).getTime() > through
+    || (note.edited_at !== null && new Date(note.edited_at).getTime() > generated),
+  ).length;
+  // A deleted note no longer appears in the list, so the count mismatch signals that a summary
+  // may still contain it. Keep the stale marker visible until a new summary is written.
+  return Math.max(changed, notes.length === summary.note_count ? 0 : 1);
 }
 
 export const SIGNAL_LABEL: Record<string, string> = {
