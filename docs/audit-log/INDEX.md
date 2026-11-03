@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-11-03 — Evidence, portal-document and research access hardening](entries/2026-11-03-evidence-portal-research-access-hardening.md) — four access-control fixes applied to production (PRs #1478-#1481): client updates on evidence items limited to attaching a file, linked-record ownership checks on portal upload, caller and ownership checks on `log_portal_document_event`, and tenant-bound research reads made staff-only; plus read-only findings on disabled/archived users parked for follow-up.
 - [2026-10-31 — Rock notes CRUD extension](entries/2026-10-31-rock-notes-crud.md) — implementation merged in PR #1485 with staff-author/Super Admin edit and delete controls, summary refresh fixes, and passing migration-safety CI; its hosted CRUD migration remains unapplied.
 - [2026-10-30 — Milestones link through a Team Rock](entries/2026-10-30-rock-milestone-links-team-chain.md) — migration applied to `unicorn-qa` and production (30 Oct 2026): `validate_eos_rock_milestone_link` now also allows Individual to Team and Team to Company milestone links (Individual to Company unchanged); picker, Rock details, Individual Rocks view and the Rock editor updated to match
 - [2026-10-29 — Removed the test data from production](entries/2026-10-29-remove-test-data.md) — data only: the `[TEST]` meeting and the two `[TEST]` sandbox Rocks (with their 6 milestones, 2 notes, 1 summary) deleted at Carl's instruction; the append-only trigger was lifted once, inside one guarded transaction, after a local backup. Counts are back to before testing.
