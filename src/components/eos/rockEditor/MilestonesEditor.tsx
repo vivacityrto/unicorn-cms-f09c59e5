@@ -13,7 +13,7 @@ import { parseMilestoneList } from '@/utils/rockEditor/pasteList';
 import type { EditorMilestone, MilestonePriority, ValidationResult } from '@/utils/rockEditor/types';
 import type { RockMilestoneStatus } from '@/types/eos';
 import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
-import type { CompanyMilestoneOption } from '@/hooks/useRockEditorData';
+import type { LinkOptionGroup } from '@/hooks/useRockEditorData';
 
 interface MilestonesEditorProps {
   milestones: EditorMilestone[];
@@ -23,9 +23,8 @@ interface MilestonesEditorProps {
   /** Shown as the default owner and due date of a milestone that sets neither. */
   rockOwnerLabel: string;
   rockDueLabel: string;
-  /** Company milestones an Individual Rock's milestones can support. */
-  companyMilestones: CompanyMilestoneOption[];
-  isIndividual: boolean;
+  /** The Team and Company Rocks above this one, with the milestones of theirs that its milestones can support. */
+  linkOptions: LinkOptionGroup[];
 }
 
 const PRIORITIES: { value: MilestonePriority; label: string }[] = [
@@ -36,7 +35,7 @@ const PRIORITIES: { value: MilestonePriority; label: string }[] = [
 ];
 
 export function MilestonesEditor({
-  milestones, onChange, validation, showErrors, rockOwnerLabel, rockDueLabel, companyMilestones, isIndividual,
+  milestones, onChange, validation, showErrors, rockOwnerLabel, rockDueLabel, linkOptions,
 }: MilestonesEditorProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -209,11 +208,14 @@ export function MilestonesEditor({
                         placeholder="https://"
                       />
                     </div>
-                    {isIndividual && companyMilestones.length > 0 && (
-                      <fieldset className="space-y-1.5 sm:col-span-2">
-                        <legend className="text-xs font-medium">Supports these Company milestones</legend>
+                    {linkOptions.filter(group => group.milestones.length > 0).map(({ rock, milestones: options }) => (
+                      <fieldset key={rock.id} className="space-y-1.5 sm:col-span-2">
+                        <legend className="text-xs font-medium">
+                          Supports these {rock.level === 'team' ? 'Team' : 'Company'} milestones
+                          <span className="ml-1 font-normal text-muted-foreground">({rock.title})</span>
+                        </legend>
                         <div className="space-y-1">
-                          {companyMilestones.map(c => {
+                          {options.map(c => {
                             const checkboxId = `${detailsId}-supports-${c.id}`;
                             return (
                               <div key={c.id} className="flex items-start gap-2">
@@ -230,7 +232,7 @@ export function MilestonesEditor({
                           })}
                         </div>
                       </fieldset>
-                    )}
+                    ))}
                   </div>
                 )}
               </li>

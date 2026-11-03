@@ -28535,6 +28535,7 @@ export type Database = {
           body: string
           created_at: string
           created_by: string | null
+          edited_at: string | null
           id: string
           meeting_id: string | null
           milestones_complete: number | null
@@ -28548,6 +28549,7 @@ export type Database = {
           body: string
           created_at?: string
           created_by?: string | null
+          edited_at?: string | null
           id?: string
           meeting_id?: string | null
           milestones_complete?: number | null
@@ -28561,6 +28563,7 @@ export type Database = {
           body?: string
           created_at?: string
           created_by?: string | null
+          edited_at?: string | null
           id?: string
           meeting_id?: string | null
           milestones_complete?: number | null

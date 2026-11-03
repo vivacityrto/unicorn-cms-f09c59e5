@@ -157,21 +157,36 @@ describe('validateRockEditor: milestones', () => {
     expect(result.errors[`milestone:${bad.id}`]).toMatch(/not valid/);
   });
 
-  it('accepts links to this Company Rock’s milestones and rejects others', () => {
+  it('accepts links to the milestones of the Rocks above and rejects others', () => {
     const good = ms({ supports: ['c1'] });
     const stray = ms({ supports: ['elsewhere'] });
-    const ctx = { rocks, companyMilestoneIds: new Set(['c1', 'c2']), now: NOW };
+    const ctx = { rocks, linkableMilestoneIds: new Set(['c1', 'c2']), now: NOW };
 
     expect(hasErrors(check(values({ milestones: [good] }), ctx))).toBe(false);
-    expect(check(values({ milestones: [stray] }), ctx).errors[`milestone:${stray.id}`]).toMatch(/not part of this Rock/);
+    expect(check(values({ milestones: [stray] }), ctx).errors[`milestone:${stray.id}`]).toMatch(/not part of the Rock this one serves/);
   });
 
   it('nudges an Individual milestone to link to a Company milestone, only when there are some', () => {
     const lonely = ms();
-    const ctx = { rocks, companyMilestoneIds: new Set(['c1']), now: NOW };
+    const ctx = { rocks, linkableMilestoneIds: new Set(['c1']), now: NOW };
 
     expect(check(values({ milestones: [lonely] }), ctx).warnings[`milestone:${lonely.id}:link`]).toMatch(/Not linked/);
     expect(check(values({ milestones: [lonely] }), { rocks, now: NOW }).warnings).toEqual({});
     expect(check(values({ level: 'team', functionId: 'fn', parentId: 'co', milestones: [lonely] }), ctx).warnings).toEqual({});
+  });
+
+  it('names what an Individual milestone can link to in the nudge', () => {
+    const lonely = ms();
+    const ctx = { rocks, linkableMilestoneIds: new Set(['t1', 'c1']), linkNoun: 'Team or Company', now: NOW };
+    expect(check(values({ milestones: [lonely] }), ctx).warnings[`milestone:${lonely.id}:link`]).toBe('Not linked to a Team or Company milestone yet.');
+  });
+
+  it('lets a Team Rock’s milestone support a Company milestone, and rejects one from elsewhere', () => {
+    const good = ms({ supports: ['c1'] });
+    const stray = ms({ supports: ['elsewhere'] });
+    const ctx = { rocks, linkableMilestoneIds: new Set(['c1']), now: NOW };
+    const team = (m: ReturnType<typeof ms>) => values({ level: 'team', functionId: 'fn', parentId: 'co', milestones: [m] });
+    expect(hasErrors(check(team(good), ctx))).toBe(false);
+    expect(check(team(stray), ctx).errors[`milestone:${stray.id}`]).toMatch(/not part of the Rock this one serves/);
   });
 });

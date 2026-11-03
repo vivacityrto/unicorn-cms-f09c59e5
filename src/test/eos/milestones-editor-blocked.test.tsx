@@ -20,8 +20,7 @@ const renderEditor = (status: EditorMilestone['status']) => {
       showErrors={false}
       rockOwnerLabel="Sam"
       rockDueLabel="31 Dec"
-      companyMilestones={[]}
-      isIndividual={false}
+      linkOptions={[]}
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Show details for milestone 1' }));

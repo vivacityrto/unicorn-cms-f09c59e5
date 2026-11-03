@@ -70,9 +70,9 @@ describe('useRockEditorData: a saved Rock is only ready when everything has real
     expect(result.current.savedLinks).toEqual([{ company_milestone_id: 'c1', individual_milestone_id: 'm1' }]);
   });
 
-  it('does not wait for links a Team Rock cannot have', async () => {
+  it('does not wait for links a Company Rock cannot have', async () => {
     const { result } = renderHook(
-      () => useRockEditorData({ enabled: true, level: 'company', parentId: null, rockId: 'r1', savedLevel: 'team' }),
+      () => useRockEditorData({ enabled: true, level: 'company', parentId: null, rockId: 'r1', savedLevel: 'company' }),
       { wrapper: wrapper() },
     );
     await settle(db.milestones);
@@ -83,7 +83,7 @@ describe('useRockEditorData: a saved Rock is only ready when everything has real
   it('refetches on every opening instead of filling the form from a cached copy', async () => {
     const w = wrapper();
     const make = () => renderHook(
-      () => useRockEditorData({ enabled: true, level: 'team', parentId: null, rockId: 'r1', savedLevel: 'team' }),
+      () => useRockEditorData({ enabled: true, level: 'company', parentId: null, rockId: 'r1', savedLevel: 'company' }),
       { wrapper: w },
     );
     const first = make();
@@ -97,5 +97,19 @@ describe('useRockEditorData: a saved Rock is only ready when everything has real
     expect(second.result.current.editDataReady).toBe(false);
     await settle(db.milestones);
     await waitFor(() => expect(second.result.current.editDataReady).toBe(true));
+  });
+});
+
+describe('useRockEditorData: a saved Team Rock’s milestones can have links too', () => {
+  it('waits for the links of a saved Team Rock, which can support Company milestones', async () => {
+    const { result } = renderHook(
+      () => useRockEditorData({ enabled: true, level: 'company', parentId: null, rockId: 'r1', savedLevel: 'team' }),
+      { wrapper: wrapper() },
+    );
+    await settle(db.milestones);
+    await waitFor(() => expect(db.linkCalls).toBe(1));
+    expect(result.current.editDataReady).toBe(false);
+    await settle(db.links);
+    await waitFor(() => expect(result.current.editDataReady).toBe(true));
   });
 });
