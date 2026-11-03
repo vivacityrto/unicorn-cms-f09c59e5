@@ -34,6 +34,7 @@ const SupportTicketPortalDetailPage = lazy(() => import("@/pages/client/SupportT
 const ClientReportsPage = lazy(() => import("@/pages/client/ClientReportsPage"));
 const RegulatoryUpdatesPage = lazy(() => import("@/pages/client/RegulatoryUpdatesPage"));
 const RegulatoryUpdateDetailPage = lazy(() => import("@/pages/client/RegulatoryUpdateDetailPage"));
+const TasIntakePage = lazy(() => import("@/pages/client/TasIntakePage"));
 
 /**
  * Client Portal pages that previously each used a dedicated *Wrapper.tsx
@@ -98,5 +99,6 @@ export const clientLayoutRoutes = (
     <Route path="reports" element={<ClientReportsPage />} />
     <Route path="regulatory-updates" element={<RegulatoryUpdatesPage />} />
     <Route path="regulatory-updates/:eventId" element={<RegulatoryUpdateDetailPage />} />
+    <Route path="tas/:intakeId" element={<TasIntakePage />} />
   </Route>
 );
