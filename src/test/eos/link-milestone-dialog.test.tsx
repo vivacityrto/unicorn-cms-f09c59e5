@@ -15,11 +15,14 @@ vi.mock('@/hooks/useMilestoneLinking', () => ({
   useSetMilestoneLinks: () => ({ mutateAsync: state.save, isPending: state.pending }),
 }));
 
-const target = (id: string, title: string, status = 'in_progress', dueDate: string | null = '2026-12-15') => ({ id, title, status, dueDate, tenantId: 6372 });
+const COMPANY = { id: 'co', title: 'Beta launch', level: 'company' as const };
+const TEAM = { id: 'tm', title: 'Client Rock - Altaira', level: 'team' as const };
+
+const target = (id: string, title: string, status = 'in_progress', dueDate: string | null = '2026-12-15', rockId = 'co') => ({ id, rockId, title, status, dueDate, tenantId: 6372 });
 
 function renderDialog() {
   const onOpenChange = vi.fn();
-  render(<LinkMilestoneDialog open onOpenChange={onOpenChange} companyRockId="co" milestone={{ id: 'ind-1', title: 'M2 - Application submission' }} rockTitle="EduCareer College" />);
+  render(<LinkMilestoneDialog open onOpenChange={onOpenChange} targetRocks={[COMPANY]} milestone={{ id: 'ind-1', title: 'M2 - Application submission' }} rockTitle="EduCareer College" />);
   return { onOpenChange };
 }
 
@@ -31,9 +34,9 @@ beforeEach(() => {
 });
 
 describe('LinkMilestoneDialog', () => {
-  it('names the milestone and its Rock, and lists the Company milestones with their status and date', () => {
+  it('names the milestone and its Rock, and lists the milestones above with their status and date', () => {
     renderDialog();
-    expect(screen.getByRole('heading', { name: 'Which Company milestones does this support?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Which milestones does this support?' })).toBeInTheDocument();
     expect(screen.getByText(/Application submission.*in EduCareer College/)).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /M1.*Beta with five clients/ })).not.toBeChecked();
     expect(screen.getByText('Due 15 Dec')).toBeInTheDocument();
@@ -102,11 +105,11 @@ describe('LinkMilestoneDialog', () => {
 
   it('shows loading, and an error without offering to save', () => {
     state.targets = { data: undefined, isLoading: true, isError: false, isFetchedAfterMount: false };
-    const { unmount } = render(<LinkMilestoneDialog open onOpenChange={vi.fn()} companyRockId="co" milestone={{ id: 'x', title: 'X' }} />);
-    expect(screen.getByLabelText('Loading Company milestones')).toBeInTheDocument();
+    const { unmount } = render(<LinkMilestoneDialog open onOpenChange={vi.fn()} targetRocks={[COMPANY]} milestone={{ id: 'x', title: 'X' }} />);
+    expect(screen.getByLabelText('Loading milestones')).toBeInTheDocument();
     unmount();
     state.targets = { data: undefined, isLoading: false, isError: true, isFetchedAfterMount: true };
-    render(<LinkMilestoneDialog open onOpenChange={vi.fn()} companyRockId="co" milestone={{ id: 'x', title: 'X' }} />);
+    render(<LinkMilestoneDialog open onOpenChange={vi.fn()} targetRocks={[COMPANY]} milestone={{ id: 'x', title: 'X' }} />);
     expect(screen.getByRole('alert')).toHaveTextContent('could not be loaded');
     expect(screen.getAllByRole('button', { name: 'Save mapping' }).every(b => (b as HTMLButtonElement).disabled)).toBe(true);
   });
@@ -115,5 +118,34 @@ describe('LinkMilestoneDialog', () => {
     state.pending = true;
     renderDialog();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
+  it('groups the Team Rock’s milestones and the Company Rock’s, and can link to both at once', async () => {
+    state.targets = {
+      data: [target('t1', 'M1 - Altaira onboarded', 'not_started', null, 'tm'), target('c1', 'M1 - Beta with five clients')],
+      isLoading: false, isError: false, isFetchedAfterMount: true,
+    };
+    const onOpenChange = vi.fn();
+    render(<LinkMilestoneDialog open onOpenChange={onOpenChange} targetRocks={[TEAM, COMPANY]} milestone={{ id: 'ind-1', title: 'M2 - Application submission' }} />);
+
+    expect(screen.getByRole('group', { name: /Team Rock: Client Rock - Altaira/ })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Company Rock: Beta launch/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Altaira onboarded/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Beta with five clients/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save mapping' }));
+    await waitFor(() => expect(state.save).toHaveBeenCalledWith({ individualMilestoneId: 'ind-1', tenantId: 6372, add: ['t1', 'c1'], remove: [] }));
+  });
+
+  it('says a Rock has no milestones yet while still offering the other one', () => {
+    state.targets = { data: [target('c1', 'M1 - Beta with five clients')], isLoading: false, isError: false, isFetchedAfterMount: true };
+    render(<LinkMilestoneDialog open onOpenChange={vi.fn()} targetRocks={[TEAM, COMPANY]} milestone={{ id: 'ind-1', title: 'M2 - X' }} />);
+    expect(screen.getByRole('group', { name: /Team Rock/ })).toHaveTextContent('No milestones yet.');
+    expect(screen.getByRole('checkbox', { name: /Beta with five clients/ })).toBeInTheDocument();
+  });
+
+  it('names the Team Rock when it is the only one above and has no milestones', () => {
+    state.targets = { data: [], isLoading: false, isError: false, isFetchedAfterMount: true };
+    render(<LinkMilestoneDialog open onOpenChange={vi.fn()} targetRocks={[TEAM]} milestone={{ id: 'ind-1', title: 'M2 - X' }} />);
+    expect(screen.getByText(/Team Rock has no milestones yet/)).toBeInTheDocument();
   });
 });

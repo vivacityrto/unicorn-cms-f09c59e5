@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({ model: undefined as unknown }));
 
 vi.mock('@/hooks/useRockContribution', () => ({ useRockContribution: () => ({ data: state.model, isLoading: false, isError: false, refetch: vi.fn() }) }));
 vi.mock('@/hooks/useMilestoneLinking', () => ({
-  useLinkTargets: () => ({ data: [{ id: 'c1', title: 'M1 - Beta with five clients', status: 'in_progress', dueDate: null, tenantId: 6372 }], isLoading: false, isError: false, isFetchedAfterMount: true }),
+  useLinkTargets: () => ({ data: [{ id: 'c1', rockId: 'co', title: 'M1 - Beta with five clients', status: 'in_progress', dueDate: null, tenantId: 6372 }], isLoading: false, isError: false, isFetchedAfterMount: true }),
   useLinkedCompanyIds: () => ({ data: [], isLoading: false, isError: false, isFetchedAfterMount: true }),
   useSetMilestoneLinks: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
@@ -38,11 +38,11 @@ describe('RockCard: the mapping picker does not leak clicks to the card behind i
     fireEvent.click(screen.getByRole('button', { name: /Expand EduCareer College/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Link to a Company milestone' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Which Company milestones does this support?' });
+    const dialog = screen.getByRole('dialog', { name: 'Which milestones does this support?' });
     // A label click is the case that used to reach the card: it is not a button, link or input.
     fireEvent.click(within(dialog).getByText('Beta with five clients'));
-    fireEvent.click(within(dialog).getByText(/Tick the Company milestones it helps deliver/));
-    fireEvent.click(within(dialog).getByRole('heading', { name: 'Which Company milestones does this support?' }));
+    fireEvent.click(within(dialog).getByText(/Tick the milestones it helps deliver/));
+    fireEvent.click(within(dialog).getByRole('heading', { name: 'Which milestones does this support?' }));
 
     expect(onOpen).not.toHaveBeenCalled();
     // And the picker's own behaviour still works: that click on the label ticked the box.

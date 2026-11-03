@@ -65,12 +65,15 @@ export function useRockContribution(companyRockId: string | undefined, enabled: 
       const companyMilestones = allMilestones.filter(m => m.rock_id === companyRockId);
       const childMilestones = allMilestones.filter(m => m.rock_id !== companyRockId);
 
+      // Links into this Rock's milestones and into those of the Team Rocks under it (Individual to Team to Company).
+      const teamRockIds = new Set(direct.filter(r => r.rock_level === 'team').map(r => r.id));
+      const supportedIds = [...companyMilestones, ...childMilestones.filter(m => teamRockIds.has(m.rock_id))].map(m => m.id);
       const [linksResult, blockersResult, carryoversResult] = await Promise.all([
-        companyMilestones.length > 0
+        supportedIds.length > 0
           ? supabase
               .from('eos_rock_milestone_links')
               .select('company_milestone_id, individual_milestone_id')
-              .in('company_milestone_id', companyMilestones.map(m => m.id))
+              .in('company_milestone_id', supportedIds)
           : Promise.resolve({ data: [], error: null }),
         supabase
           .from('eos_rock_blockers')

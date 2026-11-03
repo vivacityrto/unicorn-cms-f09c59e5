@@ -31,6 +31,7 @@ const INVALIDATE = [
   ['eos-rock-editor-rocks'],
   ['eos-rock-milestones'],
   ['eos-rock-milestone-progress'],
+  ['quarterly-rocks'],
   ['eos-rock-milestone-links'],
   ['eos-rock-company-milestones'],
   ['eos-rock-editor-milestones'],
@@ -134,7 +135,7 @@ async function syncMilestones(values: RockEditorValues, rockId: string) {
     if (error) throw error;
   }
 
-  if (values.level !== 'individual') return;
+  if (values.level !== 'individual' && values.level !== 'team') return;
   const links = buildLinkRows(values, VIVACITY_TENANT_ID);
   for (const row of rows) {
     const desired = links.filter(link => link.individual_milestone_id === row.id).map(link => link.company_milestone_id);

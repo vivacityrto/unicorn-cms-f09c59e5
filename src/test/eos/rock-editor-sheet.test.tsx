@@ -6,7 +6,7 @@ import type { EditorRock } from '@/hooks/useRockEditorData';
 
 const state = vi.hoisted(() => ({
   rocks: [] as unknown[],
-  companyMilestones: [] as unknown[],
+  linkOptions: [] as unknown[],
   mutateAsync: vi.fn(),
   suggest: vi.fn(),
   edit: { ready: true, milestones: [] as unknown[], links: [] as unknown[], error: null as Error | null, clientName: null as string | null },
@@ -21,7 +21,7 @@ vi.mock('@/hooks/useRockEditorData', () => ({
   useRockEditorData: () => ({
     rocks: state.rocks, rocksLoading: false, rocksError: null,
     functions: [{ id: 'fn', name: 'Delivery' }],
-    companyMilestones: state.companyMilestones, companyRootId: null,
+    linkOptions: state.linkOptions,
     savedMilestones: state.edit.milestones, savedLinks: state.edit.links, editDataReady: state.edit.ready,
     editDataError: state.edit.error, clientName: state.edit.clientName,
   }),
@@ -55,7 +55,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   state.rocks = [];
-  state.companyMilestones = [];
+  state.linkOptions = [];
   state.edit = { ready: true, milestones: [], links: [], error: null, clientName: null };
   state.mutateAsync.mockReset().mockResolvedValue({ id: 'new-1', parent_rock_id: null, action: 'created' });
   state.suggest.mockReset();

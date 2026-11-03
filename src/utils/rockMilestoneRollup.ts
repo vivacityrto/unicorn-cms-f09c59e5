@@ -28,6 +28,14 @@ export function emptyBreakdown(): MilestoneBreakdown {
   return { total: 0, complete: 0, inProgress: 0, blocked: 0, offTrack: 0, notStarted: 0, overdue: 0 };
 }
 
+/** Percentage of active milestones that are complete; null when there is no active work. */
+export function milestoneCompletionPercent(
+  breakdown: Pick<MilestoneBreakdown, 'total' | 'complete'> | null | undefined,
+): number | null {
+  if (!breakdown || breakdown.total <= 0) return null;
+  return Math.round((breakdown.complete / breakdown.total) * 100);
+}
+
 function add(target: MilestoneBreakdown, source: MilestoneBreakdown) {
   target.total += source.total;
   target.complete += source.complete;
