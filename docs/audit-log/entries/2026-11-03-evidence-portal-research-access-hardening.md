@@ -1,0 +1,39 @@
+# Audit: 2026-11-03 — evidence, portal-document and research access hardening
+
+**Trigger:** ad-hoc (found while analysing the TAS intake plan, then fixed as four bounded changes)
+**Scope:** four access-control changes (PRs #1478, #1479, #1480, #1481), all applied to production on 2026-11-03 under Carl's authorisation. Not covered: the disabled/archived-user finding in "Open questions parked" (investigated read-only, not fixed here) and the broader QA-versus-production access comparison.
+
+## Findings
+- **Evidence items (PR #1478).** The single UPDATE policy on `evidence_request_items` let any member of the item's tenant change any column, with no WITH CHECK, and `anon` held the UPDATE privilege. A client only needs to attach a file. Exact-head review also found a gap in the first version of the fix: a client could still set `status = received` with no document attached (which triggers the audit-ready notification and rolls the request up to `received`).
+- **Portal upload (PR #1479).** `upload-portal-document` inserted with the service role while trusting caller-supplied `linked_stage_id`, `linked_package_id`, `linked_task_id`, `evidence_request_item_id` and `category_id`, so a caller could link a document to another tenant's records. The function now resolves every linked id to the tenant being uploaded for before any write, failing closed.
+- **Portal audit log (PR #1480).** `log_portal_document_event` (SECURITY DEFINER, executable by every signed-in user) accepted any tenant and document id, so any signed-in user could add audit rows to any tenant's trail. For end-user calls it now requires staff or a full-scope member of the tenant, one of the five actions the app logs, and a document that belongs to the tenant. Production already had no PUBLIC/anon EXECUTE on it; `unicorn-qa` did (QA grant drift).
+- **Tenant research (PR #1481).** `research_jobs`, `research_findings` and `research_sources` were readable by any active tenant member with no review-status filter. As read on 2026-11-03, production holds 11 tenant-bound `research_jobs` rows (all failed, across 3 tenants, with no findings or sources), so this closed a small live exposure of job rows as well as a future one. Reads are now staff-only.
+- **Existing-row check (PR #1480).** All 99 existing `portal_document_audit` rows satisfy the new type, action and ownership rules by content. The caller rule is stricter in one respect the PR did not state: 32 of those rows' actors would fail it today (31 from one disabled internal user, 1 from a user with no membership in that tenant). Existing rows are not rewritten; the rule applies to new calls.
+
+## Code changes (this entry accompanies them)
+- PR #1478 (`hotfix/evidence-item-client-update-guard`): staff and client UPDATE policies, a scope-aware `user_has_full_tenant_access()` helper, a BEFORE UPDATE guard that refuses non-staff changes outside the attached-file columns and refuses `received` without a document, and `REVOKE UPDATE` from `anon`. Production migration `20261103011806 evidence_item_client_update_guard`. Rollback: `supabase/migrations/rollback/20261029120000_evidence_item_client_update_guard.down.sql`.
+- PR #1479 (`hotfix/upload-portal-document-linked-ids`): merged as `b07ff8f19`; deployed by `deploy-edge-functions` run 41558427295 (success); production function version 249 read back and contains the new check.
+- PR #1480 (`hotfix/portal-audit-event-tenant-check`): merged as `8a95e2e1b`. Production migration `20261103011720 portal_audit_event_tenant_check` (same signature, one overload, EXECUTE for `authenticated` and `service_role` only). Rollback restores the previous body and deliberately does not re-open PUBLIC/anon.
+- PR #1481 (`hotfix/tenant-research-staff-only-read`): merged as `d836ed1e7`. Production migration `20261103011830 tenant_research_staff_only_read` (three SELECT policies, staff and Super Admin only). Rollback restores the previous policies.
+
+## Verification
+- `unicorn-qa`, rolled-back transactions only, no residue: 12 persona checks for #1478 (client, academy-only, other tenant, staff, anon, server path) plus 7 re-checks after the review fix (own document allowed, no document refused, other-tenant document refused, staff-only column refused, accepted refused, document swap to another tenant refused, server path unaffected); 9 checks for #1480.
+- Exact-head adversarial reviews of all four PRs (read-only, catalogue SELECTs only): #1480 ready; #1478, #1479 and #1481 ready with fixes. The #1478 fixes and the #1481 comment correction were applied before production. #1479's three hardening points are follow-ups.
+- Production postflight, catalogue reads only: policy, trigger, function and grant state matched each migration; one overload for the changed function; `portal_document_audit` still 99 rows; `evidence_request_items` still 2 rows.
+- Browser: `npm run e2e:unauth` passed 12 of 12 on `origin/main` at `d836ed1e7` (all four changes merged). The authenticated persona suites were **not** run (they need saved storage states from real credentials, which are not available to the agent), so no client upload, evidence-attach, portal-audit or Regulatory Updates flow has been exercised through the real UI since these changes. Pending: Carl to generate the storage states, then run the persona suite and a manual client evidence upload on Demo RTO.
+- CI on each PR: all checks passed, including `audit-migrations` with reviewed, short-lived allowlist entries (expiring 2026-12-03) for #1478 and #1480.
+
+## KB changes shipped
+- no changes
+
+## Decisions
+- No second reviewer: Carl is the only developer and reviews his own work; exact-head review by independent tooling stood in for it.
+- Staff-only is a provisional read rule for tenant-bound research output until a deliberate release-to-client step exists.
+
+## Open questions parked
+- **Disabled/archived users (read-only investigation, not fixed).** 403 of 617 production `tenant_users` rows belong to 373 distinct disabled or archived users. Only 30 of those users have an `auth.users` record, all unbanned and email-confirmed; none signed in within 90 days and one refreshed a token in that window. `has_tenant_access_safe`, `user_has_tenant_access`, `app.user_can_access_tenant` and `user_has_full_tenant_access` do not check those flags. Smallest candidate fix: a restrictive check inside the helpers, with a regression test and its own audit entry; banning the 30 accounts is a separate data change.
+- **#1481 second branch.** `research_findings_select` still lets any `tenant_users` row read findings of a job linked to a `regulator_change_event`. This is intended for the client Regulatory Updates page (the matching events policy uses the same predicate) and no tenant-bound job carries such a link today, but nothing enforces that. Adding a tenant-less check needs a SECURITY DEFINER helper because the job rows are now staff-only. Whether clients should see draft regulator findings is a product decision.
+- **#1479 hardening.** Staff-supplied `linked_task_id` is not validated (low); malformed numeric ids are treated as absent instead of rejected (low); the multipart body is parsed before `requireCaller` (pre-existing).
+- **#1480 hardening.** Non-staff callers could still log any of the five allowed actions on their own tenant's documents (including `deleted`, `shared_to_client`, `unshared`); `p_reason` and `p_metadata` are unbounded; the app ignores the RPC error, so a rejected event is dropped silently.
+- **#1478 hardening.** `received_at` is unconstrained for clients; a client may swap the attached same-tenant document on a rejected item without a status change.
+- **QA drift.** QA's research policies, the evidence-item guard and some helpers differed from production before these changes. A re-runnable comparison query exists in private working notes; a broader QA-versus-production access diff is still to do.
