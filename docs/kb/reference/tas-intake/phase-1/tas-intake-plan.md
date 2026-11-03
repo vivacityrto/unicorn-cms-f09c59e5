@@ -102,3 +102,15 @@ explicit approval, and each carries an audit entry per
 
 - 2026-11-03 — direction approved; this workstream registered. First work:
   the hardening track, the privacy gate, and the throwaway spike.
+- 2026-11-03 — structural decisions recorded: the product owner and content
+  approver is the business owner (with a named delegate); a review can start
+  once each of the five starter topics is answered or marked not decided or
+  needs advice (no evidence needed); one intake per qualification with an
+  optional cohort label; RTO and CRICOS clients at launch with GTO clients
+  refused; answers carry two separate states (the answer and its review) plus
+  an "applies" flag; real question wording stays out of this repository.
+- 2026-11-03 — a placeholder question catalogue (88 questions absorbing the 113
+  legacy survey fields, each mapped once) and a pure branch engine were built
+  under `src/lib/tas/intake/`, with a reconciliation check
+  (`npm run tas:reconcile`, also a CI workflow). Branch conditions are a
+  provisional draft until the content owner signs the catalogue off.
