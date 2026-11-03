@@ -278,6 +278,28 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-11-03): rollback file for 20261029120000_evidence_item_client_update_guard.sql, run only to revert it. The flagged GRANT UPDATE restores anon's previous UPDATE privilege on public.evidence_request_items; it runs no row DML. Not applied unless the migration is reverted.",
       "expires": "2026-12-03"
+    },
+    {
+      "id": "tenant-access-helpers-exclude-blocked-users",
+      "file": "supabase/migrations/20261103030000_tenant_access_helpers_exclude_blocked_users.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE when applied and changes no existing row. The flagged INSERT is the statement inside the body of log_portal_document_event(), unchanged from 20261029130000_portal_audit_event_tenant_check.sql, which writes one audit row only when the function is called. The migration only adds a NOT EXISTS refusal for disabled or archived users to the membership branch of four helper functions and of that function's member check; signatures, owners and grants are unchanged. Checked on unicorn-qa inside a rolled-back transaction (active, disabled, archived and restored user, plus a staff user; no residue); applied to production on 2026-11-03 with aggregate before and after counts and a clean postflight.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "tenant-access-helpers-exclude-blocked-users-rollback",
+      "file": "supabase/migrations/rollback/20261103030000_tenant_access_helpers_exclude_blocked_users.down.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): rollback file for 20261103030000_tenant_access_helpers_exclude_blocked_users.sql, run only to revert it. The flagged INSERT is the same statement inside the restored log_portal_document_event() body; nothing is inserted when the file is applied. Not applied unless the migration is reverted.",
+      "expires": "2026-12-03"
     }
   ]
 }
