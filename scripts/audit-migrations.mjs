@@ -109,6 +109,18 @@ function maskSqlComments(content) {
   return chars.join("");
 }
 
+function maskTriggerEvents(content) {
+  const chars = content.split("");
+  const triggerHeader = /\bcreate\s+(?:constraint\s+)?trigger\b[^;]*?\b(?:before|after|instead\s+of)\b([^;]*?)\bon\b/gi;
+  for (const match of content.matchAll(triggerHeader)) {
+    const eventStart = match.index + match[0].lastIndexOf(match[1]);
+    for (let i = eventStart; i < eventStart + match[1].length; i += 1) {
+      if (chars[i] !== "\n" && chars[i] !== "\r") chars[i] = " ";
+    }
+  }
+  return chars.join("");
+}
+
 function addMatch(findings, content, file, category, operation, match, extra = {}) {
   const line = lineNumberAt(content, match.index ?? 0);
   findings.push({
@@ -160,6 +172,7 @@ function detectTags(file, content) {
 function scanMigration(file, content) {
   const findings = [];
   const scanContent = maskSqlComments(content);
+  const dmlContent = maskTriggerEvents(scanContent);
   const targetMarker = content.match(TARGET_MARKER_RE)?.[1] ?? null;
   const urls = findAll(PRODUCTION_URL_RE, scanContent);
   const projectRefs = new Set();
@@ -203,16 +216,16 @@ function scanMigration(file, content) {
     });
   }
 
-  for (const match of findAll(INSERT_RE, scanContent)) {
+  for (const match of findAll(INSERT_RE, dmlContent)) {
     addMatch(findings, content, file, "data-mutation", "insert", match);
   }
-  for (const match of findAll(UPDATE_RE, scanContent)) {
+  for (const match of findAll(UPDATE_RE, dmlContent)) {
     addMatch(findings, content, file, "destructive-mutation", "update", match);
   }
-  for (const match of findAll(DELETE_RE, scanContent)) {
+  for (const match of findAll(DELETE_RE, dmlContent)) {
     addMatch(findings, content, file, "destructive-mutation", "delete", match);
   }
-  for (const match of findAll(TRUNCATE_RE, scanContent)) {
+  for (const match of findAll(TRUNCATE_RE, dmlContent)) {
     addMatch(findings, content, file, "destructive-mutation", "truncate", match);
   }
 

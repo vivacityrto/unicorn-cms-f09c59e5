@@ -1,5 +1,5 @@
 /**
- * Rock notes: short, dated, append-only records of what was said about a Rock. These helpers
+ * Rock notes: short, dated records of what was said about a Rock. These helpers
  * only arrange notes for display; nothing here writes anything.
  */
 
@@ -14,6 +14,7 @@ export interface RockNote {
   milestones_total: number | null;
   created_by: string | null;
   created_at: string;
+  edited_at: string | null;
 }
 
 export interface RockNoteSummary {
@@ -29,6 +30,7 @@ export interface RockNoteSummary {
 }
 
 export const NOTE_MAX_CHARS = 4000;
+export const ROCK_NOTE_SUMMARY_LIMIT = 200;
 const TIME_ZONE = 'Australia/Sydney';
 
 /** "Today, 3:40 pm AEDT", "Yesterday, ...", or "Tue 14 Oct, 3:40 pm AEDT". Always Sydney time. */
@@ -98,10 +100,22 @@ export function lastTimeNotes(notes: readonly RockNote[], currentMeetingId: stri
 }
 
 /** How many notes were written after the summary last looked. */
-export function notesSinceSummary(notes: readonly RockNote[], summary: Pick<RockNoteSummary, 'notes_through'> | null | undefined): number {
+export function notesSinceSummary(
+  notes: readonly RockNote[],
+  summary: Pick<RockNoteSummary, 'notes_through' | 'generated_at' | 'note_count'> | null | undefined,
+): number {
   if (!summary) return notes.length;
   const through = new Date(summary.notes_through).getTime();
-  return notes.filter(note => new Date(note.created_at).getTime() > through).length;
+  const generated = new Date(summary.generated_at).getTime();
+  const changed = notes.filter(note =>
+    new Date(note.created_at).getTime() > through
+    || (note.edited_at !== null && new Date(note.edited_at).getTime() > generated),
+  ).length;
+  // The summariser intentionally caps its input at 200 notes while the panel can load 300.
+  // Only use count mismatch to detect deletions when the summary was below that cap and therefore
+  // included every note; at the cap, timestamps and explicit refresh are the reliable signals.
+  const missingNote = summary.note_count < ROCK_NOTE_SUMMARY_LIMIT && notes.length !== summary.note_count;
+  return Math.max(changed, missingNote ? 1 : 0);
 }
 
 export const SIGNAL_LABEL: Record<string, string> = {

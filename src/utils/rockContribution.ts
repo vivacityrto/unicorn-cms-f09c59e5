@@ -77,8 +77,10 @@ export interface CarriedTarget {
 
 export interface IndividualMilestoneView {
   milestone: ContributionMilestone;
-  /** Company milestones this one supports, from the stored links. Empty means unmapped. */
+  /** Company milestones this one supports, from the stored links. */
   supports: ContributionMilestone[];
+  /** Milestones of the Team Rock it serves that this one supports. With `supports`, empty means unmapped. */
+  teamSupports: ContributionMilestone[];
   blocker: ContributionBlocker | null;
 }
 
@@ -86,6 +88,7 @@ export interface IndividualContribution {
   rock: ContributionRock;
   /** The Team Rock it serves the Company Rock through, if it does not serve it directly. */
   viaTeam: string | null;
+  viaTeamId: string | null;
   milestones: IndividualMilestoneView[];
   progress: { complete: number; total: number };
   blocker: ContributionBlocker | null;
@@ -96,10 +99,13 @@ export interface IndividualContribution {
 
 export interface CompanyMilestoneCoverage {
   milestone: ContributionMilestone;
+  /** Individual and Team Rock milestones that support it directly. */
   contributors: Array<{ rock: ContributionRock; milestone: ContributionMilestone }>;
 }
 
 export interface ContributionModel {
+  /** The Company Rock this view is for, so a link picker can name it. */
+  companyRock: ContributionRock;
   individuals: IndividualContribution[];
   coverage: CompanyMilestoneCoverage[];
   /** The Company Rock itself carried forward, if it has been. */
@@ -124,16 +130,28 @@ export function buildContribution(input: ContributionInput): ContributionModel {
   const destRockById = new Map(input.destinationRocks.map(r => [r.id, r]));
   const destMilestoneById = new Map(input.destinationMilestones.map(m => [m.id, m]));
 
-  // A link only counts when both ends are what this view shows: a Company milestone of
-  // this Rock and a milestone of one of its Individual Rocks.
+  // A link only counts when both ends are what this view shows: the supported milestone is one of
+  // this Rock's or of a Team Rock under it, and the supporting milestone is one of its Individual Rocks'
+  // or Team Rocks'.
+  const teamRockIds = new Set(input.childRocks.filter(r => r.rock_level === 'team').map(r => r.id));
+  const teamMilestoneById = new Map(input.childMilestones.filter(m => teamRockIds.has(m.rock_id)).map(m => [m.id, m]));
   const supportsByIndividual = new Map<string, ContributionMilestone[]>();
+  const teamSupportsByIndividual = new Map<string, ContributionMilestone[]>();
   const contributorsByCompany = new Map<string, string[]>();
   for (const link of input.links) {
+    const lower = milestoneById.get(link.individual_milestone_id);
+    if (!lower) continue;
     const company = companyById.get(link.company_milestone_id);
-    const individual = milestoneById.get(link.individual_milestone_id);
-    if (!company || !individual) continue;
-    supportsByIndividual.set(individual.id, [...(supportsByIndividual.get(individual.id) ?? []), company]);
-    contributorsByCompany.set(company.id, [...(contributorsByCompany.get(company.id) ?? []), individual.id]);
+    if (company) {
+      contributorsByCompany.set(company.id, [...(contributorsByCompany.get(company.id) ?? []), lower.id]);
+      // A Team milestone feeding a Company one is coverage, not an Individual milestone's mapping.
+      if (!teamRockIds.has(lower.rock_id)) supportsByIndividual.set(lower.id, [...(supportsByIndividual.get(lower.id) ?? []), company]);
+      continue;
+    }
+    const team = teamMilestoneById.get(link.company_milestone_id);
+    if (team && !teamRockIds.has(lower.rock_id)) {
+      teamSupportsByIndividual.set(lower.id, [...(teamSupportsByIndividual.get(lower.id) ?? []), team]);
+    }
   }
 
   const blockerForRock = (rockId: string) => input.blockers.find(b => b.rock_id === rockId) ?? null;
@@ -161,32 +179,36 @@ export function buildContribution(input: ContributionInput): ContributionModel {
     const views: IndividualMilestoneView[] = own.map(m => ({
       milestone: m,
       supports: supportsByIndividual.get(m.id) ?? [],
+      teamSupports: teamSupportsByIndividual.get(m.id) ?? [],
       blocker: blockerForMilestone(m.id),
     }));
     const parent = rock.parent_rock_id ? input.childRocks.find(r => r.id === rock.parent_rock_id) : undefined;
     return {
       rock,
       viaTeam: parent && parent.rock_level === 'team' ? parent.title : null,
+      viaTeamId: parent && parent.rock_level === 'team' ? parent.id : null,
       milestones: views,
       progress: progressOf(own),
       blocker: blockerForRock(rock.id),
       blockedMilestones: own.filter(m => m.status === 'blocked').length,
       // Finished work that supports nothing is not a gap worth flagging.
-      unmappedCount: views.filter(v => v.supports.length === 0 && v.milestone.status !== 'complete' && v.milestone.status !== 'deferred').length,
+      unmappedCount: views.filter(v => v.supports.length === 0 && v.teamSupports.length === 0 && v.milestone.status !== 'complete' && v.milestone.status !== 'deferred').length,
       carriedTo: carriedFrom(rock.id),
     };
   });
 
-  const individualById = new Map(individualRocks.map(r => [r.id, r]));
+  // Team Rocks' milestones can feed a Company milestone directly, so they count as coverage too.
+  const feederRockById = new Map([...individualRocks, ...input.childRocks.filter(r => r.rock_level === 'team')].map(r => [r.id, r]));
   const coverage: CompanyMilestoneCoverage[] = input.companyMilestones.map(milestone => ({
     milestone,
     contributors: (contributorsByCompany.get(milestone.id) ?? [])
       .map(id => milestoneById.get(id))
-      .filter((m): m is ContributionMilestone => !!m && individualById.has(m.rock_id))
-      .map(m => ({ rock: individualById.get(m.rock_id)!, milestone: m })),
+      .filter((m): m is ContributionMilestone => !!m && feederRockById.has(m.rock_id))
+      .map(m => ({ rock: feederRockById.get(m.rock_id)!, milestone: m })),
   }));
 
   return {
+    companyRock: input.companyRock,
     individuals,
     coverage,
     companyCarriedTo: carriedFrom(input.companyRock.id),

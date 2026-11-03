@@ -35,7 +35,7 @@ import {
 } from '@/utils/rockPanelMetrics';
 import { summarizeMilestoneTasks, type MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
 import { openBlocker, type BlockerRow } from '@/utils/rockBlocker';
-import type { LinkRoot } from '@/utils/rockLinking';
+import { linkButtonLabel, type LinkTargets } from '@/utils/rockLinking';
 import { todayLocalIso } from '@/utils/localDate';
 
 interface UserInfo {
@@ -71,10 +71,10 @@ export interface MilestoneBlockerSupport {
   onResolve: (milestoneId: string, label: string) => void;
 }
 
-/** The mapping of an Individual Rock's milestones to Company milestones: the action, or why there is none. */
+/** The mapping of an Individual or Team Rock's milestones to the milestones above: the action, or why there is none. */
 export interface MilestoneLinkSupport {
   canManage: boolean;
-  root: LinkRoot | null;
+  root: LinkTargets | null;
   onLink: (milestoneId: string, title: string) => void;
   onEditRock?: () => void;
 }
@@ -139,6 +139,8 @@ export function MilestoneTable({
 
   const isCompany = rockLevel === 'company';
   const isIndividual = rockLevel === 'individual';
+  /** Individual and Team Rocks' milestones can support the milestones of the Rocks above them. */
+  const canMapUp = isIndividual || rockLevel === 'team';
 
   const ownerNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -255,8 +257,10 @@ export function MilestoneTable({
             const tasks = tasksByMilestone.get(milestone.id) ?? [];
             const todos = todosByMilestone?.get(milestone.id) ?? [];
             const taskSummary = summarizeMilestoneTasks(tasks, milestone.status, todos, todayIso);
-            const delivery = hasRows && isCompany && deliveryData ? companyMilestoneDelivery(milestone.id, deliveryData) : null;
-            const supported = hasRows && isIndividual && deliveryData ? supportedCompanyMilestones(milestone.id, deliveryData) : [];
+            const fed = hasRows && (isCompany || rockLevel === 'team') && deliveryData ? companyMilestoneDelivery(milestone.id, deliveryData) : null;
+            // A Company milestone nothing feeds is flagged; a Team milestone nothing feeds is normal (Team Rocks do their own work).
+            const delivery = fed && (isCompany || fed.state !== 'uncovered') ? fed : null;
+            const supported = hasRows && canMapUp && deliveryData ? supportedCompanyMilestones(milestone.id, deliveryData) : [];
             const supportRefs = supported.map(s => milestoneRef({ ...parseMilestoneTitle(s.milestone.title) }));
             const detailsId = `milestone-details-${milestone.id}`;
             const blocker = blockerSupport ? openBlocker(blockerSupport.blockers, 'milestone', milestone.id) : null;
@@ -419,12 +423,12 @@ export function MilestoneTable({
                         </Button>
                       ) : null}
                       {delivery && <CompanyMilestoneDeliveryBlock delivery={delivery} getUserInfo={getUserInfo} className="" />}
-                      {isIndividual && hasRows && <SupportedMilestonesBlock supported={supported} onOpenRock={onOpenRock} className="" />}
-                      {isIndividual && hasRows && linkSupport?.canManage && linkSupport.root && (
+                      {canMapUp && hasRows && <SupportedMilestonesBlock supported={supported} onOpenRock={onOpenRock} className="" />}
+                      {canMapUp && hasRows && linkSupport?.canManage && linkSupport.root && (
                         linkSupport.root.status === 'ok' ? (
                           <Button type="button" variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => linkSupport.onLink(milestone.id, milestone.title)}>
                             <Link2 className="h-3 w-3" aria-hidden />
-                            {supported.length > 0 ? 'Change the Company milestones it supports' : 'Link to a Company milestone'}
+                            {linkButtonLabel(linkSupport.root.rocks, supported.length > 0)}
                           </Button>
                         ) : (
                           <div className="space-y-1.5 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
