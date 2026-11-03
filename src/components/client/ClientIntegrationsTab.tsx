@@ -368,13 +368,11 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         parseFailed={parseFailed}
         isLink
       />
-      {summary.fetched_at && (
-        <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
-          <p className="text-xs text-muted-foreground">
-            Data last synced: {formatDateTime(summary.fetched_at)}
-          </p>
-        </div>
-      )}
+      <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
+        <p className="text-xs text-muted-foreground">
+          Data last synced: {summary.fetched_at ? formatDateTime(summary.fetched_at) : 'unknown'}
+        </p>
+      </div>
     </div>
   );
 }
