@@ -34,7 +34,7 @@ status of every file here, not just these three):
 - **`kpi-module-remaining.md`** — in-progress tracker for remaining KPI work.
 - **`messaging-pipeline.md`** — as-shipped messaging/broadcast pipeline state.
 - **`rock-blockers-and-carryover.md`** — Rock blockers (reason, dependency, next action, review date), carryover into a later quarter, the `blocked` status and its roll-up rule, and the Company → Individual view. Built, not yet applied; release steps inside.
-- **`rock-hierarchy-and-linking.md`** — the Company / Team / Individual Rock rules (who can stand alone, who can serve whom), how milestones map up, what "unmapped" means, the Link action, and the open decisions.
+- **`rock-hierarchy-and-linking.md`** — the Company / Team / Individual Rock rules (who can stand alone, who can serve whom), how milestones map up (Individual to Team to Company, from 30 Oct 2026), what "unmapped" means, the Link action, and the open decisions.
 - **`rock-review-discuss.md`** — the Discuss view in the meeting's Rock Review: one Rock at a time, confirm or change status, record a blocker, raise an issue for IDS, wrap-up. No database change.
 - **`rock-notes.md`** — dated, append-only notes on a Rock (typed or dictated, with the status and progress at the time), "last time" at the next meeting, notes rolled up to Company and Team Rocks, an on-request AI summary with To-Dos a person confirms. Migration and Edge Function written, not yet applied or deployed.
 - **`rock-todo-links.md`** — link a To-Do to a Rock or milestone from either side (live owner, due date, done), overdue To-Dos flagged in Discuss; the old GitHub task rows labelled as snapshots. Migration written, not yet applied.

@@ -7,6 +7,8 @@ import type { RockNote, RockNoteSummary } from '@/utils/rockNotes';
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 
 const mutateAsync = vi.fn();
+const updateMutateAsync = vi.fn();
+const deleteMutateAsync = vi.fn();
 const summarise = vi.fn();
 const createTodo = vi.fn();
 let notesData: { notes: RockNote[]; rockTitles: Record<string, string>; authorNames: Record<string, string>; includesDescendants: boolean };
@@ -14,10 +16,15 @@ let summaryData: RockNoteSummary | null;
 
 vi.mock('@/hooks/useRockNotes', () => ({
   useAddRockNote: () => ({ mutateAsync }),
+  useUpdateRockNote: () => ({ mutateAsync: updateMutateAsync, isPending: false }),
+  useDeleteRockNote: () => ({ mutateAsync: deleteMutateAsync, isPending: false }),
   useRockNotes: () => ({ data: notesData, isError: false }),
   useRockNoteSummary: () => ({ data: summaryData }),
   useSummariseRockNotes: () => ({ mutate: summarise, isPending: false }),
   useCreateTodoFromNote: () => ({ mutateAsync: createTodo, isPending: false }),
+}));
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ profile: { user_uuid: 'u1', unicorn_role: 'Team Member' } }),
 }));
 
 import { RockNotesPanel } from '@/components/eos/rocks/notes/RockNotesPanel';
@@ -27,7 +34,7 @@ const rock = { id: 'r1', title: 'Harden RBAC', tenant_id: 6372 };
 
 const note = (id: string, at: string, over: Partial<RockNote> = {}): RockNote => ({
   id, rock_id: 'r1', meeting_id: null, body: `body ${id}`, source: 'typed', rock_status: 'on_track',
-  milestones_complete: 1, milestones_total: 4, created_by: 'u1', created_at: at, ...over,
+  milestones_complete: 1, milestones_total: 4, created_by: 'u1', created_at: at, edited_at: null, ...over,
 });
 
 const renderPanel = (meetingId = 'meeting-now') =>
@@ -42,6 +49,10 @@ const renderPanel = (meetingId = 'meeting-now') =>
 beforeEach(() => {
   mutateAsync.mockReset();
   mutateAsync.mockResolvedValue({ note_id: 'n', created_at: 'x', duplicate: false });
+  updateMutateAsync.mockReset();
+  updateMutateAsync.mockResolvedValue({ id: 'a' });
+  deleteMutateAsync.mockReset();
+  deleteMutateAsync.mockResolvedValue({ id: 'a' });
   summarise.mockReset();
   createTodo.mockReset();
   createTodo.mockResolvedValue({ id: 't1' });
@@ -93,6 +104,26 @@ describe('RockNotesPanel', () => {
     expect(items[1].textContent).toContain('body old');
   });
 
+  it('lets the staff author edit note text and shows its edit timestamp', async () => {
+    notesData.notes = [note('mine', '2026-10-15T01:00:00Z')];
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit note' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Edit note mine' }), { target: { value: 'Corrected forecast' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await vi.waitFor(() => expect(updateMutateAsync).toHaveBeenCalledWith({ noteId: 'mine', body: 'Corrected forecast' }));
+  });
+
+
+  it('asks before deleting and then calls the delete mutation', async () => {
+    notesData.notes = [note('mine', '2026-10-15T01:00:00Z')];
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
+    expect(screen.getByText(/permanently removes the note/)).toBeTruthy();
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete note' });
+    fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+    await vi.waitFor(() => expect(deleteMutateAsync).toHaveBeenCalledWith('mine'));
+  });
+
   it('shows what was said last time, from an earlier meeting only', () => {
     notesData.notes = [
       note('earlier', '2026-10-08T01:00:00Z', { meeting_id: 'meeting-before', body: 'Waiting on legal' }),
@@ -135,6 +166,8 @@ describe('RockNotesPanel', () => {
     expect(screen.getByText('Steady progress.')).toBeTruthy();
     expect(screen.getByText(/1 newer note not included/)).toBeTruthy();
     expect(screen.getByText(/Written by AI from the notes only/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(summarise).toHaveBeenCalledWith({ rockId: 'r1', force: true });
   });
 
   it('creates a To-Do only when asked, once, and shows it as created', async () => {

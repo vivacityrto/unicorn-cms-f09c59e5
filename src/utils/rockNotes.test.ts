@@ -12,6 +12,7 @@ const note = (id: string, at: string, over: Partial<RockNote> = {}): RockNote =>
   milestones_total: 4,
   created_by: 'u1',
   created_at: at,
+  edited_at: null,
   ...over,
 });
 
@@ -73,8 +74,23 @@ describe('lastTimeNotes', () => {
 describe('notesSinceSummary', () => {
   it('counts only notes written after the summary looked', () => {
     const notes = [note('a', '2026-10-01T00:00:00Z'), note('b', '2026-10-05T00:00:00Z'), note('c', '2026-10-09T00:00:00Z')];
-    expect(notesSinceSummary(notes, { notes_through: '2026-10-05T00:00:00Z' })).toBe(1);
+    expect(notesSinceSummary(notes, { notes_through: '2026-10-05T00:00:00Z', generated_at: '2026-10-05T00:01:00Z', note_count: 2 })).toBe(1);
     expect(notesSinceSummary(notes, null)).toBe(3);
+  });
+
+  it('marks an edited note and a missing note as newer than the stored summary', () => {
+    const summary = { notes_through: '2026-10-05T00:00:00Z', generated_at: '2026-10-05T00:01:00Z', note_count: 2 };
+    expect(notesSinceSummary([note('old', '2026-10-01T00:00:00Z', { edited_at: '2026-10-06T00:00:00Z' }), note('new', '2026-10-04T00:00:00Z')], summary)).toBe(1);
+    expect(notesSinceSummary([note('remaining', '2026-10-04T00:00:00Z')], summary)).toBe(1);
+  });
+
+  it('does not treat the summary input cap as a deleted note when the panel loads more notes', () => {
+    const notes = Array.from({ length: 300 }, (_, index) => note(`n${index}`, '2026-10-04T00:00:00Z'));
+    expect(notesSinceSummary(notes, {
+      notes_through: '2026-10-05T00:00:00Z',
+      generated_at: '2026-10-05T00:01:00Z',
+      note_count: 200,
+    })).toBe(0);
   });
 });
 
