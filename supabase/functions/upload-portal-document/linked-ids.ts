@@ -7,8 +7,7 @@
  */
 
 // The slice of the Supabase client used here: from(table).select(cols).eq(col, v)...limit(n).
-// deno-lint-ignore no-explicit-any
-type Row = Record<string, any>;
+type Row = Record<string, string | number | boolean | null>;
 interface Query extends PromiseLike<{ data: Row[] | null; error: unknown }> {
   eq(column: string, value: string | number | boolean): Query;
   limit(count: number): Query;

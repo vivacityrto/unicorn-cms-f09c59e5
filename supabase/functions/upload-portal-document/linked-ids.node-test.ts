@@ -21,8 +21,7 @@ function fakeDb(tables: Record<string, Row[]>, failTable?: string): LinkLookupCl
               max = count;
               return q;
             },
-            // deno-lint-ignore no-explicit-any
-            then(resolve: (v: any) => unknown, reject?: (e: unknown) => unknown) {
+            then(resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) {
               if (table === failTable) {
                 return Promise.resolve({ data: null, error: new Error("boom") }).then(resolve, reject);
               }
