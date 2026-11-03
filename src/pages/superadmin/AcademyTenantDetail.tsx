@@ -108,6 +108,16 @@ export default function AcademyTenantDetail() {
     setFormInitialized(true);
   }, [tenant, formInitialized, persistedTier]);
 
+  // The form above only initialises once, so after a save (e.g. "End Vivacity
+  // Academy Access") the switch would keep showing the old value while the
+  // header badge reads the refetched tenant. Follow the saved value whenever it
+  // changes after the initial load.
+  const savedAccessEnabled = tenant?.academy_access_enabled;
+  useEffect(() => {
+    if (!formInitialized || savedAccessEnabled === undefined) return;
+    setFormAccess(savedAccessEnabled);
+  }, [savedAccessEnabled, formInitialized]);
+
   const saveMutation = useUpdateTenantAccess();
   const { data: autoEnrolRules = [] } = usePackageCourseRules(!!tenant && !persistedTier);
   const addRuleMutation = useAddPackageCourseRule();
