@@ -234,6 +234,28 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-29): the migration runs no INSERT, UPDATE or DELETE when applied, creates one new table, and changes no existing row (no To-Do, Rock or milestone is touched). Every flagged INSERT, DELETE or UPDATE is inside a function body (add_rock_todo, link_todo_to_rock, unlink_todo_from_rock) or is part of the CREATE TRIGGER clause of a validation trigger, and runs only when a signed-in staff user calls the function: each is SECURITY DEFINER with an empty search_path, checks is_vivacity_team_safe(auth.uid()) before any write, and is not executable by anon. The one DELETE removes only the link row and never a To-Do. The new table has select-only grants. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted). See docs/audit-log/entries/2026-10-29-rock-todo-links.md.",
       "expires": "2026-11-28"
+    },
+    {
+      "id": "portal-audit-event-tenant-check",
+      "file": "supabase/migrations/20261029130000_portal_audit_event_tenant_check.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE when applied and changes no existing row. The flagged INSERT is the statement inside the body of log_portal_document_event(), which writes one audit row only when the function is called. The migration adds caller, action and document-ownership checks before that INSERT for end-user calls (calls with no end user are unchanged) and sets explicit EXECUTE grants for authenticated and service_role only. Checked on unicorn-qa inside rolled-back transactions only (9 checks across personas, no residue); an aggregate read on production confirmed the 99 existing audit rows satisfy the new rules. Not applied to production until Carl approves the apply.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "portal-audit-event-tenant-check-rollback",
+      "file": "supabase/migrations/rollback/20261029130000_portal_audit_event_tenant_check.down.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): rollback file for 20261029130000_portal_audit_event_tenant_check.sql, run only to revert it. The flagged INSERT is the same statement inside the restored function body (the previous version without the new checks); nothing is inserted when the file is applied. Not applied unless the migration is reverted.",
+      "expires": "2026-12-03"
     }
   ]
 }
