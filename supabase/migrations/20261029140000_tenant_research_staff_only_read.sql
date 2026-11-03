@@ -3,10 +3,11 @@
 --
 -- research_jobs, research_findings and research_sources were readable by any active member of
 -- the job's tenant, with no review_status filter, so a draft AI/research brief written for a
--- tenant would have been visible to that tenant's own users as soon as it existed. No such rows
--- exist in production today (all research output is regulator-watch or Ask Viv, none
--- tenant-bound) and no client screen reads tenant-bound research, so this changes nothing
--- anyone can see now; it must be in place before research runs against a real tenant.
+-- tenant would have been visible to that tenant's own users as soon as it existed. As read on
+-- 2026-11-03, production holds 11 tenant-bound research_jobs rows (all failed, across 3 tenants,
+-- with no findings or sources), so this closes a small live exposure of those job rows, not only
+-- a future one. No client screen reads tenant-bound research, so no feature depends on it, and it
+-- must be in place before research runs against a real tenant.
 --
 -- Provisional choice: staff-only. Revert path: the rollback restores the previous policies;
 -- a later "release to client" mechanism can widen it deliberately.
