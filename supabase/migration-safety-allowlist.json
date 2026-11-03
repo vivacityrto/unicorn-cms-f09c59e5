@@ -323,6 +323,50 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE on any row when applied; it only creates functions and grants. All 14 flagged INSERT, UPDATE and ON CONFLICT DO UPDATE statements sit inside the bodies of the TAS intake write functions (start, save, submit, review, return for edit, redact) and their internal helpers, which run only when a signed-in caller invokes them. Each is SECURITY DEFINER with an empty search_path, authorises the caller first (staff functions require staff; client functions refuse staff and require a full-scope, non-disabled member of the intake's tenant; an unknown and a foreign intake give the same error), is not executable by anon, and writes its audit row in the same transaction. The tables they write have SELECT-only grants and guard triggers. Checked on unicorn-qa inside rolled-back transactions (about 40 flow and persona checks, no residue). Production apply is held until a final review, together with the tables migration.",
       "expires": "2026-12-03"
+    },
+    {
+      "id": "tas-client-view",
+      "file": "supabase/migrations/20261103070000_tas_client_view.sql",
+      "categories": [
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): applying the migration runs no INSERT, UPDATE or DELETE on any row; it adds two release columns, replaces two functions and three read policies, and creates new functions. Every flagged UPDATE is inside a function body: release stamps released_at/released_by and bumps row_version, confirm/flag stamps the caller's own answer decisions, submit freezes the draft version. Each is staff- or client-gated, optimistic-concurrency checked and audited. Applied to unicorn-qa and checked inside rolled-back transactions (about 40 persona checks: unreleased intake invisible, staff refused on client functions, cross-tenant, disabled, academy-only and anon refused, no residue). Production apply follows with a rolled-back smoke test. Rollback: rollback/20261103070000_tas_client_view.down.sql.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "tas-client-view-rollback",
+      "file": "supabase/migrations/rollback/20261103070000_tas_client_view.down.sql",
+      "categories": [
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback script for the TAS client view migration (2026-11-03). It restores the previous bodies of two functions, whose UPDATE statements are inside function bodies and run only when those functions are called; applying the script itself updates no rows. See the entry for the forward migration.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "tas-client-view-fixes",
+      "file": "supabase/migrations/20261103080000_tas_client_view_fixes.sql",
+      "categories": [
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): applying the migration runs no INSERT, UPDATE or DELETE on any row; it replaces the bodies of two existing functions (tas__submit, tas_client_get_summary) with the same signatures and grants. The flagged UPDATEs are the unchanged submit statements inside the tas__submit body, which run only when a caller submits an intake. Fixes two review findings on PR 1501: a removed answer no longer blocks a client submit, and a returned answer must be decided again. Applied to unicorn-qa and production and checked in rolled-back transactions (both scenarios, no residue). Rollback: rollback/20261103080000_tas_client_view_fixes.down.sql.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "tas-client-view-fixes-rollback",
+      "file": "supabase/migrations/rollback/20261103080000_tas_client_view_fixes.down.sql",
+      "categories": [
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback script for the TAS client view fixes migration (2026-11-03). It restores the previous bodies of two functions; the flagged UPDATEs are inside the tas__submit body and run only when a caller submits an intake. Applying the script itself updates no rows.",
+      "expires": "2026-12-03"
     }
   ]
 }
