@@ -63,7 +63,7 @@ test("persona reaches its current tenant/staff read shell", async ({ page }, tes
   }
 
   await openReadOnlyPage(page, "/manage-tenants", /Manage Clients/, testInfo.project.name);
-  const search = page.getByPlaceholder("Search clients by name or slug...");
+  const search = page.getByPlaceholder(/Search clients by name/);
   await expect(search).toBeVisible();
   await fillSearchAndWait(search, "__tom_p0_no_match__");
   await fillSearchAndWait(search, "");

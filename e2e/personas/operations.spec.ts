@@ -19,7 +19,7 @@ async function openOperationalPage(page: Page, path: string, heading: RegExp) {
 
 test("Manage Clients loads real client operations and supports safe filtering", async ({ page }) => {
   const pageErrors = await openOperationalPage(page, "/manage-tenants", /Manage Clients/);
-  const search = page.getByPlaceholder("Search clients by name or slug...");
+  const search = page.getByPlaceholder(/Search clients by name/);
 
   await expect(search).toBeVisible();
   await search.fill("__characterization_no_match__");

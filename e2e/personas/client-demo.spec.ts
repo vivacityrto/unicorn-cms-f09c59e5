@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { closePortalUpdateIfShown } from "./helpers";
 
 // Client persona (P0.8), using the "Demo RTO" test tenant -- a real client
 // account, not staff impersonation ("View as Client" is explicitly not a
@@ -13,6 +14,7 @@ test("Client home loads as an authenticated client, not staff shell", async ({ p
   const response = await page.goto("/client/home");
   expect(response?.status()).toBeLessThan(400);
   await expect(page).not.toHaveURL(/\/login/);
+  await closePortalUpdateIfShown(page);
   // ClientHomePage's time-aware greeting ("Good morning/afternoon/evening[, name]")
   // -- confirms this is really the client persona landing on real content,
   // not a staff/SA session that happened to also load something at this path.
@@ -44,15 +46,7 @@ test("real client can inspect users and sees only client invite roles", async ({
   expect(response?.status()).toBeLessThan(400);
   await expect(page).not.toHaveURL(/\/login/);
 
-  // The real Demo RTO account may have an unread portal update. Close the
-  // review overlay locally (the X only changes dialog state; Done/Open
-  // details would mark the production notification read or navigate away).
-  const portalUpdate = page.getByRole("dialog", { name: /Fee-Free TAFE|portal update/i });
-  await portalUpdate.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
-  if (await portalUpdate.isVisible().catch(() => false)) {
-    await portalUpdate.getByRole("button", { name: "Close" }).click();
-    await expect(portalUpdate).toBeHidden();
-  }
+  await closePortalUpdateIfShown(page);
 
   await expect(page.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
 
