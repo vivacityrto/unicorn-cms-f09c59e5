@@ -300,6 +300,18 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-11-03): rollback file for 20261103030000_tenant_access_helpers_exclude_blocked_users.sql, run only to revert it. The flagged INSERT is the same statement inside the restored log_portal_document_event() body; nothing is inserted when the file is applied. Not applied unless the migration is reverted.",
       "expires": "2026-12-03"
+    },
+    {
+      "id": "tas-intake-spike-qa-only",
+      "file": "supabase/migrations/20261103040000_tas_intake_spike_qa_only.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "qfpxvumcrnzrjyvqkicq",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): QA-ONLY throwaway spike, a draft PR that is never merged and never applied to production. The migration runs no INSERT, UPDATE or DELETE on any existing row when applied and creates three new empty tables. Every flagged INSERT, UPDATE and ON CONFLICT DO UPDATE sits inside the body of tas_start_intake, tas_save_answers or tas_submit, which run only when a signed-in staff user calls them (SECURITY DEFINER, empty search_path, tas_staff() checked before any write, not executable by anon). The tables have SELECT-only grants and freeze triggers. Checked on unicorn-qa inside rolled-back transactions only (24 checks: staff, client, other-tenant, disabled, anon, owner and service_role personas; no residue). Drop script: rollback/20261103040000_tas_intake_spike_qa_only.down.sql.",
+      "expires": "2026-12-03"
     }
   ]
 }
