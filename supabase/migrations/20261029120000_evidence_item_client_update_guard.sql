@@ -13,7 +13,7 @@
 --    full-scope member of the request's tenant, with a WITH CHECK).
 -- 3. A BEFORE UPDATE guard for non-staff callers: only received_document_id, received_at and
 --    status may change; status may only become 'received' (from pending, rejected or
---    resubmit_requested); an accepted item is frozen; the attached document must belong to the
+--    resubmit_requested) and only with a document attached; an accepted item is frozen; the attached document must belong to the
 --    same tenant. The guard keys on auth.uid() / is_staff(), not the JWT role claim, and lets
 --    trusted server paths (auth.uid() is null, e.g. service_role) through.
 -- 4. anon loses UPDATE on the table (RLS already denied it; the grant was never needed).
@@ -47,12 +47,14 @@ GRANT EXECUTE ON FUNCTION public.user_has_full_tenant_access(bigint) TO authenti
 
 DROP POLICY IF EXISTS evidence_request_items_update ON public.evidence_request_items;
 
+DROP POLICY IF EXISTS evidence_request_items_update_staff ON public.evidence_request_items;
 CREATE POLICY evidence_request_items_update_staff
   ON public.evidence_request_items FOR UPDATE
   TO authenticated
   USING (public.is_staff())
   WITH CHECK (public.is_staff());
 
+DROP POLICY IF EXISTS evidence_request_items_update_client ON public.evidence_request_items;
 CREATE POLICY evidence_request_items_update_client
   ON public.evidence_request_items FOR UPDATE
   TO authenticated
@@ -112,6 +114,13 @@ BEGIN
      AND (NEW.status <> 'received'
           OR OLD.status NOT IN ('pending', 'rejected', 'resubmit_requested')) THEN
     RAISE EXCEPTION 'A client can only mark an evidence item as received'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF NEW.status IS DISTINCT FROM OLD.status
+     AND NEW.status = 'received'
+     AND NEW.received_document_id IS NULL THEN
+    RAISE EXCEPTION 'An evidence item can only be marked received with an attached document'
       USING ERRCODE = '42501';
   END IF;
 
