@@ -234,6 +234,28 @@
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-29): the migration runs no INSERT, UPDATE or DELETE when applied, creates one new table, and changes no existing row (no To-Do, Rock or milestone is touched). Every flagged INSERT, DELETE or UPDATE is inside a function body (add_rock_todo, link_todo_to_rock, unlink_todo_from_rock) or is part of the CREATE TRIGGER clause of a validation trigger, and runs only when a signed-in staff user calls the function: each is SECURITY DEFINER with an empty search_path, checks is_vivacity_team_safe(auth.uid()) before any write, and is not executable by anon. The one DELETE removes only the link row and never a To-Do. The new table has select-only grants. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted). See docs/audit-log/entries/2026-10-29-rock-todo-links.md.",
       "expires": "2026-11-28"
+    },
+    {
+      "id": "evidence-item-client-update-guard",
+      "file": "supabase/migrations/20261029120000_evidence_item_client_update_guard.sql",
+      "categories": [
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE on any row when applied and changes no existing row. The flagged REVOKE UPDATE removes the UPDATE privilege on public.evidence_request_items from anon, which row-level security already denied. The migration also adds a BEFORE UPDATE guard trigger on that table; it only REFUSES updates by non-staff signed-in users outside the attached-file columns and returns the row unchanged for staff and for server paths with no end user. Checked on unicorn-qa inside rolled-back transactions only (12 checks across client, academy-only, other-tenant, staff, anon and server personas, no residue). Not applied to production until Carl approves the apply.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "evidence-item-client-update-guard-rollback",
+      "file": "supabase/migrations/rollback/20261029120000_evidence_item_client_update_guard.down.sql",
+      "categories": [
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): rollback file for 20261029120000_evidence_item_client_update_guard.sql, run only to revert it. The flagged GRANT UPDATE restores anon's previous UPDATE privilege on public.evidence_request_items; it runs no row DML. Not applied unless the migration is reverted.",
+      "expires": "2026-12-03"
     }
   ]
 }
