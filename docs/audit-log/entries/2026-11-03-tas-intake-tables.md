@@ -1,4 +1,4 @@
-# Audit: 2026-11-03 — TAS intake tables and access rules (QA applied, production pending)
+# Audit: 2026-11-03 — TAS intake tables and access rules (applied to QA and production)
 
 **Trigger:** ad-hoc (second schema step of the TAS intake workstream; see the [workstream plan](../../kb/reference/tas-intake/phase-1/tas-intake-plan.md))
 **Scope:** the structure and access rules for the TAS intake: six tables, two helpers and five guard functions. No write functions and no data. Not covered: the write functions, the client portal, and the private seeding of question wording.
@@ -10,17 +10,21 @@
 - Adjacent observation, not changed here: on production, tables created with Supabase's default privileges (for example the existing research and TAS-context tables) give `anon` and `authenticated` the full set of table privileges including TRUNCATE, with row-level security on. RLS covers row-level DML but not TRUNCATE; the REST API does not expose TRUNCATE, so this is reachable only through a direct database connection as those roles. The new tables revoke these explicitly.
 
 ## Code changes
-- Migration `20261103050000_tas_intake_tables.sql` and its rollback. Applied to `unicorn-qa` (replacing the throwaway spike objects, which were dropped first). **Not applied to production**: that waits until the write functions are proven on QA, so the schema and its functions go together.
+- Migration `20261103050000_tas_intake_tables.sql` and its rollback. Applied to `unicorn-qa` (replacing the throwaway spike objects, which were dropped first) and then to production on 2026-11-03 as version `20261103042254`, together with the write functions (see [2026-11-03-tas-intake-functions](2026-11-03-tas-intake-functions.md)).
 - `supabase/qa-checks/tas_intake_personas.sql`: a re-runnable, rolled-back persona and guard check for `unicorn-qa`.
 - One reviewed, short-lived migration-safety allowlist entry (the flagged INSERT is the audit write inside the redaction guard).
 
 ## Verification
 - `unicorn-qa`, rolled-back transactions only, no residue: staff, client of the tenant, client of another tenant, disabled client, academy-only client and anon reads; direct writes refused on all six tables; GTO refused; stage-versus-tenant mismatch refused; duplicate key refused and a second cohort label allowed; AI source refused; deletes refused; original answer never overwritten; frozen answers cannot be edited, added to or un-frozen; redaction allowed only as a pure redaction, audited, and refused for a client, with extra changes or with a wrong marker; redacted answers are final; review and audit tables are append-only. (One check in the script initially failed because of a script error on a table with no `id` column; it was fixed and re-run.)
 
+## Production verification
+- Read-only postflight, catalogue only: 6 tables with row-level security on and 6 policies; no non-SELECT grant to `anon`, `authenticated` or PUBLIC and no grant at all to `anon`; 8 guard triggers; one overload per function; 0 rows.
+- Production applied only after the functions were proven on QA, so the schema and its functions went together. The tables stay empty until the question wording is seeded privately.
+
 ## Decisions
-- Production apply is deliberately held back: no consumer can write to the tables yet, and the next step may still adjust columns.
+- Applied to production together with the functions, after both had passed their QA checks.
 
 ## Open questions parked
-- Write functions (save, submit, return, review, redaction) and the content-hash algorithm (SHA-256, not MD5).
+- The released client summary and a server-side starter-settled check (the write functions themselves are now live; see the functions entry).
 - The retention period before automatic redaction is for Vivacity's governing persons.
 - The default-privilege grants noted above, across existing tables.
