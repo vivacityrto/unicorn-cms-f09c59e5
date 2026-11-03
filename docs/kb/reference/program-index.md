@@ -1,6 +1,6 @@
 # Unicorn 2.0 — Program Index
 
-> **Last updated:** 2026-09-16 · **Reconsider by:** 2026-10-10 · **Confidence:** high (status lines below are read from each initiative's own master doc header and the latest merged phase/packet evidence, not inferred).
+> **Last updated:** 2026-09-16 (TAS workstream rows added 2026-11-03; the four initiative rows were not re-reviewed then) · **Reconsider by:** 2026-10-10 (overdue) · **Confidence:** high for the 2026-09-16 rows (status lines were read from each initiative's own master doc header and the latest merged phase/packet evidence, not inferred); the TAS rows are planning-stage only.
 
 Canonical glue across the four active initiatives. This file records
 **status, current phase/packet, dependencies/gates, authoritative document
@@ -39,6 +39,7 @@ initiatives above without becoming new cross-cutting programs.
 | Workstream | Status | Current packet | Dependencies/gates |
 |---|---|---|---|
 | Academy Solo MVP | implementation in progress (controlled pilot target 2026-09-15); invitation compatibility, capacity-RPC, reversible-Solo, drawer-close, and RTO-default fixes prepared; authenticated pilot verification pending | [`academy-solo-mvp-implementation-packet.md`](academy-solo/phase-1/academy-solo-mvp-implementation-packet.md) | Existing identity/tenant primitives; server-side Academy boundary; valid legacy `User` role plus `academy_user`/`academy_only` authority; distinct Academy Customers lifecycle; explicit Academy-vs-RTO directory classification with RTO default; no RTO/package/Client Health semantics; named-user approval; QA negative cases; separate hosted migration review. |
+| TAS intake and consultant builder | planning; direction approved 2026-11-03, no implementation started | [`tas-intake-plan.md`](tas-intake/phase-1/tas-intake-plan.md) | Existing tenant, stage-task, evidence and research primitives; separate production-hardening work gating the evidence and research phases; privacy impact assessment and client-type gate before anything client-facing; no voice or AI model in the MVP; QA-first migrations with explicit production approval; engine reuse needs a written decision by both entities' governing persons. |
 
 ## Active work
 
@@ -54,6 +55,7 @@ real-time state.
 | Tenant Operating Model | P1.2-c complete; work paused for Carl's temporary ComplyHub focus. Resume from the [Codex pause/resume handoff](tenant-operating-model/p1/tom-codex-pause-resume-handoff-2026-09-16.md) | — | Codex | 2026-09-16 |
 | Client Health Activity Analytics | H0 containment and evidence preparation delivered; consultant operational data blocks metric policy; replacement shadow remains separately gated | — | Claude Code / Codex | 2026-09-14 |
 | Academy Solo MVP delivery workstream | Phase 1 invitation compatibility, server boundary, manual lifecycle, and directory/account-surface separation | `codex/manage-clients-academy-surface-20260915` | Codex | 2026-09-15 |
+| TAS intake and consultant builder workstream | Planning approved; hardening track, privacy gate and throwaway QA spike are the first work | — | Claude Code | 2026-11-03 |
 
 ## Dependencies and gates
 
