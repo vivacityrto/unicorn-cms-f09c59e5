@@ -197,6 +197,17 @@ describe('TasIntakePage', () => {
     expect(await screen.findByText(/someone else changed this/i)).toBeTruthy();
   });
 
+  it('keeps the error when a failed confirm is followed by a successful reload', async () => {
+    rpc.mockImplementation((fn: string) =>
+      fn === 'tas_client_confirm_answers'
+        ? Promise.resolve({ data: null, error: { code: 'XX000', message: 'boom' } })
+        : Promise.resolve({ data: summary([answer({})]), error: null }),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /this is right: question one/i }));
+    expect(await screen.findByText(/could not save that/i)).toBeTruthy();
+  });
+
   it('points a returned answer out to the client', async () => {
     rpc.mockResolvedValue({ data: summary([answer({ returned: true })], 'returned'), error: null });
     renderPage();

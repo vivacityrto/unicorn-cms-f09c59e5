@@ -74,10 +74,12 @@ export function useTasClientSummary(intakeId: string | undefined) {
       setBusy(true);
       const { error } = await rpcClient.rpc(fn, args);
       if (error) {
-        // SQLSTATE 40001: someone else changed the intake. Reload and let the person try again.
-        setProblem(error.code === '40001' ? 'conflict' : error.code === '22023' ? 'not_found' : 'other');
+        // SQLSTATE 40001: someone else changed the intake. Reload so the person sees the current state,
+        // then show the problem (a successful reload clears it, so it is set afterwards).
+        const failure: TasLoadProblem =
+          error.code === '40001' ? 'conflict' : error.code === '22023' ? 'not_found' : 'other';
         await load();
-        if (error.code === '40001') setProblem('conflict');
+        setProblem(failure);
         setBusy(false);
         return false;
       }

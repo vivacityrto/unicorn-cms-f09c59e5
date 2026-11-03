@@ -13,13 +13,20 @@
 - Migration `20261103070000_tas_client_view.sql` and its rollback. Applied to `unicorn-qa`, then to production on 2026-11-03 as version `20261103043744`. Adds `tas_intake.released_at` / `released_by`, two release helpers, three replaced read policies, replaced `tas__authorise` and `tas__submit`, and three functions: `tas_staff_release_to_client`, `tas_client_get_summary`, `tas_client_confirm_answers`.
 - `supabase/qa-checks/tas_client_view.sql`: a re-runnable, rolled-back persona check for `unicorn-qa`.
 - Frontend: `src/pages/client/TasIntakePage.tsx`, `src/hooks/useTasClientSummary.ts` (one typed adapter over the untyped RPC calls until Supabase types are regenerated), a lazy child route `/client/tas/:intakeId`, and ten component tests.
-- Two reviewed, short-lived migration-safety allowlist entries (the flagged UPDATEs are all inside function bodies).
+- Four reviewed, short-lived migration-safety allowlist entries (two for the fix migration) (the flagged UPDATEs are all inside function bodies).
 
 ## Verification
 - `unicorn-qa`, rolled-back transactions, no residue: about 40 checks covering the release gate, summary contents, confirm / flag, the submit rule, staff refused on client functions, and other-tenant, disabled, academy-only and anon callers refused.
 - Production, read-only postflight: one overload each, all SECURITY DEFINER with an empty search path; the new public functions are executable by `authenticated` and not by `anon` or PUBLIC; the internal helpers stay closed; the three read policies require release; both tables still empty.
 - Production, rolled-back smoke test (writes only to the new empty tables, 0 rows afterwards; the disabled-user and academy-only checks were left out of the production run because they would touch real user rows, and were proven on QA): staff refused on the client summary; an unreleased intake invisible and "Not found"; a client cannot release; stale release 40001; release audited once; a released intake readable by its own client only; other tenant and unknown intake give the same error; anon refused; submit before confirming refused; confirm and flag counts 2/1; staff refused on confirm; submit works and confirm after submit is refused; after a return the internal reason never appears, the returned flag does, a redacted answer comes back removed with no value, and confirming it is refused.
 - Frontend: typecheck clean, 1563 frontend tests and 495 edge tests pass, build passes, lint ratchet clean.
+
+## Review follow-up (same day)
+Three inline review findings on PR 1501 were checked against the code and all confirmed; none had surfaced in the first QA run (which redacted only after submit and never re-checked a returned answer).
+- **Removed answer blocked submit.** An answer redacted before the client confirmed it still counted as unchecked, and the client cannot confirm a removed answer, so submit could never succeed. Fixed.
+- **Returned answer still counted as confirmed.** The copy made on return keeps the earlier confirmation, so a returned answer let the client resubmit without looking at it again. A returned answer now counts as neither confirmed nor flagged until the client decides again, in the summary and in the submit check. Fixed.
+- **Frontend lost errors.** A failed confirm or submit had its error cleared when the reload succeeded; the error is now set after the reload. Fixed, with a test.
+- Migration `20261103080000_tas_client_view_fixes.sql` (function bodies only) and its rollback, applied to `unicorn-qa` and then to production as version `20261103044452`; `supabase/qa-checks/tas_client_view_fixes.sql` reproduces both scenarios. Both passed on QA and in a rolled-back production smoke test (0 rows afterwards); postflight showed one overload each and unchanged grants. The original `tas_client_view.sql` check script was not re-run after the fix; the new script covers confirm, submit, return and resubmit.
 
 ## Open questions parked
 - Live browser check of the page against a real released intake (nothing exists to release on production yet; needs seeded questions).
