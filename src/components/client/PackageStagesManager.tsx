@@ -30,6 +30,8 @@ import { StageDocumentsSection } from './StageDocumentsSection';
 import { StageEmailsSection } from './StageEmailsSection';
 import { StageNotesSection } from './StageNotesSection';
 import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
+import { TasIntakeSpikePanel } from './TasIntakeSpikePanel';
+import { isTasSpikeStage, useStageKey } from '@/hooks/useTasIntakeSpike';
 import { AuditProgressCard } from './AuditProgressCard';
 import { NewAuditModal } from '@/components/audit/NewAuditModal';
 import { AUDIT_STAGE_IDS, STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
@@ -102,6 +104,8 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
   const { statuses } = useTaskStatusOptions();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const stageKey = useStageKey(stage.stage_id);
+  const showTasSpike = isTasSpikeStage(stageKey, isVivacityStaffRole(profile?.unicorn_role));
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
@@ -302,6 +306,12 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
                 <FileText className="h-3.5 w-3.5" />
                 Documents{countBadge(documents)}
               </TabsTrigger>
+              {showTasSpike && (
+                <TabsTrigger value="tas-intake" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                  <ListTodo className="h-3.5 w-3.5" />
+                  TAS intake
+                </TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="staff-tasks" className="mt-0">
               <StageStaffTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} packageInstanceId={packageInstanceId ?? undefined} stageStatusId={statusCode} stageName={stage.stage_name} />
@@ -322,6 +332,11 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
                 isVivacityStaff={isVivacityStaffRole(profile?.unicorn_role)}
               />
             </TabsContent>
+            {showTasSpike && (
+              <TabsContent value="tas-intake" className="mt-0">
+                <TasIntakeSpikePanel stageInstanceId={stage.id} tenantId={tenantId} />
+              </TabsContent>
+            )}
           </Tabs>
         </CollapsibleContent>
       </div>
