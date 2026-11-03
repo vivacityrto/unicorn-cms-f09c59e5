@@ -138,7 +138,7 @@ export interface TGASummary {
   initial_registration_date: string | null;
   registration_start_date: string | null;
   registration_end_date: string | null;
-  fetched_at: string;
+  fetched_at: string | null;
 }
 
 export interface TGAContact {
@@ -312,7 +312,8 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
               initial_registration_date: null,
               registration_start_date: typedData.rto_data.registration_start,
               registration_end_date: typedData.rto_data.registration_end,
-              fetched_at: typedData.last_sync_at || new Date().toISOString(),
+              // A missing last_sync_at stays unknown; never present "now" as the data's age.
+              fetched_at: typedData.last_sync_at || null,
             });
 
             // Map scope items to qualifications/units/skillsets
