@@ -236,6 +236,28 @@
       "expires": "2026-11-28"
     },
     {
+      "id": "portal-audit-event-tenant-check",
+      "file": "supabase/migrations/20261029130000_portal_audit_event_tenant_check.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE when applied and changes no existing row. The flagged INSERT is the statement inside the body of log_portal_document_event(), which writes one audit row only when the function is called. The migration adds caller, action and document-ownership checks before that INSERT for end-user calls (calls with no end user are unchanged) and sets explicit EXECUTE grants for authenticated and service_role only. Checked on unicorn-qa inside rolled-back transactions only (9 checks across personas, no residue); an aggregate read on production confirmed the 99 existing audit rows satisfy the new rules. Not applied to production until Carl approves the apply.",
+      "expires": "2026-12-03"
+    },
+    {
+      "id": "portal-audit-event-tenant-check-rollback",
+      "file": "supabase/migrations/rollback/20261029130000_portal_audit_event_tenant_check.down.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Reviewed findings only (2026-11-03): rollback file for 20261029130000_portal_audit_event_tenant_check.sql, run only to revert it. The flagged INSERT is the same statement inside the restored function body (the previous version without the new checks); nothing is inserted when the file is applied. Not applied unless the migration is reverted.",
+      "expires": "2026-12-03"
+    },
+    {
       "id": "evidence-item-client-update-guard",
       "file": "supabase/migrations/20261029120000_evidence_item_client_update_guard.sql",
       "categories": [
@@ -243,7 +265,7 @@
       ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE on any row when applied and changes no existing row. The flagged REVOKE UPDATE removes the UPDATE privilege on public.evidence_request_items from anon, which row-level security already denied. The migration also adds a BEFORE UPDATE guard trigger on that table; it only REFUSES updates by non-staff signed-in users outside the attached-file columns and returns the row unchanged for staff and for server paths with no end user. Checked on unicorn-qa inside rolled-back transactions only (12 checks across client, academy-only, other-tenant, staff, anon and server personas, no residue). Not applied to production until Carl approves the apply.",
+      "reason": "Reviewed findings only (2026-11-03): the migration runs no INSERT, UPDATE or DELETE on any row when applied and changes no existing row. The flagged REVOKE UPDATE removes the UPDATE privilege on public.evidence_request_items from anon, which row-level security already denied. The migration also adds a BEFORE UPDATE guard trigger on that table; it only REFUSES updates by non-staff signed-in users outside the attached-file columns and returns the row unchanged for staff and for server paths with no end user. Checked on unicorn-qa inside rolled-back transactions only (12 checks across client, academy-only, other-tenant, staff, anon and server personas, plus 7 re-checks after the review fix, no residue). Applied to production on 2026-11-03 under Carl's authorisation, with a catalogue postflight.",
       "expires": "2026-12-03"
     },
     {
