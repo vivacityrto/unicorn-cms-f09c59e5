@@ -59,6 +59,7 @@ import { PackageTimeSection } from './PackageTimeSection';
 import { StartPackageDialog } from './StartPackageDialog';
 import { PackagePinnedNote } from './PackagePinnedNote';
 import { RenewalConfirmDialog } from './RenewalConfirmDialog';
+import { AnniversaryDateEditor } from './AnniversaryDateEditor';
 import { PackageDataManager } from './PackageDataManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -573,19 +574,12 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                         <CalendarIcon className="h-4 w-4 shrink-0" />
                         <span>Started {format(new Date(pkg.membership_started_at), 'd MMM yyyy')}</span>
                       </div>
-                      {pkg.start_renewal_date && pkg.last_renewed_date ? (
-                        <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
-                          <CalendarIcon className="h-4 w-4 shrink-0" />
-                          <span>
-                            Current period {format(parseISO(pkg.start_renewal_date), 'd MMM yyyy')}
-                            {pkg.next_renewal_date && ` – ${format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}`}
-                          </span>
-                        </div>
-                      ) : pkg.next_renewal_date && (
-                        <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">
-                          <CalendarIcon className="h-4 w-4 shrink-0" />
-                          <span>Anniversary {format(parseISO(pkg.next_renewal_date), 'd MMM yyyy')}</span>
-                        </div>
+                      {pkg.next_renewal_date && (
+                        <AnniversaryDateEditor
+                          pkg={pkg}
+                          canEdit={isSuperAdmin() && !pkg.is_complete}
+                          onSaved={() => onRefresh?.()}
+                        />
                       )}
                       {pkg.last_renewed_date && (
                         <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap">

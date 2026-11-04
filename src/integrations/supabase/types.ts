@@ -73357,6 +73357,10 @@ export type Database = {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }
         Returns: undefined
       }
+      set_package_anniversary_date: {
+        Args: { p_instance_id: number; p_new_date: string; p_reason: string }
+        Returns: Json
+      }
       set_relationship_role: {
         Args: {
           p_reason?: string
