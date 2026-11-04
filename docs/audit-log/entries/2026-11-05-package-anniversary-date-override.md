@@ -23,7 +23,9 @@
 - `src/components/client/ClientPackagesTab.tsx` uses the editor in place of the two read-only date labels. `src/integrations/supabase/types.ts` gains the RPC signature.
 - Tests: `src/test/packages/anniversaryOverride.test.ts` (7 tests: defaulting, custom detection, bounds at exactly 3 years and one day over, unchanged, past-date warning).
 
-**Verification.** Package test files 4/4 pass (82 tests). Type-check and ESLint clean on the touched files. The function was exercised on `unicorn-qa` inside a transaction that was rolled back by a raised exception: unauthenticated call refused (`42501`); short reason, date on or before the period start, more than 3 years, unchanged date, completed package all refused (`22023`); missing instance refused (`P0002`); a valid change updated the date, wrote one audit row and recomputed `hours_used`. QA afterwards had no function, no audit rows and the original values. **Not yet applied to production** — see below.
+**Verification.** Package test files 4/4 pass (82 tests). Type-check and ESLint clean on the touched files. The function was exercised on `unicorn-qa` inside a transaction that was rolled back by a raised exception: unauthenticated call refused (`42501`); short reason, date on or before the period start, more than 3 years, unchanged date, completed package all refused (`22023`); missing instance refused (`P0002`); a valid change updated the date, wrote one audit row and recomputed `hours_used`. QA afterwards had no function, no audit rows and the original values.
+
+**Production.** Applied to `yxkgdalkbrriasiyyrwk` on 5 Nov 2026 at Carl's instruction through the Supabase MCP (migration name `set_package_anniversary_date_rpc`, SQL identical to the committed file). Before: the function did not exist. Postflight (read-only): exactly one function with the signature `(bigint, date, text)`; `SECURITY DEFINER` with an empty `search_path`; EXECUTE held by `authenticated` and not by `anon` or `PUBLIC`; an unauthenticated call is refused with `42501`; zero `anniversary_date_override` audit rows, so no package date was changed. The happy path was not run on production, by design (it would alter a real package); it was proven on `unicorn-qa` above.
 
 ## Decisions
 
@@ -33,7 +35,7 @@
 
 ## Open questions parked
 
-- Apply the migration to production (needs Carl's explicit go-ahead; migrations go through the Supabase MCP). Until it is applied the pencil will return an error on save.
+- The UI is not live until PR 1507 is merged (the function is already in production; the pencil ships with the frontend merge). Merge needs an explicit ask.
 - `RenewalConfirmDialog` shows "Current Period" as `anniversary − 1 year → anniversary`, not the real window start, so for a package with a custom anniversary its display (not its saved values) can disagree with the card. Candidate follow-up: use `COALESCE(start_renewal_date, start_date)` there.
 - The 12 active packages at 730 days and the 8 off-cycle ones are not changed by this work. Whether each is intentional or an error needs a per-package decision by the CSC or Angela.
 - Pro-rating included hours for non-standard periods.
