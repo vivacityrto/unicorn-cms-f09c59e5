@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-11-04 - Rock notes CRUD production release](entries/2026-11-04-rock-notes-production-release.md) - approved migration `20261031054829_rock_notes_crud` applied to production ref `yxkgdalkbrriasiyyrwk` as version `20261104132015`; schema, RLS, grants and guard trigger verified, all five existing notes preserved by fingerprint, and the authenticated Notes panel rendered with no note edits or deletions
 - [2026-11-03 — TAS client confirm view](entries/2026-11-03-tas-client-view.md) — release gate (a client sees nothing until a consultant releases), a read-only client summary with no internal content, confirm and flag, submit needs every answer checked; applied to `unicorn-qa` and production, plus the client page
 - [2026-11-03 — TAS intake write functions](entries/2026-11-03-tas-intake-functions.md) — eight caller-checked functions (start, save, submit, review, return for edit, redact, staff and client variants) applied to `unicorn-qa` and production: client functions refuse staff, stale saves refused, idempotent hashed submit, copy-on-return, erasure across versions, audit without content; a rolled-back production smoke test passed.
 - [2026-11-03 — TAS intake tables and access rules](entries/2026-11-03-tas-intake-tables.md) — six tables, helpers and guard triggers applied to `unicorn-qa` and production: SELECT-only grants, staff-only decisions and audit, a freeze with an audited redaction path, GTO clients refused; no write functions or data yet.
