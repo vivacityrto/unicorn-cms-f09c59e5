@@ -179,3 +179,22 @@ Once those pass, the same QA environment can support the broader layered
 coverage model. Expansion should be tracked as separate suites and impact
 packets rather than inflating `isolation.test.tsx` into an unreviewable
 all-purpose test.
+
+## Rock Notes panel QA follow-on (2026-11-04)
+
+The existing protected manual QA workflow now supports a bounded `rock_notes`
+canary using the existing Super Admin, Team Member author and Integrator
+non-author sessions. Run
+[`41829458958`](https://github.com/vivacityrto/unicorn-cms-f09c59e5/actions/runs/41829458958)
+passed both the authenticated CRUD/RLS checks and the rendered Notes panel
+checks. The labeled fixture used QA tenant 20 and was removed through the
+authorized Super Admin session; an independent read-only postflight found no
+matching Rock or note rows and two durable `created`/`deleted` events.
+
+The app''s regular Rocks hierarchy remains scoped to tenant 6372, so the QA
+tenant-20 fixture is rendered through a separate development-only harness,
+not by changing the app''s tenant filter. This does not weaken RLS or permissions
+and does not make the harness part of the production bundle. Details and the
+remaining release hold are tracked in the
+[Rock notes CRUD audit](../../../../audit-log/entries/2026-10-31-rock-notes-crud.md)
+and the [Rock notes codebase state](../../../codebase-state/rock-notes.md).
