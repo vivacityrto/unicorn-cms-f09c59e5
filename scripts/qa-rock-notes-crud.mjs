@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// One-row, authenticated QA verification of the Rock Notes CRUD RLS policies.
-// It consumes storage states produced by e2e/auth-setup.mjs after real logins;
-// it never creates or resets users and never uses a service-role key.
+// One-row, authenticated QA verification of Rock Notes CRUD RLS and the actual
+// panel. It consumes real-login storage states; it never creates/resets users,
+// changes app tenant scope, or uses a service-role key.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { verifyRockNotesPanelUi } from "./qa-rock-notes-panel-ui.mjs";
 
 export const QA_PROJECT_REF = "qfpxvumcrnzrjyvqkicq";
 export const QA_PROJECT_URL = `https://${QA_PROJECT_REF}.supabase.co`;
@@ -236,8 +237,15 @@ async function run() {
   ]);
 
   const title = `[QA TEST ONLY] Rock Notes CRUD ${config.runId}`;
-  const authorNoteBody = `[QA TEST ONLY] Rock Notes CRUD ${config.runId} :: author-delete`;
-  const superAdminNoteBody = `[QA TEST ONLY] Rock Notes CRUD ${config.runId} :: super-admin-delete`;
+  const authorNoteBody = `[QA TEST ONLY] Rock Notes CRUD ${config.runId} :: author`;
+  const superAdminNoteBody = `[QA TEST ONLY] Rock Notes CRUD ${config.runId} :: super-admin-target`;
+  const bodies = {
+    author: authorNoteBody,
+    adminTarget: superAdminNoteBody,
+    authorUiEdited: `${authorNoteBody} :: ui-author-edited`,
+    uiAdded: `[QA TEST ONLY] Rock Notes CRUD ${config.runId} :: ui-author-added`,
+    adminUiEdited: `${superAdminNoteBody} :: ui-super-admin-edited`,
+  };
   // Edits stay inside this run-scoped allowlist so cleanup can never touch
   // an unexpected note, while still recognizing every body this test writes.
   const noteBodies = new Set([
@@ -245,6 +253,9 @@ async function run() {
     superAdminNoteBody,
     `${authorNoteBody} :: author-edited`,
     `${authorNoteBody} :: super-admin-edited`,
+    bodies.authorUiEdited,
+    bodies.uiAdded,
+    bodies.adminUiEdited,
   ]);
   const tenantResult = await author.client.from("tenants").select("id, slug").eq("id", QA_FIXTURE_TENANT_ID).single();
   const tenant = requireSuccess(tenantResult, "Verify the QA fixture tenant");
@@ -299,7 +310,7 @@ async function run() {
     rockId = readId(requireSuccess(createResult, "Create the single synthetic QA Rock"), "Rock creation");
 
     const authorDeleteNote = await addNote(author.client, rockId, authorNoteBody);
-    const superAdminDeleteNote = await addNote(author.client, rockId, superAdminNoteBody);
+    await addNote(author.client, rockId, superAdminNoteBody);
 
     const authorNote = await author.client
       .from("eos_rock_notes")
@@ -344,19 +355,13 @@ async function run() {
       throw new Error("Super Admin edit did not timestamp the body-only change or preserve authorship");
     }
 
-    const superAdminDelete = await superAdmin.client
-      .from("eos_rock_notes")
-      .delete()
-      .eq("id", authorDeleteNote)
-      .select("id");
-    expectOneRow(requireSuccess(superAdminDelete, "Super Admin delete"), "Super Admin delete");
-
-    const authorDelete = await author.client
-      .from("eos_rock_notes")
-      .delete()
-      .eq("id", superAdminDeleteNote)
-      .select("id");
-    expectOneRow(requireSuccess(authorDelete, "Author delete"), "Author delete");
+    await verifyRockNotesPanelUi({
+      stateDirectory,
+      runId: config.runId,
+      rockId,
+      title,
+      bodies,
+    });
   } catch (error) {
     operationError = error;
   } finally {
@@ -376,7 +381,7 @@ async function run() {
     throw new Error(`QA Rock Notes role verification failed for run ${config.runId}: ${safeMessage(operationError)}; synthetic rows were cleaned where safe`);
   }
   if (!cleanupResult) throw new Error(`QA Rock Notes fixture was not created for run ${config.runId}`);
-  console.log(`QA Rock Notes RLS verification passed for ${config.runId}: 1 synthetic Rock, 2 notes, 3 active role sessions; Rock/note rows cleaned, ${cleanupResult.eventCount} audit events preserved.`);
+  console.log(`QA Rock Notes RLS and rendered panel verification passed for ${config.runId}: 1 synthetic Rock, 2 seeded notes, 3 active role sessions; Rock/note rows cleaned, ${cleanupResult.eventCount} audit events preserved.`);
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

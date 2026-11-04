@@ -9,7 +9,7 @@ on:
         default: false
         type: boolean
       rock_notes:
-        description: "Run one labeled synthetic Rock Notes RLS canary in unicorn-qa"
+        description: "Run one labeled synthetic Rock Notes UI and RLS canary in unicorn-qa"
         required: false
         default: false
         type: boolean
@@ -209,7 +209,7 @@ jobs:
           E2E_EMAIL=qa-e2e-superadmin@example.qa E2E_PASSWORD="$QA_E2E_SUPERADMIN_PASSWORD" node e2e/auth-setup.mjs qa-superadmin
           E2E_EMAIL=tom_qa_20260913_seed_01_csc@example.qa E2E_PASSWORD="$QA_TOM_CSC_PASSWORD" node e2e/auth-setup.mjs tom-csc
           E2E_EMAIL=tom_qa_20260913_seed_01_integrator@example.qa E2E_PASSWORD="$QA_TOM_INTEGRATOR_PASSWORD" node e2e/auth-setup.mjs tom-integrator
-      - name: Run bounded Rock Notes RLS canary
+      - name: Run bounded Rock Notes RLS and panel canary
         env:
           QA_SUPABASE_PROJECT_REF: qfpxvumcrnzrjyvqkicq
           QA_ROCK_NOTES_TEST_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
