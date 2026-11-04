@@ -218,7 +218,7 @@ async function cleanup({ author, superAdmin, title, runId, noteBodies, rockId, c
     .from("eos_rock_events")
     .select("action, actor_user_id, rock_title")
     .eq("rock_id", rockId)
-    .order("created_at", { ascending: true });
+    .order("occurred_at", { ascending: true });
   const events = requireSuccess(eventsResult, "Postflight Rock event check");
   if (events.length !== 2 || events[0].action !== "created" || events[1].action !== "deleted" || events.some(event => event.rock_title !== title)) {
     throw new Error(`Expected the synthetic Rock's two durable audit events for run ${runId}`);
@@ -364,7 +364,10 @@ async function run() {
       cleanupResult = await cleanup({ author, superAdmin, title, runId: config.runId, noteBodies, rockId, createAttempted });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "unknown cleanup failure";
-      console.error(`Synthetic QA fixture may remain; its label is "${title}". ${detail}`);
+      const operationDetail = operationError
+        ? `Role verification also failed: ${safeMessage(operationError)}`
+        : "Role verification operations completed before cleanup.";
+      console.error(`Synthetic QA fixture may remain; its label is "${title}". ${detail} ${operationDetail}`);
       throw new Error(`QA Rock Notes test cleanup failed for run ${config.runId}; preserve and inspect the labeled fixture before rerunning`);
     }
   }
