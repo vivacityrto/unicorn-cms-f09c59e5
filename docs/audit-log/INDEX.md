@@ -1,4 +1,4 @@
-﻿# Audit Index
+# Audit Index
 
 Chronological list of audits. Git tags are the authoritative reference
 (`git tag --list "audit-*" "remix-*"`), this is the human-readable mirror.
