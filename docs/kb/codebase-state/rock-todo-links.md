@@ -15,7 +15,7 @@ A milestone's Tasks box only ever held snapshots of GitHub issues, so a Rock who
 - **To-Do side.** On the meeting's To-Do list and the To-Dos page, each To-Do shows the Rock (and milestone) it is for, and staff get a **Link to a Rock** / **Change** control: pick a Rock (newest quarter first), optionally one of its milestones, Save; or **Make it standalone**. Linking a To-Do that is already linked moves it.
 - **Discuss view.** A Rock with overdue To-Dos linked to it (itself or any milestone) shows "n To-Dos linked to it are overdue" in its flags and joins **Needs the room**. The deck is fixed when the view opens, so the filter picks the flag up as soon as the data arrives or when the filter is switched.
 
-Progress never completes a milestone: "ready for review" is only a hint and a person decides.
+Progress never completes a milestone: "ready for review" is only a hint and a person decides, using the **Sign off** button on the milestone row (see [rock-task-sync.md](rock-task-sync.md#signing-off-a-milestone)).
 
 ## Past To-Dos in the meeting's To-Do list
 
