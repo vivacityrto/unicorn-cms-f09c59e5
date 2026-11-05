@@ -367,6 +367,18 @@
       "owner": "Carl",
       "reason": "Rollback script for the TAS client view fixes migration (2026-11-03). It restores the previous bodies of two functions; the flagged UPDATEs are inside the tas__submit body and run only when a caller submits an intake. Applying the script itself updates no rows.",
       "expires": "2026-12-03"
+    },
+    {
+      "id": "set-package-anniversary-date-rpc",
+      "file": "supabase/migrations/20261105010000_set_package_anniversary_date_rpc.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved (2026-11-05): creates the SuperAdmin-only function set_package_anniversary_date. All four flagged statements (two keyed UPDATEs on package_instances, one keyed UPDATE on package_renewal_periods, one INSERT into client_audit_log) are inside the function body and run only when a SuperAdmin calls it on one package instance; applying the migration changes no rows. Already applied to production and verified read-only (one function, authenticated-only EXECUTE, unauthenticated call refused, zero audit rows); happy path proven in a rolled-back transaction on unicorn-qa. See docs/audit-log/entries/2026-11-05-package-anniversary-date-override.md.",
+      "expires": "2026-12-04"
     }
   ]
 }
