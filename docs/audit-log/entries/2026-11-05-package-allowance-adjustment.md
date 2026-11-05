@@ -26,7 +26,7 @@
 
 **Verification.** Package and pinned-note test files 6/6 pass (98 tests). ESLint clean on the touched files. The function was exercised on `unicorn-qa` in a transaction rolled back by a raised exception: unauthenticated call refused (`42501`); short reason, zero hours, over 1000 hours, a result at or below zero and a completed package refused (`22023`); missing instance refused (`P0002`); +161 h on a 7 h instance gave 168 h in `v_package_burndown` and in the open period, one pinned note and one audit row; a second adjustment (+7 h) left one note with two entries and the title "175 h total (+168 h on the original 7 h)"; markup in the reason was escaped; a further +1000 h past the ceiling was refused.
 
-**Production.** Not applied. Applying it needs Carl's explicit go-ahead (see parked).
+**Production.** Applied on 5 November 2026 to `yxkgdalkbrriasiyyrwk` (migration `adjust_package_allowance_rpc`, via the Supabase MCP, after Carl's explicit go-ahead). Read-only postflight: exactly one function with signature `(bigint, numeric, text)`; `SECURITY DEFINER` with an empty `search_path`; EXECUTE held by `authenticated` and not by `anon` or `PUBLIC`; an unauthenticated call refused with `42501`; zero `package_allowance_adjusted` audit rows and zero `allowance-adjustment` notes, so no data has been changed. The happy path was deliberately not run on production; it was proven on `unicorn-qa`. The first real adjustment (the 24-day client) is made through the Adjust Hours action once the frontend is deployed.
 
 ## Decisions
 
@@ -36,7 +36,6 @@
 
 ## Open questions parked
 
-- Not applied to production yet; the card action ships with the frontend deploy but will error until the function exists there.
 - The pinned note is a normal `notes` row, so it is visible to anyone `notes` RLS lets read that tenant's notes, which includes users of the tenant itself. The dialog says so; keep the reason free of anything internal.
 - Renewal copies `included_minutes` into the new period, so an adjusted allowance carries into the next term until adjusted again. The pinned note says so only implicitly.
 - Legacy views (`v_consult_hours_remaining`, `v_client_package_usage_summary`, `v_score_consult` and others) read `hours_included`, which is null on every instance, so they already show zero included hours for all packages. Not caused by or fixed here; how much of the health scoring depends on them is not verified.
