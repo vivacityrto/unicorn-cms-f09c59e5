@@ -20,7 +20,7 @@ GitHub `[task]` issues in `ComplyHub-ai/rto-compass-hub` already carry `Linked: 
 | Any task `in progress` or `review`, or any task closed | `not_started` → `in_progress` |
 | Any **open** task `blocked` | `not_started` / `in_progress` → `blocked` |
 | No open blocked task remains | A block **the sync set** is released (to `in_progress`, or the prior status if no task has started), only if nobody has edited the milestone since. A human's block is never released. |
-| Every linked task closed | **No status change.** The panel shows "Ready for review" (derived, not stored). A person marks the milestone complete in Unicorn. |
+| Every linked task closed | **No status change.** The panel shows "Ready for review" (derived, not stored). A person marks the milestone complete in Unicorn with the **Sign off** button (see "Signing off a milestone" below). |
 
 The sync never touches `complete`, `deferred` or `off_track`, and never completes anything. This matches the crosswalk rule that a task does not grant approval or replace the initiative's evidence gates. A milestone can have many tasks (for example R0-a/b/c share one), so every rule above is evaluated across all of its linked tasks.
 
@@ -56,6 +56,18 @@ Environment (names only): `ROCK_TASK_SYNC_SECRET` (required; missing means every
 ## Display
 
 The Rock details panel lists each milestone's linked tasks (title linking to the issue, status, assignees, due date), a `n blocked` badge, `Tasks · x of y closed`, and "Ready for review". It tolerates the links table not existing yet, so the frontend can deploy before the migration.
+
+## Signing off a milestone
+
+Added 2026-11-05. Before this, the only way to complete a milestone was Edit Rock, then the milestone's Status dropdown, then saving the whole Rock, which re-saves every milestone on it. Expanding a milestone row in the Rock details panel now shows a **Sign off** button (`MilestoneTable.tsx`, `SignOffMilestoneDialog.tsx`).
+
+- **Who:** anyone who can edit the Rock (the same gate as Mark as blocked and Carry forward), on a Rock that is not archived. The database rule is unchanged: `eos_rock_milestones_manage` lets any Vivacity team user or EOS-role holder write. Restricting sign-off to an owner or leader would need a server function and is not built.
+- **When:** from `not_started`, `in_progress` or `off_track`. A `blocked` milestone shows "Resolve the blocker first" instead, because completing it directly would silently close its blocker. `complete` and `deferred` milestones get no button.
+- **How:** the dialog shows the "Done when" text and the evidence link, then updates only that one milestone row (`useMilestoneSignOff`). The update is guarded by the allowed statuses, so a milestone someone blocked, deferred or completed in the meantime is not overwritten; zero rows updated is reported as "changed since you opened it", not as success. The existing `record_eos_rock_milestone_event` trigger records who changed the status and when. There is no separate signed-off-by column.
+- **Cautions, never blockers:** the dialog warns when only some delivering milestones are complete, when nothing is delivering a Company milestone, or when no evidence link or "Done when" is recorded. Delivery progress stays a hint, as above.
+- **Not built:** reopening a milestone signed off by mistake (use Edit Rock for now), and a sign-off note.
+
+No schema, RLS, trigger or Edge Function change, so no audit-log entry. `rock-task-sync-publisher.md` was reviewed and is intentionally unchanged: it describes what the sender may do, not the Unicorn UI.
 
 ## ComplyHub side (proposed; owned by the task-workflow owners, not built here)
 

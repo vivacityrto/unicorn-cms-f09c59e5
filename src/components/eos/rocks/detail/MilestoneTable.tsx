@@ -1,5 +1,5 @@
 import { useMemo, useState, type MouseEvent } from 'react';
-import { Ban, ChevronDown, ChevronRight, ExternalLink, Link2, Search } from 'lucide-react';
+import { Ban, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, Link2, Search } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ import {
   type DeliveryData,
 } from '@/utils/milestoneDelivery';
 import { MILESTONE_STATUS } from '@/utils/milestoneStatusStyle';
+import { canSignOffMilestone, signOffCautions, signOffUnavailableReason } from '@/utils/milestoneSignOff';
+import type { SignOffTarget } from '@/components/eos/rocks/signoff/SignOffMilestoneDialog';
 import { formatDate, relativeDays, safeExternalUrl } from '@/utils/rockPanelFormat';
 import {
   daysBetween,
@@ -71,6 +73,12 @@ export interface MilestoneBlockerSupport {
   onResolve: (milestoneId: string, label: string) => void;
 }
 
+/** Signing a milestone off: whether this person may, and what to open when they choose to. Absent for legacy (JSON) milestones, which have no row to update. */
+export interface MilestoneSignOffSupport {
+  canManage: boolean;
+  onSignOff: (target: SignOffTarget) => void;
+}
+
 /** The mapping of an Individual or Team Rock's milestones to the milestones above: the action, or why there is none. */
 export interface MilestoneLinkSupport {
   canManage: boolean;
@@ -98,6 +106,7 @@ interface MilestoneTableProps {
   onOpenRock?: (rockId: string) => void;
   blockerSupport?: MilestoneBlockerSupport;
   linkSupport?: MilestoneLinkSupport;
+  signOffSupport?: MilestoneSignOffSupport;
 }
 
 function OwnerCell({ name }: { name: string | null }) {
@@ -131,6 +140,7 @@ export function MilestoneTable({
   onOpenRock,
   blockerSupport,
   linkSupport,
+  signOffSupport,
 }: MilestoneTableProps) {
   const [filter, setFilter] = useState<MilestoneFilter>('all');
   const [query, setQuery] = useState('');
@@ -399,6 +409,33 @@ export function MilestoneTable({
                       )}
                     </div>
                     <div className="space-y-2">
+                      {signOffSupport?.canManage && canSignOffMilestone(milestone.status) && (
+                        <div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          // Emphasised once everything delivering it is done; always available, since delivery is only a hint.
+                          variant={delivery?.state === 'ready_for_review' ? 'default' : 'outline'}
+                          className="h-7 px-2 text-xs"
+                          aria-label={`Sign off milestone: ${milestone.label}`}
+                          onClick={() =>
+                            signOffSupport.onSignOff({
+                              id: milestone.id,
+                              label: milestone.label,
+                              exitCriteria: milestone.exitCriteria,
+                              evidenceHref,
+                              cautions: signOffCautions({ delivery, evidenceUrl: evidenceHref, exitCriteria: milestone.exitCriteria }),
+                            })
+                          }
+                        >
+                          <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden />
+                          Sign off
+                        </Button>
+                        </div>
+                      )}
+                      {signOffSupport?.canManage && signOffUnavailableReason(milestone.status) && (
+                        <p className="text-xs text-muted-foreground">{signOffUnavailableReason(milestone.status)}</p>
+                      )}
                       {blocker && blockerSupport ? (
                         <BlockerDetails
                           compact

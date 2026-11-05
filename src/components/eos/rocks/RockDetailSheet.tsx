@@ -33,6 +33,7 @@ import {
 import { BlockerDetails, ResolvedBlockerList, type DependencyTarget } from '@/components/eos/rocks/blockers/BlockerDetails';
 import { BlockerDialog } from '@/components/eos/rocks/blockers/BlockerDialog';
 import { ResolveBlockerDialog } from '@/components/eos/rocks/blockers/ResolveBlockerDialog';
+import { SignOffMilestoneDialog, type SignOffTarget } from '@/components/eos/rocks/signoff/SignOffMilestoneDialog';
 import { CarryForwardDialog } from '@/components/eos/rocks/carryover/CarryForwardDialog';
 import { CarryoverLinks } from '@/components/eos/rocks/carryover/CarryoverLinks';
 import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
@@ -213,6 +214,7 @@ export function RockDetailSheet({
   const [contextOpen, setContextOpen] = useState(false);
   const [blockerTarget, setBlockerTarget] = useState<{ subject: BlockerSubject; id: string; label: string; mode: 'record' | 'resolve' } | null>(null);
   const [carryOpen, setCarryOpen] = useState(false);
+  const [signOffTarget, setSignOffTarget] = useState<SignOffTarget | null>(null);
   const [linkTarget, setLinkTarget] = useState<{ id: string; title: string } | null>(null);
 
   const milestonesQuery = useQuery({
@@ -566,6 +568,11 @@ export function RockDetailSheet({
                         }
                       : undefined
                   }
+                  signOffSupport={
+                    hasRows
+                      ? { canManage: canManage && !isArchived, onSignOff: setSignOffTarget }
+                      : undefined
+                  }
                   blockerSupport={
                     hasRows
                       ? {
@@ -749,6 +756,13 @@ export function RockDetailSheet({
           subjectId={blockerTarget.id}
           subjectLabel={blockerTarget.label}
           blocker={openBlocker(blockers, blockerTarget.subject, blockerTarget.id)}
+        />
+      )}
+      {signOffTarget && (
+        <SignOffMilestoneDialog
+          open
+          onOpenChange={next => !next && setSignOffTarget(null)}
+          target={signOffTarget}
         />
       )}
       {linkTarget && linkRoot?.status === 'ok' && (
