@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      rock_notes:
+        description: "Run one labeled synthetic Rock Notes UI and RLS canary in unicorn-qa"
+        required: false
+        default: false
+        type: boolean
 
 # Provisioning is idempotent but still shouldn't race itself.
 concurrency:
@@ -15,8 +20,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  reject-conflicting-modes:
+    if: ${{ inputs.characterize && inputs.rock_notes }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: echo "Choose either characterize or rock_notes, not both" >&2; exit 1
+
   seed:
-    if: ${{ !inputs.characterize }}
+    if: ${{ !inputs.characterize && !inputs.rock_notes }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: unicorn-qa
@@ -57,7 +70,7 @@ jobs:
           QA_TOM_SERVICE_PRINCIPAL_PASSWORD: ${{ secrets.QA_TOM_SERVICE_PRINCIPAL_PASSWORD }}
 
   characterize:
-    if: ${{ inputs.characterize }}
+    if: ${{ inputs.characterize && !inputs.rock_notes }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: unicorn-qa
@@ -149,3 +162,57 @@ jobs:
             ${{ runner.temp }}/unicorn-qa-vite.log
             ${{ runner.temp }}/tom-p0-playwright.log
           if-no-files-found: ignore
+
+  rock-notes:
+    if: ${{ inputs.rock_notes && !inputs.characterize }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: unicorn-qa
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Run local QA harness contract tests
+        run: npm run test:qa-harness
+      - name: Validate the non-production QA target
+        run: npm run qa:baseline:validate -- --manifest docs/kb/codebase-state/qa-baseline-manifest-2026-09-07.json --target-ref qfpxvumcrnzrjyvqkicq --target-url https://qfpxvumcrnzrjyvqkicq.supabase.co
+      - name: Install browser for existing-persona login
+        run: npx playwright install --with-deps chromium
+      - name: Start QA-pointed dev server
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          nohup npm run dev > "$RUNNER_TEMP/rock-notes-qa-vite.log" 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:8080 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "QA dev server did not become ready" >&2
+          cat "$RUNNER_TEMP/rock-notes-qa-vite.log" >&2
+          exit 1
+      - name: Generate storage states from existing QA accounts
+        shell: bash
+        env:
+          QA_E2E_SUPERADMIN_PASSWORD: ${{ secrets.QA_E2E_SUPERADMIN_PASSWORD }}
+          QA_TOM_CSC_PASSWORD: ${{ secrets.QA_TOM_CSC_PASSWORD }}
+          QA_TOM_INTEGRATOR_PASSWORD: ${{ secrets.QA_TOM_INTEGRATOR_PASSWORD }}
+        run: |
+          E2E_EMAIL=qa-e2e-superadmin@example.qa E2E_PASSWORD="$QA_E2E_SUPERADMIN_PASSWORD" node e2e/auth-setup.mjs qa-superadmin
+          E2E_EMAIL=tom_qa_20260913_seed_01_csc@example.qa E2E_PASSWORD="$QA_TOM_CSC_PASSWORD" node e2e/auth-setup.mjs tom-csc
+          E2E_EMAIL=tom_qa_20260913_seed_01_integrator@example.qa E2E_PASSWORD="$QA_TOM_INTEGRATOR_PASSWORD" node e2e/auth-setup.mjs tom-integrator
+      - name: Run bounded Rock Notes RLS and panel canary
+        env:
+          QA_SUPABASE_PROJECT_REF: qfpxvumcrnzrjyvqkicq
+          QA_ROCK_NOTES_TEST_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          VITE_SUPABASE_URL: https://qfpxvumcrnzrjyvqkicq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.QA_SUPABASE_PUBLISHABLE_KEY }}
+        run: node scripts/qa-rock-notes-crud.mjs
