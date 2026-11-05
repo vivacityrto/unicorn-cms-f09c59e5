@@ -60,6 +60,7 @@ import { StartPackageDialog } from './StartPackageDialog';
 import { PackagePinnedNote } from './PackagePinnedNote';
 import { RenewalConfirmDialog } from './RenewalConfirmDialog';
 import { AnniversaryDateEditor } from './AnniversaryDateEditor';
+import { AdjustAllowanceDialog } from './AdjustAllowanceDialog';
 import { PackageDataManager } from './PackageDataManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -120,6 +121,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
   const [cancelTarget, setCancelTarget] = useState<ClientPackage | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [adjustTarget, setAdjustTarget] = useState<ClientPackage | null>(null);
   const [holdTarget, setHoldTarget] = useState<ClientPackage | null>(null);
   const [holdReason, setHoldReason] = useState('');
   const [holding, setHolding] = useState(false);
@@ -465,6 +467,15 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
         onSuccess={() => onRefresh?.()}
       />
 
+      {/* Adjust hours (SuperAdmin) */}
+      <AdjustAllowanceDialog
+        pkg={adjustTarget}
+        tenantId={tenantId}
+        open={adjustTarget !== null}
+        onOpenChange={(next) => { if (!next) setAdjustTarget(null); }}
+        onSaved={() => onRefresh?.()}
+      />
+
       {/* Start Package Dialog */}
       <StartPackageDialog
         open={startPackageOpen}
@@ -680,6 +691,17 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onR
                                 {isExpanded ? 'Collapse Stages' : 'Expand Stages'}
                               </DropdownMenuItem>
                             </CollapsibleTrigger>
+                            {!pkg.is_complete && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAdjustTarget(pkg);
+                                }}
+                              >
+                                <Clock className="h-4 w-4 mr-2" />
+                                Adjust Hours
+                              </DropdownMenuItem>
+                            )}
                             {!pkg.is_complete && pkg.membership_state !== 'paused' && (
                               <DropdownMenuItem
                                 onClick={(e) => {
