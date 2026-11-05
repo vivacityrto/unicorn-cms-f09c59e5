@@ -70530,6 +70530,10 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: undefined
       }
+      adjust_package_allowance: {
+        Args: { p_hours_delta: number; p_instance_id: number; p_reason: string }
+        Returns: Json
+      }
       admin_fix_invitations: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_memberships: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_profile_linkage: { Args: { dry_run?: boolean }; Returns: Json }

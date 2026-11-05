@@ -379,6 +379,18 @@
       "owner": "Carl",
       "reason": "Carl-approved (2026-11-05): creates the SuperAdmin-only function set_package_anniversary_date. All four flagged statements (two keyed UPDATEs on package_instances, one keyed UPDATE on package_renewal_periods, one INSERT into client_audit_log) are inside the function body and run only when a SuperAdmin calls it on one package instance; applying the migration changes no rows. Already applied to production and verified read-only (one function, authenticated-only EXECUTE, unauthenticated call refused, zero audit rows); happy path proven in a rolled-back transaction on unicorn-qa. See docs/audit-log/entries/2026-11-05-package-anniversary-date-override.md.",
       "expires": "2026-12-04"
+    },
+    {
+      "id": "adjust-package-allowance-rpc",
+      "file": "supabase/migrations/20261105020000_adjust_package_allowance_rpc.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Creates the SuperAdmin-only function adjust_package_allowance. All five flagged statements (keyed UPDATEs on package_instances, package_renewal_periods and notes; INSERTs into notes and client_audit_log) are inside the function body and run only when a SuperAdmin calls it on one package instance; applying the migration changes no rows. Not yet applied to production; the happy path and every refusal were proven in a rolled-back transaction on unicorn-qa. Entry added for PR review, same form as set-package-anniversary-date-rpc. See docs/audit-log/entries/2026-11-05-package-allowance-adjustment.md.",
+      "expires": "2026-12-04"
     }
   ]
 }

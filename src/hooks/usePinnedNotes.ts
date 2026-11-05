@@ -10,6 +10,8 @@ export interface PinnedNoteItem {
   parent_type: string | null;
   parent_id: number | null;
   package_id: number | null;
+  /** Lets a surface style a system-maintained note (e.g. 'allowance-adjustment'). */
+  tags?: string[] | null;
   /** Resolved from packages.name when the note belongs to a package. */
   package_name: string | null;
   created_by: string;
@@ -35,7 +37,7 @@ export function usePinnedNotes(tenantId: number | null) {
     queryFn: async (): Promise<PinnedNoteItem[]> => {
       const { data, error } = await supabase
         .from('notes')
-        .select('id, title, note_details, parent_type, parent_id, package_id, created_by, updated_at')
+        .select('id, title, note_details, parent_type, parent_id, package_id, tags, created_by, updated_at')
         .eq('tenant_id', tenantId as number)
         .eq('is_pinned', true)
         .order('updated_at', { ascending: false });
