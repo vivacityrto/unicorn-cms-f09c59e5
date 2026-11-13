@@ -21,7 +21,7 @@
 
 - None in this entry. The fix is the existing migration on `main`; this entry records the finding and the rollout plan below. No production change was made while auditing.
 
-## Rollout plan (steps 1 and 2 done, see QA result; steps 3 to 6 need Carl's explicit go-ahead before any production write)
+## Rollout plan (all steps done: QA result and production result below; step 5, rollback, was not needed)
 
 1. **Preflight, read-only, production.** Confirm exactly one `fn_preview_broadcast_recipients(text, text, text[])` and that its body still lacks `relationship_role`. Re-run the active-tenant counts above and record them.
 2. **Verify on `unicorn-qa` first.** Apply the migration to `unicorn-qa`, then in a transaction rolled back by a raised exception: impersonate a Vivacity staff caller, run the function with `ARRAY['parent','user']` for `everyone`, and confirm Users now appear and `academy_only` users and tenant 6372 still do not. Confirm a non-staff caller still gets `Access denied`.
@@ -39,9 +39,21 @@ Steps 1 and 2 are done. The migration was applied to `unicorn-qa` (ref `qfpxvumc
 - **Structure after:** exactly one function with signature `(text, text, text[])`, `SECURITY DEFINER`, `search_path = public`, EXECUTE held by `authenticated`.
 - **Difference to check on production.** On QA, `anon` also holds EXECUTE on the function. On production `anon` does not (checked read-only: `anon` false, `authenticated` true, and the same for `fn_queue_broadcast_campaign`). The function refuses any caller who is not Vivacity staff, so this is not an exposure, but it means QA's grants differ from production's. `CREATE OR REPLACE` keeps the existing grants, so production should stay as it is; step 4's postflight must confirm `anon` is still false there. Whether QA had the `anon` grant before the migration was not recorded.
 
+## Production result (13 November 2026)
+
+Applied to production (ref `yxkgdalkbrriasiyyrwk`) via the Supabase MCP as version `20261113042312`, after Carl's explicit go-ahead in session.
+
+- **Preflight (read-only):** one function, body without `relationship_role`, `anon` false, `authenticated` true. Baseline for `everyone`: 78 distinct parent recipients; 121 expected with Users.
+- **Postflight (read-only):** still exactly one function with signature `(text, text, text[])`; body now contains `relationship_role`; `SECURITY DEFINER`, `search_path = public`; `anon` still false on both `fn_preview_broadcast_recipients` and `fn_queue_broadcast_campaign`; `authenticated` true.
+- **Behaviour (rolled-back block, no writes), staff preview for `everyone`:** `['parent']` returns 78, `['parent','user']` returns 121, of which 43 are Users. Zero academy-only users and zero rows for tenant 6372. A non-staff client caller and a caller with no user were both refused (`Access denied: Vivacity staff access required`).
+- **Test-user note:** the first client-caller check was not refused because the arbitrary User it picked is a Vivacity staff account; 4 of the 52 `user` rows are internal staff, who correctly pass the staff gate. Re-run with a non-internal User: refused. The gate is unchanged by the migration.
+- **Not run:** a real broadcast, and a real User session. No campaign was created or queued; `broadcast_campaigns`, `broadcast_recipients` and `tenant_users` were not written. One campaign was already in `draft` or `queued` before this change (12 campaigns, 808 recipient rows); if it is a draft, queuing it now includes Users.
+
+Net effect: the next broadcast counts and tracks the 43 client Users in active tenants as individual recipients. Message delivery to them did not change.
+
 ## Decisions
 
-- Pending: apply to production (Carl's approval). QA steps are done.
+- Applied to production with Carl's approval; QA first, then production, as planned. Rollback (re-apply the role-only body) was not needed.
 - Fix by widening the role match in the existing function, as the migration does, rather than changing what the dialog sends, so old campaign rows that stored `['parent']` keep working.
 
 ## Open questions parked
