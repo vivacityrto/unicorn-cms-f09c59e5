@@ -127,6 +127,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^4.0.0",
     "autoprefixer": "^10.4.21",
+    "axe-core": "^4.10.2",
     "beasties": "^0.4.2",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
