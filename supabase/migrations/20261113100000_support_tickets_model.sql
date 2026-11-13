@@ -412,8 +412,11 @@ BEGIN
     NEW.resolved_at := NULL;
   END IF;
 
-  -- First staff edit of an AI-drafted classification marks it reviewed.
-  IF OLD.ai_state = 'drafted' AND NEW.ai_state = 'drafted'
+  -- A staff edit of title, type or urgency marks the classification reviewed.
+  -- This also covers 'pending' and 'drafting': leaving the claim valid would
+  -- let the AI function overwrite what staff just chose, because its writes
+  -- are conditional on ai_state still being 'drafting'.
+  IF OLD.ai_state IN ('pending', 'drafting', 'drafted') AND NEW.ai_state = OLD.ai_state
      AND auth.uid() IS NOT NULL
      AND public.is_vivacity_team_safe(auth.uid())
      AND (NEW.title IS DISTINCT FROM OLD.title

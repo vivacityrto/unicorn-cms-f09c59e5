@@ -132,6 +132,9 @@ export function usePostReply(ticketId: string | undefined) {
       qc.invalidateQueries({ queryKey: ['support-tickets'] });
       qc.invalidateQueries({ queryKey: ['support-ticket', ticketId] });
       qc.invalidateQueries({ queryKey: ['client-support-tickets'] });
+      // A client reply can reopen the ticket in the database, so the client's
+      // own detail query must be refetched too or its status chip goes stale.
+      qc.invalidateQueries({ queryKey: ['client-support-ticket'] });
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Could not send your message');

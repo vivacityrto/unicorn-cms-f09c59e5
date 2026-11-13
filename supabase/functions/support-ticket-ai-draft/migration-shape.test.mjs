@@ -61,6 +61,11 @@ describe("support tickets model migration", () => {
     assert.match(sql, /p_product <> 'unicorn' THEN\s+RAISE EXCEPTION 'Not permitted'/);
   });
 
+  it("marks an AI classification reviewed on a staff edit even while the draft is pending or drafting", () => {
+    assert.match(sql, /OLD\.ai_state IN \('pending', 'drafting', 'drafted'\) AND NEW\.ai_state = OLD\.ai_state/);
+    assert.match(sql, /NEW\.ai_state := 'reviewed'/);
+  });
+
   it("gives clients no UPDATE right on tickets", () => {
     const update = sql.match(/CREATE POLICY support_tickets_update[\s\S]*?;\n/)?.[0] ?? "";
     assert.match(update, /USING \(public\.is_vivacity_team_safe/);
@@ -81,6 +86,15 @@ describe("support tickets backfill migration", () => {
     assert.ok((sql.match(/ON CONFLICT[^;]*DO NOTHING/g) ?? []).length >= 4);
     assert.match(sql, /RAISE EXCEPTION 'support ticket backfill reconciliation failed/);
     assert.match(sql, /content hash mismatches/);
+  });
+
+  it("holds only tickets inserted by this run to the legacy values, so a delta run survives later edits", () => {
+    assert.match(sql, /CREATE TEMP TABLE _new_tickets/);
+    assert.match(sql, /RETURNING id\s*\)\s*INSERT INTO _new_tickets/);
+    assert.match(sql, /CREATE TEMP TABLE _stage_new/);
+    // Field-level checks read the new-only stage, never the full one.
+    const checks = sql.slice(sql.indexOf("'status distribution'"), sql.indexOf("'messages (all kinds)'"));
+    assert.ok(!/FROM _stage(?!_new)/.test(checks) && !/JOIN _stage(?!_new)/.test(checks));
   });
 
   it("migrates only the support channel of help_threads", () => {

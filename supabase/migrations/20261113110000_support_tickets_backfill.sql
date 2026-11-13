@@ -101,15 +101,26 @@ BEGIN
     WHERE t.channel = 'support';
   END IF;
 
-  -- Tickets, in created order so ticket_number follows history.
-  INSERT INTO public.support_tickets
-    (id, product, tenant_id, reporter_id, type, status, urgency, title, assignee_id, source_url,
-     ai_state, created_at, updated_at, resolved_at, last_activity_at, deleted_at)
-  SELECT id, 'unicorn', tenant_id, reporter_id, type, status, urgency, title, assignee_id, source_url,
-         'none', created_at, updated_at, resolved_at, last_activity_at, deleted_at
-  FROM _stage
-  ORDER BY created_at, id
-  ON CONFLICT (id) DO NOTHING;
+  -- Tickets, in created order so ticket_number follows history. Only rows this
+  -- run actually inserts are recorded in _new_tickets: a ticket migrated earlier
+  -- may since have been changed through the new UI, so the field-level
+  -- reconciliation below must not hold it to the unchanged legacy row.
+  CREATE TEMP TABLE _new_tickets (id uuid PRIMARY KEY) ON COMMIT DROP;
+  WITH ins AS (
+    INSERT INTO public.support_tickets
+      (id, product, tenant_id, reporter_id, type, status, urgency, title, assignee_id, source_url,
+       ai_state, created_at, updated_at, resolved_at, last_activity_at, deleted_at)
+    SELECT id, 'unicorn', tenant_id, reporter_id, type, status, urgency, title, assignee_id, source_url,
+           'none', created_at, updated_at, resolved_at, last_activity_at, deleted_at
+    FROM _stage
+    ORDER BY created_at, id
+    ON CONFLICT (id) DO NOTHING
+    RETURNING id
+  )
+  INSERT INTO _new_tickets SELECT id FROM ins;
+
+  CREATE TEMP TABLE _stage_new ON COMMIT DROP AS
+    SELECT s.* FROM _stage s JOIN _new_tickets n ON n.id = s.id;
 
   INSERT INTO public.support_ticket_migration_map (legacy_table, legacy_id, ticket_id)
   SELECT src, id, id FROM _stage
@@ -243,23 +254,23 @@ BEGIN
            (SELECT count(*)::text FROM public.support_tickets t JOIN public.support_ticket_migration_map m
               ON m.ticket_id = t.id AND m.legacy_table = 'help_threads')
     UNION ALL SELECT 'status distribution',
-           (SELECT COALESCE(string_agg(status || '=' || n, ',' ORDER BY status), '') FROM (SELECT status, count(*) n FROM _stage GROUP BY 1) x),
-           (SELECT COALESCE(string_agg(status || '=' || n, ',' ORDER BY status), '') FROM (SELECT t.status, count(*) n FROM public.support_tickets t JOIN _stage s ON s.id = t.id GROUP BY 1) x)
+           (SELECT COALESCE(string_agg(status || '=' || n, ',' ORDER BY status), '') FROM (SELECT status, count(*) n FROM _stage_new GROUP BY 1) x),
+           (SELECT COALESCE(string_agg(status || '=' || n, ',' ORDER BY status), '') FROM (SELECT t.status, count(*) n FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id GROUP BY 1) x)
     UNION ALL SELECT 'type distribution',
-           (SELECT COALESCE(string_agg(type || '=' || n, ',' ORDER BY type), '') FROM (SELECT type, count(*) n FROM _stage GROUP BY 1) x),
-           (SELECT COALESCE(string_agg(type || '=' || n, ',' ORDER BY type), '') FROM (SELECT t.type, count(*) n FROM public.support_tickets t JOIN _stage s ON s.id = t.id GROUP BY 1) x)
+           (SELECT COALESCE(string_agg(type || '=' || n, ',' ORDER BY type), '') FROM (SELECT type, count(*) n FROM _stage_new GROUP BY 1) x),
+           (SELECT COALESCE(string_agg(type || '=' || n, ',' ORDER BY type), '') FROM (SELECT t.type, count(*) n FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id GROUP BY 1) x)
     UNION ALL SELECT 'urgency distribution',
-           (SELECT COALESCE(string_agg(urgency || '=' || n, ',' ORDER BY urgency), '') FROM (SELECT urgency, count(*) n FROM _stage GROUP BY 1) x),
-           (SELECT COALESCE(string_agg(urgency || '=' || n, ',' ORDER BY urgency), '') FROM (SELECT t.urgency, count(*) n FROM public.support_tickets t JOIN _stage s ON s.id = t.id GROUP BY 1) x)
+           (SELECT COALESCE(string_agg(urgency || '=' || n, ',' ORDER BY urgency), '') FROM (SELECT urgency, count(*) n FROM _stage_new GROUP BY 1) x),
+           (SELECT COALESCE(string_agg(urgency || '=' || n, ',' ORDER BY urgency), '') FROM (SELECT t.urgency, count(*) n FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id GROUP BY 1) x)
     UNION ALL SELECT 'tenant distribution',
-           (SELECT COALESCE(string_agg(tenant_id || '=' || n, ',' ORDER BY tenant_id), '') FROM (SELECT tenant_id, count(*) n FROM _stage GROUP BY 1) x),
-           (SELECT COALESCE(string_agg(tenant_id || '=' || n, ',' ORDER BY tenant_id), '') FROM (SELECT t.tenant_id, count(*) n FROM public.support_tickets t JOIN _stage s ON s.id = t.id GROUP BY 1) x)
+           (SELECT COALESCE(string_agg(tenant_id || '=' || n, ',' ORDER BY tenant_id), '') FROM (SELECT tenant_id, count(*) n FROM _stage_new GROUP BY 1) x),
+           (SELECT COALESCE(string_agg(tenant_id || '=' || n, ',' ORDER BY tenant_id), '') FROM (SELECT t.tenant_id, count(*) n FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id GROUP BY 1) x)
     UNION ALL SELECT 'assigned tickets',
-           (SELECT count(*)::text FROM _stage WHERE assignee_id IS NOT NULL),
-           (SELECT count(*)::text FROM public.support_tickets t JOIN _stage s ON s.id = t.id WHERE t.assignee_id IS NOT NULL)
+           (SELECT count(*)::text FROM _stage_new WHERE assignee_id IS NOT NULL),
+           (SELECT count(*)::text FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id WHERE t.assignee_id IS NOT NULL)
     UNION ALL SELECT 'deleted tickets',
-           (SELECT count(*)::text FROM _stage WHERE deleted_at IS NOT NULL),
-           (SELECT count(*)::text FROM public.support_tickets t JOIN _stage s ON s.id = t.id WHERE t.deleted_at IS NOT NULL)
+           (SELECT count(*)::text FROM _stage_new WHERE deleted_at IS NOT NULL),
+           (SELECT count(*)::text FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id WHERE t.deleted_at IS NOT NULL)
     UNION ALL SELECT 'messages (all kinds)',
            (SELECT count(*)::text FROM _msg),
            (SELECT count(*)::text FROM public.support_ticket_messages m JOIN _msg x ON x.id = m.id)
@@ -272,7 +283,7 @@ BEGIN
     UNION ALL SELECT 'content hash mismatches (title + first message)',
            '0',
            (SELECT count(*)::text
-              FROM _stage s
+              FROM _stage_new s
               JOIN public.support_tickets t ON t.id = s.id
               JOIN _msg f ON f.ticket_id = s.id AND f.grp IN ('first', 'help')
                           AND f.created_at = (SELECT min(f2.created_at) FROM _msg f2 WHERE f2.ticket_id = s.id AND f2.grp IN ('first', 'help'))
