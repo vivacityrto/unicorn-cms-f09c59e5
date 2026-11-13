@@ -2,18 +2,12 @@
   "version": 1,
   "entries": [
     {
-      "id": "grant-team-users-manage-to-internal-staff",
-      "file": "supabase/migrations/20261012020000_grant_team_users_manage_to_internal_staff.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
-      "targetProject": "yxkgdalkbrriasiyyrwk",
-      "owner": "Carl",
-      "reason": "Carl-approved (2026-10-12): upserts 5 role_permissions rows (admin.team_users.manage = full for Team Leader, Team Member, Integrator, BGT, CSC) so internal staff can edit users' profiles; idempotent ON CONFLICT (role, feature_key). The remaining flagged lines are the update_team_member_profile function body (keyed UPDATE ... WHERE user_uuid = p_target_user_id, unchanged from the prior definition) and an error string containing the word update.",
-      "expires": "2026-11-11"
-    },
-    {
       "id": "add-system-account-role-and-reclassify",
       "file": "supabase/migrations/20260915025352_add_system_account_role_and_reclassify.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Carl-approved (2026-09-15): inserts one new dd_unicorn_roles catalogue row (System Account) and reassigns unicorn_role/is_system_account for exactly 3 named accounts (admin@vivacity.com.au, angela+invitetest@vivacity.com.au, bulk-generate-automation@vivacity.com.au) already confirmed non-human/test/automation identities. bulk-generate-automation's real production capability is carried by a separate, untouched supplemental role -- this migration only reclassifies its primary role label. No other user rows are affected. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -22,7 +16,10 @@
     {
       "id": "add-email-templates-manage-capability",
       "file": "supabase/migrations/20260915014755_add_email_templates_manage_capability.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Carl-approved RBAC v6 capability scoping (2026-09-15): inserts one new permission_features row and 7 role_permissions rows for the new email_templates.manage key, modeled directly on the existing public.email_templates RLS boundary (Super Admin full, other internal Vivacity roles limited/view-only). The ON CONFLICT DO UPDATE is a safe upsert guard, not a destructive operation on existing data -- these are brand-new rows for a brand-new feature key. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -31,7 +28,9 @@
     {
       "id": "retire-client-eos-access-user-roles-cleanup",
       "file": "supabase/migrations/20260915004558_retire_client_eos_access.sql",
-      "categories": ["destructive-mutation"],
+      "categories": [
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Carl-approved retirement of client-tenant EOS access (2026-09-15): DELETE FROM public.eos_user_roles removes 384 rows from a 2026-01-06 bulk backfill across 377 tenants that was never real onboarding (all identical timestamp, assigned_by NULL). Verified zero effect on Vivacity's own tenant (6372), which has zero rows in this table already. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -40,7 +39,10 @@
     {
       "id": "academy-solo-internal-staff-demo-invite-support",
       "file": "supabase/migrations/20260914060040_academy_solo_internal_staff_and_demo_invite_support.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Approved Academy Solo controlled-pilot access policy: grant the existing internal-staff roles the Academy feature and upsert their existing role-permission rows so staff can provision and manage demo invites. Applied to production and QA with no pilot account or invite data seeded; the migration is covered by the Academy Solo audit entry. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -49,7 +51,9 @@
     {
       "id": "academy-solo-account-provisioning",
       "file": "supabase/migrations/20260914064041_academy_solo_account_provisioning.sql",
-      "categories": ["data-mutation"],
+      "categories": [
+        "data-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Approved Academy Solo controlled-pilot provisioning: the SECURITY DEFINER RPC creates an isolated Academy tenant and writes the required audit event only when an authorized staff member starts the pilot flow. Applied to production and QA, verified with zero Academy Solo accounts or demo invites created during migration rollout. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -58,7 +62,10 @@
     {
       "id": "academy-solo-access-boundary",
       "file": "supabase/migrations/20260914120000_academy_solo_access_boundary.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Approved Academy Solo access boundary and lifecycle controls: update the tenant marker during explicit provisioning, write audit events for staff lifecycle actions, and revoke access for the single-seat Academy learner on lifecycle completion. Applied to production and QA; anon EXECUTE was explicitly revoked in the follow-up corrective migration and all pilot counts remain zero. Renewed 2026-09-25: same reviewed finding, still an already-applied historical migration, only its allowlist window had lapsed. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -67,7 +74,10 @@
     {
       "id": "academy-solo-invitation-role-compatibility-function-body",
       "file": "supabase/migrations/20260914230604_academy_solo_invitation_role_compatibility.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body preserves the existing invitation writes while adding Academy-role compatibility and is covered by the Academy invitation contract tests and audit entry. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -76,7 +86,10 @@
     {
       "id": "academy-solo-invitation-anonymous-binding-function-body",
       "file": "supabase/migrations/20260915030000_academy_solo_invitation_anonymous_identity_binding.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed false positives: the scanner matches INSERT/UPDATE statements inside CREATE OR REPLACE FUNCTION public.accept_invitation_v2. The migration creates/replaces the invitation acceptance function; these statements execute only later when a caller presents a valid invitation, not during migration replay. The function body binds an accepted invitation to the authenticated identity and is covered by the Academy invitation contract tests and audit entry. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -85,7 +98,10 @@
     {
       "id": "academy-solo-reversibility-invite-capacity-fix",
       "file": "supabase/migrations/20260915040000_academy_solo_reversibility_and_invite_capacity_fix.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed false positives: UPDATE and INSERT statements are inside the existing staff-only SECURITY DEFINER Academy lifecycle RPC. The migration makes Solo marker and seat-cap changes reversible by preserving the prior cap, removes the marker on disable, and keeps the invitation capacity read on the caller-scoped one-argument RPC. Covered by static contract tests and bounded browser verification; no production deployment is performed by this PR. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -94,7 +110,11 @@
     {
       "id": "add-qa-persona-flag-and-role-retirements",
       "file": "supabase/migrations/20260915032729_add_qa_persona_flag_and_role_retirements.sql",
-      "categories": ["data-mutation", "destructive-mutation", "hard-coded-id"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation",
+        "hard-coded-id"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Carl-approved (2026-09-15): backfills is_qa_persona=true for the 5 accounts already flagged kpi_pod='qa' (live query confirmed kpi_pod has only ever held null or 'qa' across the entire database), inserts one supplemental CSC user_roles row for Nova's real account (755d843d-8d93-4179-8bb8-50c61a6f21fe, confirmed via live query -- she is an Integrator who also runs the CSC seat, using the existing user_roles/check_permission() multi-role infrastructure already proven in production via the Bulk Generate Automation precedent), and sets dd_unicorn_roles.is_active=false for Team Leader and CET (both confirmed zero current holders) per the RBAC v6 plan's 2026-09-10 baseline. A separate duplicate account (nova+csc@vivacity.com.au) was found and deliberately left untouched, deferred to a later session. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -103,7 +123,11 @@
     {
       "id": "migrate-staff-directory-fns-to-qa-persona-function-bodies",
       "file": "supabase/migrations/20260915032908_migrate_staff_directory_fns_to_qa_persona.sql",
-      "categories": ["data-mutation", "destructive-mutation", "hard-coded-id"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation",
+        "hard-coded-id"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "False positive, same shape as prior function-body entries above: all flagged INSERT statements are inside the CREATE OR REPLACE FUNCTION bodies for seed_meeting_attendees_from_roles and sync_l10_meeting_participants (eos_meeting_attendees/eos_meeting_participants inserts) -- unchanged from each function's existing production behavior except swapping the kpi_pod='qa' exclusion for is_qa_persona (sync_l10_meeting_participants previously had no qa-exclusion at all, a separate pre-existing gap closed here), only executed later, per-caller, when a real meeting is scheduled/synced. The migration itself performs no direct data mutation; it only redefines get_vivacity_team_directory, get_vivacity_team_directory_staff, seed_meeting_attendees_from_roles, and sync_l10_meeting_participants. The flagged tenant_id=6372 literal is the pre-existing, unchanged Vivacity-tenant constant already used throughout this function. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -112,7 +136,10 @@
     {
       "id": "gate-upsert-rock-with-parenting-security-definer",
       "file": "supabase/migrations/20260915043200_gate_upsert_rock_with_parenting_vivacity_team_only.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "False positive, same shape as prior function-body entries above: the flagged INSERT/UPDATE statements are the pre-existing, unchanged body of the CREATE OR REPLACE FUNCTION upsert_rock_with_parenting (eos_rocks writes) -- only executed later, per-caller, when a real EOS rock is created or edited. This migration adds exactly one new statement (an is_vivacity_team_safe(auth.uid()) authorization gate as the function's first line) and changes nothing else; applied as an urgent same-day security fix after discovering the function had zero internal authorization check and its SECURITY DEFINER writes bypass eos_rocks RLS entirely (table owned by postgres, relforcerowsecurity=false) while being EXECUTE-granted to `authenticated` -- see the linked audit entry for full detail. Self-directed given severity (live, exploitable-today bypass), matching this session's established same-day-fix precedent for the eos_scorecard/eos_rocks client-tenant RLS gap; pending Carl's review via this PR, same as any other change to this repo. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -121,7 +148,9 @@
     {
       "id": "grant-eos-rocks-company-create-all-internal-roles",
       "file": "supabase/migrations/20260915050212_grant_eos_rocks_company_create_all_internal_roles.sql",
-      "categories": ["destructive-mutation"],
+      "categories": [
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Carl-approved (2026-09-15, RBAC v6 P1-x eos.rocks.own.manage golden-matrix packet): 'internal staff can create rocks' -- eos.rocks.company.create's Super-Admin/Team-Leader-only catalogue restriction is retired. Sets role_permissions.level='full' for BGT/CET/CSC/Integrator on this one feature_key, matching Super Admin/Team Leader (already full) and eos.rocks.own.manage (already full for every internal role). This brings the catalogue in line with already-live behavior -- neither the UI dropdown gate nor eos_rocks RLS ever actually checked rock_level on create, so no new access is granted, only the catalogue's stale claim is corrected. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -130,7 +159,10 @@
     {
       "id": "vivacity-academy-tiers-function-bodies",
       "file": "supabase/migrations/20260925061256_vivacity_academy_tiers.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Two distinct findings. (1) 4 of the 5 flagged statements are function-body false positives, same shape as the other entries above: the INSERT/UPDATE statements are inside the CREATE OR REPLACE FUNCTION bodies for manage_academy_solo_access (tenants update, audit_eos_events insert) and create_academy_solo_account (tenants insert, audit_eos_events insert) -- unchanged from each function's existing production behavior, only executed later, per-caller, when an authorized staff member actually calls the RPC. (2) The 5th (the top-level UPDATE public.tenants backfill at the end of the migration) is a real, already-applied one-time data mutation: it stamps metadata.academy_solo.tier='solo' on rows that already have a metadata.academy_solo object but no tier field -- by construction, every existing Academy Solo tenant. Verified live via execute_sql immediately after applying: exactly the 4 known Academy Solo tenants (The Australian Higher Education Academy, Techskill Academy, Kingston State College, Rothwell Early Learning Centre Daycare) were updated, academy_max_users unchanged at 1 for all four, no other tenant rows touched. See docs/audit-log/entries/2026-09-25-vivacity-academy-tiers-and-seat-limit-fix.md. Renewed 2026-10-27 per Carl's direction: existing scope and recorded decision state retained; only the temporary allowlist window was refreshed.",
@@ -139,7 +171,10 @@
     {
       "id": "company-individual-rock-parenting-rpc",
       "file": "supabase/migrations/20261027100000_validate_company_individual_rock_parenting.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed function-body findings only: INSERT/UPDATE statements are inside the existing staff-gated SECURITY DEFINER RPC and execute only when an authorized user creates or edits a Rock. This migration changes no rows during replay; it extends Company/Individual parent validation and preserves current staff authorization and client auto-parenting.",
@@ -148,7 +183,10 @@
     {
       "id": "company-individual-rock-milestone-normalization",
       "file": "supabase/migrations/20261027110000_normalize_eos_rock_milestones.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings: the one migration-time INSERT copies existing tenant 6372 legacy milestone JSON into normalized rows using deterministic IDs and a uniqueness guard; the source JSON is preserved. The event-table INSERT is trigger-function behavior, and UPDATE matches are trigger declarations, not migration-time row updates. Read-only preflight counted 453 legacy items across 152 Rocks; post-apply verification will confirm row parity and source preservation.",
@@ -157,7 +195,10 @@
     {
       "id": "rock-task-sync",
       "file": "supabase/migrations/20261027130000_rock_task_sync.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings (2026-10-27, under Carl's option-2 task-sync policy decision; applied to unicorn-qa and production on Carl's explicit instruction, 2026-10-27): all 8 matches are statements inside the bodies of two SECURITY DEFINER functions (apply_rock_task_sync_event and recompute_rock_milestone_from_tasks), executable only by service_role. The migration itself writes no rows when applied. At runtime the functions insert/upsert eos_rock_milestone_task_links and eos_task_sync_events keyed by (provider, external_key) and event_id, and update eos_rock_milestones.status for one named milestone only within the not_started/in_progress/blocked transitions (never complete, deferred or off_track), after tenant validation. Verified in unicorn-qa and production (PostgreSQL 15): all policy scenarios plus the human-block and restore cases, run in rolled-back transactions.",
@@ -166,7 +207,10 @@
     {
       "id": "rock-editor-explicit-upsert",
       "file": "supabase/migrations/20261027150000_rock_editor_explicit_upsert.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed function-body findings only (2026-10-27): the flagged INSERT and UPDATE are the existing statements inside the staff-gated SECURITY DEFINER upsert_rock_with_parenting(), which run only when an authorized user saves a Rock. This migration changes no rows when applied. It removes the function's two silent side effects (the auto-created Client Rock Team Rock and the quiet first-Team-Rock parent pick), adds a level lock for Rocks that have a parent or children, and defaults a new Company Rock's vto_id to the tenant's latest V/TO. Signature and return shape are unchanged, so CREATE OR REPLACE leaves a single overload. Dry-run against production inside a rolled-back transaction before applying: all cases behaved as designed and nothing persisted (156 Rocks, 0 test Rocks, old definition still live afterwards). See docs/audit-log/entries/2026-10-27-rock-editor-explicit-upsert.md.",
@@ -175,7 +219,10 @@
     {
       "id": "rock-editor-explicit-upsert-rollback",
       "file": "supabase/migrations/rollback/20261027150000_rock_editor_explicit_upsert.down.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed function-body findings only (2026-10-27): the rollback restores the previous definition of upsert_rock_with_parenting() verbatim (migration 20261027100000), including its client Rock auto-parenting. The flagged INSERT and UPDATE are statements inside that staff-gated SECURITY DEFINER function body; applying the rollback changes no rows. Use only if the explicit-upsert migration must be reverted.",
@@ -184,7 +231,10 @@
     {
       "id": "rock-lifecycle",
       "file": "supabase/migrations/20261027160000_rock_lifecycle.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings (2026-10-27): none of the six matches changes a row when the migration is applied. Three INSERTs are statements inside the body of the append-only history trigger function record_eos_rock_event(); the flagged DELETE is the words OR DELETE in that trigger's CREATE TRIGGER definition; the two UPDATEs are statements inside the staff-gated SECURITY DEFINER functions archive_rock() and restore_rock(), which set archived_at on named Rocks only when an authorized user archives or restores. The migration also adds a delete guard trigger that only refuses deletions, a created_by default trigger, and a read-only impact function. Dry-run against production inside one rolled-back transaction before applying: history, created_by default, delete guard cases, archive and restore (single, with children, only Rocks archived together), staff-only refusal for a non-staff user, and archiving all 155 existing Rocks without a failure; afterwards 156 Rocks, no new objects, nothing persisted. See docs/audit-log/entries/2026-10-27-rock-lifecycle.md.",
@@ -193,7 +243,10 @@
     {
       "id": "retire-rock-task-sync-functions-rollback",
       "file": "supabase/migrations/rollback/20261028010000_retire_rock_task_sync_functions.down.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed function-body findings only (2026-10-28): the rollback restores, verbatim, the two service-role-only functions recompute_rock_milestone_from_tasks() and apply_rock_task_sync_event() from 20261027130000_rock_task_sync.sql (bodies byte-identical, md5 ced27d69... and bba588e8..., and equal to the bodies currently in production). The flagged INSERT, UPDATE and DELETE statements are inside those function bodies and execute only if the functions are later called by service_role; applying the rollback changes no rows. It also clears two table comments. Use only if the retirement migration must be reverted. See docs/audit-log/entries/2026-10-28-retire-rock-task-sync.md.",
@@ -202,7 +255,10 @@
     {
       "id": "rock-blockers-and-carryover",
       "file": "supabase/migrations/20261028020000_rock_blockers_and_carryover.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-28): the single statement that runs when the migration is applied is one INSERT of the lookup row 'blocked' into dd_rock_status (guarded by WHERE NOT EXISTS, so re-running adds nothing); no existing Rock, milestone or link row is changed and there is no backfill. Every other flagged INSERT or UPDATE is inside a function body (set_blocker, resolve_blocker, carry_forward_rock, the status-change trigger) or is part of a CREATE TRIGGER clause, and runs only when a signed-in staff user calls the function; each function is SECURITY DEFINER with an empty search_path, checks is_vivacity_team_safe(auth.uid()) first, and is not executable by anon. The three new tables have no INSERT/UPDATE/DELETE grants. Dry-run against unicorn-qa inside rolled-back transactions only (three runs, nothing persisted), including the rollback script. See docs/audit-log/entries/2026-10-28-rock-blockers-and-carryover.md.",
@@ -211,7 +267,9 @@
     {
       "id": "rock-blockers-and-carryover-rollback",
       "file": "supabase/migrations/rollback/20261028020000_rock_blockers_and_carryover.down.sql",
-      "categories": ["destructive-mutation"],
+      "categories": [
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-28): the rollback for 20261028020000. It deletes the dd_rock_status lookup row 'blocked' and first moves any Rock still at status 'blocked' to 'at_risk' so no Rock keeps a status older screens do not know; it then drops the three new tables, which discards recorded blockers and carryover provenance. Use only if the migration must be reverted. Run inside a rolled-back transaction on unicorn-qa after the migration and verified to leave no table, function, status row or blocked Rock behind, with rock_delete_blockers() back to its earlier answers. See docs/audit-log/entries/2026-10-28-rock-blockers-and-carryover.md.",
@@ -220,7 +278,10 @@
     {
       "id": "rock-notes",
       "file": "supabase/migrations/20261028120000_rock_notes.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-28): the migration runs no INSERT, UPDATE or DELETE when applied, and changes no existing row. The flagged INSERT is the statement inside add_rock_note(), which runs only when a signed-in staff user calls it (SECURITY DEFINER, empty search_path, is_vivacity_team_safe(auth.uid()) checked first, not executable by anon). The flagged UPDATE OR DELETE is the CREATE TRIGGER clause of the append-only guard, which REFUSES every update and delete (the one exception is a deleted meeting clearing meeting_id). The two new tables have select-only grants; summaries are written only by the service role. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted), including refusals, the snapshot, the duplicate guard, append-only, the delete guard and grants. See docs/audit-log/entries/2026-10-28-rock-notes.md.",
@@ -229,7 +290,10 @@
     {
       "id": "rock-todo-links",
       "file": "supabase/migrations/20261029030000_rock_todo_links.sql",
-      "categories": ["data-mutation", "destructive-mutation"],
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
       "reason": "Reviewed findings only (2026-10-29): the migration runs no INSERT, UPDATE or DELETE when applied, creates one new table, and changes no existing row (no To-Do, Rock or milestone is touched). Every flagged INSERT, DELETE or UPDATE is inside a function body (add_rock_todo, link_todo_to_rock, unlink_todo_from_rock) or is part of the CREATE TRIGGER clause of a validation trigger, and runs only when a signed-in staff user calls the function: each is SECURITY DEFINER with an empty search_path, checks is_vivacity_team_safe(auth.uid()) before any write, and is not executable by anon. The one DELETE removes only the link row and never a To-Do. The new table has select-only grants. Dry-run against unicorn-qa inside a rolled-back transaction only (nothing persisted). See docs/audit-log/entries/2026-10-29-rock-todo-links.md.",

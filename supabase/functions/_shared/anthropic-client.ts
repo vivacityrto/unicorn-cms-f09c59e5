@@ -93,6 +93,10 @@ export async function callAnthropic(args: {
   tools?: AnthropicToolDefinition[];
   max_tokens?: number;
   temperature?: number;
+  /** Optional: force a specific tool, e.g. { type: "tool", name: "draft_ticket" }. */
+  tool_choice?: Record<string, unknown>;
+  /** Optional: abort the request (used by callers that enforce a deadline). */
+  signal?: AbortSignal;
 }): Promise<AnthropicResponse> {
   const apiKey = getApiKey();
 
@@ -108,9 +112,13 @@ export async function callAnthropic(args: {
   if (args.tools && args.tools.length > 0) {
     body.tools = args.tools;
   }
+  if (args.tool_choice) {
+    body.tool_choice = args.tool_choice;
+  }
 
   const resp = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
+    signal: args.signal,
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
