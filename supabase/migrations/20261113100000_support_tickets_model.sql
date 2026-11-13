@@ -5,7 +5,7 @@
 --
 -- Design: docs/kb/reference/support-tickets-overhaul/ (and the audit entry
 -- docs/audit-log/entries/2026-11-13-support-tickets-model.md).
--- migration-target-project: qfpxvumcrnzrjyvqkicq
+-- migration-target-project: yxkgdalkbrriasiyyrwk
 --
 -- Rollback: supabase/migrations/rollback/20261113100000_support_tickets_model.down.sql
 

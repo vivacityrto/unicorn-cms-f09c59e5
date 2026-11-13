@@ -455,6 +455,66 @@
       "owner": "Carl",
       "reason": "Creates the SuperAdmin-only function adjust_package_allowance. All five flagged statements (keyed UPDATEs on package_instances, package_renewal_periods and notes; INSERTs into notes and client_audit_log) are inside the function body and run only when a SuperAdmin calls it on one package instance; applying the migration changes no rows. Not yet applied to production; the happy path and every refusal were proven in a rolled-back transaction on unicorn-qa. Entry added for PR review, same form as set-package-anniversary-date-rpc. See docs/audit-log/entries/2026-11-05-package-allowance-adjustment.md.",
       "expires": "2026-12-04"
+    },
+    {
+      "id": "support-tickets-model",
+      "file": "supabase/migrations/20261113100000_support_tickets_model.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved design (2026-11-13). Creates the new support ticket tables, RLS, triggers and the create_support_ticket function. Every flagged line is inside a function or trigger body (INSERTs into the new ticket tables and user_notifications, keyed UPDATEs of the new support_tickets table), a foreign key ON UPDATE/ON DELETE clause, a GRANT, or the single INSERT of the private ticket-files storage bucket (ON CONFLICT DO NOTHING). Applying the file changes no existing rows. Proven on unicorn-qa with 41 rolled-back RLS and behaviour checks; not yet applied to production. See docs/audit-log/entries/2026-11-13-support-tickets-model.md.",
+      "expires": "2026-12-13"
+    },
+    {
+      "id": "support-tickets-backfill",
+      "file": "supabase/migrations/20261113110000_support_tickets_backfill.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved design (2026-11-13). Backfills the 22 suggest_items tickets and 12 Help Centre support threads into the new tables. INSERT-only into the new tables and temp tables; originals are never modified; idempotent (ON CONFLICT DO NOTHING); one transaction with in-transaction reconciliation that raises and rolls back on any mismatch. Proven on unicorn-qa with synthetic legacy rows (rolled back, then applied); production gets a read-only dry run first and a write only on Carl separate approval. Rollback: supabase/migrations/rollback/20261113110000_support_tickets_backfill.down.sql.",
+      "expires": "2026-12-13"
+    },
+    {
+      "id": "support-tickets-model-rollback",
+      "file": "supabase/migrations/rollback/20261113100000_support_tickets_model.down.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file for the support tickets model migration. Drops only the new objects; the one DELETE removes the ticket-files bucket row only when the bucket holds no objects. Run only before cut-over.",
+      "expires": "2026-12-13"
+    },
+    {
+      "id": "support-tickets-backfill-rollback",
+      "file": "supabase/migrations/rollback/20261113110000_support_tickets_backfill.down.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file for the backfill. Deletes exactly the tickets recorded in the migration map (cascading to their messages and attachment rows) plus the map and check rows. Legacy tables were never modified. Run only before cut-over.",
+      "expires": "2026-12-13"
+    },
+    {
+      "id": "support-tickets-cutover-rollback",
+      "file": "supabase/migrations/rollback/20261113120000_support_tickets_cutover.down.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file for the cut-over. Re-grants INSERT and UPDATE on the two legacy tables exactly as before; recreates the two help_* insert policies and the notification trigger. Flagged lines are GRANT statements only.",
+      "expires": "2026-12-13"
     }
   ]
 }

@@ -13,7 +13,7 @@
 --   * trg_notify_csc_on_support_ticket is dropped: ticket triggers replace it.
 --     The 252 existing support_ticket notifications are left as they are.
 --
--- migration-target-project: qfpxvumcrnzrjyvqkicq
+-- migration-target-project: yxkgdalkbrriasiyyrwk
 -- Rollback: supabase/migrations/rollback/20261113120000_support_tickets_cutover.down.sql
 
 REVOKE INSERT, UPDATE, DELETE ON public.suggest_items       FROM authenticated, anon;

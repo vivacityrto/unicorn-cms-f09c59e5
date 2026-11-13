@@ -10,7 +10,7 @@
 -- legacy and new counts and per-ticket content hashes; any mismatch raises and
 -- the whole migration rolls back. Results are kept in support_ticket_migration_checks.
 --
--- migration-target-project: qfpxvumcrnzrjyvqkicq
+-- migration-target-project: yxkgdalkbrriasiyyrwk
 -- Rollback: supabase/migrations/rollback/20261113110000_support_tickets_backfill.down.sql
 
 DO $backfill$
