@@ -21,7 +21,7 @@
 
 - None in this entry. The fix is the existing migration on `main`; this entry records the finding and the rollout plan below. No production change was made while auditing.
 
-## Rollout plan (not yet run; needs Carl's explicit go-ahead before any production write)
+## Rollout plan (steps 1 and 2 done, see QA result; steps 3 to 6 need Carl's explicit go-ahead before any production write)
 
 1. **Preflight, read-only, production.** Confirm exactly one `fn_preview_broadcast_recipients(text, text, text[])` and that its body still lacks `relationship_role`. Re-run the active-tenant counts above and record them.
 2. **Verify on `unicorn-qa` first.** Apply the migration to `unicorn-qa`, then in a transaction rolled back by a raised exception: impersonate a Vivacity staff caller, run the function with `ARRAY['parent','user']` for `everyone`, and confirm Users now appear and `academy_only` users and tenant 6372 still do not. Confirm a non-staff caller still gets `Access denied`.
@@ -30,9 +30,18 @@
 5. **Rollback.** Re-apply the previous body, which is the same function with the filter reduced to `tu.role = ANY(p_include_roles)`. Existing `broadcast_recipients` rows are untouched by either direction, and no campaign is queued by the migration itself.
 6. **Effect to tell staff.** The next broadcast will count and track client Users as individual recipients. Message delivery to them does not change.
 
+## QA result (13 November 2026)
+
+Steps 1 and 2 are done. The migration was applied to `unicorn-qa` (ref `qfpxvumcrnzrjyvqkicq`) via the Supabase MCP as version `20261113041848`; production is unchanged.
+
+- **Before:** QA had the same single function with no `relationship_role` clause, and 18 full-access Users across 4 active tenants plus 1 primary contact.
+- **Behaviour**, in a rolled-back transaction (the block raised an exception with the results, and it writes nothing), impersonating Super Admin `ada3ae59…` for `everyone`: `['parent']` returned 1 recipient; `['parent','user']` returned 19, of which 18 are Users. Zero academy-only users and zero rows for tenant 6372. A client caller (a `relationship_role = 'user'` member) got `Access denied: Vivacity staff access required`, and so did a caller with no user in the claims.
+- **Structure after:** exactly one function with signature `(text, text, text[])`, `SECURITY DEFINER`, `search_path = public`, EXECUTE held by `authenticated`.
+- **Difference to check on production.** On QA, `anon` also holds EXECUTE on the function. On production `anon` does not (checked read-only: `anon` false, `authenticated` true, and the same for `fn_queue_broadcast_campaign`). The function refuses any caller who is not Vivacity staff, so this is not an exposure, but it means QA's grants differ from production's. `CREATE OR REPLACE` keeps the existing grants, so production should stay as it is; step 4's postflight must confirm `anon` is still false there. Whether QA had the `anon` grant before the migration was not recorded.
+
 ## Decisions
 
-- Pending: apply to production after steps 1 to 2 (Carl's approval).
+- Pending: apply to production (Carl's approval). QA steps are done.
 - Fix by widening the role match in the existing function, as the migration does, rather than changing what the dialog sends, so old campaign rows that stored `['parent']` keep working.
 
 ## Open questions parked
