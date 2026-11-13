@@ -60,12 +60,14 @@ export const NotificationDropdown = () => {
         ?? new URLSearchParams(notification.link?.split('?')[1] ?? '').get('conversation');
       navigate(convId ? `/communications?thread=${convId}` : '/communications');
     } else if (notification.type === 'support_ticket') {
+      // Legacy Client Messages notifications: source_id is a help thread id that is now also the ticket id.
       navigate(
         notification.source_id
-          ? `/support-tickets?thread=${notification.source_id}`
+          ? `/support-tickets/${notification.source_id}`
           : '/support-tickets'
       );
     } else if (notification.link) {
+      // ticket_submitted, ticket_reply, ticket_assigned and ticket_resolved carry their own link.
       navigate(notification.link);
     }
   };

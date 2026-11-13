@@ -2,34 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, User, Headphones, MessageCircle, Paperclip, X, CheckCircle2 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { Send, Loader2, User, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, Json } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-
-function getBrowserName(ua: string): string {
-  if (/Edg\//.test(ua)) return 'Edge';
-  if (/Chrome\//.test(ua)) return 'Chrome';
-  if (/Firefox\//.test(ua)) return 'Firefox';
-  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
-  return 'Unknown';
-}
-
-function getOSName(ua: string): string {
-  if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
-  if (/Windows/.test(ua)) return 'Windows';
-  if (/Mac OS X/.test(ua)) return 'macOS';
-  if (/Android/.test(ua)) return 'Android';
-  if (/iPhone|iPad/.test(ua)) return 'iOS';
-  if (/Linux/.test(ua)) return 'Linux';
-  return 'Unknown';
-}
+import { ClientMessageBox } from "@/components/client-portal/support-tickets/ClientMessageBox";
+import { useHelpCenter } from "./HelpCenterContext";
 
 interface Message {
   id: string;
@@ -43,14 +24,13 @@ interface MessageTabProps {
   channel: "csc" | "support";
 }
 
-const channelConfig: Record<"csc" | "support", {
+const channelConfig: Record<"csc", {
   title: string;
   subtitle: string;
   emptyIcon: typeof MessageCircle;
   emptyTitle: string;
   emptyDescription: string;
   placeholder: string;
-  fallback?: string;
 }> = {
   csc: {
     title: "Message your CSC",
@@ -60,24 +40,15 @@ const channelConfig: Record<"csc" | "support", {
     emptyDescription: "Send a message. We reply in Unicorn.",
     placeholder: "Type a message to your consultant...",
   },
-  support: {
-    title: "Support",
-    subtitle: "For technical issues and access help. Prefer in-app so we can track everything.",
-    emptyIcon: Headphones,
-    emptyTitle: "Contact support",
-    emptyDescription: "For technical issues and access help.",
-    placeholder: "Describe your issue...",
-    fallback: "support@vivacity.com.au",
-  },
 };
 
-export function MessageTab({ channel }: MessageTabProps) {
+function CscMessageTab({ channel }: { channel: "csc" }) {
   const { profile } = useAuth();
   const config = channelConfig[channel];
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  // For CSC: tenant_conversations.id; for support: help_threads.id
+  // tenant_conversations.id for the CSC conversation
   const [threadId, setThreadId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(channel === "csc");
   // CSC branch: blocks send when participant upsert failed.
@@ -88,55 +59,6 @@ export function MessageTab({ channel }: MessageTabProps) {
   const staffAvatarMapRef = useRef(staffAvatarMap);
   staffAvatarMapRef.current = staffAvatarMap;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [subject, setSubject] = useState("");
-
-  useEffect(() => {
-    return () => {
-      if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
-    };
-  }, [attachmentPreview]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      toast.error("Only image files are allowed.");
-      return;
-    }
-    if (f.size > MAX_ATTACHMENT_BYTES) {
-      toast.error("Image must be 5 MB or smaller.");
-      return;
-    }
-    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
-    setAttachment(f);
-    setAttachmentPreview(URL.createObjectURL(f));
-  };
-
-  const clearAttachment = () => {
-    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
-    setAttachment(null);
-    setAttachmentPreview(null);
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const file = e.clipboardData.files[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    e.preventDefault();
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      toast.error("Image must be 5 MB or smaller.");
-      return;
-    }
-    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
-    setAttachment(file);
-    setAttachmentPreview(URL.createObjectURL(file));
-  };
-
-  // ---------- Load history ----------
   useEffect(() => {
     if (!profile?.user_uuid) return;
 
@@ -378,9 +300,7 @@ export function MessageTab({ channel }: MessageTabProps) {
   const sendMessage = async () => {
     if (loading || !profile) return;
     const hasText = input.trim().length > 0;
-    const hasAttachment = channel === "support" && !!attachment;
-    if (!hasText && !hasAttachment) return;
-    if (channel === "csc" && !hasText) return;
+    if (!hasText) return;
     if (channel === "csc" && cscInitFailed) {
       toast.error("Message thread not initialized. Please refresh and try again.");
       return;
@@ -390,11 +310,7 @@ export function MessageTab({ channel }: MessageTabProps) {
     setLoading(true);
 
     try {
-      if (channel === "csc") {
-        await sendCsc(userMsg);
-      } else {
-        await sendSupport(userMsg);
-      }
+      await sendCsc(userMsg);
     } catch (err) {
       console.error("Message send error:", err);
       toast.error("Failed to send message. Please try again.");
@@ -402,69 +318,6 @@ export function MessageTab({ channel }: MessageTabProps) {
       setLoading(false);
     }
   };
-
-  async function sendSupport(userMsg: string) {
-    const diagnosticMeta = {
-      page_path: window.location.pathname,
-      browser: getBrowserName(navigator.userAgent),
-      os: getOSName(navigator.userAgent),
-      screen: `${window.innerWidth}x${window.innerHeight}`,
-      ...(subject.trim() ? { subject: subject.trim() } : {}),
-    };
-
-    const { data: newThread, error: threadError } = await supabase
-      .from("help_threads")
-      .insert({
-        tenant_id: profile!.tenant_id,
-        user_id: profile!.user_uuid,
-        channel: "support",
-        status: "open",
-        subject: subject.trim() || null,
-        metadata: diagnosticMeta,
-      })
-      .select("id")
-      .single();
-
-    if (threadError) throw threadError;
-    const currentThreadId = newThread.id;
-
-    let messageMetadata: Json | null = null;
-    const fileToUpload = attachment;
-    if (fileToUpload) {
-      const path = `${profile!.tenant_id}/${currentThreadId}/${crypto.randomUUID()}-${fileToUpload.name}`;
-      const { error: upErr } = await supabase.storage
-        .from("support-attachments")
-        .upload(path, fileToUpload, { contentType: fileToUpload.type, upsert: false });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("support-attachments").getPublicUrl(path);
-      messageMetadata = {
-        attachments: [{ url: pub.publicUrl, name: fileToUpload.name, type: fileToUpload.type }],
-      };
-    }
-
-    const { error: msgError } = await supabase
-      .from("help_messages")
-      .insert({
-        thread_id: currentThreadId,
-        sender_id: profile!.user_uuid,
-        role: "user",
-        content: userMsg || "(image attached)",
-        ...(messageMetadata ? { metadata: messageMetadata } : {}),
-      });
-
-    if (msgError) throw msgError;
-
-    await supabase
-      .from("help_threads")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", currentThreadId);
-
-    setSubmitted(true);
-    setInput("");
-    setSubject("");
-    setThreadId(null);
-    clearAttachment();
-  }
 
   async function sendCsc(userMsg: string) {
     const conversationId = threadId;
@@ -513,103 +366,6 @@ export function MessageTab({ channel }: MessageTabProps) {
   }
 
   const EmptyIcon = config.emptyIcon;
-
-  if (channel === "support") {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-border space-y-1">
-          <p className="text-sm text-muted-foreground">{config.subtitle}</p>
-          {config.fallback && (
-            <p className="text-xs text-muted-foreground">
-              Or email: <span className="text-foreground">{config.fallback}</span>
-            </p>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          {submitted ? (
-            <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
-              <div>
-                <p className="font-medium text-secondary">Ticket submitted</p>
-                <p className="text-sm text-muted-foreground mt-1">Our team will be in touch.</p>
-              </div>
-              <Button variant="outline" onClick={() => setSubmitted(false)}>
-                Submit another ticket
-              </Button>
-            </div>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-              className="space-y-3"
-            >
-              <Input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject (optional)"
-                disabled={loading}
-              />
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onPaste={handlePaste}
-                placeholder={config.placeholder}
-                rows={4}
-                disabled={loading}
-              />
-              {attachmentPreview && (
-                <div className="relative inline-block">
-                  <img
-                    src={attachmentPreview}
-                    alt="Attachment preview"
-                    className="h-16 w-16 object-cover rounded border border-border"
-                  />
-                  <button
-                    type="button"
-                    onClick={clearAttachment}
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
-                    aria-label="Remove attachment"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading}
-                  aria-label="Attach image"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={loading || (!input.trim() && !attachment)}
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                  Send Ticket
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -706,4 +462,30 @@ export function MessageTab({ channel }: MessageTabProps) {
 
     </div>
   );
+}
+
+/**
+ * Support is a plain message box. The message becomes a ticket straight away
+ * (create_support_ticket) and staff triage it in the Tickets list; nothing is
+ * written to help_threads or help_messages from here any more.
+ */
+function SupportMessageTab() {
+  const { closeHelpCenter } = useHelpCenter();
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-4 py-3 border-b border-border space-y-1">
+        <p className="text-sm text-muted-foreground">For technical issues and access help. Send a message and we will track it for you.</p>
+        <p className="text-xs text-muted-foreground">
+          Or email: <span className="text-foreground">support@vivacity.com.au</span>
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <ClientMessageBox onViewTickets={closeHelpCenter} />
+      </div>
+    </div>
+  );
+}
+
+export function MessageTab({ channel }: MessageTabProps) {
+  return channel === "support" ? <SupportMessageTab /> : <CscMessageTab channel="csc" />;
 }

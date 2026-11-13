@@ -32,7 +32,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { NewTicketModal } from "@/components/support-tickets/NewTicketModal";
+import { NewTicketDialog } from "@/components/support-tickets/NewTicketDialog";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { Building2 } from "lucide-react";
 import { MiniKpiSummary } from "@/components/kpi-v2/MiniKpiSummary";
@@ -1212,7 +1212,7 @@ export default function MainDashboard() {
 
 
 
-      <NewTicketModal open={ticketOpen} onOpenChange={setTicketOpen} />
+      <NewTicketDialog open={ticketOpen} onOpenChange={setTicketOpen} />
     </Fragment>
   );
 }

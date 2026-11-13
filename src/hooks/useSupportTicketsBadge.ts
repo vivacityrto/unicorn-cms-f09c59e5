@@ -1,26 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Tickets that still need triage: new and unassigned. RLS limits this to what the signed-in staff member can see. */
 export function useSupportTicketsBadge() {
   const { data: count = 0 } = useQuery({
     queryKey: ["support-tickets-badge"],
     queryFn: async () => {
-      const { data: threads, error } = await supabase
-        .from("help_threads")
-        .select("id")
-        .eq("channel", "support")
-        .eq("status", "open");
-      if (error || !threads?.length) return 0;
-
-      const ids = threads.map((t) => t.id);
-      const { data: staffMsgs } = await supabase
-        .from("help_messages")
-        .select("thread_id")
-        .eq("role", "staff")
-        .in("thread_id", ids);
-
-      const answered = new Set((staffMsgs || []).map((m) => m.thread_id));
-      return threads.filter((t) => !answered.has(t.id)).length;
+      const { count: n, error } = await supabase
+        .from("support_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new")
+        .is("assignee_id", null)
+        .is("deleted_at", null);
+      if (error) return 0;
+      return n ?? 0;
     },
     refetchInterval: 60_000,
     staleTime: 30_000,

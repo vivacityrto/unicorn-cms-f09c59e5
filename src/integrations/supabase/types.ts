@@ -48241,6 +48241,190 @@ export type Database = {
           },
         ]
       }
+      support_ticket_attachments: {
+        Row: {
+          bucket: string
+          created_at: string
+          file_name: string
+          id: string
+          message_id: string | null
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          ticket_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          bucket?: string
+          created_at?: string
+          file_name: string
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          ticket_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          ticket_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "support_ticket_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          staff_only: boolean
+          ticket_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          kind: string
+          staff_only?: boolean
+          ticket_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          staff_only?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          ai_state: string
+          assignee_id: string | null
+          created_at: string
+          deleted_at: string | null
+          external_ref: string | null
+          id: string
+          last_activity_at: string
+          product: string
+          reporter_id: string
+          resolved_at: string | null
+          source_url: string | null
+          status: string
+          tenant_id: number
+          ticket_number: number
+          title: string
+          type: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          ai_state?: string
+          assignee_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          external_ref?: string | null
+          id?: string
+          last_activity_at?: string
+          product?: string
+          reporter_id: string
+          resolved_at?: string | null
+          source_url?: string | null
+          status?: string
+          tenant_id: number
+          ticket_number?: never
+          title: string
+          type?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          ai_state?: string
+          assignee_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          external_ref?: string | null
+          id?: string
+          last_activity_at?: string
+          product?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          source_url?: string | null
+          status?: string
+          tenant_id?: number
+          ticket_number?: never
+          title?: string
+          type?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "support_tickets_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       suggest_items: {
         Row: {
           affected_areas: string[] | null
@@ -70471,6 +70655,20 @@ export type Database = {
       }
     }
     Functions: {
+      create_support_ticket: {
+        Args: {
+          p_body: string
+          p_diagnostics?: Json
+          p_external_ref?: string
+          p_page_path?: string
+          p_product?: string
+          p_subject: string
+          p_tenant_id?: number
+          p_type?: string
+          p_urgency?: string
+        }
+        Returns: { id: string; ticket_number: number }[]
+      }
       _apply_relationship_role_row: {
         Args: {
           p_changed_by?: string

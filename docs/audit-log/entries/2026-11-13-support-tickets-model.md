@@ -46,13 +46,24 @@
 - **Edge Function deployed to QA** (a bundle of the used shared exports). Probed: no token returns 401 at the gateway; the anon key as a bearer returns 401 from `verifyAuth`; CORS preflight 200. Unit tests (32) and the static auth-gate test pass under `npm run test:edge`.
 - **`pg_policies` dump** for the three tables and `storage.objects` taken after apply: 12 policies as designed.
 
+## Frontend verification (13 November 2026)
+
+- **Full chain on the branch:** `npm run typecheck` (0 errors), `npm run lint:ratchet` (no regressions), `npm run test:frontend` (1,638 passed, 43 skipped; includes 39 new tests for view and filter logic, sorting, inline assign and status, the reason dialog, empty states, the client message box success and failure paths, and the client thread), `npm run test:edge` (541 passed, including 46 new for the function and the migration shapes), `npm run build`, `node scripts/check-kb-links.mjs`, and the migration safety audit (0 blocking, 37 allowlisted).
+- **UI and accessibility pass against a stubbed network, not real data or a real login.** Synthetic, de-identified tickets served to the real components on a local dev server (script and screenshots: `support-tickets-after/` in the session notes folder). axe-core 4.10.2 with WCAG 2.0/2.1 A and AA rules found **0 violations** on the staff list, the open ticket panel and the new-ticket dialog in light and dark, on the 375 px list, and on the client Support list and client message box at desktop width. It found real issues on the first run, now fixed: summary counts used a malformed definition list, outline buttons used the cyan theme colour (below AA on white), and long titles were truncated. 375 px has no horizontal overflow in either theme. The inline Assign control sends a single PATCH carrying only `assignee_id`. The client message box calls `create_support_ticket` and then the AI function with `{ ticket_id }` only, and shows the reference number.
+- **Not captured:** the client message box at 375 px (my script opened the navigation drawer instead), the Help Centre Support tab inside the drawer, and a real-session pass of any page.
+
 ## Production read-only dry run (13 November 2026; select-only, nothing written)
 
 Legacy counts the backfill will reconcile against: **23 `suggest_items` rows (1 soft-deleted) and 12 support threads, so 35 tickets; 112 messages; 9 attachments (1 + 8 from thread messages).** Statuses closed 9, new 1, resolved 13; mapped types bug 11, request 12; urgency critical 3, high 4, medium 14, low 2; 10 assigned; tenants: 15 staff-raised under the Vivacity tenant and 8 across seven client tenants; 12 support threads in 6 tenants, 9 with a subject, 7 with a staff reply, 11 with diagnostics. 8 rows have a `priority` that differs from `urgency` (urgency wins). **Every reporter, assignee, thread user, message sender and tenant resolves** (0 missing), and all 8 thread attachment URLs match the expected bucket path, so the foreign keys will hold.
 
+## QA fixtures left in place (Carl to decide: keep or clean)
+
+- On `unicorn-qa`: the three migrations, the deployed `support-ticket-ai-draft` function, 12 synthetic legacy tickets, 4 synthetic Help Centre threads (3 support, 1 chat-bot) with 5 messages and 1 attachment row, the resulting 15 migrated tickets with their messages, a QA stand-in tenant `6372` (slug `qa-vivacity-standin`), and reference rows in the five `dd_suggest_*` tables (QA had none). No accounts were created. The tenant `6372` stand-in is needed to raise ComplyHub or company tickets on QA.
+- `supabase/qa-checks/support_tickets_legacy_seed_cleanup.sql` removes all of it (not run). The cut-over migration was also applied on QA, so the legacy tables there are read-only for the browser roles.
+
 ## Not verified
 
-- **No real authenticated session was used on QA.** I had no QA persona credentials and did not create or alter accounts. RLS is proven at the role and claims level (above), and the UI was checked against a stubbed network. A real-login Playwright pass, and a real call of the deployed function, are open (see the PR description).
+- **No real authenticated session was used on QA.** I had no QA persona credentials and created or altered no accounts: creating test accounts needs the user's approval in the session, and the confirmation prompt was declined. RLS is proven at the role and claims level (above), and the UI was checked against a stubbed network. A real-login Playwright pass, and a real call of the deployed function as a user (which would also show whether `ANTHROPIC_API_KEY` is set on QA), are open (see the PR description).
 - **`ANTHROPIC_API_KEY` on `unicorn-qa` could not be confirmed** (secrets are not readable through the tools). The function degrades safely (`ai_state = 'failed'`, default fields); the AI path itself is untested end to end.
 - Haiku quality on short or vague messages is untested.
 - The one rolled-back backfill run on QA advanced the ticket-number sequence (numbers 16 to 30 on QA). Production will not have this gap because its dry run is select-only.

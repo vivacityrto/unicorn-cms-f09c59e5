@@ -1,237 +1,169 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import { NewTicketModal } from '@/components/support-tickets/NewTicketModal';
-import { useSubmitSupportTicket } from '@/components/support-tickets/useSubmitSupportTicket';
+import { NewTicketDialog } from '@/components/support-tickets/NewTicketDialog';
+import { TicketFilters } from '@/components/support-tickets/TicketFilters';
+import { TicketHero } from '@/components/support-tickets/TicketHero';
+import { TicketList } from '@/components/support-tickets/TicketList';
+import { TicketPanel } from '@/components/support-tickets/TicketDetail';
+import { CloseTicketDialog } from '@/components/support-tickets/TicketControls';
+import { TicketSummaryBar } from '@/components/support-tickets/TicketSummaryBar';
+import { useSupportTickets } from '@/components/support-tickets/useSupportTickets';
 import {
-  useAdminSupportTickets, type AdminTicketRow,
-} from '@/components/support-tickets/useAdminSupportTickets';
-import { AdminTicketStats } from '@/components/support-tickets/AdminTicketStats';
-import {
-  AdminTicketStatusTabs, type StatusTab,
-} from '@/components/support-tickets/AdminTicketStatusTabs';
-import {
-  AdminTicketFilters,
-  type TypeFilter, type UrgencyFilter, type DateRangeFilter,
-} from '@/components/support-tickets/AdminTicketFilters';
-import { AdminTicketsTable } from '@/components/support-tickets/AdminTicketsTable';
-import { ClientMessagesPanel } from '@/components/support-tickets/ClientMessagesPanel';
-import { useAdminHelpThreads } from '@/components/support-tickets/useAdminHelpThreads';
-import { cn } from '@/lib/utils';
+  EMPTY_FILTERS, TICKET_VIEWS, applyFilters, computeSummary, filtersActive, matchesView, parseListParams, sortTickets,
+  ticketsToCsv, toListParams, viewCounts,
+  type ListUrlState, type SortKey, type TicketFilterState, type TicketView,
+} from '@/components/support-tickets/ticketLogic';
 
-const BUG_TYPE_CODES = new Set(['error', 'functionality_fail']);
-
-function matchesType(row: AdminTicketRow, filter: TypeFilter): boolean {
-  if (filter === 'all') return true;
-  const code = row.item_type?.code;
-  if (!code) return false;
-  if (filter === 'bug') return BUG_TYPE_CODES.has(code);
-  return code === filter;
-}
-
-function csvEscape(v: unknown): string {
-  const s = v == null ? '' : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-export default function SupportTicketsPage() {
+/**
+ * Staff Tickets page. The view, filters, sort and open ticket live in the URL,
+ * so a refresh or a shared link lands on the same screen.
+ */
+export default function SupportTicketsPage({ startNew = false }: { startNew?: boolean }) {
   const navigate = useNavigate();
-  const { profile, isSuperAdmin, loading } = useAuth();
-  const [newOpen, setNewOpen] = useState(false);
-  const { hasTenant } = useSubmitSupportTicket();
-
+  const [params, setParams] = useSearchParams();
+  const { user, profile, isSuperAdmin, loading } = useAuth();
   const allowed = profile?.is_vivacity_internal === true || isSuperAdmin();
+  const [newOpen, setNewOpen] = useState(startNew);
+  const [closingId, setClosingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
     if (!allowed) {
-      toast.error('Support Tickets admin view is for the Vivacity team only.');
+      toast.error('Tickets are for the Vivacity team only.');
       navigate('/dashboard', { replace: true });
     }
   }, [loading, allowed, navigate]);
 
-  const { data: rows = [], isLoading } = useAdminSupportTickets();
-  const { data: helpThreads = [] } = useAdminHelpThreads();
-  const clientBadgeCount = useMemo(
-    () => helpThreads.filter((t) => t.status === 'open' && t.unanswered).length,
-    [helpThreads],
+  // Notifications from the old Client Messages feature linked to ?thread=<id>; that id is now a ticket id.
+  const legacyThread = params.get('thread');
+  useEffect(() => {
+    if (legacyThread) navigate(`/support-tickets/${encodeURIComponent(legacyThread)}`, { replace: true });
+  }, [legacyThread, navigate]);
+
+  const { data: rows = [], isLoading } = useSupportTickets();
+  const state = useMemo(() => parseListParams(params), [params]);
+
+  const update = (patch: Partial<ListUrlState>) => {
+    setParams(toListParams({ ...state, ...patch }), { replace: true });
+  };
+
+  const filtered = useMemo(
+    () => applyFilters(rows, state.filters, { meId: user?.id ?? null }),
+    [rows, state.filters, user?.id],
   );
-
-  const [view, setView] = useState<'internal' | 'client'>('internal');
-  const [statusTab, setStatusTab] = useState<StatusTab>('active');
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>('all');
-  const [clientFilter, setClientFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<DateRangeFilter>(null);
-
+  const summary = useMemo(() => computeSummary(filtered), [filtered]);
+  const counts = useMemo(() => viewCounts(filtered), [filtered]);
+  const visible = useMemo(
+    () => sortTickets(filtered.filter((r) => matchesView(r, state.view)), state.sort),
+    [filtered, state.view, state.sort],
+  );
   const clientOptions = useMemo(() => {
     const map = new Map<number, string>();
-    rows.forEach((r) => {
-      if (r.tenant?.id != null) map.set(r.tenant.id, r.tenant.name ?? `Tenant ${r.tenant.id}`);
-    });
-    return Array.from(map.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    rows.forEach((r) => { if (r.tenant?.id != null) map.set(r.tenant.id, r.tenant.name ?? `Client ${r.tenant.id}`); });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [rows]);
 
-  const baseFiltered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const cutoff = dateRange
-      ? Date.now() - ({ '7d': 7, '30d': 30, '90d': 90 }[dateRange] ?? 0) * 24 * 60 * 60 * 1000
-      : null;
+  const onSortChange = (key: SortKey) => {
+    const sameKey = state.sort.key === key;
+    const defaultDir = key === 'urgency' || key === 'activity' ? 'desc' : 'asc';
+    update({ sort: { key, dir: sameKey ? (state.sort.dir === 'asc' ? 'desc' : 'asc') : defaultDir } });
+  };
 
-    return rows.filter((r) => {
-      if (q && !r.title?.toLowerCase().includes(q)) return false;
-      if (!matchesType(r, typeFilter)) return false;
-      if (urgencyFilter !== 'all' && r.urgency !== urgencyFilter) return false;
-      if (clientFilter !== 'all' && String(r.tenant?.id ?? '') !== clientFilter) return false;
-      if (cutoff != null && new Date(r.created_at).getTime() < cutoff) return false;
-      return true;
-    });
-  }, [rows, search, typeFilter, urgencyFilter, clientFilter, dateRange]);
-
-  const tabCounts = useMemo<Record<StatusTab, number>>(() => {
-    const c: Record<StatusTab, number> = {
-      active: 0, new: 0, triaged: 0, in_progress: 0,
-      resolved: 0, closed: 0, declined: 0,
-    };
-    baseFiltered.forEach((r) => {
-      const code = r.status?.code as StatusTab | undefined;
-      if (code && code in c) (c[code] as number) = (c[code] as number) + 1;
-      if (code !== 'resolved' && code !== 'closed') c.active += 1;
-    });
-    return c;
-  }, [baseFiltered]);
-
-  const visibleRows = useMemo(() => {
-    if (statusTab === 'active') return baseFiltered.filter((r) => r.status?.code !== 'resolved' && r.status?.code !== 'closed');
-    if (statusTab === 'declined') return [];
-    return baseFiltered.filter((r) => r.status?.code === statusTab);
-  }, [baseFiltered, statusTab]);
-
-  const handleExportCsv = () => {
-    const headers = ['Title', 'Client', 'Submitted By', 'Type', 'Status', 'Urgency', 'Assigned To', 'Created Date'];
-    const lines = [
-      headers.join(','),
-      ...visibleRows.map((r) => [
-        r.title,
-        r.tenant?.name ?? '',
-        r.reporter?.full_name ?? '',
-        r.item_type?.label ?? '',
-        r.status?.label ?? '',
-        r.urgency ?? '',
-        r.assignee?.full_name ?? '',
-        format(new Date(r.created_at), 'dd MMM yyyy'),
-      ].map(csvEscape).join(',')),
-    ];
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const exportCsv = () => {
+    const blob = new Blob([ticketsToCsv(visible)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `support-tickets-${format(new Date(), 'yyyyMMdd-HHmm')}.csv`;
+    a.download = `tickets-${format(new Date(), 'yyyyMMdd-HHmm')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
+  const closeNew = (open: boolean) => {
+    setNewOpen(open);
+    if (!open && startNew) navigate('/support-tickets', { replace: true });
+  };
+
   if (!allowed) {
-    return <div className="p-6 text-sm text-muted-foreground">Redirecting…</div>;
+    return <div className="p-6 text-sm text-muted-foreground">Redirecting</div>;
   }
 
+  const resetKey = JSON.stringify([state.view, state.filters, state.sort]);
+  const closing = rows.find((r) => r.id === closingId) ?? null;
+
   return (
-    <div className="bg-gray-50 min-h-full">
-      {/* Hero banner — edge to edge */}
-      <div
-        className="px-8 py-10 flex items-center justify-between"
-        style={{ background: 'linear-gradient(135deg, #7130A0 0%, #ED1878 100%)' }}
-      >
-        <div>
-          <h1 className="text-4xl font-normal text-white tracking-wide">
-            Support Tickets
-          </h1>
-          <p className="text-sm text-white/75 mt-1">
-            Manage and triage suggestions, bugs, and feature requests across all clients
-          </p>
-        </div>
-        {view === 'internal' && (
+    <div className="min-h-full bg-background">
+      <TicketHero
+        title="Tickets"
+        subtitle="Issues, requests and questions across Vivacity, Unicorn and ComplyHub"
+        actions={
           <Button
             onClick={() => setNewOpen(true)}
-            disabled={!hasTenant}
-            className="bg-white text-[#7130A0] hover:bg-white/90 font-semibold rounded-lg px-5 py-2.5 text-sm h-auto"
+            className="min-h-11 w-full gap-1.5 bg-white font-semibold text-brand-acai hover:bg-white/90 sm:w-auto"
           >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Submit Support Ticket
+            <Plus aria-hidden className="h-4 w-4" />
+            New ticket
           </Button>
-        )}
-      </div>
+        }
+      />
 
-      {/* View switch */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-2">
-        {([
-          { key: 'internal' as const, label: 'Internal Tickets', count: rows.length },
-          { key: 'client' as const, label: 'Client Messages', count: clientBadgeCount },
-        ]).map((v) => {
-          const active = view === v.key;
-          return (
-            <button
-              key={v.key}
-              onClick={() => setView(v.key)}
-              className={cn(
-                'text-sm font-medium px-4 py-2 rounded-md border transition-colors inline-flex items-center gap-2',
-                active
-                  ? 'bg-[#7130A0] text-white border-[#7130A0]'
-                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
-              )}
-            >
-              {v.label}
-              <span className={cn(
-                'text-[11px] font-semibold rounded-full px-1.5 py-0.5 min-w-[20px] text-center',
-                active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600',
-              )}>
-                {v.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <TicketSummaryBar summary={summary} />
 
-      {view === 'internal' ? (
-        <>
-          {/* Stats */}
-          <div className="bg-white border-b border-gray-100">
-            <AdminTicketStats rows={rows} />
-          </div>
+      <Tabs value={state.view} onValueChange={(v) => update({ view: v as TicketView })}>
+        <div className="overflow-x-auto px-4 sm:px-6">
+          <TabsList aria-label="Ticket views" className="h-auto justify-start gap-1 bg-transparent p-0">
+            {TICKET_VIEWS.map((v) => (
+              <TabsTrigger
+                key={v.key}
+                value={v.key}
+                className="min-h-11 gap-2 rounded-b-none border-b-2 border-transparent px-4 data-[state=active]:border-brand-purple data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:min-h-10"
+              >
+                {v.label}
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground">{counts[v.key]}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-          {/* Tabs */}
-          <div className="bg-white">
-            <AdminTicketStatusTabs value={statusTab} onChange={setStatusTab} counts={tabCounts} />
-          </div>
+        <TicketFilters
+          filters={state.filters}
+          onChange={(filters: TicketFilterState) => update({ filters })}
+          clientOptions={clientOptions}
+          onExportCsv={exportCsv}
+        />
 
-          {/* Filters */}
-          <AdminTicketFilters
-            search={search} onSearchChange={setSearch}
-            typeFilter={typeFilter} onTypeChange={setTypeFilter}
-            urgencyFilter={urgencyFilter} onUrgencyChange={setUrgencyFilter}
-            clientFilter={clientFilter} onClientChange={setClientFilter}
-            clientOptions={clientOptions}
-            dateRange={dateRange} onDateRangeChange={setDateRange}
-            onExportCsv={handleExportCsv}
+        <TabsContent value={state.view} className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+          <TicketList
+            rows={visible}
+            isLoading={isLoading}
+            totalCount={rows.length}
+            filtersActive={filtersActive(state.filters)}
+            sort={state.sort}
+            onSortChange={onSortChange}
+            onOpen={(id) => update({ ticket: id })}
+            onRequestClose={setClosingId}
+            onClearFilters={() => update({ filters: EMPTY_FILTERS })}
+            onNewTicket={() => setNewOpen(true)}
+            resetKey={resetKey}
           />
+        </TabsContent>
+      </Tabs>
 
-          {/* Table */}
-          <AdminTicketsTable rows={visibleRows} isLoading={isLoading} />
-        </>
-      ) : (
-        <ClientMessagesPanel />
-      )}
-
-      <NewTicketModal open={newOpen} onOpenChange={setNewOpen} />
+      <TicketPanel
+        ticketId={state.ticket}
+        onClose={() => update({ ticket: null })}
+        fallback={rows.find((r) => r.id === state.ticket) ?? null}
+      />
+      <CloseTicketDialog ticket={closing} open={!!closing} onOpenChange={(o) => { if (!o) setClosingId(null); }} />
+      <NewTicketDialog open={newOpen} onOpenChange={closeNew} />
     </div>
   );
 }

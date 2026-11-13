@@ -145,8 +145,7 @@ function LegacyTenantDocumentsRedirect() {
   const { tenantId } = useParams<{ tenantId: string }>();
   return <Navigate replace to={`/tenant/${encodeURIComponent(tenantId || '')}?tab=documents`} />;
 }
-const NewSupportTicketPage = lazy(() => import("@/pages/NewSupportTicketPage"));
-const SuggestionDetail = lazy(() => import("@/pages/SuggestionDetail"));
+const SupportTicketDetailPage = lazy(() => import("@/pages/SupportTicketDetailPage"));
 const RtoTips = lazy(() => import("@/pages/RtoTips"));
 const ClientActivityFeed = lazy(() => import("@/pages/ClientActivityFeed"));
 const ClientImpactPage = lazy(() => import("@/pages/ClientImpactPage"));
@@ -725,9 +724,8 @@ export const dashboardLayoutRoutes = (
       <Route path="/audits/:id/findings" element={<LegacyAuditTabRedirect tab="findings" />} />
       <Route path="/audits/:id/actions" element={<LegacyAuditTabRedirect tab="actions" />} />
       <Route path="/audits/:id/report" element={<LegacyAuditTabRedirect tab="report" />} />
-      <Route path="/support-tickets/new" element={<NewSupportTicketPage />} />
-      <Route path="/support-tickets/:id" element={<SuggestionDetail />} />
-      <Route path="/suggestions/:id" element={<SuggestionDetail />} />
+      <Route path="/support-tickets/new" element={<SupportTicketsPage startNew />} />
+      <Route path="/support-tickets/:id" element={<SupportTicketDetailPage />} />
       <Route path="/rto-tips" element={<RtoTips />} />
       <Route path="/client-activity" element={<ClientActivityFeed />} />
       <Route path="/tenant/:clientId/impact" element={<ClientImpactPage />} />
