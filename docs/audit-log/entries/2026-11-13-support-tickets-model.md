@@ -63,6 +63,7 @@ Legacy counts the backfill will reconcile against: **23 `suggest_items` rows (1 
 
 ## Not verified
 
+- **Review fixes made after the QA runs, not yet re-run on QA** (the Supabase tool was disconnected): the update trigger now marks an AI classification reviewed on a staff edit while the draft is pending or drafting; the backfill's field-level reconciliation covers only tickets inserted by the current run; and the delta run re-syncs a ticket edited in the old system after the first import (unchanged in the new system) or stops with the ticket ids when both sides changed. They are covered by static tests only. Before production, re-apply the trigger function to QA and re-run the backfill on the synthetic data, including an edit made to a legacy row after the first run.
 - **No real authenticated session was used on QA.** I had no QA persona credentials and created or altered no accounts: creating test accounts needs the user's approval in the session, and the confirmation prompt was declined. RLS is proven at the role and claims level (above), and the UI was checked against a stubbed network. A real-login Playwright pass, and a real call of the deployed function as a user (which would also show whether `ANTHROPIC_API_KEY` is set on QA), are open (see the PR description).
 - **`ANTHROPIC_API_KEY` on `unicorn-qa` could not be confirmed** (secrets are not readable through the tools). The function degrades safely (`ai_state = 'failed'`, default fields); the AI path itself is untested end to end.
 - Haiku quality on short or vague messages is untested.

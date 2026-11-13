@@ -97,6 +97,15 @@ describe("support tickets backfill migration", () => {
     assert.ok(!/FROM _stage(?!_new)/.test(checks) && !/JOIN _stage(?!_new)/.test(checks));
   });
 
+  it("re-syncs a ticket edited in the old system after import, and stops when both sides changed", () => {
+    assert.match(sql, /CREATE TEMP TABLE _drift/);
+    assert.match(sql, /s\.updated_at > m\.migrated_at/);
+    assert.match(sql, /RAISE EXCEPTION 'delta backfill: ticket\(s\) changed in both the old and the new system/);
+    assert.match(sql, /CREATE TEMP TABLE _resync/);
+    assert.match(sql, /UPDATE public\.support_tickets t\s+SET type = s\.type/);
+    assert.match(sql, /tickets edited in the old system are re-synced/);
+  });
+
   it("migrates only the support channel of help_threads", () => {
     assert.match(sql, /WHERE t\.channel = 'support'/);
     assert.ok(!/channel = 'chatbot'/.test(sql));

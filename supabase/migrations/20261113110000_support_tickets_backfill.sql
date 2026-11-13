@@ -18,6 +18,7 @@ DECLARE
   v_note   text := 'Migrated from the previous ticketing system on '
                    || to_char(now() AT TIME ZONE 'Australia/Sydney', 'FMDD FMMonth YYYY');
   v_failed text;
+  v_conflict text;
 BEGIN
   IF to_regclass('public.suggest_items') IS NULL AND to_regclass('public.help_threads') IS NULL THEN
     RETURN;
@@ -125,6 +126,49 @@ BEGIN
   INSERT INTO public.support_ticket_migration_map (legacy_table, legacy_id, ticket_id)
   SELECT src, id, id FROM _stage
   ON CONFLICT DO NOTHING;
+
+  -- Tickets already migrated by an earlier run whose legacy row has changed
+  -- since (an old-system edit between the first import and cut-over):
+  --   * unchanged in the new system  -> re-sync the fields from the legacy row;
+  --   * changed on both sides        -> stop, so a person decides, nothing is lost silently.
+  -- A change is detected by the legacy updated_at passing the migration time;
+  -- a new-system change by the ticket's updated_at passing it (the update
+  -- trigger sets it to now()). Only rows whose mapped fields actually differ count.
+  CREATE TEMP TABLE _drift ON COMMIT DROP AS
+  SELECT s.id, (t.updated_at > m.migrated_at) AS changed_in_new
+  FROM _stage s
+  JOIN public.support_ticket_migration_map m ON m.ticket_id = s.id AND m.legacy_table = s.src
+  JOIN public.support_tickets t ON t.id = s.id
+  WHERE s.id NOT IN (SELECT id FROM _new_tickets)
+    AND s.updated_at > m.migrated_at
+    AND (t.type, t.status, t.urgency, t.title, t.assignee_id, t.deleted_at)
+        IS DISTINCT FROM (s.type, s.status, s.urgency, s.title, s.assignee_id, s.deleted_at);
+
+  SELECT string_agg(id::text, ', ') INTO v_conflict FROM _drift WHERE changed_in_new;
+  IF v_conflict IS NOT NULL THEN
+    RAISE EXCEPTION 'delta backfill: ticket(s) changed in both the old and the new system, decide by hand before cut-over: %', v_conflict;
+  END IF;
+
+  CREATE TEMP TABLE _resync ON COMMIT DROP AS SELECT id FROM _drift;
+
+  UPDATE public.support_tickets t
+     SET type = s.type, status = s.status, urgency = s.urgency, title = s.title,
+         assignee_id = s.assignee_id, resolved_at = s.resolved_at, deleted_at = s.deleted_at,
+         last_activity_at = s.last_activity_at, updated_at = s.updated_at
+    FROM _stage s
+   WHERE s.id = t.id AND t.id IN (SELECT id FROM _resync);
+
+  INSERT INTO public.support_ticket_messages (id, ticket_id, author_id, kind, staff_only, body, created_at)
+  SELECT md5('stm:resync:' || r.id || ':' || floor(extract(epoch FROM now()))::bigint)::uuid, r.id, NULL, 'event', true,
+         'Updated from the previous ticketing system on '
+           || to_char(now() AT TIME ZONE 'Australia/Sydney', 'FMDD FMMonth YYYY')
+           || ' (it was changed there after the first import)', now()
+  FROM _resync r
+  ON CONFLICT (id) DO NOTHING;
+
+  UPDATE public.support_ticket_migration_map m
+     SET migrated_at = now()
+   WHERE m.ticket_id IN (SELECT id FROM _resync);
 
   -- Message 1 of every suggest_items ticket: the legacy description, verbatim.
   CREATE TEMP TABLE _msg (
@@ -271,6 +315,13 @@ BEGIN
     UNION ALL SELECT 'deleted tickets',
            (SELECT count(*)::text FROM _stage_new WHERE deleted_at IS NOT NULL),
            (SELECT count(*)::text FROM public.support_tickets t JOIN _stage_new s ON s.id = t.id WHERE t.deleted_at IS NOT NULL)
+    UNION ALL SELECT 'tickets edited in the old system are re-synced',
+           '0',
+           (SELECT count(*)::text FROM _resync r
+              JOIN _stage s ON s.id = r.id
+              JOIN public.support_tickets t ON t.id = r.id
+             WHERE (t.type, t.status, t.urgency, t.title, t.assignee_id, t.deleted_at)
+                   IS DISTINCT FROM (s.type, s.status, s.urgency, s.title, s.assignee_id, s.deleted_at))
     UNION ALL SELECT 'messages (all kinds)',
            (SELECT count(*)::text FROM _msg),
            (SELECT count(*)::text FROM public.support_ticket_messages m JOIN _msg x ON x.id = m.id)

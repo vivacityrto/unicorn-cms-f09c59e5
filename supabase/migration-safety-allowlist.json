@@ -477,7 +477,7 @@
       ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Carl-approved design (2026-11-13). Backfills the 22 suggest_items tickets and 12 Help Centre support threads into the new tables. INSERT-only into the new tables and temp tables; originals are never modified; idempotent (ON CONFLICT DO NOTHING); one transaction with in-transaction reconciliation that raises and rolls back on any mismatch. Proven on unicorn-qa with synthetic legacy rows (rolled back, then applied); production gets a read-only dry run first and a write only on Carl separate approval. Rollback: supabase/migrations/rollback/20261113110000_support_tickets_backfill.down.sql.",
+      "reason": "Carl-approved design (2026-11-13). Backfills the 22 suggest_items tickets and 12 Help Centre support threads into the new tables. INSERTs into the new tables and temp tables, plus one keyed UPDATE of already-migrated support_tickets rows (and their migration-map time) to re-sync a ticket edited in the old system after the first import, and a hard stop when a ticket changed on both sides; legacy tables are never modified; idempotent (ON CONFLICT DO NOTHING); one transaction with in-transaction reconciliation that raises and rolls back on any mismatch. Proven on unicorn-qa with synthetic legacy rows (rolled back, then applied); production gets a read-only dry run first and a write only on Carl separate approval. Rollback: supabase/migrations/rollback/20261113110000_support_tickets_backfill.down.sql.",
       "expires": "2026-12-13"
     },
     {
