@@ -73,16 +73,18 @@ After the real-login pass Carl asked for cleanup. On `unicorn-qa` (project confi
 - The legacy attachments are referenced in place; relocating them to `ticket-files` is deferred to the retire step.
 - `notify-suggestion-submitted` is unused by repository code; production logs were not checked.
 
-## Production steps (each needs Carl's go-ahead; nothing here has been run)
+## Production applied (14 November 2026)
 
-1. **Preconditions:** this PR approved; confirm `ANTHROPIC_API_KEY` is set on production; read the `notify-suggestion-submitted` logs.
-2. **Preflight (read-only):** re-run the dry run above and record the counts.
-3. **Apply `…100000_support_tickets_model.sql`** (additive; changes no existing row).
-4. **Apply `…110000_support_tickets_backfill.sql`.** Expect 35 tickets, 112 messages, 9 attachments, all 12 reconciliation checks true, ticket numbers 1 to 35. Any mismatch aborts the transaction.
-5. **Merge the PR.** The merge deploys `support-ticket-ai-draft` to production and ships the frontend.
-6. **Smoke test** as a staff member and as a client (open a ticket, reply, assign, resolve, reopen by reply; client message box shows the confirmation and the ticket appears in the staff list).
-7. **Off-peak (22:00 to 04:00 AEST): re-run the backfill as a delta** (idempotent), then **apply `…120000_support_tickets_cutover.sql`**. Postflight: `suggest_items` and `suggest_attachments` have no INSERT/UPDATE/DELETE for `authenticated` or `anon`; `help_threads` / `help_messages` have no INSERT policy; the trigger is gone.
-8. **After 30 days, under a separate approval:** drop the legacy tables, triggers and `dd_suggest_*` lookups, relocate the legacy attachment files, and retire `notify-suggestion-submitted`.
+Carl instructed in chat to merge and apply to production. Sequence as chosen: migrations first, then merge. Project confirmed as `yxkgdalkbrriasiyyrwk` ("1. Unicorn 2.0-dev") before each write.
+
+1. **Preflight (read-only):** 23 `suggest_items` (1 deleted), 12 support threads, 22 thread messages, 1 direct attachment, tenant `6372` present, no ticket tables yet. Matched the 13 November dry run.
+2. **Model migration applied** (`support_tickets_model`; includes the corrected update trigger). Checked afterwards: 5 tables with RLS, 12 policies (including the three storage policies), 10 functions, 3 triggers, private `ticket-files` bucket.
+3. **Backfill applied** (`support_tickets_backfill`) at about 8:58 pm AEDT. It did not raise, and all 13 reconciliation rows are true (stored in `support_ticket_migration_checks`): 23 + 12 tickets, statuses closed 9, new 1, resolved 25; types bug 11, request 12, other 12; urgency critical 3, high 4, medium 26, low 2; 10 assigned; 1 deleted; 112 messages; 9 attachments; 46 staff-only messages still staff-only; 0 content hash mismatches. Ticket numbers 1 to 35. Legacy tables unchanged (23 and 12 rows); the user triggers on the new tables were re-enabled.
+4. **PR #1513 merged** (squash, `b728f23cd`) after all CI checks passed. `Deploy Edge Functions` succeeded; `support-ticket-ai-draft` is active in production (version 1, JWT verification on).
+5. **Smoke test, read-only and at the database level:** inside a rolled-back transaction, a real client reporter saw exactly their own 5 tickets, none from others, and no staff-only message; a Super Admin saw all 35 tickets and 112 messages; `anon` was denied. **No real-login pass was run in production** (no production test credentials were used and no production ticket was raised).
+6. **Cut-over applied** (`support_tickets_cutover`) at about 9:01 pm AEDT rather than in the 22:00 to 04:00 AEST window, because a check found no new or edited legacy row since the backfill, so a delta run would have copied nothing, and it was Saturday evening. Postflight: no INSERT, UPDATE or DELETE grant on `suggest_items` or `suggest_attachments` for `authenticated` or `anon`; `help_threads_insert` and `help_messages_insert` policies gone; `trg_notify_csc_on_support_ticket` gone; 23 legacy rows and 35 tickets intact.
+
+**Not done or not confirmed in production:** `ANTHROPIC_API_KEY` could not be confirmed (secrets are not readable through the tools); on QA the AI draft fell back, so treat the production draft as unverified and watch for `ai_state = 'failed'`. The `notify-suggestion-submitted` logs were not read. The Help Centre Support tab was not checked in a real session. **Step 8 remains:** after 30 days, under a separate approval, drop the legacy tables, triggers and `dd_suggest_*` lookups, relocate the legacy attachment files, and retire `notify-suggestion-submitted`.
 
 ## Rollback
 
