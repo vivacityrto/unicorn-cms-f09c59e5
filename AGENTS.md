@@ -244,7 +244,11 @@ former `unicorn-kb` and `unicorn-audit` repos — see
   (`/support-tickets`) — the only difference is the new one lists both
   `/support-tickets` registrations individually (with guard/component detail
   for each) rather than deduping to one row, which is more useful, not a
-  regression. `--json`/`--out <file>` supported like the other new scripts.
+  regression. (Resolved: the duplicate was removed when the staff routes
+  moved into `src/routes/dashboardRoutes.tsx` on 2026-09-01; `/support-tickets`
+  is registered once. The Support Tickets feature itself was rebuilt on
+  2026-11-13 — see `docs/kb/reference/support-tickets-overhaul-2026-11-13.md`.)
+  `--json`/`--out <file>` supported like the other new scripts.
   `npm run routes:check-drift` (`scripts/check-route-drift.mjs`) compares
   `route-inventory-by-role.md`'s claimed route count against the live one
   and already caught real drift: the doc claims 249 (`/academy/team` and

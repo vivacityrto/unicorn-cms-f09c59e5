@@ -22,7 +22,7 @@ Where Client Success Consultants run their portfolio. The staff sidebar's `CLIEN
 | Packages | `/manage-packages` | Package catalogue (KS-GTO, M-RR, M-AM, M-DR, etc.) and assignment |
 | Documents | `/manage-documents` | System document library (~575 docs, ~21 categories, ~78 phases) |
 | Communications | `/communications` | Outbound/inbound client communications hub |
-| Support Tickets | `/support-tickets` | Per-client ticketing |
+| Support Tickets | `/support-tickets` | Company-wide tickets (Unicorn, ComplyHub, company) with a reply thread; see [support-tickets-overhaul-2026-11-13.md](../reference/support-tickets-overhaul-2026-11-13.md) |
 | RTO Tips | `/rto-tips` | Quick-reference compliance content |
 | Compliance Auditor | `/compliance-audits` | AI-assisted compliance auditor |
 | Audits | `/audits` | Full audit engagement workspace (CHC, Mock, CRICOS, Due Diligence) |

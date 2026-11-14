@@ -33,7 +33,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
-import { FloatingSuggestionsDialog } from "./FloatingSuggestionsDialog";
 import { SupportTicketsPanel } from "@/components/support-tickets/SupportTicketsPanel";
 import { DailyNotesPanel } from "@/components/task-notes/DailyNotesPanel";
 

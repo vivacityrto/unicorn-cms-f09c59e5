@@ -1,24 +1,28 @@
-import { Route, Navigate } from "react-router-dom";
+import { Route, Navigate, useParams } from "react-router-dom";
+
+/** Redirect that keeps the ticket id, so old notification and bookmark links open the ticket, not the list. */
+function RedirectKeepingId({ to }: { to: (id: string) => string }) {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? to(id) : "/support-tickets"} replace />;
+}
 
 /**
- * Legacy "Suggestion & Issue Register" redirects into Support Tickets. The
- * bare /support-tickets route, /support-tickets/new, and /support-tickets/:id
- * (plus its /suggestions/:id alias) all moved into src/routes/dashboardRoutes.tsx
- * alongside the rest of the staff shell (docs/kb/reference/dashboard-direct-
- * layout-migration-plan-2026-09-01.md, PR 14); client-portal support-tickets
- * pages live in src/routes/clientRoutes.tsx. Was previously split across
- * three non-adjacent locations in App.tsx; consolidated here as one route
- * family (P1.2), then thinned down to just the redirects once the two real
- * pages joined the shared layout.
+ * Legacy "Suggestion & Issue Register" links redirect into Tickets. The real
+ * pages live in src/routes/dashboardRoutes.tsx (staff: /support-tickets,
+ * /support-tickets/new, /support-tickets/:id) and src/routes/clientRoutes.tsx
+ * (client portal). Ticket ids were preserved when tickets moved to the new
+ * model, so /suggestions/<id> and /client/suggestions/<id> still land on the
+ * right ticket.
  */
 export const supportTicketsRoutes = (
   <>
-    {/* Suggestion & Issue Register (legacy → redirect to Support Tickets) */}
+    {/* Staff */}
     <Route path="/suggestions" element={<Navigate to="/support-tickets" replace />} />
     <Route path="/suggestions/new" element={<Navigate to="/support-tickets/new" replace />} />
-    {/* Client portal legacy redirects (destination routes live in clientRoutes.tsx) */}
+    <Route path="/suggestions/:id" element={<RedirectKeepingId to={(id) => `/support-tickets/${id}`} />} />
+    {/* Client portal */}
     <Route path="/client/suggestions" element={<Navigate to="/client/support-tickets" replace />} />
     <Route path="/client/suggestions/new" element={<Navigate to="/client/support-tickets" replace />} />
-    <Route path="/client/suggestions/:id" element={<Navigate to="/client/support-tickets" replace />} />
+    <Route path="/client/suggestions/:id" element={<RedirectKeepingId to={(id) => `/client/support-tickets/${id}`} />} />
   </>
 );
