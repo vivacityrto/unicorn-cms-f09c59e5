@@ -27,6 +27,9 @@ DELETE FROM public.dd_suggest_status;
 DELETE FROM public.dd_suggest_priority;
 DELETE FROM public.dd_suggest_impact_rating;
 DELETE FROM public.dd_suggest_release_status;
+-- Audit rows the tenant insert trigger wrote for the stand-in tenant (they block its delete).
+DELETE FROM public.consultant_assignment_audit_log WHERE tenant_id = 6372 AND created_at >= date '2026-11-13';
+DELETE FROM public.consultant_capacity_audit_log WHERE (tenant_id = 6372 OR client_id = 6372) AND created_at >= date '2026-11-13';
 DELETE FROM public.tenants WHERE id = 6372 AND slug = 'qa-vivacity-standin';
 
 COMMIT;
