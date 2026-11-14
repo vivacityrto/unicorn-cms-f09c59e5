@@ -1,6 +1,6 @@
 # Support Tickets overhaul (13 November 2026)
 
-> **Last updated:** 2026-11-13 · **Reconsider by:** 2027-02-13 · **Confidence:** high for the model and RLS (proven on `unicorn-qa`); production not yet applied.
+> **Last updated:** 2026-11-14 · **Reconsider by:** 2027-02-13 · **Confidence:** high for the model and RLS (proven on `unicorn-qa`); applied to production on 14 November 2026 (35 tickets migrated and reconciled, cut-over done); the AI draft is unverified in production.
 >
 > One company-wide ticketing system for Unicorn, ComplyHub and company issues. Standalone feature work, not one of the four tracked initiatives. Evidence, QA results, production steps and rollback: [audit entry](../../audit-log/entries/2026-11-13-support-tickets-model.md).
 
