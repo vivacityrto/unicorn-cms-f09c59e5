@@ -249,6 +249,60 @@ BEGIN
   BEGIN PERFORM public.create_support_ticket('s', 'b');
   EXCEPTION WHEN insufficient_privilege THEN v_raised := true; END;
   RESET ROLE; INSERT INTO _t VALUES ('anon cannot call create_support_ticket', v_raised, '');
+
+  -- 18. A staff edit wins over an AI draft that is pending or drafting.
+  PERFORM pg_temp.act(ca);
+  SELECT c.id INTO v_id FROM public.create_support_ticket('Pending draft case', 'Please look at this') c;
+  RESET ROLE;
+  PERFORM pg_temp.act(tm);
+  UPDATE public.support_tickets SET title = 'Staff chose this title' WHERE id = v_id;
+  RESET ROLE;
+  SELECT ai_state INTO v_txt FROM public.support_tickets WHERE id = v_id;
+  PERFORM pg_temp.act(NULL, 'service_role');
+  UPDATE public.support_tickets SET ai_state = 'drafting' WHERE id = v_id AND ai_state = 'pending';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RESET ROLE;
+  INSERT INTO _t VALUES ('staff edit while the draft is pending marks it reviewed, so the function cannot claim it', v_txt = 'reviewed' AND n = 0, 'ai_state=' || v_txt || ' claim_rows=' || n);
+
+  PERFORM pg_temp.act(ca);
+  SELECT c.id INTO v_id FROM public.create_support_ticket('Drafting case', 'Another message') c;
+  RESET ROLE;
+  PERFORM pg_temp.act(NULL, 'service_role');
+  UPDATE public.support_tickets SET ai_state = 'drafting' WHERE id = v_id;
+  RESET ROLE;
+  PERFORM pg_temp.act(tm);
+  UPDATE public.support_tickets SET urgency = 'critical' WHERE id = v_id;
+  RESET ROLE;
+  SELECT ai_state INTO v_txt FROM public.support_tickets WHERE id = v_id;
+  PERFORM pg_temp.act(NULL, 'service_role');
+  UPDATE public.support_tickets SET title = 'AI title', type = 'bug', ai_state = 'drafted' WHERE id = v_id AND ai_state = 'drafting';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RESET ROLE;
+  SELECT (title || '|' || urgency) INTO v_state FROM public.support_tickets WHERE id = v_id;
+  INSERT INTO _t VALUES ('staff edit while the draft is drafting makes the function write nothing (staff choice kept)',
+    v_txt = 'reviewed' AND n = 0 AND v_state = 'Drafting case|critical', 'ai_state=' || v_txt || ' ai_rows=' || n || ' now=' || v_state);
+
+  PERFORM pg_temp.act(ca);
+  SELECT c.id INTO v_id FROM public.create_support_ticket('Assign only case', 'Third message') c;
+  RESET ROLE;
+  PERFORM pg_temp.act(tm);
+  UPDATE public.support_tickets SET assignee_id = tl WHERE id = v_id;
+  RESET ROLE;
+  SELECT ai_state INTO v_txt FROM public.support_tickets WHERE id = v_id;
+  INSERT INTO _t VALUES ('assigning (not editing title, type or urgency) leaves a pending draft pending', v_txt = 'pending', 'ai_state=' || v_txt);
+
+  PERFORM pg_temp.act(NULL, 'service_role');
+  UPDATE public.support_tickets SET ai_state = 'drafting' WHERE id = v_id AND ai_state = 'pending';
+  UPDATE public.support_tickets SET title = 'AI drafted title', type = 'bug', urgency = 'high', ai_state = 'drafted' WHERE id = v_id AND ai_state = 'drafting';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RESET ROLE;
+  SELECT ai_state INTO v_txt FROM public.support_tickets WHERE id = v_id;
+  INSERT INTO _t VALUES ('the function path (no user) writes its draft and does not mark it reviewed', n = 1 AND v_txt = 'drafted', 'ai_state=' || v_txt);
+  PERFORM pg_temp.act(tm);
+  UPDATE public.support_tickets SET urgency = 'low' WHERE id = v_id;
+  RESET ROLE;
+  SELECT ai_state INTO v_txt FROM public.support_tickets WHERE id = v_id;
+  INSERT INTO _t VALUES ('first staff edit of a drafted classification marks it reviewed', v_txt = 'reviewed', 'ai_state=' || v_txt);
 END
 $t$;
 
