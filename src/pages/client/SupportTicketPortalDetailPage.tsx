@@ -14,7 +14,7 @@ export default function SupportTicketPortalDetailPage() {
   const { data: thread, isLoading: threadLoading } = useTicketThread(ticket?.id, { includeAuthors: false });
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">
+    <div className="w-full space-y-4 px-4 py-4 sm:px-8 sm:py-6">
       <Link
         to="/client/support-tickets"
         className="inline-flex min-h-11 items-center gap-1.5 rounded text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring sm:min-h-0"
