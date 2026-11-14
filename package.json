@@ -22,6 +22,7 @@
     "client-health:run-ledger:validate": "node scripts/validate-client-health-run-ledger.mjs",
     "rbac:golden:validate": "node scripts/validate-rbac-golden-ledger.mjs",
     "client-health:evidence:validate": "node scripts/validate-client-health-evidence.mjs",
+    "tas:reconcile": "node scripts/tas-reconcile-legacy-map.mjs",
     "routes": "node scripts/generate-route-manifest.mjs",
     "routes:check-drift": "node scripts/check-route-drift.mjs",
     "check:kb-links": "node scripts/check-kb-links.mjs",
