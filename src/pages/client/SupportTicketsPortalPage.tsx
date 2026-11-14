@@ -48,7 +48,7 @@ export default function SupportTicketsPortalPage() {
         }
       />
 
-      <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-5 sm:px-6">
+      <div className="w-full space-y-4 px-4 py-5 sm:px-8">
         <div className="space-y-1.5">
           <Label htmlFor="client-ticket-search" className="sr-only">Search your tickets</Label>
           <Input
