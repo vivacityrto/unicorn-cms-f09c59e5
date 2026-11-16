@@ -113,6 +113,7 @@ const EosCalendar = lazy(() => import("@/pages/EosCalendar"));
 const EosAccountabilityChart = lazy(() => import("@/pages/EosAccountabilityChart"));
 const EosHealthCheck = lazy(() => import("@/pages/EosHealthCheck"));
 const EosMeetings = lazy(() => import("@/pages/EosMeetings"));
+const EosPlanningSurveyReview = lazy(() => import("@/pages/EosPlanningSurveyReview"));
 const EosConfigurations = lazy(() => import("@/pages/EosConfigurations"));
 const EosConfigurationDetail = lazy(() => import("@/pages/EosConfigurationDetail"));
 const EosMeetingSummary = lazy(() => import("@/pages/EosMeetingSummary"));
@@ -709,6 +710,7 @@ export const dashboardLayoutRoutes = (
       <Route path="/eos/accountability" element={<EosAccountabilityChart />} />
       <Route path="/eos/health-check" element={<EosHealthCheck />} />
       <Route path="/eos/meetings" element={<EosMeetings />} />
+      <Route path="/eos/planning-surveys/:id/review" element={<EosPlanningSurveyReview />} />
       <Route path="/eos/configurations" element={<EosConfigurations />} />
       <Route path="/eos/configurations/:id" element={<EosConfigurationDetail />} />
       <Route path="/eos/meetings/:meetingId/summary" element={<EosMeetingSummary />} />

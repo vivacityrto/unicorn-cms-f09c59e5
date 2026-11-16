@@ -1,3 +1,4 @@
+import { createSurveyIngressBudget } from '../_shared/planning-survey-budget.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.108.2';
 import { constantTimeEqual } from '../_shared/requireCaller-helpers.ts';
 import { createPlanningSurveyCollector, type CollectionCampaign } from '../_shared/planning-survey-collector.ts';
@@ -8,12 +9,12 @@ import { createPlanningSurveyCollector, type CollectionCampaign } from '../_shar
 // OFF until hosted logging review, QA and production release are authorised.
 const url = Deno.env.get('SUPABASE_URL');
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const enabled = Deno.env.get('PLANNING_SURVEYS_ENABLED') === 'true' && Boolean(url && serviceKey);
+const enabled = Deno.env.get('PLANNING_SURVEYS_ENABLED') === 'true' && Deno.env.get('PLANNING_SURVEY_GATEWAY_REVIEWED') === 'true' && Boolean(url && serviceKey);
 const origins = new Set((Deno.env.get('PLANNING_SURVEY_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean));
 const client = url && serviceKey ? createClient(url, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 }) : null;
-Deno.serve(createPlanningSurveyCollector({
+const collector = createPlanningSurveyCollector({
   enabled, allowedOrigins: origins, now: Date.now,
   async findCampaign(id) {
     if (!client) return null;
@@ -41,4 +42,9 @@ Deno.serve(createPlanningSurveyCollector({
     if (error) throw new Error('Unable to accept response.');
     return data === true;
   },
-}));
+});
+const admit = createSurveyIngressBudget(60, 60_000, () => performance.now());
+Deno.serve(req => {
+  if (!admit()) return new Response(JSON.stringify({ error: 'Collection temporarily unavailable.' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+  return collector(req);
+});

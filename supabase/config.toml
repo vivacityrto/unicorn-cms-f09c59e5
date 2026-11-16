@@ -476,3 +476,7 @@ verify_jwt = false
 # No user session is accepted; do not deploy before privacy/release approval.
 [functions.planning-survey-collect]
 verify_jwt = false
+
+# Draft separate authenticated reviewer surface; feature flag remains off.
+[functions.planning-survey-review]
+verify_jwt = true

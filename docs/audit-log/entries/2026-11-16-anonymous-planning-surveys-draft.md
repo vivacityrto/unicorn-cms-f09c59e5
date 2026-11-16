@@ -61,10 +61,48 @@ PR 1516; failed/not-run checks must remain explicit.
   do not confuse credential-omitting API calls with zero hosting metadata.
 - A shared-key holder can flood/forward a link. The count/size caps are not a
   substitute for reviewed privacy-preserving abuse/rate controls before launch.
-- Reviewer/results/export UI is **not** enabled. The minimum count helper/field
+- Reviewer/results UI is drafted in the fourth slice below but **not** enabled; exports remain absent. The minimum count helper/field
   is not proof of deployed result suppression. Duplicate ballots mean counts
   are responses, not verified unique people. Keep results closed until access,
   suppression and thematic review are implemented and tested.
 - Production deployment and explicit activation require their own authorisation
   after QA/privacy review. Never merge this Edge PR as a harmless code-only step:
   the repository deploys affected Edge functions when merged.
+
+## Fourth draft slice: restricted review and abuse budgets
+
+A separate logged-in reviewer route and endpoint are now drafted. UI visibility
+uses `usePermissionDetailed`; Edge uses canonical `requireCaller` with existing
+`eos.configurations.manage/full`. Neither substitutes for explicit campaign
+membership. The service-only RPC rechecks membership, close/raw privileges,
+closed state, configured response threshold and privacy-release approval under
+the campaign row lock. No members or release approvals are seeded. The only
+administrative mutation exposed is closing collection, with explicit UI intent;
+there is no open/reopen, assignment, key creation, settings change or publish API.
+
+Results contain independently shuffled answer text per question, not row IDs,
+receipt keys, times or cross-question respondent grouping. Text is rendered as
+React text, not HTML. No export, AI summarisation, automatic downstream updates
+or live results feed. Reviewer actions audit actor/campaign/action only, never
+answer contents. Threshold counts submissions, not unique people.
+
+New ballots are bounded by a configurable campaign-wide per-minute database
+budget (default zero) under the same lock; exact accepted retries bypass this
+budget. The current aggregate minute is retained without participant identifiers.
+A coarse per-isolate ingress budget rejects excess requests before DB lookups.
+This is NOT distributed gateway protection, and a link holder can still exhaust
+capacity. Runtime activation additionally requires an explicit gateway-review
+gate. Distributed traffic, provider logs and privacy-preserving upstream abuse
+controls remain unverified deployment blockers.
+
+Local SQL tests now exercise missing reviewer, missing approval, insufficient
+count, open collection, wrong reviewer, close then review, direct-role denials,
+minimal audit payload, rate cap and replay exemption. Unit/component tests add
+review intent, wrong-campaign rejection, no mount-time raw fetch, answer clearing,
+rate-budget rollover and invalid limits. Final suite results are recorded in PR.
+
+Browser QA: a legitimate escalated local Chromium retry still failed at socket
+creation. Cloud-browser fallback could not reach localhost preview (connection
+refused), so no visual/runtime browser proof is claimed. No Sage desktop control
+was taken. Review route also needs telemetry/replay inspection before raw data is
+exposed; importing it inside the authenticated app does not itself prove that.

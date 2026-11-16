@@ -157,3 +157,25 @@ record](../audit-log/entries/2026-11-16-anonymous-planning-surveys-draft.md) for
 implemented controls, actual local SQL verification and remaining launch gates.
 Reviewer/results/export access is not implemented yet; response count is not a
 verified count of individual people. No automatic Issues or Rocks are created.
+
+## Fourth draft slice: restricted review, close control and budgets
+
+The reviewer page now has a gated EOS route and a separate authenticated endpoint.
+Default-off runtime/build flags, existing configuration-management permission and
+explicit per-campaign assignment all apply. SQL enforces closed/count/privacy
+approval atomically. Responses are shuffled independently per question, with no
+cross-question grouping or response metadata. Close is the only administrative
+write exposed; there is no campaign creation, approval, membership, publication,
+open/reopen or configuration API. No reviewer is seeded.
+
+New submissions have an aggregate per-minute budget, disabled until configured;
+exact accepted retries are exempt. Coarse per-isolate ingress limiting happens
+before DB lookup but is not distributed protection. Gateway/privacy review stays
+a required release gate. No participant identifiers/IPs are retained for rate
+limiting. The aggregate current-minute counter is infrastructure metadata and
+must be included in disclosure/review rather than called zero-metadata collection.
+
+The reviewer route is not a completed privacy release: app-level telemetry/replay,
+hosted logs, browser QA, named reviewer approval, minimum submission count and
+upstream abuse controls still need verification. No theme publication or automatic
+Rocks/Flight Plans is implemented. Code/migrations remain draft and unapplied.
