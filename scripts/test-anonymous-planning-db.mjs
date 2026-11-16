@@ -8,6 +8,8 @@ const { PGlite } = await import(process.env.PGLITE_MODULE_URL ?? '@electric-sql/
 const db = new PGlite();
 try {
   await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');
+  // Simulate broad hosted default privileges: migration must explicitly revoke them.
+  await db.exec('alter default privileges in schema public grant all on tables to anon, authenticated, service_role; alter default privileges in schema public grant all on functions to anon, authenticated, service_role;');
   await db.exec(await readFile(new URL('../supabase/migrations/20261116013601_anonymous_planning_surveys.sql', import.meta.url), 'utf8'));
   const id='c9cdfa38-4c2e-48c9-91a5-05720dd332fe';
   const receipt='9d4c20e4-0265-4cd1-b4ba-7f6fd3b6517c';
@@ -28,7 +30,7 @@ try {
   assert.equal(await accept({...answers,strengths:'Changed'}),false);
   assert.equal(await accept({...answers,email:'CANARY'},'0c5bf274-1793-41c2-a68c-d10f83620475'),false);
   assert.equal(await accept(answers,'0c5bf274-1793-41c2-a68c-d10f83620475','b'.repeat(64)),false);
-  assert.equal(await accept(answers,'0c5bf274-1793-41c2-a68c-d10f83620475'),true);
+  assert.equal(await accept({...answers,priority:'RARE_CANARY'},'0c5bf274-1793-41c2-a68c-d10f83620475'),true);
   assert.equal(await accept(answers,'d3e72f3d-5858-4ae8-b44b-5fba0bc1552c'),false);
   await assert.rejects(()=>db.query('delete from public.eos_planning_responses'));
   await db.exec('reset role');
@@ -48,6 +50,7 @@ try {
   await db.exec('set role service_role'); assert.equal(await review(),null); assert.deepEqual(await review('close'),{closed:true});
   assert.equal(await review('review','ca6fa123-e972-4480-aeb0-31160ffccdf7'),null);
   const result=await review(); assert.equal(result.responseCount,2);assert.deepEqual(result.answersByQuestion.strengths,['Synthetic','Synthetic']);
+  assert.deepEqual(result.answersByQuestion.priority,[]);assert.equal(JSON.stringify(result).includes('RARE_CANARY'),false);
   assert.equal(JSON.stringify(result).includes(receipt),false);assert.equal(JSON.stringify(result).includes(actor),false);
   await db.exec('reset role');
   for(const role of ['anon','authenticated']) {

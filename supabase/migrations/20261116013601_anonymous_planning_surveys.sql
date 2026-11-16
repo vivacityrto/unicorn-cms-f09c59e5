@@ -27,7 +27,7 @@ create table public.eos_planning_responses (
 );
 alter table public.eos_planning_campaigns enable row level security;
 alter table public.eos_planning_responses enable row level security;
-revoke all on public.eos_planning_campaigns, public.eos_planning_responses from public, anon, authenticated;
+revoke all on public.eos_planning_campaigns, public.eos_planning_responses from public, anon, authenticated, service_role;
 grant select on public.eos_planning_campaigns to service_role;
 grant select, insert on public.eos_planning_responses to service_role;
 -- RPC takes a campaign-row lock; service_role needs UPDATE for SELECT FOR UPDATE.
@@ -60,7 +60,7 @@ create table public.eos_planning_collection_budget (
 alter table public.eos_planning_reviewers enable row level security;
 alter table public.eos_planning_admin_audit enable row level security;
 alter table public.eos_planning_collection_budget enable row level security;
-revoke all on public.eos_planning_reviewers, public.eos_planning_admin_audit, public.eos_planning_collection_budget from public, anon, authenticated;
+revoke all on public.eos_planning_reviewers, public.eos_planning_admin_audit, public.eos_planning_collection_budget from public, anon, authenticated, service_role;
 grant select on public.eos_planning_reviewers to service_role;
 grant insert on public.eos_planning_admin_audit to service_role;
 grant select, insert, update on public.eos_planning_collection_budget to service_role;
@@ -115,7 +115,7 @@ begin
   return true;
 end;
 $$;
-revoke all on function public.accept_anonymous_planning_response(uuid,text,text,uuid,jsonb) from public, anon, authenticated;
+revoke all on function public.accept_anonymous_planning_response(uuid,text,text,uuid,jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.accept_anonymous_planning_response(uuid,text,text,uuid,jsonb) to service_role;
 -- No campaigns, keys, staff grants, notifications, or actual responses are seeded.
 
@@ -148,11 +148,16 @@ begin
   if n < c.minimum_responses then return null; end if;
   foreach k in array array['strengths','weaknesses','opportunities','threats','start','stop','keep','priority'] loop
     -- Independently shuffled per question: no cross-question respondent grouping.
-    results := results || jsonb_build_object(k, coalesce((select jsonb_agg(answers->>k order by random()) from public.eos_planning_responses where campaign_id=p_campaign_id and length(btrim(answers->>k))>0), '[]'::jsonb));
+    -- Suppress sparse questions too. This is still ballots, never verified people.
+    if (select count(*) from public.eos_planning_responses where campaign_id=p_campaign_id and length(btrim(answers->>k))>0) < c.minimum_responses then
+      results := results || jsonb_build_object(k, '[]'::jsonb);
+    else
+      results := results || jsonb_build_object(k, coalesce((select jsonb_agg(answers->>k order by random()) from public.eos_planning_responses where campaign_id=p_campaign_id and length(btrim(answers->>k))>0), '[]'::jsonb));
+    end if;
   end loop;
   insert into public.eos_planning_admin_audit(campaign_id,actor_user_id,action) values(p_campaign_id,p_actor_user_id,'review');
   return jsonb_build_object('campaignId',c.id,'business',c.business,'year',c.year,'responseCount',n,'answersByQuestion',results);
 end;
 $$;
-revoke all on function public.review_anonymous_planning_campaign(uuid,uuid,text) from public,anon,authenticated;
+revoke all on function public.review_anonymous_planning_campaign(uuid,uuid,text) from public,anon,authenticated,service_role;
 grant execute on function public.review_anonymous_planning_campaign(uuid,uuid,text) to service_role;

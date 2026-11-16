@@ -106,3 +106,31 @@ creation. Cloud-browser fallback could not reach localhost preview (connection
 refused), so no visual/runtime browser proof is claimed. No Sage desktop control
 was taken. Review route also needs telemetry/replay inspection before raw data is
 exposed; importing it inside the authenticated app does not itself prove that.
+
+## Fifth slice: independent review remediation
+
+Independent review of fourth-slice head found no confirmed auth bypass but noted
+rare answers were returned once total ballots met the threshold. The RPC now
+also suppresses each question below the configured nonempty-ballot threshold.
+It does not reveal those sparse counts. This still does not prove distinct
+participants and does not eliminate self-identifying free text.
+
+Fixed the stale unmounted label. Reviewer activation additionally requires an
+explicit `PLANNING_SURVEY_REVIEW_PRIVACY_VERIFIED` release gate; this is a hold,
+not evidence the telemetry/log review has been completed.
+
+Extracted the reviewer HTTP handler for integration testing. Tests execute the
+real canonical `requireCaller`, and the production reviewer adapter, using only
+synthetic Deno/Supabase transports. Missing, malformed and invalid auth, full
+permission scope, verified actor binding, denied/revoked permission, forged
+actor payloads, disabled service, oversized input and generic failures are
+covered. These tests do not verify hosted JWT signature validation, real account
+revocation, deployed gateway behaviour or current role grants. Those remain
+release gates, alongside browser QA and distributed abuse protection.
+
+Also hardened grants against broad hosted default privileges: migration now
+revokes service-role defaults before granting only required operations, rather
+than assuming an additive GRANT removes default DELETE/UPDATE privileges. The
+local SQL harness now starts with broad default grants and confirms migration
+revocation, including denied service-role response deletion. Hosted parity still
+requires verification; this test is deliberately not a claim about live grants.

@@ -4,7 +4,7 @@ import { parsePlanningReview, type PlanningReview } from '@/lib/eos/planning-sur
 
 type Gateway = { review: (campaignId: string) => Promise<unknown>; close: (campaignId: string) => Promise<void> };
 type Props = { campaignId: string; gateway: Gateway };
-/** Unmounted draft. Gateway MUST enforce assignment, closed state and privacy gates server-side. */
+/** Default-off routed draft. Gateway MUST enforce assignment, closed state and privacy gates server-side. */
 export function PlanningSurveyReview({ campaignId, gateway }: Props) {
   return <Review key={campaignId} campaignId={campaignId} gateway={gateway} />;
 }
@@ -32,7 +32,7 @@ function Review({ campaignId, gateway }: Props) {
   }
   return <section className="space-y-5 p-4" aria-labelledby="planning-review-title">
     <h1 id="planning-review-title">Strategic planning: restricted review</h1>
-    <p>Draft review tool. Access must be separately approved. Responses are not verified unique people. Free text may reveal who wrote it.</p>
+    <p>Draft review tool. Access must be separately approved. Responses are not verified unique people. Free text may reveal who wrote it. A submission threshold does not establish a number of distinct people.</p>
     <p>No individual completion list, early response feed, role filters, downloads or automatic Rocks.</p>
     <p role="status">{message}</p>
     <button disabled={busy} onClick={load}>Request closed-campaign results</button>
@@ -47,6 +47,7 @@ function Review({ campaignId, gateway }: Props) {
       <p>{result.responseCount} responses, not a count of unique people. No submission order is shown.</p>
       {PLANNING_QUESTIONS.map(({ id, title }) => <section key={id}>
         <h3>{title}</h3>
+        {result.answersByQuestion[id].length === 0 && <p>No text released for this question. It may have no answers or not meet the release threshold.</p>}
         <ul>{result.answersByQuestion[id].map((answer, index) => answer.trim() && <li key={index} className="whitespace-pre-wrap break-words">{answer}</li>)}</ul>
       </section>)}
       <p>Prepare non-identifying themes for planning. Creating or changing Mission Control, Flight Plans or Rocks is a separate deliberate action.</p>

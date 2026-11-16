@@ -179,3 +179,12 @@ The reviewer route is not a completed privacy release: app-level telemetry/repla
 hosted logs, browser QA, named reviewer approval, minimum submission count and
 upstream abuse controls still need verification. No theme publication or automatic
 Rocks/Flight Plans is implemented. Code/migrations remain draft and unapplied.
+
+## Fifth slice: sparse-answer and auth-boundary review
+
+Per-question text is withheld when nonempty ballots fall below the configured
+threshold, even if campaign total meets it. Hidden counts are not returned.
+Ballots still are not people. The reviewer endpoint has a separate explicit
+privacy-verification activation gate and integration tests that execute the
+real `requireCaller` and production adapter with synthetic transport. Hosted
+JWT/RLS/revocation, gateway/log/telemetry and browser proof are still outstanding.
