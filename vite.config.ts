@@ -87,7 +87,10 @@ export default defineConfig(({ mode }) => ({
   // `npm run dev` forever at "[optimizer] scanning dependencies...". Pinning
   // the real entry point avoids the runaway glob entirely.
   optimizeDeps: {
-    entries: ["index.html"],
+    entries: ["index.html", "planning-survey.html"],
+  },
+  build: {
+    rolldownOptions: { input: { main: resolve(__dirname, "index.html"), planningSurvey: resolve(__dirname, "planning-survey.html") } },
   },
   define: {
     "import.meta.env.VITE_BUILD_ID": JSON.stringify(BUILD_ID),

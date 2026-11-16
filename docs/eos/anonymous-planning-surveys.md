@@ -1,7 +1,8 @@
 # Anonymous strategic planning surveys
 
-Status: draft implementation slice, 16 November 2026. Not deployed, routed or
-accepting responses. This is not an existing operational capability.
+Status: isolated draft implementation, 16 November 2026. Standalone collection
+page and disabled backend are implemented but NOT deployed or accepting real
+responses. No operational anonymous-survey capability is claimed.
 
 ## Product decision and scope
 
@@ -128,3 +129,31 @@ Hosting/network metadata and identifying free text remain part of the disclosure
 and release review even with an untracked link. Supabase's current
 [correlated-log changelog](https://supabase.com/changelog/53230-correlated-logs)
 reinforces the need to verify infrastructure logs, not just omit a user column.
+
+
+## Shared-link implementation packet
+
+Angela accepted shared links, aggregate participation and general reminders,
+without one-person-one-response guarantees. The draft now contains an isolated
+`planning-survey.html` entrypoint, capability-gated collector, atomic service-only
+response RPC and new tables. Collection defaults off at deployment and campaign
+levels. The original unmounted preview remains a design artifact; the standalone
+page is the future respondent journey. Its build flag is
+`VITE_PLANNING_SURVEYS_ENABLED`; the server flag is `PLANNING_SURVEYS_ENABLED`.
+Do not set either or open campaigns until release gates are satisfied.
+
+Shared invitation URL shape (not a real link):
+`https://<approved-survey-host>/planning-survey.html#campaign=<campaign-uuid>&key=<random-256-bit-key>`.
+Generate separate random keys for Vivacity and ComplyHub only during authorised
+setup; store SHA-256 of the key in the campaign table, never the plaintext key.
+The normal app Supabase client must never submit answers. The page removes the
+fragment before its first request and uses an independent credential-omitting
+transport. No invitation was sent or real key generated in this implementation.
+
+The RPC allows exact previously accepted replay after close so an uncertain
+response can be confirmed, but rejects new late ballots and changed retries.
+It retains originals rather than overwriting feedback. Read the [draft audit
+record](../audit-log/entries/2026-11-16-anonymous-planning-surveys-draft.md) for
+implemented controls, actual local SQL verification and remaining launch gates.
+Reviewer/results/export access is not implemented yet; response count is not a
+verified count of individual people. No automatic Issues or Rocks are created.

@@ -45,14 +45,18 @@ export function validateAnonymousSubmission(
   campaign: CampaignContext,
   nowMs: number,
 ): ValidatedSubmission {
-  // Campaign context is server-resolved, not copied from request metadata.
-  if (!UUID_V4.test(campaign.id) || !['vivacity', 'complyhub'].includes(campaign.business)
-    || !Number.isInteger(campaign.year) || campaign.year < 2027 || campaign.year > 2100
-    || !campaign.questionnaireVersion || campaign.questionnaireVersion.length > 100
-    || campaign.state !== 'open' || !Number.isFinite(nowMs)
+  if (campaign.state !== 'open' || !Number.isFinite(nowMs)
     || !Number.isFinite(campaign.opensAtMs) || !Number.isFinite(campaign.closesAtMs)
     || campaign.opensAtMs >= campaign.closesAtMs
     || nowMs < campaign.opensAtMs || nowMs >= campaign.closesAtMs) reject();
+  return parseAnonymousSubmissionEnvelope(input, campaign);
+}
+
+/** Existing-ballot receipt checks may occur after close; storage must decide new vs replay atomically. */
+export function parseAnonymousSubmissionEnvelope(input: unknown, campaign: CampaignContext): ValidatedSubmission {
+  if (!UUID_V4.test(campaign.id) || !['vivacity', 'complyhub'].includes(campaign.business)
+    || !Number.isInteger(campaign.year) || campaign.year < 2027 || campaign.year > 2100
+    || !campaign.questionnaireVersion || campaign.questionnaireVersion.length > 100) reject();
   if (!record(input) || !exactKeys(input, SUBMISSION_KEYS)) reject();
   if (input.campaignId !== campaign.id || input.questionnaireVersion !== campaign.questionnaireVersion
     || typeof input.idempotencyKey !== 'string' || !UUID_V4.test(input.idempotencyKey)
