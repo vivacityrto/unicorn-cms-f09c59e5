@@ -98,3 +98,33 @@ and browser QA are recorded in the draft PR/handoff with explicit passed,
 failed and not-run distinctions. Code merge, migration, release and user-journey
 verification are separate milestones. No production action is authorised by
 this document.
+
+## Second draft slice: collection contract, not a deployed collector
+
+The pure `_shared/anonymous-planning-survey.ts` module now validates a strictly
+allowlisted answer envelope against server-resolved campaign/year/business and
+questionnaire context. Unknown metadata is rejected, invalid/closed windows
+fail closed, responses are bounded, and error text never echoes input. Retry
+classification distinguishes identical replay from changed-payload conflict;
+production must enforce this atomically in its database adapter. It is not
+one-person-one-response enforcement. Random retry IDs must never be derived
+from accounts or reused across campaigns.
+
+Theme-release gating requires closed collection, a deliberately supplied
+minimum count and completed privacy review. This helper is not authorisation
+or a substitute for server-enforced access. Tests cover each rule with synthetic
+inputs. There is still no handler, adapter, database table or route collecting
+responses, and no claim of end-to-end unlinkability.
+
+### Pending product tradeoff
+
+A shared, untracked campaign link can avoid sending a staff login with answers,
+using aggregate participation and general reminders only. It cannot guarantee
+one-response-per-person, and anyone given the link can submit. An individually
+tracked link or authenticated answer submission would instead require a reviewed
+anonymous credential mechanism to preserve unlinkability. Angela is being asked
+about the shared-link/duplicate/reminder tradeoff; neither choice is assumed.
+Hosting/network metadata and identifying free text remain part of the disclosure
+and release review even with an untracked link. Supabase's current
+[correlated-log changelog](https://supabase.com/changelog/53230-correlated-logs)
+reinforces the need to verify infrastructure logs, not just omit a user column.
