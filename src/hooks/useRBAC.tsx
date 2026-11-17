@@ -192,6 +192,7 @@ export const EOS_ROUTES = [
   '/eos',
   '/eos/overview',
   '/eos/scorecard',
+  '/eos/cst-report',
   '/eos/vto',
   '/eos/mission-control',
   '/eos/rocks',

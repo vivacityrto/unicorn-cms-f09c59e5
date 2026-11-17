@@ -515,6 +515,97 @@
       "owner": "Carl",
       "reason": "Rollback file for the cut-over. Re-grants INSERT and UPDATE on the two legacy tables exactly as before; recreates the two help_* insert policies and the notification trigger. Flagged lines are GRANT statements only.",
       "expires": "2026-12-13"
+    },
+    {
+      "id": "cst-scorecard-migration",
+      "file": "supabase/migrations/20261117100000_cst_scorecard_activity_report.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation",
+        "cron-registration",
+        "cron-unschedule",
+        "extension-assumption"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "The flagged INSERT and ON CONFLICT DO UPDATE are inside the body of snapshot_cst_week(), which writes only the new cst_scorecard_weekly_snapshot table when called (weekly job or service_role). The migration itself writes no rows and changes no existing table, policy or function. The weekly job (cron.schedule, preceded by unscheduling only its own name) is created only where pg_cron is installed and runs select public.snapshot_cst_week().",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "cst-scorecard-rollback",
+      "file": "supabase/migrations/rollback/20261117100000_cst_scorecard_activity_report.down.sql",
+      "categories": [
+        "cron-unschedule",
+        "extension-assumption"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file. Unschedules only the job named cst-scorecard-weekly-snapshot, and only where pg_cron exists, then drops the objects the migration added.",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "scorecard-refresh-weekly-cron",
+      "file": "supabase/migrations/20261117130000_scorecard_refresh_weekly_cron.sql",
+      "categories": [
+        "production-url",
+        "cron-unschedule",
+        "cron-registration",
+        "http-call"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Registers the one weekly job scorecard-refresh-weekly (Monday 04:00 Sydney) that calls the scorecard-refresh edge function on the production project, authenticated through the vault helpers like the other cron-only functions. The unschedule removes only a job of that exact name so the migration can be re-applied.",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "scorecard-refresh-weekly-cron-rollback",
+      "file": "supabase/migrations/rollback/20261117130000_scorecard_refresh_weekly_cron.down.sql",
+      "categories": [
+        "cron-unschedule"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file. Unschedules only the job named scorecard-refresh-weekly; entries it already wrote are kept.",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "notification-routing-foundation",
+      "file": "supabase/migrations/20261117140000_notification_routing_foundation.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Design and decisions approved by Carl on 17 November 2026 (docs/kb/reference/notification-redesign-2026-11-17.md); not yet applied to production. Flagged lines: two INSERTs that seed the new notification_category and notification_role_defaults lookup tables (ON CONFLICT DO NOTHING, no existing row touched), and the INSERT / keyed UPDATE inside the bodies of create_notification_delegate() and end_notification_delegate(), which write only the new staff_notification_delegates table and audit_events when called by a signed-in Super Admin or CSC. The migration changes no existing table, row, policy, function or trigger. No behaviour change until rollout step 2.",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "notification-message-routing",
+      "file": "supabase/migrations/20261117150000_notification_message_routing.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation",
+        "cron-registration",
+        "cron-unschedule"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Design and decisions approved by Carl on 17 November 2026 (docs/kb/reference/notification-redesign-2026-11-17.md); not yet applied to production. The migration is inert on apply: message_routing_mode is seeded as legacy and escalation_enabled as false. Flagged lines: the INSERT that seeds three rows in the new notification_routing_settings table (ON CONFLICT DO NOTHING); the INSERTs and the UPDATE of tenant_conversations inside the replaced fn_tm_on_message_insert(), which are unchanged from the live version (migration 20260703061102) apart from the added metadata value; the INSERTs inside fn_tm_routing_shadow() and escalate_unread_client_messages(), which write only the new log and escalation tables and, when escalation is enabled, escalation rows in user_notifications; and the pg_cron job (created only where pg_cron is installed, preceded by unscheduling only its own name, a no-op until escalation_enabled is true). The migration writes no row in an existing table.",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "notification-message-routing-rollback",
+      "file": "supabase/migrations/rollback/20261117150000_notification_message_routing.down.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation",
+        "cron-unschedule"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file. Unschedules only the job named notification-escalate-unread-client-messages, restores fn_tm_on_message_insert to the live version from migration 20260703061102 (its INSERT and UPDATE are inside the function body), and drops the objects the migration added.",
+      "expires": "2026-12-17"
     }
   ]
 }

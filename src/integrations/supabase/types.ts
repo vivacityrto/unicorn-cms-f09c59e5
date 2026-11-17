@@ -37086,6 +37086,102 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_category: {
+        Row: {
+          default_audience: string
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          default_audience: string
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          default_audience?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      notification_client_overrides: {
+        Row: {
+          created_at: string
+          mode: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          mode: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          mode?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          category: string
+          channel: string
+          enabled: boolean
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          channel: string
+          enabled: boolean
+          scope?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          channel?: string
+          enabled?: boolean
+          scope?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_role_defaults: {
+        Row: {
+          category: string
+          channel: string
+          enabled: boolean
+          role: string
+          scope: string
+        }
+        Insert: {
+          category: string
+          channel: string
+          enabled: boolean
+          role: string
+          scope?: string
+        }
+        Update: {
+          category?: string
+          channel?: string
+          enabled?: boolean
+          role?: string
+          scope?: string
+        }
+        Relationships: []
+      }
       notification_rules: {
         Row: {
           created_at: string
@@ -46254,6 +46350,48 @@ export type Database = {
           start_date?: string
           status?: string
           type?: string
+        }
+        Relationships: []
+      }
+      staff_notification_delegates: {
+        Row: {
+          categories: string[] | null
+          created_at: string
+          created_by: string | null
+          delegate_user_id: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          principal_kind: string
+          principal_user_id: string | null
+          starts_at: string
+          tenant_id: number | null
+        }
+        Insert: {
+          categories?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          delegate_user_id: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          principal_kind: string
+          principal_user_id?: string | null
+          starts_at?: string
+          tenant_id?: number | null
+        }
+        Update: {
+          categories?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          delegate_user_id?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          principal_kind?: string
+          principal_user_id?: string | null
+          starts_at?: string
+          tenant_id?: number | null
         }
         Relationships: []
       }
@@ -70655,6 +70793,17 @@ export type Database = {
       }
     }
     Functions: {
+      create_notification_delegate: {
+        Args: {
+          p_categories?: string[]
+          p_delegate_user_id: string
+          p_principal_kind: string
+          p_principal_user_id: string | null
+          p_tenant_id?: number
+        }
+        Returns: string
+      }
+      end_notification_delegate: { Args: { p_id: string }; Returns: undefined }
       create_support_ticket: {
         Args: {
           p_body: string
@@ -71790,6 +71939,16 @@ export type Database = {
       }
       get_bulk_generate_system_session: { Args: never; Returns: string }
       get_client_eos_overview: { Args: { p_client_id: string }; Returns: Json }
+      get_client_notification_recipients: {
+        Args: { p_category: string; p_tenant_id: number }
+        Returns: {
+          email: boolean
+          in_app: boolean
+          reason: string
+          teams: boolean
+          user_id: string
+        }[]
+      }
       get_client_package_dashboard: {
         Args: { p_package_instance_id?: number; p_tenant_id: number }
         Returns: {

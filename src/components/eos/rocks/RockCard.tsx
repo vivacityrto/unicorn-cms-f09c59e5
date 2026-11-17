@@ -28,7 +28,9 @@ import {
 import { format } from 'date-fns';
 import type { RockWithHierarchy, RockLevel } from '@/types/eos';
 import { IndividualRocksSection } from '@/components/eos/rocks/contribution/IndividualRocksSection';
+import { RockWorkLine } from '@/components/eos/rocks/RockWorkLine';
 import { dbToUiStatus, getStatusConfig as getStatusConfigUtil } from '@/utils/rockStatusUtils';
+import { rockStatusSignals, type RockWorkSummary } from '@/utils/rockWork';
 import { cn } from '@/lib/utils';
 
 interface UserInfo {
@@ -53,6 +55,11 @@ interface RockCardProps {
   getUserName?: (userId: string) => string | null;
   getUserInfo?: (userId: string) => UserInfo | null;
   getSeatName?: (seatId: string) => string | null;
+  /**
+   * The Rock's linked To-Dos as one figure (its own and its milestones'). Left undefined until they
+   * have loaded, so nothing is shown or flagged against an empty list; pass a zero summary for none.
+   */
+  todoWork?: RockWorkSummary;
 }
 
 export function RockCard({
@@ -70,6 +77,7 @@ export function RockCard({
   getUserName,
   getUserInfo,
   getSeatName,
+  todoWork,
 }: RockCardProps) {
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
@@ -91,6 +99,12 @@ export function RockCard({
     (status === 'complete' && milestoneProgress < 100) ||
     (milestoneProgress === 100 && status !== 'complete')
   );
+
+  // The status lines wait for the milestone figure too (`milestoneStats` only exists once the page's milestone query has
+  // loaded), so a card is never flagged, or told "the work may be finished", while its milestones are unknown or failed to load.
+  const workSignals = todoWork && rock.milestoneStats
+    ? rockStatusSignals({ status, hasMilestones: milestoneTotal > 0 || legacyMilestones.length > 0, todos: todoWork })
+    : [];
 
   const getStatusConfig = (s: string) => {
     const configs: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline'; icon: typeof TrendingUp; label: string; className?: string }> = {
@@ -280,6 +294,9 @@ export function RockCard({
             <Progress value={milestoneProgress} className="h-2" />
           </div>
         )}
+
+        {/* Linked To-Dos (the Rock's own and its milestones'), with a line where the status disagrees with them */}
+        {todoWork && <RockWorkLine work={todoWork} signals={workSignals} />}
 
         {/* Children summary */}
         {hasChildren && showChildren && (

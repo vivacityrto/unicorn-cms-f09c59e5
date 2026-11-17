@@ -17,9 +17,13 @@ const state = vi.hoisted(() => ({
 
 // The notes panel and its microphone controller have their own tests; these suites are about the deck.
 vi.mock('@/components/eos/rocks/notes/RockNotesPanel', () => ({ RockNotesPanel: () => null }));
-const todoState = vi.hoisted(() => ({ overdue: {} as Record<string, number> }));
+const todoState = vi.hoisted(() => ({
+  overdue: {} as Record<string, number>,
+  summaries: {} as Record<string, { total: number; done: number; open: number; overdue: number; percent: number | null }>,
+}));
 vi.mock('@/hooks/useRockTodos', () => ({
   useOverdueTodoCountsByRock: () => ({ data: todoState.overdue }),
+  useRockTodoSummaries: () => ({ data: todoState.summaries, isSuccess: true }),
 }));
 const notesController = vi.hoisted(() => ({
   retarget: vi.fn(),
@@ -40,7 +44,7 @@ vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'u1'
 vi.mock('@/hooks/useRockDiscussion', () => ({
   useSetRockStatus: () => ({ mutateAsync: state.setStatus, isPending: false, variables: undefined }),
   useRaiseRockIssue: () => ({ mutateAsync: state.raise, isPending: false }),
-  useRockMilestones: () => ({ data: state.milestones, isLoading: false, isError: false }),
+  useRockMilestones: () => ({ data: state.milestones, isLoading: false, isError: false, isSuccess: true }),
   useRockLinkedIssues: () => state.issuesQuery,
   useOpenIssueRockIds: () => ({ data: [] }),
 }));
@@ -101,6 +105,7 @@ const heading = () => document.querySelector('[data-slide-heading]') as HTMLElem
 
 beforeEach(() => {
   todoState.overdue = {};
+  todoState.summaries = {};
   notesController.provided = false;
   notesController.isRecording = false;
   notesController.activeRockId = null;
@@ -149,6 +154,46 @@ describe('RockDiscussDialog: overdue To-Dos', () => {
   it('shows no To-Do flag when nothing is overdue', () => {
     renderDialog();
     expect(screen.queryByText(/To-Dos? linked to it/)).toBeNull();
+  });
+});
+
+describe('RockDiscussDialog: To-Do roll-up', () => {
+  const summary = (total: number, done: number, overdue = 0) => ({ total, done, open: total - done, overdue, percent: total ? Math.round((done / total) * 100) : null });
+
+  it('shows the Rock\'s linked To-Dos as one figure, with the overdue count', () => {
+    todoState.summaries = { a: summary(3, 2, 1) };
+    renderDialog();
+    const line = within(screen.getByLabelText('To-Dos'));
+    expect(line.getByText('2/3')).toBeInTheDocument();
+    expect(line.getByText('1 overdue')).toBeInTheDocument();
+  });
+
+  it('does not repeat the overdue warning the flags already give for an On Track Rock', () => {
+    todoState.summaries = { a: summary(3, 2, 1) };
+    todoState.overdue = { a: 1 };
+    renderDialog();
+    expect(screen.getByText('1 To-Do linked to it is overdue')).toBeInTheDocument();
+    expect(screen.queryByText(/marked On Track, but/)).toBeNull();
+  });
+
+  it('asks whether a Rock with no milestones is finished once every To-Do is done, with no button to change it', () => {
+    todoState.summaries = { a: summary(2, 2) };
+    renderDialog();
+    expect(screen.getByText('All 2 linked To-Dos are done. If the work is finished, mark the Rock Complete.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark Rock Complete' })).toBeNull();
+  });
+
+  it('does not ask that when the Rock has milestones', () => {
+    todoState.summaries = { a: summary(2, 2) };
+    state.milestones = [{ id: 'm1', rock_id: 'a', title: 'M1 - Tidy', status: 'in_progress', owner_id: null, due_date: null, sort_order: 1 }];
+    renderDialog();
+    expect(screen.getByLabelText('To-Dos')).toBeInTheDocument();
+    expect(screen.queryByText(/linked To-Dos are done/)).toBeNull();
+  });
+
+  it('shows nothing for a Rock with no linked To-Dos', () => {
+    renderDialog();
+    expect(screen.queryByLabelText('To-Dos')).toBeNull();
   });
 });
 

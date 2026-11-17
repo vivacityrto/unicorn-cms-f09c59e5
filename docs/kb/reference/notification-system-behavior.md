@@ -1,5 +1,7 @@
 # Notification System Behaviour Reference
 
+> **Redesign proposed (17 November 2026):** recipient routing by client ownership, a delegates model and a per-user preference matrix are proposed in [notification-redesign-2026-11-17.md](notification-redesign-2026-11-17.md). Nothing below has changed yet.
+
 ## emit_notification error behaviour (changed 14 May 2026 — Phase 3A)
 
 ### What changed

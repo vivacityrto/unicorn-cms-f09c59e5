@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
 import { isCronAuthorized, cronUnauthorizedResponse } from "../_shared/cron-auth.ts";
+import { lastCompletedWeekKey, snapshotWeekEnding } from "./weeks.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -40,7 +41,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Default to this week's Monday
+    // week_ending is the Monday that starts the scorecard week. Default: the last completed week.
     const weekEnd = week_ending || getWeekEnding();
 
     // Fetch all enabled automatic metrics for this tenant
@@ -82,7 +83,7 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
 
         if (existing) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('eos_scorecard_entries')
             .update({
               value,
@@ -92,8 +93,15 @@ Deno.serve(async (req: Request) => {
               updated_at: new Date().toISOString(),
             })
             .eq('id', existing.id);
+          if (updateError) throw updateError;
         } else {
-          await supabase.from('eos_scorecard_entries').insert({
+          // entered_by is a required foreign key to auth.users, so a placeholder
+          // id cannot be used. Fail loudly instead of recording nothing.
+          const enteredBy = actor_user_id || Deno.env.get('SCORECARD_REFRESH_ACTOR_USER_ID');
+          if (!enteredBy) {
+            throw new Error('No user to record system entries against: pass actor_user_id or set SCORECARD_REFRESH_ACTOR_USER_ID');
+          }
+          const { error: insertError } = await supabase.from('eos_scorecard_entries').insert({
             metric_id: metric.id,
             tenant_id,
             week_ending: weekEnd,
@@ -101,9 +109,10 @@ Deno.serve(async (req: Request) => {
             actual_value: value,
             entry_source: 'system',
             status,
-            entered_by: actor_user_id || '00000000-0000-0000-0000-000000000000',
-            created_by: actor_user_id,
+            entered_by: enteredBy,
+            created_by: actor_user_id ?? null,
           });
+          if (insertError) throw insertError;
         }
 
         // Update automation rule last_run
@@ -159,12 +168,10 @@ Deno.serve(async (req: Request) => {
 });
 
 function getWeekEnding(): string {
-  const now = new Date();
-  const day = now.getDay();
-  // Get Sunday of the current week as week_ending
-  const sunday = new Date(now);
-  sunday.setDate(now.getDate() + (7 - day) % 7);
-  return sunday.toISOString().split('T')[0];
+  // Entries are keyed by the Monday that starts the week (the convention every
+  // manual entry and the L10 grid use), not by its Sunday. Default to the last
+  // week that has fully ended, in Sydney time.
+  return lastCompletedWeekKey();
 }
 
 function calculateStatus(actual: number, target: number, direction: string): string {
@@ -221,6 +228,24 @@ async function resolveMetricValue(
         ['on_track', 'complete'].includes(r.status),
       ).length;
       return Math.round((onTrack / rocks.length) * 100);
+    }
+
+    // CST team metrics for Live Client RTOs, read from the weekly snapshot
+    // (cst_scorecard_weekly_snapshot via get_cst_team_metric). A week with no
+    // snapshot row yields null, so the metric is skipped rather than recorded
+    // as zero. Definitions: docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md
+    case 'cst_client_activity_rate_pct':
+    case 'cst_rtos_with_activity_pct':
+    case 'cst_certificates_issued_count':
+    case 'cst_users_never_signed_in_count':
+    case 'cst_rtos_no_activity_count': {
+      // The snapshot keys a week by its Sunday; entries key it by the Monday.
+      const { data, error } = await supabase.rpc('get_cst_team_metric', {
+        p_metric_key: metricKey,
+        p_week_ending: snapshotWeekEnding(weekEnding),
+      });
+      if (error) throw error;
+      return data === null || data === undefined ? null : Number(data);
     }
 
     // Placeholder resolvers — these require integration with external data sources

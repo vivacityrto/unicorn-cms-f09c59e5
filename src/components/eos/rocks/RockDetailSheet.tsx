@@ -44,8 +44,10 @@ import { splitTodosByMilestone } from '@/utils/rockTodos';
 import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
+import { RockWorkStrip } from '@/components/eos/rocks/detail/RockWorkStrip';
 import { RockHistory } from '@/components/eos/rocks/detail/RockHistory';
 import { useAuth } from '@/hooks/useAuth';
+import { useEosRocks } from '@/hooks/useEos';
 import { useMilestoneDelivery } from '@/hooks/useMilestoneDelivery';
 import { useRockBlockers } from '@/hooks/useRockBlockers';
 import { useRockCarryover } from '@/hooks/useRockCarryover';
@@ -67,6 +69,7 @@ import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 import type { MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
 import { openBlocker, resolvedBlockers, type BlockerSubject } from '@/utils/rockBlocker';
 import { formatQuarter } from '@/utils/rockCarryover';
+import { rockStatusSignals, rockWorkSummary } from '@/utils/rockWork';
 import { linkTargetRocksFor } from '@/utils/rockLinking';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import type {
@@ -269,6 +272,8 @@ export function RockDetailSheet({
   const carryoverQuery = useRockCarryover(rockId, open);
   const { data: people } = useVivacityTeamUsers();
   const editorRocksQuery = useEditorRocks(open && !!profile);
+  // The same status write the Rock's progress control uses, so the mismatch banner can settle a Rock in one step.
+  const { updateRock } = useEosRocks();
 
   if (!rock) return null;
 
@@ -367,6 +372,19 @@ export function RockDetailSheet({
     (uiStatus === 'complete' && metrics.percentComplete < 100) ||
     (metrics.percentComplete === 100 && uiStatus !== 'complete')
   );
+  // Status changes follow the footer's gate: someone who can edit the Rock, and only while it is not archived.
+  const canChangeStatus = canManage && !isArchived;
+  const markRockComplete = () =>
+    updateRock.mutate({ id: rock.id, status: 'complete', completed_date: new Date().toISOString() });
+  // Reverse case: the Rock says Complete but its milestones are not all done, so it goes back to On Track.
+  const reopenRockOnTrack = () =>
+    updateRock.mutate({ id: rock.id, status: 'on_track', completed_date: null });
+
+  // The Rock's linked To-Dos as one figure (its own and its milestones'), and where the status disagrees with them.
+  // Left out until both the To-Dos and the milestones have loaded (and the milestones did not fail), so a Rock is
+  // never flagged against an empty list, or offered "mark Complete" while its milestones are unknown.
+  const work = rockWorkSummary(todosQuery.data ?? [], todayIso);
+  const workSignals = todosQuery.isSuccess && milestonesQuery.isSuccess ? rockStatusSignals({ status: uiStatus, hasMilestones: milestones.length > 0, todos: work }) : [];
 
   const dueLabel = formatDate(rock.due_date);
   const dueDays = rock.due_date && uiStatus !== 'complete'
@@ -495,6 +513,14 @@ export function RockDetailSheet({
             onOpenRock={onOpenRock}
           />
 
+          <RockWorkStrip
+            work={work}
+            signals={workSignals}
+            canChangeStatus={canChangeStatus}
+            actionPending={updateRock.isPending}
+            onMarkComplete={markRockComplete}
+          />
+
           <section className="space-y-4" aria-labelledby="rock-milestones-heading">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 id="rock-milestones-heading" className="flex items-center gap-2 text-base font-semibold">
@@ -524,9 +550,20 @@ export function RockDetailSheet({
             ) : (
               <>
                 {hasStatusMismatch && (
-                  <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>Rock status doesn't match milestone progress ({metrics.percentComplete}% complete).</span>
+                  <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>Rock status doesn't match milestone progress ({metrics.percentComplete}% complete).</span>
+                    </div>
+                    {canChangeStatus && (uiStatus === 'complete' ? (
+                      <Button type="button" size="sm" variant="outline" className="h-7 shrink-0 bg-background text-xs" disabled={updateRock.isPending} onClick={reopenRockOnTrack}>
+                        Reopen as On Track
+                      </Button>
+                    ) : (
+                      <Button type="button" size="sm" className="h-7 shrink-0 text-xs" disabled={updateRock.isPending} onClick={markRockComplete}>
+                        Mark Rock Complete
+                      </Button>
+                    ))}
                   </div>
                 )}
                 {deliveryQuery.isError && (
