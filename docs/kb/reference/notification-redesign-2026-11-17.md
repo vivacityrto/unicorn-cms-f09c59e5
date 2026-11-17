@@ -52,7 +52,7 @@ Default audience per category (all subject to the recipient's own preferences):
 | Package threshold, risk flagged | Tenant's primary CSC and delegates |
 | Platform alerts (stalled bulk job, capacity) | Super Admins |
 
-Always excluded: `System Account` users, archived or disabled users, test accounts (a `notification_exempt` flag on `users`, not a name match), and the actor.
+Always excluded: `System Account` users, archived or disabled users, test accounts (rows in a `notification_exempt_users` table, not a flag on `users` and not a name match: `users` carries table-wide write grants for signed-in users, so a flag there could be set by the user themselves), and the actor.
 
 ### 2. Delegates (the assistant exception)
 
@@ -112,7 +112,7 @@ Narrowing delivery risks a client message that nobody sees. Rules:
 
 One PR each, in this order. Every database step is hand-written and needs an audit entry under `docs/audit-log/entries/` per the AGENTS.md schema rules.
 
-1. **Foundation (database).** The three new tables, `notification_exempt`, the resolver, role defaults, and the delegate RPC with its audit writes (decision 3). No behaviour change: nothing calls the resolver yet. Includes the per-column `GRANT SELECT` for any new `public.users` column and the RPC-body sweep for any table whose constraints change.
+1. **Foundation (database).** The new tables (category lookup, role defaults, preferences, client overrides, delegates, exempt accounts), the resolver, and the delegate RPC with its audit writes (decision 3). No behaviour change: nothing calls the resolver yet. No existing table is altered, so no per-column `GRANT` or RPC-body sweep is needed. **Status: migration `20261117140000_notification_routing_foundation.sql` written and proven on `unicorn-qa` (40 rolled-back checks, all passing); production apply pending.** The AJ and Ezel delegate links and the exempt accounts are data, applied as a separate audited production step. See [the audit entry](../../audit-log/entries/2026-11-17-notification-routing-foundation.md).
 2. **Messages.** Swap `fn_tm_on_message_insert` Branch B for the resolver. Use `DROP FUNCTION` first if the signature changes, then confirm exactly one overload remains. Verify on `unicorn-qa` with real assignments before production, and run a shadow period that logs what the resolver would have sent next to what was sent. Adds the escalation cron job (decision 4), which also runs in shadow mode first.
 3. **UI.** Bell gear popover, preference matrix, per-client overrides, delegates management (Super Admins for anyone, CSCs for their own assistants).
 4. **Other categories.** Tickets, notes, tasks and package thresholds move to the resolver, and the client-side inserts are retired.
