@@ -9,9 +9,10 @@
 --      - an unassigned ticket for a client whose primary CSC (or delegates, or
 --        people watching or opted in) can be notified goes to them, instead of
 --        every Super Admin, Team Leader and Team Member;
---      - an unassigned ticket with no tenant, or whose tenant has no reachable
---        owner, still goes to the triage pool exactly as before, so company and
---        product tickets keep working.
+--      - an unassigned ticket with no tenant, for Vivacity's own tenant (6372, where
+--        staff-created company and product tickets live), or whose tenant has no
+--        reachable owner, still goes to the triage pool exactly as before, so
+--        company and product tickets keep working.
 --    The 2-argument version is dropped (a changed parameter list needs DROP, not
 --    CREATE OR REPLACE, or a second overload is left behind). Its two callers,
 --    create_support_ticket() and support_ticket_messages_after_insert(), are
@@ -52,7 +53,9 @@ BEGIN
     RETURN;
   END IF;
 
-  IF p_tenant IS NOT NULL THEN
+  -- 6372 is Vivacity's own tenant: staff-created company and product tickets carry it
+  -- (create_support_ticket defaults to it), and they belong in the triage pool.
+  IF p_tenant IS NOT NULL AND p_tenant <> 6372 THEN
     SELECT array_agg(r.user_id) INTO v_ids
       FROM public.resolve_notification_recipients('support_ticket', p_tenant, p_exclude) r
      WHERE r.in_app AND r.reason <> 'unassigned';
