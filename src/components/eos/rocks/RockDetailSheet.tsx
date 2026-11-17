@@ -381,9 +381,10 @@ export function RockDetailSheet({
     updateRock.mutate({ id: rock.id, status: 'on_track', completed_date: null });
 
   // The Rock's linked To-Dos as one figure (its own and its milestones'), and where the status disagrees with them.
-  // Left out until they have loaded, so a Rock is never flagged against an empty list.
+  // Left out until both the To-Dos and the milestones have loaded (and the milestones did not fail), so a Rock is
+  // never flagged against an empty list, or offered "mark Complete" while its milestones are unknown.
   const work = rockWorkSummary(todosQuery.data ?? [], todayIso);
-  const workSignals = todosQuery.isSuccess ? rockStatusSignals({ status: uiStatus, hasMilestones: milestones.length > 0, todos: work }) : [];
+  const workSignals = todosQuery.isSuccess && milestonesQuery.isSuccess ? rockStatusSignals({ status: uiStatus, hasMilestones: milestones.length > 0, todos: work }) : [];
 
   const dueLabel = formatDate(rock.due_date);
   const dueDays = rock.due_date && uiStatus !== 'complete'
