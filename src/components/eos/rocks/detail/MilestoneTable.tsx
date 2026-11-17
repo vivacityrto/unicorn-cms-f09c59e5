@@ -270,6 +270,11 @@ export function MilestoneTable({
             const fed = hasRows && (isCompany || rockLevel === 'team') && deliveryData ? companyMilestoneDelivery(milestone.id, deliveryData) : null;
             // A Company milestone nothing feeds is flagged; a Team milestone nothing feeds is normal (Team Rocks do their own work).
             const delivery = fed && (isCompany || fed.state !== 'uncovered') ? fed : null;
+            // "0/0 done" says nothing, and used to hide the milestone's own To-Dos. The row's last column
+            // shows delivery only when something is delivering (or the lack of it is the warning and there is
+            // no To-Do progress to show instead); the details keep a delivery block only when it has content.
+            const showDeliveryInRow = !!delivery && (delivery.counts.active > 0 || (delivery.state === 'uncovered' && taskSummary.total === 0));
+            const showDeliveryBlock = !!delivery && (delivery.counts.active > 0 || delivery.contributors.length > 0 || delivery.state === 'uncovered');
             const supported = hasRows && canMapUp && deliveryData ? supportedCompanyMilestones(milestone.id, deliveryData) : [];
             const supportRefs = supported.map(s => milestoneRef({ ...parseMilestoneTitle(s.milestone.title) }));
             const detailsId = `milestone-details-${milestone.id}`;
@@ -346,7 +351,7 @@ export function MilestoneTable({
                       )}
                     </div>
                     <div className="min-w-0 text-xs">
-                      {delivery ? (
+                      {delivery && showDeliveryInRow ? (
                         delivery.state === 'uncovered' ? (
                           <span className="font-medium text-amber-700 dark:text-amber-300">Nothing delivering</span>
                         ) : (
@@ -459,7 +464,7 @@ export function MilestoneTable({
                           {milestone.status === 'blocked' ? 'Record the reason' : 'Mark as blocked'}
                         </Button>
                       ) : null}
-                      {delivery && <CompanyMilestoneDeliveryBlock delivery={delivery} getUserInfo={getUserInfo} className="" />}
+                      {delivery && showDeliveryBlock && <CompanyMilestoneDeliveryBlock delivery={delivery} getUserInfo={getUserInfo} className="" />}
                       {canMapUp && hasRows && <SupportedMilestonesBlock supported={supported} onOpenRock={onOpenRock} className="" />}
                       {canMapUp && hasRows && linkSupport?.canManage && linkSupport.root && (
                         linkSupport.root.status === 'ok' ? (
