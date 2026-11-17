@@ -2,7 +2,7 @@
 
 **Trigger:** ad-hoc. Rollout step 1 of the notification redesign ([design doc](../../kb/reference/notification-redesign-2026-11-17.md)): ownership-based recipient routing, delegates for assistants, and a per-user preference matrix.
 **Scope:** one migration that adds tables, functions, RLS and grants. **No behaviour change**: nothing calls the new resolver, and `fn_tm_on_message_insert`, `emit_notification` and every existing table, policy and trigger are untouched.
-**Status:** applied to `unicorn-qa` and proven, then applied to production on 17 November 2026 (project `yxkgdalkbrriasiyyrwk`, version `20261117043730`, Carl's explicit go-ahead) with a read-only postflight that matched the design. Still pending: the data step (AJ and Ezel delegate links, exempt accounts), which needs its own go-ahead.
+**Status:** applied to `unicorn-qa` and proven, then applied to production on 17 November 2026 (project `yxkgdalkbrriasiyyrwk`, version `20261117043730`, Carl's explicit go-ahead) with a read-only postflight that matched the design. The data step (AJ and Ezel delegate links, exempt accounts) was applied the same day.
 
 ## What changed
 
@@ -34,7 +34,17 @@
 2. **Applied** through the Supabase MCP (`apply_migration`), text identical to the file on the PR branch. Recorded as `20261117043730 notification_routing_foundation`.
 3. **Postflight, read-only, matched the design:** six tables, all with RLS on; one overload of each of the four functions; `anon` has no table grant; `authenticated` has SELECT on the lookup, delegate and exempt tables and SELECT, INSERT, UPDATE, DELETE only on preferences and overrides (RLS limits those to own rows); `authenticated` can execute only `create_notification_delegate` and `end_notification_delegate`; seeds are 7 categories and 105 role defaults, 0 delegates, 0 exempt; the live `fn_tm_on_message_insert` md5 is unchanged (nothing calls the resolver yet).
 
-**Still pending, needs a separate go-ahead:** the data step: one `all_csc` delegate row each for AJ and Ezel (decision 5), written with matching `audit_events` rows, and exempt rows for the test and duplicate accounts (`Test`, `Carl (CST)`, `Carl (Reviewer)`). Neither affects any notification until the routing mode is `resolver` (rollout step 2 entry).
+**Data step, done 17 November 2026 (Carl's go-ahead: "Yes, add them").** One transaction on `yxkgdalkbrriasiyyrwk`, after resolving each name to exactly one active internal user:
+
+- Two `all_csc` delegate links (decision 5): AJ and Ezel, no tenant or category limit, `created_by` the authorising Super Admin (Carl).
+- Three exempt accounts: `Test` (test account), `Carl (CST)` and `Carl (Reviewer)` (duplicate accounts).
+- Five `audit_events` rows (`entity` = `notification_delegate` or `notification_exempt_user`, `action` = `created`).
+- Written as direct INSERTs rather than through `create_notification_delegate()`, because that function needs a signed-in caller; the rows have the same shape as the RPC writes. Re-running the statement adds nothing (it is idempotent).
+- Rollback: `UPDATE public.staff_notification_delegates SET ended_at = now() WHERE created_by = '<Carl>' AND ended_at IS NULL AND principal_kind = 'all_csc'` and `DELETE FROM public.notification_exempt_users WHERE reason IN ('Test account (Test CSC)', 'Duplicate account (Carl (CST))', 'Duplicate account (Carl (Reviewer))')`.
+
+**Read-only check against real assignments afterwards.** Mode is still `legacy`, so nothing a user sees has changed. Running the resolver for `client_message` over all 67 tenants with an active CSC assignment: 65 tenants return their primary CSC; every tenant returns 2 to 3 recipients (average 2.8: the primary CSC plus AJ and Ezel); 190 rows (65 `primary_csc`, 125 `delegate`); 3 exempt and 2 delegate accounts as intended.
+
+**Finding, to fix before cutover.** Two tenants have an active primary CSC who cannot be notified: tenant 7492 (a disabled, archived Super Admin) and tenant 7564 (the `Angela` System Account). The resolver counts that assignment as an owner, so for these tenants it returns only the two delegates and does not escalate to Super Admins as "unassigned". Two actions: (1) correct those two assignments in `tenant_csc_assignments` (a data decision for the team); (2) change the resolver so an assignment only counts as an owner when that person is an eligible recipient, so such a tenant is treated as unassigned. Item 2 is a small `CREATE OR REPLACE` of `resolve_notification_recipients` (same signature, so no overload) with a new QA check, and the resolver is not live until the mode is `resolver`.
 
 ## Rollback
 
