@@ -223,6 +223,23 @@ async function resolveMetricValue(
       return Math.round((onTrack / rocks.length) * 100);
     }
 
+    // CST team metrics for Live Client RTOs, read from the weekly snapshot
+    // (cst_scorecard_weekly_snapshot via get_cst_team_metric). A week with no
+    // snapshot row yields null, so the metric is skipped rather than recorded
+    // as zero. Definitions: docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md
+    case 'cst_client_activity_rate_pct':
+    case 'cst_rtos_with_activity_pct':
+    case 'cst_certificates_issued_count':
+    case 'cst_users_never_signed_in_count':
+    case 'cst_rtos_no_activity_count': {
+      const { data, error } = await supabase.rpc('get_cst_team_metric', {
+        p_metric_key: metricKey,
+        p_week_ending: weekEnding,
+      });
+      if (error) throw error;
+      return data === null || data === undefined ? null : Number(data);
+    }
+
     // Placeholder resolvers — these require integration with external data sources
     case 'qualified_leads_count':
     case 'discovery_calls_booked_count':

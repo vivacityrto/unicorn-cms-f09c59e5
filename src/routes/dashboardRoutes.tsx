@@ -108,6 +108,7 @@ const EosFlightPlan = lazy(() => import("@/pages/EosFlightPlan"));
 const EosRisksOpportunities = lazy(() => import("@/pages/EosRisksOpportunities"));
 const EosTodos = lazy(() => import("@/pages/EosTodos"));
 const EosScorecard = lazy(() => import("@/pages/EosScorecard"));
+const EosCstReport = lazy(() => import("@/pages/EosCstReport"));
 const EosVto = lazy(() => import("@/pages/EosVto"));
 const EosCalendar = lazy(() => import("@/pages/EosCalendar"));
 const EosAccountabilityChart = lazy(() => import("@/pages/EosAccountabilityChart"));
@@ -704,6 +705,7 @@ export const dashboardLayoutRoutes = (
       <Route path="/eos/risks-opportunities" element={<EosRisksOpportunities />} />
       <Route path="/eos/todos" element={<EosTodos />} />
       <Route path="/eos/scorecard" element={<EosScorecard />} />
+      <Route path="/eos/cst-report" element={<EosCstReport />} />
       <Route path="/eos/vto" element={<EosVto />} />
       <Route path="/eos/calendar" element={<EosCalendar />} />
       <Route path="/eos/accountability" element={<EosAccountabilityChart />} />

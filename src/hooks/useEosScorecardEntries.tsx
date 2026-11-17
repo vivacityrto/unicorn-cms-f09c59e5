@@ -67,6 +67,8 @@ export const useEosScorecardEntries = (metricId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-scorecard-entries'] });
+      // Scorecard page and L10 review derive status and trend from this query.
+      queryClient.invalidateQueries({ queryKey: ['scorecard-metrics-v2'] });
       toast({ title: 'Entry recorded successfully' });
     },
     onError: (error: Error) => {
@@ -88,6 +90,8 @@ export const useEosScorecardEntries = (metricId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-scorecard-entries'] });
+      // Scorecard page and L10 review derive status and trend from this query.
+      queryClient.invalidateQueries({ queryKey: ['scorecard-metrics-v2'] });
       toast({ title: 'Entry updated successfully' });
     },
     onError: (error: Error) => {

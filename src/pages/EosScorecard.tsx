@@ -22,6 +22,7 @@ import { MissingDataPanel } from '@/components/eos/scorecard2/MissingDataPanel';
 import { MetricDetailDrawer } from '@/components/eos/scorecard2/MetricDetailDrawer';
 import { MetricEditorDialogV2 } from '@/components/eos/scorecard2/MetricEditorDialogV2';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
+import { CstSignalCards } from '@/components/eos/cst/CstSignalCards';
 import type { ScorecardMetric } from '@/types/scorecard';
 
 export default function EosScorecard() {
@@ -206,6 +207,9 @@ function ScorecardDashboard() {
           <span>{lastRefreshed}</span>
         </div>
       </div>
+
+      {/* CST headline numbers for Live Clients (client activity and certificates) */}
+      <CstSignalCards />
 
       {/* Metric count warning */}
       {showMetricWarning && (

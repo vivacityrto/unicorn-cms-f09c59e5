@@ -34,7 +34,7 @@ import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { useLiveMeetingViewingState } from '@/hooks/useLiveMeetingViewingState';
 import { useLiveMeetingSegmentNavigation } from '@/hooks/useLiveMeetingSegmentNavigation';
 import { RockEditorSheet } from '@/components/eos/rockEditor/RockEditorSheet';
-import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
+import { MeetingScorecardReview } from '@/components/eos/meeting/MeetingScorecardReview';
 import { IssuesQueue } from '@/components/eos/IssuesQueue';
 import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
@@ -655,9 +655,9 @@ export const LiveMeetingView = () => {
               </p>
               <ScorecardPrompt />
             </Card>
-            {metrics?.slice(0, scorecardCap).map((metric) => (
-              <ScorecardEntryGrid key={metric.id} metric={metric} />
-            ))}
+            {metrics && metrics.length > 0 && (
+              <MeetingScorecardReview metrics={metrics} cap={scorecardCap} />
+            )}
             {(!metrics || metrics.length === 0) && (
               <Card className="p-6">
                 <p className="text-muted-foreground text-sm text-center">

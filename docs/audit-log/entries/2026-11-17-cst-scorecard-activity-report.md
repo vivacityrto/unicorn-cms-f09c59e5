@@ -1,0 +1,59 @@
+# Audit: 2026-11-17 — cst-scorecard-activity-report
+
+**Trigger:** the team asked for client logins per RTO and courses finished as part of the EOS scorecard for the CST (the primary CSCs), with a breakdown and a redesigned L10 Scorecard segment.
+**Scope:** one migration (five functions, one snapshot table with RLS, one weekly job), a `scorecard-refresh` edge-function change, a CST report page, CST headline cards on the Scorecard page, and an exceptions-first L10 Scorecard segment. Definitions and decisions: [docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md](../../kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md).
+**Status:** applied to `unicorn-qa` only. **Nothing has been applied to production**, and no edge function has been deployed. Production needs Carl's separate go-ahead (steps below). Merging this PR deploys the `scorecard-refresh` change (the repository deploys edge functions on merge to `main`); that function has no scheduled caller, so the deploy changes nothing until a metric using the new keys exists.
+
+## What changed
+
+**Database (`supabase/migrations/20261117100000_cst_scorecard_activity_report.sql`, rollback in `supabase/migrations/rollback/`)**
+
+- `cst_activity_stats(start, end)`: per Live Client RTO, client users, active users, never-signed-in users and certificates issued in a window. Internal; `service_role` only.
+- `get_cst_report(period, anchor)`: the report, grouped by primary CSC with each RTO nested. Periods `week`, `month`, `year`, `days28`, with the prior period alongside. Sydney-time boundaries. **Vivacity staff only**, checked inside the function (`is_vivacity_team_safe(auth.uid())`); granted to `authenticated` and `service_role`, not `anon`.
+- `cst_scorecard_weekly_snapshot`: one row per Live RTO per week (Sunday week ending). RLS on; staff SELECT policy only; every client write privilege revoked (new public tables otherwise carry default grants to `authenticated`).
+- `snapshot_cst_week(date)`, `backfill_cst_snapshots(integer)`: write the snapshot. `service_role` only. Refuse a date that is not a Sunday or has not ended.
+- `get_cst_team_metric(key, week_ending)`: team value for five metric keys, read from the snapshot. `service_role` only. Returns null for an unknown key or a week with no snapshot.
+- Weekly `pg_cron` job (Sunday 16:30 UTC, Monday 03:30 Sydney), created only where `pg_cron` exists. It is not installed on `unicorn-qa`.
+- All functions are `SECURITY DEFINER` with `SET search_path TO ''`, schema-qualified, `REVOKE ALL … FROM PUBLIC`.
+
+**Definitions that matter**
+
+- Live Clients mirror Manage Tenants: status Active, On hold, In Arears or Warning, not archived, RTO accounts only.
+- Client activity: portal page views, `client_login`, `message_sent`, `message_read`, `academy_lesson_completed`, and `academy_enrolled` **only where `metadata.source` is `self_enrol`**. **This narrows the list Carl approved on 17 November 2026.** In the last 180 days, 382 of 626 enrolment events were `auto_package` or `auto_all_clients`: the system enrolled the learner and attributed the event to them, so counting them would report activity nobody did. `staff_impersonation` and `manual` are excluded for the same reason. Staff actions and staff-shared documents never count because only actors who are client users of that RTO are kept.
+- Client user: `tenant_users` row, profile not Vivacity internal, not archived.
+- Courses finished: a certificate issued (`academy_certificates.issued_at`, not revoked).
+
+**Edge function:** `scorecard-refresh` resolves five new `cst_*` metric keys through `get_cst_team_metric`. A week with no snapshot is skipped, not recorded as zero.
+
+**Frontend:** `/eos/cst-report` (Week, Month, Year, Last 28 days; primary CSC rows that expand to RTOs; CSV export with formula neutralising; Vivacity team route); four CST headline cards on the Scorecard page; five CST metric templates; the L10 Scorecard segment now lists every active metric with the worst first (off track, at risk, out of date, no data) and keeps on-track metrics closed. The configured `scorecard_metric_cap` (5 on all four types for tenant 6372) now sets how many to-discuss metrics start expanded instead of hiding the rest. Live entry and the existing Add to Issues action are unchanged because the segment still renders `ScorecardEntryGrid` for each expanded metric.
+
+## Evidence
+
+**`unicorn-qa` (17 November 2026, project confirmed before each write).** Migration applied through the Supabase MCP, plus a follow-up revoke for the table grant described below.
+
+- **Access:** with no identity, `get_cst_report` raises 42501 (Not authorized). With a client user's identity, also 42501. With a Vivacity internal user's identity, all four periods return. `anon` cannot execute the report or select the table; `authenticated` cannot execute any of the other four functions.
+- **Grant defect found and fixed:** the first apply left `INSERT` on the snapshot table granted to `authenticated` by the schema's default privileges. RLS had no write policy so it was not exploitable, but the migration now revokes it and a second QA migration applied the same change. Re-check: `authenticated` has SELECT only.
+- **Behaviour:** QA has 5 Live RTOs and 19 client users. A year window gave 8 active users across 4 RTOs, matching an independent query. The report returned 2 CSC groups. `backfill_cst_snapshots(4)` wrote 20 rows (5 RTOs × 4 weeks), all Sunday week endings, latest the last fully ended Sunday. `get_cst_team_metric` returned values for the five keys and null for an unknown key and for a week with no snapshot. `snapshot_cst_week` refused a non-Sunday and a Sunday that has not ended.
+- **Not proven on QA:** a week with real recent activity (QA data is old), the `pg_cron` job (not installed), and certificates (QA has none).
+
+**Production, read-only (select only, nothing written), 17 November 2026.** The same logic gave 57 Live RTOs, 55 with users, 191 client users, **38 active in 28 days (20%)**, 21 RTOs with activity, 34 without, 30 never signed in. Certificates issued: 1 this week (4 last week), 5 this month (15 last month), 61 this year (none before 2026). These are the figures after the self-enrolment narrowing; the earlier 43 users (23%) included automatic enrolments.
+
+**Repository checks:** `npm run typecheck`, `lint:ratchet`, `test:frontend`, `test:edge`, `check-kb-links` and the migration safety audit; results are in the PR description.
+
+## Known limits
+
+- History: membership and Live status are the current ones, so a past week is the current client base measured over that week. Page views exist only since 4 August 2026, so activity before then rests on timeline events alone.
+- Certificate counts are small (1 to 4 a week). Month is the useful view.
+- Per-RTO rows are not shown on the Scorecard page, only on the report.
+- The 9 per-consultant copies of CHC, Validation and Projects On Track on the company scorecard are not merged (that is data, not code).
+- Existing automatic metrics (CHC, validation, Active ComplyHub Users) still have no resolver and remain empty; this change only adds the CST keys.
+
+## Production steps (not done; need Carl's go-ahead)
+
+1. Confirm the target is production ref `yxkgdalkbrriasiyyrwk`.
+2. Apply `20261117100000_cst_scorecard_activity_report.sql` through the Supabase MCP (`apply_migration`).
+3. Postflight, read-only: the five functions exist once each (`pg_proc`), grants as above (`has_function_privilege` for `anon` and `authenticated`), RLS on and `authenticated` has SELECT only on the snapshot table, and the cron job is listed (`cron.job`).
+4. Run `select public.backfill_cst_snapshots(13)` once as `service_role`. This writes the snapshot table only.
+5. Create the five CST metrics from the Add Metric templates on the Scorecard page (a data change; set the real targets first), then call `scorecard-refresh` once for tenant 6372 to confirm entries appear.
+
+**Rollback:** `supabase/migrations/rollback/20261117100000_cst_scorecard_activity_report.down.sql` drops everything the migration added. No existing object was altered, and the snapshot is derived data that can be rebuilt.

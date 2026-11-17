@@ -515,6 +515,33 @@
       "owner": "Carl",
       "reason": "Rollback file for the cut-over. Re-grants INSERT and UPDATE on the two legacy tables exactly as before; recreates the two help_* insert policies and the notification trigger. Flagged lines are GRANT statements only.",
       "expires": "2026-12-13"
+    },
+    {
+      "id": "cst-scorecard-migration",
+      "file": "supabase/migrations/20261117100000_cst_scorecard_activity_report.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation",
+        "cron-registration",
+        "cron-unschedule",
+        "extension-assumption"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "The flagged INSERT and ON CONFLICT DO UPDATE are inside the body of snapshot_cst_week(), which writes only the new cst_scorecard_weekly_snapshot table when called (weekly job or service_role). The migration itself writes no rows and changes no existing table, policy or function. The weekly job (cron.schedule, preceded by unscheduling only its own name) is created only where pg_cron is installed and runs select public.snapshot_cst_week().",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "cst-scorecard-rollback",
+      "file": "supabase/migrations/rollback/20261117100000_cst_scorecard_activity_report.down.sql",
+      "categories": [
+        "cron-unschedule",
+        "extension-assumption"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file. Unschedules only the job named cst-scorecard-weekly-snapshot, and only where pg_cron exists, then drops the objects the migration added.",
+      "expires": "2026-12-17"
     }
   ]
 }

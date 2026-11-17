@@ -1,8 +1,8 @@
 # CST scorecard metric dictionary (17 November 2026)
 
-> **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the definitions and the measured figures (queried read-only on production, 17 November 2026); the design is a reviewed mockup only, nothing is built; targets are placeholders.
+> **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the definitions and the measured figures (queried read-only on production, 17 November 2026); the data layer is applied to `unicorn-qa` only and **not yet on production**; targets are placeholders.
 >
-> Definitions for the CST team scorecard and the matching changes to the EOS Scorecard page and the L10 Scorecard segment. The L10 Segue segment is out of scope. Standalone feature work, not one of the four tracked initiatives. The EOS module is Vivacity-internal; this reads client data but is only shown to Vivacity staff.
+> Definitions for the CST team scorecard and the matching changes to the EOS Scorecard page and the L10 Scorecard segment. The L10 Segue segment is out of scope. Standalone feature work, not one of the four tracked initiatives. The EOS module is Vivacity-internal; this reads client data but is only shown to Vivacity staff. Evidence, QA results, production steps and rollback: [audit entry](../../audit-log/entries/2026-11-17-cst-scorecard-activity-report.md).
 
 ## Terms
 
@@ -11,7 +11,8 @@
 | **CST** | The primary CSCs: one primary assignment per RTO that has not ended. | `tenant_csc_assignments` where `is_primary` and `ended_at` is null (the lookup Manage Tenants uses) |
 | **Live Clients** | RTOs with status Active, On hold, In Arears or Warning, not archived, RTO accounts only (tenant metadata has no `academy_solo`). 57 RTOs on 17 November 2026. | Manage Tenants `LIVE_STATUSES` and its default "Live" filter |
 | **Client user** | A `tenant_users` row of a Live RTO whose profile is not `is_vivacity_internal` and not archived. 191 users on 17 November 2026, against 215 raw rows (18 are Vivacity staff). | `tenant_users` joined to `users` |
-| **Client activity** | Any of these by a client user of that RTO: a portal page view, a `client_login` timeline event, a message sent or read, an Academy lesson completed or an Academy enrolment. Approved by Carl on 17 November 2026. | `client_portal_page_views`, `client_timeline_events` |
+| **Client activity** | Any of these by a client user of that RTO: a portal page view, a `client_login` timeline event, a message sent or read, an Academy lesson completed, or an Academy enrolment the learner made themselves (`metadata.source` is `self_enrol`). List approved by Carl on 17 November 2026, then narrowed on the enrolment item (next row). | `client_portal_page_views`, `client_timeline_events` |
+| **Enrolments that do not count** | `auto_package` and `auto_all_clients` (the system enrolled the learner: 382 of 626 enrolment events in the last 180 days), `staff_impersonation` and `manual`. They are recorded against the learner but are not something the client did, so counting them would report activity nobody performed. | `client_timeline_events.metadata.source` |
 | **Not client activity** | Vivacity staff actions (including viewing a client's portal), `document_shared_to_client` (staff pushing a document, 14,080 of the 90-day events), system events (invoices, status changes), archived users. | Excluded by the actor filter above |
 | **Course finished** | A certificate is issued, not an enrolment marked completed. | `academy_certificates.issued_at`, `revoked_at` null |
 
@@ -23,9 +24,9 @@ All five are automatic. Owner is each primary CSC for their own RTOs; the scorec
 
 | Metric | Definition | Direction | Proposed target | Measured 17 Nov 2026 |
 |---|---|---|---|---|
-| Client activity rate % | Client users with client activity in the last 28 days ÷ client users | Higher | 50% | 43 of 191 (23%) |
+| Client activity rate % | Client users with client activity in the last 28 days ÷ client users | Higher | 50% | 38 of 191 (20%) |
 | RTOs with client activity % | Live RTOs with at least one active client user ÷ Live RTOs that have client users | Higher | 60% | 21 of 55 (38%) |
-| Certificates issued | Certificates issued in the period (week, month or year), with the prior period beside it | Higher | 12 a month | 5 in November to date, 15 in October, 61 in 2026 (8 RTOs) |
+| Certificates issued | Certificates issued in the period (week, month or year), with the prior period beside it. On the weekly scorecard it is the week's count. | Higher | 12 a month, 3 a week | 1 this week (4 last week), 5 in November to date (15 in October), 61 in 2026 (8 RTOs) |
 | Users never signed in | Client users whose profile has no sign-in | Lower | 15 or fewer | 30 of 191 |
 | Live RTOs with no activity (28 days) | Live RTOs with client users and no active client user | Lower | 20 or fewer | 34 of 55 |
 
@@ -39,7 +40,7 @@ Notes:
 
 ### Reference query shape (measured)
 
-For each Live RTO: take the client users above; take distinct `(tenant_id, user_id)` from page views in the window plus distinct `(tenant_id, created_by)` from timeline events of type `client_login`, `message_sent`, `message_read`, `academy_lesson_completed` or `academy_enrolled` in the window; keep only pairs that match a client user. Actors that are not client users are discarded, which removes staff page views and staff actions.
+For each Live RTO: take the client users above; take distinct `(tenant_id, user_id)` from page views in the window plus distinct `(tenant_id, created_by)` from timeline events of type `client_login`, `message_sent`, `message_read` or `academy_lesson_completed`, or `academy_enrolled` where `metadata.source` is `self_enrol`, in the window; keep only pairs that match a client user. Implemented as `cst_activity_stats(start, end)`. Actors that are not client users are discarded, which removes staff page views and staff actions.
 
 ## User reconciliation (data-quality flags)
 
@@ -48,20 +49,24 @@ For each Live RTO: take the client users above; take distinct `(tenant_id, user_
 - `user_activity.tenant_id` is null on all 1,690 rows, so that table cannot give per-RTO activity.
 - Manage Tenants' CSC load chips use `lifecycle_status = 'active'` (54 RTOs), not the Live definition (57). **Open:** choose one cohort for both screens.
 
-## Proposed data design (not built)
+## Data design (built; applied to `unicorn-qa` only)
 
-A nightly snapshot per RTO per week, so trends and the per-CSC split do not depend on pruned or slow source queries: tenant, week ending, CSC as at that week, client users, active users, certificates issued, never-signed-in users. Staff read only. Populated by a scheduled function; earlier weeks backfilled from timeline events only. Adding this needs a migration, row-level security, a cron job and an entry in `docs/audit-log/entries/`; none is approved or started. Use one week-ending convention (Sunday) everywhere.
+- `get_cst_report(period, anchor)` computes any period live (week, month, year, last 28 days, each with its prior period). Staff only.
+- `cst_scorecard_weekly_snapshot`: one row per Live RTO per week (Sunday week ending, Sydney time) holding the CSC as at that week, client users, users active in the 28 days to week end, never-signed-in users and certificates issued that week. Written by `snapshot_cst_week` (weekly `pg_cron` job, Monday 03:30 Sydney) and `backfill_cst_snapshots`. Staff read only.
+- `get_cst_team_metric(key, week_ending)` feeds `scorecard-refresh` for five keys: `cst_client_activity_rate_pct`, `cst_rtos_with_activity_pct`, `cst_certificates_issued_count`, `cst_users_never_signed_in_count`, `cst_rtos_no_activity_count`.
+- Past weeks use the current user base and current Live status because neither history is stored.
+- Production needs a separate go-ahead; steps and rollback are in the audit entry.
 
-## Changes to existing screens (not built)
+## Screens
 
-- **Scorecard page:** add the CST scorecard (five metrics) as a team scorecard that rolls up to the company scorecard when red. Collapse the per-consultant copies of CHC, Validation and Projects On Track (9 of 17 company rows) into one row each with a split, giving 11 company rows.
-- **CST report:** Week, Month and Year, grouped by primary CSC, expandable to RTOs, with prior-period comparison and CSV export.
-- **L10 Scorecard segment:** show every metric, not the first `scorecard_metric_cap` (default 5); show amber; keep green closed; each off-track metric gets Add to IDS, To-Do or Noted; facilitator reads numbers, discussion happens in IDS.
+- **CST report** (`/eos/cst-report`, built): Week, Month, Year and Last 28 days, grouped by primary CSC, expandable to RTOs, with prior-period comparison and CSV export.
+- **Scorecard page** (built): four CST headline cards above the existing tables, and five CST metric templates (category CST) so the team scorecard can be created from Add Metric. **Not done:** collapsing the per-consultant copies of CHC, Validation and Projects On Track (9 of 17 company rows) into one row each with a split. That is a data change and needs the CST's decision on owners.
+- **L10 Scorecard segment** (built): every active metric, worst first (off track, at risk, out of date, no data), on-track metrics closed. The configured `scorecard_metric_cap` (5) now sets how many to-discuss metrics start expanded rather than hiding the rest. Live entry and Add to Issues are unchanged. Facilitator reads numbers, discussion happens in IDS.
 
 ## Known defects found while scoping (unfixed)
 
 - Every automatic scorecard metric has zero entries: `scorecard-refresh` returns null for the CHC, Validation and Active ComplyHub Users keys, and no scheduled caller was found.
-- The L10 Scorecard segment uses a different component from the Scorecard page, with binary status and the five-metric cap, so new CST metrics would never appear in the meeting.
+- The L10 Scorecard segment used a different component from the Scorecard page, with binary status and a five-metric cap that showed only the first five by display order, so new CST metrics would never have appeared in the meeting. **Addressed** by the exceptions-first segment (see Screens). It still renders the older entry grid inside each expanded metric.
 - Likely week-key mismatch (not confirmed against data): the refresh function keys entries by Sunday, the L10 grid by Monday.
 - The last 8 L10s averaged 94 minutes against 90 planned.
 
