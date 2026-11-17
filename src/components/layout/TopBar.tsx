@@ -70,6 +70,7 @@ const routeTitles: Record<string, string> = {
   "/eos": "EOS Overview",
   "/eos/leadership": "Leadership Dashboard",
   "/eos/scorecard": "Scorecard",
+  "/eos/cst-report": "CST Report",
   "/eos/vto": "Mission Control",
   "/eos/rocks": "Rocks",
   "/eos/flight-plan": "Flight Plan",

@@ -69,6 +69,7 @@ const eosMenuItems = [
   { icon: Target, label: "EOS Overview", path: "/eos" },
   { icon: ShieldCheck, label: "Leadership Dashboard", path: "/eos/leadership", leadershipOnly: true },
   { icon: BarChart3, label: "Scorecard", path: "/eos/scorecard" },
+  { icon: Gauge, label: "CST Report", path: "/eos/cst-report" },
   { icon: Flag, label: "Mission Control", path: "/eos/vto" },
   { icon: TrendingUp, label: "Rocks", path: "/eos/rocks" },
   { icon: Rocket, label: "Flight Plan", path: "/eos/flight-plan" },

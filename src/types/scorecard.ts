@@ -12,7 +12,8 @@ export type MetricCategory =
   | 'Product'
   | 'Finance'
   | 'Team'
-  | 'Compliance';
+  | 'Compliance'
+  | 'CST';
 
 export const METRIC_CATEGORIES: MetricCategory[] = [
   'Sales',
@@ -22,6 +23,7 @@ export const METRIC_CATEGORIES: MetricCategory[] = [
   'Finance',
   'Team',
   'Compliance',
+  'CST',
 ];
 
 export const METRIC_UNITS = ['Count', '$', '%', 'Hours', 'Days'];
@@ -246,6 +248,65 @@ export const METRIC_TEMPLATES: MetricTemplate[] = [
     metric_key: 'clients_with_current_chc_pct',
     example_result: '92%',
     defaultTarget: 90,
+  },
+  // CST team metrics for Live Client RTOs. Definitions and the week each value
+  // belongs to: docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md.
+  // Values come from cst_scorecard_weekly_snapshot via scorecard-refresh.
+  // Targets are placeholders for the CST to set.
+  {
+    name: 'CST: Client activity rate %',
+    description: 'Client users active in the portal in the last 28 days, as a share of all client users at Live Client RTOs',
+    category: 'CST',
+    unit: '%',
+    direction: 'higher_is_better',
+    metric_source: 'automatic',
+    metric_key: 'cst_client_activity_rate_pct',
+    example_result: '20%',
+    defaultTarget: 50,
+  },
+  {
+    name: 'CST: RTOs with client activity %',
+    description: 'Live Client RTOs with at least one active client user in the last 28 days',
+    category: 'CST',
+    unit: '%',
+    direction: 'higher_is_better',
+    metric_source: 'automatic',
+    metric_key: 'cst_rtos_with_activity_pct',
+    example_result: '38%',
+    defaultTarget: 60,
+  },
+  {
+    name: 'CST: Certificates issued',
+    description: 'Academy certificates issued this week to Live Client RTOs',
+    category: 'CST',
+    unit: 'Count',
+    direction: 'higher_is_better',
+    metric_source: 'automatic',
+    metric_key: 'cst_certificates_issued_count',
+    example_result: '3 certificates',
+    defaultTarget: 3,
+  },
+  {
+    name: 'CST: Users never signed in',
+    description: 'Client users at Live Client RTOs who have never signed in',
+    category: 'CST',
+    unit: 'Count',
+    direction: 'lower_is_better',
+    metric_source: 'automatic',
+    metric_key: 'cst_users_never_signed_in_count',
+    example_result: '30 users',
+    defaultTarget: 15,
+  },
+  {
+    name: 'CST: Live RTOs with no activity',
+    description: 'Live Client RTOs with client users but no client activity in the last 28 days',
+    category: 'CST',
+    unit: 'Count',
+    direction: 'lower_is_better',
+    metric_source: 'automatic',
+    metric_key: 'cst_rtos_no_activity_count',
+    example_result: '34 RTOs',
+    defaultTarget: 20,
   },
   {
     name: 'Clients with Current Validation %',

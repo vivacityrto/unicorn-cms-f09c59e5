@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { MetricRow } from './MetricRow';
 import type { ScorecardMetric } from '@/types/scorecard';
 
-const CATEGORY_ORDER = ['Sales', 'Marketing', 'Delivery', 'Product', 'Finance', 'Team', 'Compliance'];
+const CATEGORY_ORDER = ['Sales', 'Marketing', 'Delivery', 'Product', 'Finance', 'Team', 'Compliance', 'CST'];
 
 interface CategorySectionProps {
   category: string;
