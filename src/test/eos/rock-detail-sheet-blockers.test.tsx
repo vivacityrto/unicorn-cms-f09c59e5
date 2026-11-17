@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'user-1' } }) }));
+vi.mock('@/hooks/useEos', () => ({ useEosRocks: () => ({ rocks: [], isLoading: false, updateRock: { mutate: vi.fn(), isPending: false } }) }));
 vi.mock('@/hooks/useRockBlockers', () => ({
   useRockBlockers: () => state.blockers,
   useSetBlocker: () => ({ mutateAsync: state.save, isPending: false }),
