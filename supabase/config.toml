@@ -471,3 +471,12 @@ verify_jwt = false
 # Auth is enforced in-function via requireCaller (staff.ai.use).
 [functions.summarise-rock-notes]
 verify_jwt = false
+
+# Capability-gated anonymous collector. Runtime flag and campaign gate default OFF.
+# No user session is accepted; do not deploy before privacy/release approval.
+[functions.planning-survey-collect]
+verify_jwt = false
+
+# Draft separate authenticated reviewer surface; feature flag remains off.
+[functions.planning-survey-review]
+verify_jwt = true
