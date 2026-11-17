@@ -1,4 +1,5 @@
 -- Rollback for 20261117100000_cst_scorecard_activity_report.sql
+-- migration-target-project: yxkgdalkbrriasiyyrwk
 -- Removes the CST report functions, the weekly snapshot table (and its data),
 -- and the weekly job. Nothing else depends on these objects: no existing table,
 -- function or policy was changed by the migration. The snapshot table is

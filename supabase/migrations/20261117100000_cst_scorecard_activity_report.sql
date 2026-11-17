@@ -1,5 +1,6 @@
 -- CST scorecard: client activity and certificates issued for Live Client RTOs,
 -- grouped by primary CSC. Definitions: docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md
+-- migration-target-project: yxkgdalkbrriasiyyrwk
 --
 -- Adds (no existing object is altered):
 --   public.cst_activity_stats(timestamptz, timestamptz)   internal, per-RTO stats for a window
