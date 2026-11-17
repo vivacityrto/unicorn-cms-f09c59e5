@@ -32,4 +32,15 @@ for (const key of keys) {
   assert.ok(source.indexOf(`case '${key}':`) < placeholderIndex, `${key} must not sit in the placeholder block`);
 }
 
+// The snapshot is keyed by Sunday, entries by Monday: the resolver must convert.
+assert.match(source, /p_week_ending: snapshotWeekEnding\(weekEnding\)/);
+assert.match(source, /from "\.\/weeks\.ts"/);
+
+// System entries need a real auth user (entered_by is a foreign key), and a failed
+// write must surface instead of being reported as a success.
+assert.ok(!source.includes('00000000-0000-0000-0000-000000000000'), 'no placeholder user id');
+assert.match(source, /SCORECARD_REFRESH_ACTOR_USER_ID/);
+assert.match(source, /if \(insertError\) throw insertError;/);
+assert.match(source, /if \(updateError\) throw updateError;/);
+
 console.log('scorecard-refresh CST metric checks passed');
