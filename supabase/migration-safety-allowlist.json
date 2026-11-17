@@ -542,6 +542,31 @@
       "owner": "Carl",
       "reason": "Rollback file. Unschedules only the job named cst-scorecard-weekly-snapshot, and only where pg_cron exists, then drops the objects the migration added.",
       "expires": "2026-12-17"
+    },
+    {
+      "id": "scorecard-refresh-weekly-cron",
+      "file": "supabase/migrations/20261117130000_scorecard_refresh_weekly_cron.sql",
+      "categories": [
+        "production-url",
+        "cron-unschedule",
+        "cron-registration",
+        "http-call"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Registers the one weekly job scorecard-refresh-weekly (Monday 04:00 Sydney) that calls the scorecard-refresh edge function on the production project, authenticated through the vault helpers like the other cron-only functions. The unschedule removes only a job of that exact name so the migration can be re-applied.",
+      "expires": "2026-12-17"
+    },
+    {
+      "id": "scorecard-refresh-weekly-cron-rollback",
+      "file": "supabase/migrations/rollback/20261117130000_scorecard_refresh_weekly_cron.down.sql",
+      "categories": [
+        "cron-unschedule"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file. Unschedules only the job named scorecard-refresh-weekly; entries it already wrote are kept.",
+      "expires": "2026-12-17"
     }
   ]
 }
