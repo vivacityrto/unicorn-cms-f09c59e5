@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the current-state findings (read from live production on 17 November 2026, read-only); medium for the design, which is a proposal with open decisions and no code or migration yet.
 >
-> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decision 1 settled on 17 November 2026, decisions 2 to 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
+> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decisions 1 and 2 settled on 17 November 2026, decisions 3 to 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
 
 ## Why
 
@@ -128,9 +128,10 @@ One PR each, in this order. Every database step is hand-written and needs an aud
 
 1. **Non-CSC staff default for client messages. Decided 17 November 2026 (Carl): owner-only plus escalation.** Only the tenant's primary CSC and their delegates are notified by default. A tenant with no active primary CSC, or a message unread for the escalation period, escalates once to Super Admins (timing is open decision 4). Other staff (Super Admins, Team Members, Integrators, BGT) can opt in per client or globally in their preferences. Rejected: keeping all-staff delivery with quiet low-priority entries, and owner-only with no escalation (an absent or unassigned owner could leave a client message unseen).
 
+2. **Teams and email. Decided 17 November 2026 (Carl): one matrix for all channels.** In-app, Teams and email are columns of the same preference matrix, and owner-only routing from decision 1 applies to every channel. Teams delivery therefore moves off `notification_rules` onto `notification_preferences` and the resolver (rollout step 4 at the latest; `emit` already writes `notification_outbox` for Teams). Existing `notification_rules` rows are migrated into the matrix so nobody loses a Teams setting they already chose. Rejected: bell-only (Teams could still ping non-owners) and matrix-now-Teams-later.
+
 Open:
 
-2. **Teams and email.** Recommended: the same matrix controls them, so there is one place to configure. Alternative: the bell only, leaving Teams on `notification_rules`.
 3. **Who maintains delegates.** Recommended: Super Admins only. Alternative: a CSC can add their own assistant.
 4. **Escalation timing and recipients** (proposed 4 working hours, then Super Admins).
 5. **Confirm the assistants** named in the brief against the new delegates model, since current data does not identify them as assistants.
