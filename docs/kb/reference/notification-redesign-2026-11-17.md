@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the current-state findings (read from live production on 17 November 2026, read-only); medium for the design, which is a proposal with open decisions and no code or migration yet.
 >
-> Standalone feature design, not one of the four tracked initiatives. Status: **proposed, awaiting decisions in "Open decisions"**. Nothing in this document has been built, migrated or applied.
+> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decision 1 settled on 17 November 2026, decisions 2 to 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
 
 ## Why
 
@@ -124,9 +124,12 @@ One PR each, in this order. Every database step is hand-written and needs an aud
 - **Notification fatigue moves rather than disappears** if defaults are wrong: measure read rate per category before and after.
 - **Trigger-based authorization caveat:** any check on `request.jwt.claim.role` does not protect edge-function writes (see AGENTS.md). Delegate management must be enforced by RLS and an RPC, not only by the page.
 
-## Open decisions
+## Decisions
 
-1. **Non-CSC staff default for client messages.** Recommended: primary CSC plus delegates, with the escalation safety net. Alternative: keep all-staff delivery but quiet and filterable.
+1. **Non-CSC staff default for client messages. Decided 17 November 2026 (Carl): owner-only plus escalation.** Only the tenant's primary CSC and their delegates are notified by default. A tenant with no active primary CSC, or a message unread for the escalation period, escalates once to Super Admins (timing is open decision 4). Other staff (Super Admins, Team Members, Integrators, BGT) can opt in per client or globally in their preferences. Rejected: keeping all-staff delivery with quiet low-priority entries, and owner-only with no escalation (an absent or unassigned owner could leave a client message unseen).
+
+Open:
+
 2. **Teams and email.** Recommended: the same matrix controls them, so there is one place to configure. Alternative: the bell only, leaving Teams on `notification_rules`.
 3. **Who maintains delegates.** Recommended: Super Admins only. Alternative: a CSC can add their own assistant.
 4. **Escalation timing and recipients** (proposed 4 working hours, then Super Admins).
