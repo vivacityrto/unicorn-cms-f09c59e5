@@ -13,3 +13,13 @@
 **Rollback:** Re-add the constraint with `CHECK (product = 'unicorn' OR tenant_id = 6372)`, only once no non-Unicorn ticket sits under another tenant.
 
 **UI:** The Product selector is now an inline column in the tickets table and a field on mobile cards, beside Status and Assigned to.
+
+## Follow-up: reporter keeps access (migration `20261117110000_support_tickets_reporter_keeps_access`)
+
+Review on PR #1537 found that the reporter rules still required `product = 'unicorn'`, so reclassifying a client's ticket removed the reporter's access to it. Carl chose to keep access in chat on 17 Nov 2026.
+
+**Change (applied to production `yxkgdalkbrriasiyyrwk`):** dropped the product predicate from `can_view_support_ticket`, `can_read_support_file` and the `support_tickets_select` policy. Reporter access still requires being the reporter, a live ticket and current tenant access. Staff access is unchanged.
+
+**Verification:** read back the live policy and both functions after applying. None still mentions `product`.
+
+**Rollback:** restore the `product = 'unicorn'` predicate in the three definitions, from `supabase/migrations/20261113100000_support_tickets_model.sql`.
