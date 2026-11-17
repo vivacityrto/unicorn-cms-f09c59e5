@@ -91,9 +91,9 @@ export function TicketList(props: Props) {
 
   return (
     <div>
-      {/* Table from 768px; cards below. */}
-      <div className="hidden md:block">
-        <table className="w-full table-fixed text-sm">
+      {/* Table from 768px; cards below. Scrolls inside its own wrapper so a wide table never clips the pager or header. */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full min-w-[70rem] table-fixed text-sm">
           <caption className="sr-only">Tickets</caption>
           <colgroup>
             <col />
