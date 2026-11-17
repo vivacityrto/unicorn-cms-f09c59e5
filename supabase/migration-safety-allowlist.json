@@ -544,30 +544,28 @@
       "expires": "2026-12-17"
     },
     {
-      "id": "notification-message-routing",
-      "file": "supabase/migrations/20261117150000_notification_message_routing.sql",
+      "id": "scorecard-refresh-weekly-cron",
+      "file": "supabase/migrations/20261117130000_scorecard_refresh_weekly_cron.sql",
       "categories": [
-        "data-mutation",
-        "destructive-mutation",
+        "production-url",
+        "cron-unschedule",
         "cron-registration",
-        "cron-unschedule"
+        "http-call"
       ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Design and decisions approved by Carl on 17 November 2026 (docs/kb/reference/notification-redesign-2026-11-17.md); not yet applied to production. The migration is inert on apply: message_routing_mode is seeded as legacy and escalation_enabled as false. Flagged lines: the INSERT that seeds three rows in the new notification_routing_settings table (ON CONFLICT DO NOTHING); the INSERTs and the UPDATE of tenant_conversations inside the replaced fn_tm_on_message_insert(), which are unchanged from the live version (migration 20260703061102) apart from the added metadata value; the INSERTs inside fn_tm_routing_shadow() and escalate_unread_client_messages(), which write only the new log and escalation tables and, when escalation is enabled, escalation rows in user_notifications; and the pg_cron job (created only where pg_cron is installed, preceded by unscheduling only its own name, a no-op until escalation_enabled is true). The migration writes no row in an existing table.",
+      "reason": "Registers the one weekly job scorecard-refresh-weekly (Monday 04:00 Sydney) that calls the scorecard-refresh edge function on the production project, authenticated through the vault helpers like the other cron-only functions. The unschedule removes only a job of that exact name so the migration can be re-applied.",
       "expires": "2026-12-17"
     },
     {
-      "id": "notification-message-routing-rollback",
-      "file": "supabase/migrations/rollback/20261117150000_notification_message_routing.down.sql",
+      "id": "scorecard-refresh-weekly-cron-rollback",
+      "file": "supabase/migrations/rollback/20261117130000_scorecard_refresh_weekly_cron.down.sql",
       "categories": [
-        "data-mutation",
-        "destructive-mutation",
         "cron-unschedule"
       ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Rollback file. Unschedules only the job named notification-escalate-unread-client-messages, restores fn_tm_on_message_insert to the live version from migration 20260703061102 (its INSERT and UPDATE are inside the function body), and drops the objects the migration added.",
+      "reason": "Rollback file. Unschedules only the job named scorecard-refresh-weekly; entries it already wrote are kept.",
       "expires": "2026-12-17"
     },
     {
