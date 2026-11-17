@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the current-state findings (read from live production on 17 November 2026, read-only); medium for the design, which is a proposal with open decisions and no code or migration yet.
 >
-> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decisions 1 to 4 settled on 17 November 2026, decision 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
+> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; all five decisions settled on 17 November 2026 (see "Decisions")**. Nothing in this document has been built, migrated or applied.
 
 ## Why
 
@@ -10,7 +10,7 @@ Staff are notified about every client, not their own. A client message today rea
 
 - Staff should be notified by their own clients, with the audience decided by role (RBAC), not by a hard-coded list.
 - Each person gets a notification preference control, reached from an icon on the bell.
-- The main trigger is communications on a client's primary CSC (Client Success Champion), with an exception for assistants to consultants (named in the brief as RJ and Ezel), who need the notifications of the consultant they support. Everything else should be customisable by checkbox.
+- The main trigger is communications on a client's primary CSC (Client Success Champion), with an exception for assistants to consultants (named in the brief as AJ and Ezel), who need the notifications of the consultant they support. Everything else should be customisable by checkbox.
 
 ## Current state (verified against production, 17 November 2026)
 
@@ -30,7 +30,7 @@ Staff are notified about every client, not their own. A client message today rea
 3. **Messages bypass preferences entirely.** The message trigger never reads `user_notification_prefs` or `notification_rules`. The four preference categories in the UI cover tasks, meetings, obligations and events, not messages, tickets or notes. All 21 saved preference rows are still on defaults.
 4. **Non-people receive notifications.** The three `System Account` users and several test or duplicate accounts (names containing `Test`, `Carl (CST)`, `Carl (Reviewer)`) are in the staff fan-out and never read anything.
 5. **Roles are not aligned with who owns clients.** Internal roles are `CSC` (9), `Super Admin` (9), `Team Member` (5), `System Account` (3), `Integrator` (2) and `BGT` (1). Several Super Admins hold that role for platform access, not client ownership, but receive client traffic as if they were owners.
-6. **No assistant or delegate relationship exists anywhere in the data.** The two people named as assistants do not appear as such: one is a CSC-role user with no assignments, the other a Super Admin with a single primary assignment. The assistant concept needs a new model, and the two names should be confirmed against it.
+6. **No assistant or delegate relationship exists anywhere in the data.** The two people named as assistants (AJ and Ezel) are titled Administrative Assistant and Administration Assistant on their profiles, but nothing records whom they assist: one holds the Super Admin role and is the CSC on 9 clients, the other has the CSC role and no assignments. The assistant concept needs a new model (decision 5 settles their scope).
 7. **Other types are lower volume but unrouted.** In the last 30 days: `support_ticket` 72 rows to 24 recipients, `note_shared` 36, `note_added` 31, `ticket_submitted` 18, `ticket_reply` 9. Each picks recipients in its own trigger or component.
 
 Not checked in this pass: the bell UI components (`NotificationDropdown`, `MyNotificationsPage`) beyond their hooks, and the full set of client-side insert paths. Re-verify both before building.
@@ -60,7 +60,8 @@ A new table, `staff_notification_delegates`:
 
 | Column | Purpose |
 |---|---|
-| `principal_user_id` | The consultant or CSC being assisted |
+| `principal_user_id` | The consultant or CSC being assisted; null when `principal_kind = 'all_csc'` |
+| `principal_kind` | `user` (one named principal) or `all_csc` (every CSC, including CSCs added later, so a new CSC needs no new rows) |
 | `delegate_user_id` | The assistant |
 | `tenant_id` | Null means all of the principal's clients; otherwise one client |
 | `categories` | Which categories pass through (default: all) |
@@ -134,9 +135,9 @@ One PR each, in this order. Every database step is hand-written and needs an aud
 
 4. **Escalation timing and recipients. Decided 17 November 2026 (Carl): 4 working hours, then Super Admins, once.** The clock counts the primary CSC's working time, using `users.timezone`, `working_days` and `working_hours` (defaulting to Australia/Sydney, Monday to Friday, 9 am to 5 pm where a profile is blank). A message sent at 4:30 pm therefore escalates late the next morning. The message escalates only if none of the owner recipients has read it; one read stops the clock. A tenant with no active primary CSC skips the wait and goes to Super Admins immediately. Each escalation is marked on the notification (`escalated`, with the reason) so firing rates can be measured. Implementation needs a scheduled job (cron) that scans unread owner notifications against the clock, in rollout step 2. Rejected: 2 working hours (more escalation noise for owners in meetings) and next working day (a client could wait most of a day).
 
-Open:
+5. **The assistants. Decided 17 November 2026 (Carl): AJ and Ezel are delegates of every CSC.** Each is seeded as one `principal_kind = 'all_csc'` delegate row with no tenant restriction and all categories, so they receive client notifications for every CSC-owned client, including CSCs and clients added later. AJ also keeps the 9 clients AJ is already primary CSC on. Consequences to accept: these two will see roughly the volume the all-staff fan-out sends today for CSC-owned clients, and because AJ is also a Super Admin, AJ's escalation notifications must be deduplicated against the delegate notification (one row per user per message, by `dedupe_key`). The earlier brief named RJ; the correct pair is AJ and Ezel. Seeding is part of rollout step 1 and is verified against `tenant_csc_assignments` before cut-over. Only `all_csc` links may be created by a Super Admin; a CSC can grant `user` links for themselves only.
 
-5. **Confirm the assistants** named in the brief against the new delegates model, since current data does not identify them as assistants.
+All decisions are now settled; the doc is ready for review and merge.
 
 ## Related documents
 
