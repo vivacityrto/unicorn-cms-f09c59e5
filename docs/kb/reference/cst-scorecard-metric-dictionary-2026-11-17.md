@@ -1,6 +1,6 @@
 # CST scorecard metric dictionary (17 November 2026)
 
-> **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the definitions and the measured figures (queried read-only on production, 17 November 2026); the data layer is applied to `unicorn-qa` and to production (17 November 2026), with the snapshot table not yet backfilled and no CST metrics created; targets are placeholders.
+> **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the definitions and the measured figures (queried read-only on production, 17 November 2026); the data layer is applied to `unicorn-qa` and to production (17 November 2026), with the snapshot backfilled for 13 weeks and no CST metrics created yet; targets are placeholders.
 >
 > Definitions for the CST team scorecard and the matching changes to the EOS Scorecard page and the L10 Scorecard segment. The L10 Segue segment is out of scope. Standalone feature work, not one of the four tracked initiatives. The EOS module is Vivacity-internal; this reads client data but is only shown to Vivacity staff. Evidence, QA results, production steps and rollback: [audit entry](../../audit-log/entries/2026-11-17-cst-scorecard-activity-report.md).
 
@@ -55,7 +55,7 @@ For each Live RTO: take the client users above; take distinct `(tenant_id, user_
 - `cst_scorecard_weekly_snapshot`: one row per Live RTO per week (Sunday week ending, Sydney time) holding the CSC as at that week, client users, users active in the 28 days to week end, never-signed-in users and certificates issued that week. Written by `snapshot_cst_week` (weekly `pg_cron` job, Monday 03:30 Sydney) and `backfill_cst_snapshots`. Staff read only.
 - `get_cst_team_metric(key, week_ending)` feeds `scorecard-refresh` for five keys: `cst_client_activity_rate_pct`, `cst_rtos_with_activity_pct`, `cst_certificates_issued_count`, `cst_users_never_signed_in_count`, `cst_rtos_no_activity_count`.
 - Past weeks use the current user base and current Live status because neither history is stored.
-- Applied to production on 17 November 2026 and verified read-only. Still to do: backfill the snapshot (13 weeks), then create the five CST metrics with real targets. Steps and rollback are in the audit entry.
+- Applied to production on 17 November 2026 and verified read-only. The snapshot was backfilled the same day for the 13 weeks to 15 November 2026 (741 rows; the first two weeks are likely understated because page views start on 4 August). Still to do: create the five CST metrics with real targets. Steps and rollback are in the audit entry.
 
 ## Screens
 
