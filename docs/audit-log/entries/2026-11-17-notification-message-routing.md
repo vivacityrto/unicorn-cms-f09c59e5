@@ -34,7 +34,7 @@
 
 **Still to do, each needing Carl's go-ahead:**
 
-1. The data step from the foundation entry (AJ and Ezel delegate links, exempt accounts).
+1. ~~The data step from the foundation entry~~ **Done 17 November 2026** (AJ and Ezel delegate links, three exempt accounts; see [the foundation entry](2026-11-17-notification-routing-foundation.md)). **Before the cutover:** fix the resolver so an assignment to an ineligible person (tenants 7492 and 7564 today) counts as unassigned and escalates to Super Admins (finding in that entry), and decide who owns those two tenants.
 2. **Shadow period:** set `message_routing_mode = 'shadow'` with an audited `UPDATE`. Compare `notification_routing_shadow_log` over a few working days (who legacy notified that the resolver would not, and any resolver-only recipient). Expected: one agreement per client-sent message for tenants with an active primary CSC, and Super Admins only for tenants without one.
 3. **Cutover:** set `message_routing_mode = 'resolver'` and `escalation_enabled = 'true'`; re-run the inbox cleanup ([entry](2026-11-17-notification-inbox-cleanup.md)) so inboxes start clean.
 4. Read-only postflight: unread message counts per staff member against the design; one escalation test.
