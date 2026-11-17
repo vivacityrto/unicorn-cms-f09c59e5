@@ -2,7 +2,7 @@
 
 **Trigger:** ad-hoc. Rollout step 1 of the notification redesign ([design doc](../../kb/reference/notification-redesign-2026-11-17.md)): ownership-based recipient routing, delegates for assistants, and a per-user preference matrix.
 **Scope:** one migration that adds tables, functions, RLS and grants. **No behaviour change**: nothing calls the new resolver, and `fn_tm_on_message_insert`, `emit_notification` and every existing table, policy and trigger are untouched.
-**Status:** applied to `unicorn-qa` and proven. **Not applied to production**; that needs Carl's explicit go-ahead (see "Production steps").
+**Status:** applied to `unicorn-qa` and proven, then applied to production on 17 November 2026 (project `yxkgdalkbrriasiyyrwk`, version `20261117043730`, Carl's explicit go-ahead) with a read-only postflight that matched the design. Still pending: the data step (AJ and Ezel delegate links, exempt accounts), which needs its own go-ahead.
 
 ## What changed
 
@@ -26,12 +26,15 @@
 - **`supabase/qa-checks/notification_routing_tests.sql`: 40 checks, all passing, rolled back** (a count of delegate, preference, override, exempt and audit rows afterwards was 0). They cover: only the primary CSC is told for an owned tenant; the actor is excluded; an unassigned tenant escalates to Super Admins only; unknown category raises; task and platform audiences; an `all_csc` delegate is notified with the owner and gets nothing for an unassigned tenant; a CSC can add and end their own assistant only for a tenant they own and cannot add for someone else, create `all_csc`, end an `all_csc` link or write the table directly; a CSC sees only their own links; ending a link stops delivery; creates and ends are audited; a client user and `anon` are refused; a client, system account or disabled user cannot be a delegate; unknown category and duplicate active link are refused; a category-limited delegate gets only its categories; scope `off`, per-client mute, watch and opt-in all behave; default channels are in-app and Teams, not email; exempt and system accounts are never recipients; own-row RLS on preferences and the exempt list is Super Admin only.
 - **Not proven on QA:** behaviour against production data volumes, real CSC assignments (QA has two), and the `System Account` role value (QA has no such role, so the check used `is_system_account`).
 
-## Production steps (not done)
+## Production
 
-1. **Preflight, read-only** on `yxkgdalkbrriasiyyrwk`: none of the new tables or functions exist; helper functions `is_super_admin_safe` and `is_vivacity_team_safe` exist.
-2. Apply the migration file text unchanged through the Supabase MCP (`apply_migration`).
-3. **Data, separate and audited:** one `all_csc` delegate row each for AJ and Ezel (decision 5), written through the same shape as the RPC with matching `audit_events` rows; exempt rows for the test and duplicate accounts (`Test`, `Carl (CST)`, `Carl (Reviewer)`).
-4. Read-only postflight: grants, one overload per function, resolver output for a few real tenants compared with `tenant_csc_assignments`.
+**Done, 17 November 2026 (Carl's go-ahead: "Apply both, inert").**
+
+1. **Preflight, read-only.** Target confirmed as `yxkgdalkbrriasiyyrwk` (the same ref as `supabase/config.toml` and the migration's target marker). None of the new tables or functions existed; `pg_cron` installed; helper functions present; live `fn_tm_on_message_insert` md5 `f18ffa14c565d4d73ec93cb3d9050d03`.
+2. **Applied** through the Supabase MCP (`apply_migration`), text identical to the file on the PR branch. Recorded as `20261117043730 notification_routing_foundation`.
+3. **Postflight, read-only, matched the design:** six tables, all with RLS on; one overload of each of the four functions; `anon` has no table grant; `authenticated` has SELECT on the lookup, delegate and exempt tables and SELECT, INSERT, UPDATE, DELETE only on preferences and overrides (RLS limits those to own rows); `authenticated` can execute only `create_notification_delegate` and `end_notification_delegate`; seeds are 7 categories and 105 role defaults, 0 delegates, 0 exempt; the live `fn_tm_on_message_insert` md5 is unchanged (nothing calls the resolver yet).
+
+**Still pending, needs a separate go-ahead:** the data step: one `all_csc` delegate row each for AJ and Ezel (decision 5), written with matching `audit_events` rows, and exempt rows for the test and duplicate accounts (`Test`, `Carl (CST)`, `Carl (Reviewer)`). Neither affects any notification until the routing mode is `resolver` (rollout step 2 entry).
 
 ## Rollback
 
