@@ -2,7 +2,7 @@
 
 **Trigger:** the team asked for client logins per RTO and courses finished as part of the EOS scorecard for the CST (the primary CSCs), with a breakdown and a redesigned L10 Scorecard segment.
 **Scope:** one migration (five functions, one snapshot table with RLS, one weekly job), a `scorecard-refresh` edge-function change, a CST report page, CST headline cards on the Scorecard page, and an exceptions-first L10 Scorecard segment. Definitions and decisions: [docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md](../../kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md).
-**Status:** applied to `unicorn-qa` only. **Nothing has been applied to production**, and no edge function has been deployed. Production needs Carl's separate go-ahead (steps below). Merging this PR deploys the `scorecard-refresh` change (the repository deploys edge functions on merge to `main`); that function has no scheduled caller, so the deploy changes nothing until a metric using the new keys exists.
+**Status:** applied to `unicorn-qa`, then to production on 17 November 2026 (version `20261117034338`, Carl's explicit go-ahead) with a read-only postflight that matched the design. **The snapshot table is still empty** (the backfill has not been run) and **no CST metrics have been created**. The `scorecard-refresh` change deployed when PR #1521 merged; that function has no scheduled caller, so it changes nothing until a metric using the new keys exists.
 
 ## What changed
 
@@ -48,12 +48,21 @@
 - The 9 per-consultant copies of CHC, Validation and Projects On Track on the company scorecard are not merged (that is data, not code).
 - Existing automatic metrics (CHC, validation, Active ComplyHub Users) still have no resolver and remain empty; this change only adds the CST keys.
 
-## Production steps (not done; need Carl's go-ahead)
+## Production
 
-1. Confirm the target is production ref `yxkgdalkbrriasiyyrwk`.
-2. Apply `20261117100000_cst_scorecard_activity_report.sql` through the Supabase MCP (`apply_migration`).
-3. Postflight, read-only: the five functions exist once each (`pg_proc`), grants as above (`has_function_privilege` for `anon` and `authenticated`), RLS on and `authenticated` has SELECT only on the snapshot table, and the cron job is listed (`cron.job`).
-4. Run `select public.backfill_cst_snapshots(13)` once as `service_role`. This writes the snapshot table only.
-5. Create the five CST metrics from the Add Metric templates on the Scorecard page (a data change; set the real targets first), then call `scorecard-refresh` once for tenant 6372 to confirm entries appear.
+Steps 1 to 3 were done on 17 November 2026; steps 4 and 5 are not done and need Carl's go-ahead.
+
+1. **Done.** Target confirmed as production ref `yxkgdalkbrriasiyyrwk` (the `postgres` database; the same ref as `supabase/config.toml` and the migration's target marker). Preflight, read-only: none of the five functions, the table or the cron job existed; `pg_cron` was installed; `is_vivacity_team_safe` existed; 57 Live RTOs.
+2. **Done.** `20261117100000_cst_scorecard_activity_report.sql` applied through the Supabase MCP (`apply_migration`), text identical to the file on `main`. Recorded as `20261117034338 cst_scorecard_activity_report`.
+3. **Done.** Postflight, read-only:
+   - Each of the five functions exists exactly once, all `SECURITY DEFINER` with an empty `search_path`.
+   - `anon` cannot execute `get_cst_report` or select the table; `authenticated` can execute only `get_cst_report`, and cannot execute the other four functions.
+   - RLS is on; the one policy is `cst_snapshot_staff_read` (SELECT); `authenticated` has SELECT only on the snapshot table (no insert, update or delete).
+   - The cron job is listed and active: `30 16 * * 0`, `select public.snapshot_cst_week();`. The first run is Sunday 22 November 2026, 16:30 UTC (Monday 23 November, 03:30 Sydney).
+   - `cst_activity_stats` over the last 28 days returned 191 client users, 38 active, 21 RTOs active, 30 never signed in: the same figures measured before the migration existed.
+   - `get_cst_report` with no identity raises 42501. Called as a Vivacity Super Admin it returned 8 groups (7 primary CSCs plus unassigned) for all four periods. Week: 11 active users, 1 certificate (4 prior). Month: 25 active users, 5 certificates (15 prior). Year: 89 active users, 61 certificates, no prior year. Last 28 days: 38 active users, 21 RTOs active, 12 certificates (15 prior).
+   - The snapshot table holds 0 rows.
+4. **Not done.** Run `select public.backfill_cst_snapshots(13)` once as `service_role`. This writes the snapshot table only. Until it runs, `get_cst_team_metric` returns null for every week, so no CST metric entries are produced. The weekly job will write one week on 22 to 23 November regardless.
+5. **Not done.** Create the five CST metrics from the Add Metric templates on the Scorecard page (a data change; set the real targets first), then call `scorecard-refresh` once for tenant 6372 to confirm entries appear.
 
 **Rollback:** `supabase/migrations/rollback/20261117100000_cst_scorecard_activity_report.down.sql` drops everything the migration added. No existing object was altered, and the snapshot is derived data that can be rebuilt.
