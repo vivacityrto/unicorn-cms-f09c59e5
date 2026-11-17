@@ -261,9 +261,9 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
   };
 
   return (
-    <div className={cn("fixed z-50 bg-card border border-border rounded-2xl shadow-2xl flex flex-col", "bottom-6 right-6 w-[420px] h-[600px]")}>
+    <div className={cn("fixed z-50 bg-card border border-border rounded-2xl shadow-2xl flex flex-col", "bottom-6 right-6 w-[420px] h-[600px] max-h-[calc(100vh-3rem)] max-w-[calc(100vw-3rem)]")}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl bg-gradient-to-r from-primary/10 to-primary/5">
+      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl bg-gradient-to-r from-primary/10 to-primary/5">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
@@ -279,7 +279,7 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 min-h-0 p-4">
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
@@ -298,7 +298,7 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
       </ScrollArea>
 
       {/* Input area */}
-      <div className="p-3 border-t border-border bg-muted/30 rounded-b-2xl">
+      <div className="shrink-0 p-3 border-t border-border bg-muted/30 rounded-b-2xl">
         {error && <ErrorNotice error={error} onRetry={error.kind === "server" || error.kind === "network" ? handleRetry : undefined} />}
 
         {messages.length > 0 && !error && (
