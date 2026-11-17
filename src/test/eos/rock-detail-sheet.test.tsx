@@ -13,6 +13,11 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ profile: { user_uuid: 'user-1' } }),
 }));
 
+const statusUpdate = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+vi.mock('@/hooks/useEos', () => ({
+  useEosRocks: () => ({ rocks: [], isLoading: false, updateRock: statusUpdate }),
+}));
+
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: (table: string) => {
@@ -300,6 +305,59 @@ describe('RockDetailSheet', () => {
       renderSheet();
 
       expect(await screen.findByText(/doesn't match milestone progress \(100% complete\)/)).toBeInTheDocument();
+    });
+
+    it('offers Mark Rock Complete when every milestone is done but the Rock is not Complete', async () => {
+      statusUpdate.mutate.mockClear();
+      tableData.rows.eos_rock_milestones = [m('1', 'rock-1', 'Milestone 1 - Done', 'complete'), m('2', 'rock-1', 'Milestone 2 - Done', 'complete')];
+      renderSheet({ onEdit: vi.fn() });
+
+      expect(await screen.findByText(/doesn't match milestone progress \(100% complete\)/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Mark Rock Complete' }));
+
+      expect(statusUpdate.mutate).toHaveBeenCalledExactlyOnceWith({
+        id: 'rock-1',
+        status: 'complete',
+        completed_date: expect.any(String),
+      });
+      expect(screen.queryByRole('button', { name: 'Reopen as On Track' })).toBeNull();
+    });
+
+    it('offers Reopen as On Track when the Rock is Complete but its milestones are not', async () => {
+      statusUpdate.mutate.mockClear();
+      tableData.rows.eos_rock_milestones = [m('1', 'rock-1', 'Milestone 1 - Done', 'complete'), m('2', 'rock-1', 'Milestone 2 - Open', 'in_progress')];
+      renderSheet({ rock: { ...rock, status: 'complete' }, onEdit: vi.fn() });
+
+      expect(await screen.findByText(/doesn't match milestone progress \(50% complete\)/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Reopen as On Track' }));
+
+      expect(statusUpdate.mutate).toHaveBeenCalledExactlyOnceWith({ id: 'rock-1', status: 'on_track', completed_date: null });
+      expect(screen.queryByRole('button', { name: 'Mark Rock Complete' })).toBeNull();
+    });
+
+    it('shows the mismatch text without a status button for someone who cannot change the Rock', async () => {
+      tableData.rows.eos_rock_milestones = [m('1', 'rock-1', 'Milestone 1 - Done', 'complete')];
+      renderSheet();
+
+      expect(await screen.findByText(/doesn't match milestone progress \(100% complete\)/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Mark Rock Complete' })).toBeNull();
+    });
+
+    it('hides the status button on an archived Rock', async () => {
+      tableData.rows.eos_rock_milestones = [m('1', 'rock-1', 'Milestone 1 - Done', 'complete')];
+      renderSheet({ rock: { ...rock, archived_at: '2026-10-01T00:00:00.000Z' }, onEdit: vi.fn() });
+
+      expect(await screen.findByText(/doesn't match milestone progress \(100% complete\)/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Mark Rock Complete' })).toBeNull();
+    });
+
+    it('offers no status button when the Rock and its milestones agree', async () => {
+      tableData.rows.eos_rock_milestones = [m('1', 'rock-1', 'Milestone 1 - Open', 'in_progress')];
+      renderSheet({ onEdit: vi.fn() });
+
+      expect(await screen.findByRole('region', { name: 'Milestone list' })).toBeInTheDocument();
+      expect(screen.queryByText(/doesn't match milestone progress/)).toBeNull();
+      expect(screen.queryByRole('button', { name: /Mark Rock Complete|Reopen as On Track/ })).toBeNull();
     });
   });
 
