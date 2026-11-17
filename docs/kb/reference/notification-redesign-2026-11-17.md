@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the current-state findings (read from live production on 17 November 2026, read-only); medium for the design, which is a proposal with open decisions and no code or migration yet.
 >
-> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decisions 1 to 3 settled on 17 November 2026, decisions 4 and 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
+> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decisions 1 to 4 settled on 17 November 2026, decision 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
 
 ## Why
 
@@ -100,7 +100,7 @@ A gear on the bell popover opens a compact panel: one row per category with chec
 Narrowing delivery risks a client message that nobody sees. Rules:
 
 - A tenant with no active primary CSC routes to Super Admins as an "unassigned" notification.
-- A client message unread by every recipient for a set period (proposed 4 working hours) escalates to delegates, then to Super Admins, once.
+- A client message unread by every owner recipient (primary CSC and delegates, who all receive it from the start) for 4 working hours escalates once to Super Admins (decision 4).
 - The reason string makes escalations visible, and an `escalated` flag allows measuring how often it fires.
 
 ### 6. Unify the two pipelines
@@ -112,7 +112,7 @@ Narrowing delivery risks a client message that nobody sees. Rules:
 One PR each, in this order. Every database step is hand-written and needs an audit entry under `docs/audit-log/entries/` per the AGENTS.md schema rules.
 
 1. **Foundation (database).** The three new tables, `notification_exempt`, the resolver, role defaults, and the delegate RPC with its audit writes (decision 3). No behaviour change: nothing calls the resolver yet. Includes the per-column `GRANT SELECT` for any new `public.users` column and the RPC-body sweep for any table whose constraints change.
-2. **Messages.** Swap `fn_tm_on_message_insert` Branch B for the resolver. Use `DROP FUNCTION` first if the signature changes, then confirm exactly one overload remains. Verify on `unicorn-qa` with real assignments before production, and run a shadow period that logs what the resolver would have sent next to what was sent.
+2. **Messages.** Swap `fn_tm_on_message_insert` Branch B for the resolver. Use `DROP FUNCTION` first if the signature changes, then confirm exactly one overload remains. Verify on `unicorn-qa` with real assignments before production, and run a shadow period that logs what the resolver would have sent next to what was sent. Adds the escalation cron job (decision 4), which also runs in shadow mode first.
 3. **UI.** Bell gear popover, preference matrix, per-client overrides, delegates management (Super Admins for anyone, CSCs for their own assistants).
 4. **Other categories.** Tickets, notes, tasks and package thresholds move to the resolver, and the client-side inserts are retired.
 5. **Clean-up.** Remove the legacy four-category tab and the superseded `event_settings.categories` path, once nothing reads them.
@@ -132,9 +132,10 @@ One PR each, in this order. Every database step is hand-written and needs an aud
 
 3. **Who maintains delegates. Decided 17 November 2026 (Carl): Super Admins, plus CSCs for their own assistants.** Super Admins can create or end a delegate link for anyone. A CSC can create or end links only where they are the `principal_user_id`, and only for tenants where they hold an active assignment in `tenant_csc_assignments` (a null tenant means "all my clients", which a CSC may grant only for themselves). Enforcement is by RLS and a `SECURITY DEFINER` RPC that checks the caller, not by the page: the RPC rejects a delegate who is not an active internal user, a `System Account` or an exempt account, and a principal other than the caller unless the caller is a Super Admin. Links are ended (`ended_at`), never deleted, and every create or end writes an `audit_events` row naming who granted what, so access to client messages and notes can be reviewed. Rejected: Super Admins only, and a CSC request flow with Super Admin approval. The cost of the chosen option is the RPC and audit trail, which are part of rollout step 1.
 
+4. **Escalation timing and recipients. Decided 17 November 2026 (Carl): 4 working hours, then Super Admins, once.** The clock counts the primary CSC's working time, using `users.timezone`, `working_days` and `working_hours` (defaulting to Australia/Sydney, Monday to Friday, 9 am to 5 pm where a profile is blank). A message sent at 4:30 pm therefore escalates late the next morning. The message escalates only if none of the owner recipients has read it; one read stops the clock. A tenant with no active primary CSC skips the wait and goes to Super Admins immediately. Each escalation is marked on the notification (`escalated`, with the reason) so firing rates can be measured. Implementation needs a scheduled job (cron) that scans unread owner notifications against the clock, in rollout step 2. Rejected: 2 working hours (more escalation noise for owners in meetings) and next working day (a client could wait most of a day).
+
 Open:
 
-4. **Escalation timing and recipients** (proposed 4 working hours, then Super Admins).
 5. **Confirm the assistants** named in the brief against the new delegates model, since current data does not identify them as assistants.
 
 ## Related documents
