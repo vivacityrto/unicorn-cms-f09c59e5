@@ -1,0 +1,139 @@
+# Notification redesign: ownership-based routing and preferences (17 November 2026)
+
+> **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the current-state findings (read from live production on 17 November 2026, read-only); medium for the design, which is a proposal with open decisions and no code or migration yet.
+>
+> Standalone feature design, not one of the four tracked initiatives. Status: **proposed, awaiting decisions in "Open decisions"**. Nothing in this document has been built, migrated or applied.
+
+## Why
+
+Staff are notified about every client, not their own. A client message today reaches all 19 active internal users, so the people who own the client are buried in traffic that belongs to someone else, and the bell stops being a reliable signal. Carl's brief:
+
+- Staff should be notified by their own clients, with the audience decided by role (RBAC), not by a hard-coded list.
+- Each person gets a notification preference control, reached from an icon on the bell.
+- The main trigger is communications on a client's primary CSC (Client Success Champion), with an exception for assistants to consultants (named in the brief as RJ and Ezel), who need the notifications of the consultant they support. Everything else should be customisable by checkbox.
+
+## Current state (verified against production, 17 November 2026)
+
+**Two parallel systems.**
+
+| System | Tables | Written by | Delivers to |
+|---|---|---|---|
+| Bell | `user_notifications` | Database triggers (for example `fn_tm_on_message_insert`) and some client-side inserts (`TasksManagement`, `EosQCSession`, `QCScheduler`, `AskVivFlagButton`, `StageNotesTab`, `noteNotifications.ts`) | In-app bell and `/my-notifications` |
+| Teams | `notification_outbox`, `notification_rules`, `dd_notification_event` | `emit_notification(...)` (11 active event types) | Teams, through `process-notification-outbox` |
+
+`notification_rules` is a per-user, per-event on/off switch that only `emit_notification` reads. `user_notification_prefs` holds `email_enabled`, `inapp_enabled`, `digest_enabled`, `quiet_hours` and `event_settings` (JSON), and the UI only exposes four categories in it (`tasks`, `meetings`, `obligations`, `events`). The two systems share no vocabulary: bell `type` values and `dd_notification_event` values do not map to each other.
+
+**Findings.**
+
+1. **Message routing ignores ownership.** `fn_tm_on_message_insert` sends every client-sent `tenant_messages` row to every active `is_vivacity_internal` user (the "Branch B" staff fan-out added 3 July 2026, see [messaging-pipeline.md](../codebase-state/messaging-pipeline.md)). In the 30 days to 17 November each of the 19 staff received the same 31 message notifications. Across all users there were 725 `message` rows in that period against 49 conversations.
+2. **Ownership is modelled but unused.** `tenant_csc_assignments` has 67 active rows (58 labelled `CSC`, 9 `Primary CSC`, all `is_primary = true`). No notification logic reads it.
+3. **Messages bypass preferences entirely.** The message trigger never reads `user_notification_prefs` or `notification_rules`. The four preference categories in the UI cover tasks, meetings, obligations and events, not messages, tickets or notes. All 21 saved preference rows are still on defaults.
+4. **Non-people receive notifications.** The three `System Account` users and several test or duplicate accounts (names containing `Test`, `Carl (CST)`, `Carl (Reviewer)`) are in the staff fan-out and never read anything.
+5. **Roles are not aligned with who owns clients.** Internal roles are `CSC` (9), `Super Admin` (9), `Team Member` (5), `System Account` (3), `Integrator` (2) and `BGT` (1). Several Super Admins hold that role for platform access, not client ownership, but receive client traffic as if they were owners.
+6. **No assistant or delegate relationship exists anywhere in the data.** The two people named as assistants do not appear as such: one is a CSC-role user with no assignments, the other a Super Admin with a single primary assignment. The assistant concept needs a new model, and the two names should be confirmed against it.
+7. **Other types are lower volume but unrouted.** In the last 30 days: `support_ticket` 72 rows to 24 recipients, `note_shared` 36, `note_added` 31, `ticket_submitted` 18, `ticket_reply` 9. Each picks recipients in its own trigger or component.
+
+Not checked in this pass: the bell UI components (`NotificationDropdown`, `MyNotificationsPage`) beyond their hooks, and the full set of client-side insert paths. Re-verify both before building.
+
+## Design
+
+### 1. One recipient resolver
+
+Replace per-trigger recipient logic with one SQL function, for example `resolve_notification_recipients(event_category, tenant_id, actor_user_id, subject_user_id)`, called by every emitter. It returns `(user_id, reason)` rows so the bell can say why a notification arrived ("you are the primary CSC", "you assist Tanya", "you are following this client").
+
+Default audience per category (all subject to the recipient's own preferences):
+
+| Category | Default audience |
+|---|---|
+| Client message | Tenant's primary CSC plus that CSC's delegates |
+| Support ticket for a client | Assignee, else the tenant's primary CSC and delegates |
+| Note added or shared | Tenant's primary CSC and delegates, and the named person for a share |
+| Task assigned or overdue | The assignee |
+| Package threshold, risk flagged | Tenant's primary CSC and delegates |
+| Platform alerts (stalled bulk job, capacity) | Super Admins |
+
+Always excluded: `System Account` users, archived or disabled users, test accounts (a `notification_exempt` flag on `users`, not a name match), and the actor.
+
+### 2. Delegates (the assistant exception)
+
+A new table, `staff_notification_delegates`:
+
+| Column | Purpose |
+|---|---|
+| `principal_user_id` | The consultant or CSC being assisted |
+| `delegate_user_id` | The assistant |
+| `tenant_id` | Null means all of the principal's clients; otherwise one client |
+| `categories` | Which categories pass through (default: all) |
+| `starts_at`, `ended_at` | Delegation window, so cover can be temporary |
+
+A delegate receives whatever the principal would, for the clients and categories in scope, and sees the "you assist X" reason on each item.
+
+**Recommendation: a separate table, not a new `role_label` on `tenant_csc_assignments`.** Several views and the client home hero read that table to mean "the CSC", and an assistant row there would show a client an assistant as their champion.
+
+### 3. Preference matrix
+
+A normalised `notification_preferences` table, server-readable by the resolver:
+
+| Column | Purpose |
+|---|---|
+| `user_id`, `event_category`, `channel` | The cell: for example `client_message` by `in_app`, `teams`, `email` or `digest` |
+| `scope` | `my_clients`, `my_and_delegated`, `all_clients` or `off` |
+| `enabled` | The checkbox |
+
+Defaults come from a `notification_role_defaults` table keyed by RBAC role, so changing a default does not need a deploy. Per-client overrides (watch or mute one client) are a small `notification_client_overrides` table that reuses the existing `follower` notion. Quiet hours and digest settings stay in `user_notification_prefs` and apply across all categories.
+
+Starting defaults, to be agreed:
+
+| Role | Default |
+|---|---|
+| CSC | Own clients: messages, tickets, notes, tasks, package thresholds |
+| Super Admin | Platform alerts and escalations only; client traffic opt-in |
+| Team Member, Integrator, BGT | Opt-in |
+| System Account | Never |
+
+### 4. The bell icon widget
+
+A gear on the bell popover opens a compact panel: one row per category with checkboxes for in-app, Teams and email, a scope selector on client-linked rows, and a link to the full settings page. The full page (`/notification-settings`) keeps the Teams connection and quiet hours, and gains the per-client override list. The existing four-category tab (`NotificationPrefsTab`) is replaced by the matrix.
+
+### 5. Safety net so client messages are never orphaned
+
+Narrowing delivery risks a client message that nobody sees. Rules:
+
+- A tenant with no active primary CSC routes to Super Admins as an "unassigned" notification.
+- A client message unread by every recipient for a set period (proposed 4 working hours) escalates to delegates, then to Super Admins, once.
+- The reason string makes escalations visible, and an `escalated` flag allows measuring how often it fires.
+
+### 6. Unify the two pipelines
+
+`emit` becomes the single entry point: it resolves recipients, applies preferences, writes `user_notifications` for in-app and `notification_outbox` for Teams and email. Client-side inserts are retired one by one in favour of RPC calls, and the bell `type` and `dd_notification_event` vocabularies are mapped to one category list (one-time mapping table).
+
+## Rollout
+
+One PR each, in this order. Every database step is hand-written and needs an audit entry under `docs/audit-log/entries/` per the AGENTS.md schema rules.
+
+1. **Foundation (database).** The three new tables, `notification_exempt`, the resolver and role defaults. No behaviour change: nothing calls the resolver yet. Includes the per-column `GRANT SELECT` for any new `public.users` column and the RPC-body sweep for any table whose constraints change.
+2. **Messages.** Swap `fn_tm_on_message_insert` Branch B for the resolver. Use `DROP FUNCTION` first if the signature changes, then confirm exactly one overload remains. Verify on `unicorn-qa` with real assignments before production, and run a shadow period that logs what the resolver would have sent next to what was sent.
+3. **UI.** Bell gear popover, preference matrix, per-client overrides, delegates management for Super Admins.
+4. **Other categories.** Tickets, notes, tasks and package thresholds move to the resolver, and the client-side inserts are retired.
+5. **Clean-up.** Remove the legacy four-category tab and the superseded `event_settings.categories` path, once nothing reads them.
+
+## Risks
+
+- **Missed client messages** after narrowing: mitigated by the unassigned and unread escalations, and by the shadow period in step 2.
+- **Stale ownership data:** routing is only as good as `tenant_csc_assignments`. Fix or audit assignments for active tenants before cut-over.
+- **Notification fatigue moves rather than disappears** if defaults are wrong: measure read rate per category before and after.
+- **Trigger-based authorization caveat:** any check on `request.jwt.claim.role` does not protect edge-function writes (see AGENTS.md). Delegate management must be enforced by RLS and an RPC, not only by the page.
+
+## Open decisions
+
+1. **Non-CSC staff default for client messages.** Recommended: primary CSC plus delegates, with the escalation safety net. Alternative: keep all-staff delivery but quiet and filterable.
+2. **Teams and email.** Recommended: the same matrix controls them, so there is one place to configure. Alternative: the bell only, leaving Teams on `notification_rules`.
+3. **Who maintains delegates.** Recommended: Super Admins only. Alternative: a CSC can add their own assistant.
+4. **Escalation timing and recipients** (proposed 4 working hours, then Super Admins).
+5. **Confirm the assistants** named in the brief against the new delegates model, since current data does not identify them as assistants.
+
+## Related documents
+
+- [notification-system-behavior.md](notification-system-behavior.md): `emit_notification` validation and the 10-event wiring.
+- [messaging-pipeline.md](../codebase-state/messaging-pipeline.md): the message trigger chain and the July 2026 staff fan-out this design replaces.
+- [support-tickets-overhaul-2026-11-13.md](support-tickets-overhaul-2026-11-13.md): ticket notifications that move to the resolver in step 4.
