@@ -13,7 +13,9 @@ import { IndividualRocksSection } from '@/components/eos/rocks/contribution/Indi
 import { StatusBar } from '@/components/eos/rocks/detail/StatusBar';
 import { RaiseIssuePanel } from '@/components/eos/meeting/discuss/RaiseIssuePanel';
 import { RockStatusDecision } from '@/components/eos/meeting/discuss/RockStatusDecision';
-import { useOverdueTodoCountsByRock } from '@/hooks/useRockTodos';
+import { useOverdueTodoCountsByRock, useRockTodoSummaries } from '@/hooks/useRockTodos';
+import { RockWorkLine } from '@/components/eos/rocks/RockWorkLine';
+import { NO_TODOS, rockStatusSignals } from '@/utils/rockWork';
 import { RockNotesPanel } from '@/components/eos/rocks/notes/RockNotesPanel';
 import { cn } from '@/lib/utils';
 import { useRockBlockers } from '@/hooks/useRockBlockers';
@@ -90,6 +92,13 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
   const milestonesQuery = useRockMilestones(rock.id);
   const milestoneRows = milestonesQuery.data ?? [];
   const milestoneIds = useMemo(() => milestoneRows.map(m => m.id), [milestoneRows]);
+  // The Rock's linked To-Dos as one figure (its own and its milestones'), once they and the milestones have loaded.
+  // The overdue line is left out here: the flags above already say "n To-Dos linked to it are overdue".
+  const todoSummary = useRockTodoSummaries([rock.id], true);
+  const todoWork = todoSummary.isSuccess ? todoSummary.data[rock.id] ?? NO_TODOS : undefined;
+  const workSignals = todoWork && milestonesQuery.isSuccess
+    ? rockStatusSignals({ status, hasMilestones: milestoneRows.length > 0, todos: todoWork }).filter(s => s.id !== 'on_track_with_overdue_todos')
+    : [];
   const blockersQuery = useRockBlockers(rock.id, milestoneIds);
   const blockers = blockersQuery.data ?? [];
   const rockBlocker = openBlocker(blockers, 'rock', rock.id);
@@ -213,6 +222,12 @@ export function RockDiscussSlide({ node, ownerNames, outcomes, meeting, quarterL
               onEdit={() => setBlockerMode('record')}
               onResolve={() => setBlockerMode('resolve')}
             />
+            </div>
+          )}
+
+          {todoWork && (todoWork.total > 0 || workSignals.length > 0) && (
+            <div className="xl:col-span-2">
+              <RockWorkLine size="slide" work={todoWork} signals={workSignals} className="rounded-lg border bg-card px-3 py-2" />
             </div>
           )}
 
