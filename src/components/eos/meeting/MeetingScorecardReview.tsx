@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -54,14 +54,28 @@ export function MeetingScorecardReview({ metrics, cap }: Props) {
   const attention = rows.filter((r) => r.bucket !== 'on_track');
   const onTrack = rows.filter((r) => r.bucket === 'on_track');
 
+  // Which metrics show their entry form. The default (the first `cap` to-discuss
+  // metrics) is captured once, when the status data first arrives. Re-deriving it
+  // on every render would drop a metric's form the moment recording a value turns
+  // it green and moves it out of the to-discuss list.
+  const defaultExpanded = useRef<Set<string> | null>(null);
+  if (defaultExpanded.current === null && statusMetrics.length > 0) {
+    defaultExpanded.current = new Set(attention.slice(0, Math.max(cap, 0)).map((r) => r.metric.id));
+  }
   const [open, setOpen] = useState<Set<string> | null>(null);
-  const expanded = open ?? new Set(attention.slice(0, Math.max(cap, 0)).map((r) => r.metric.id));
+  const expanded = open ?? defaultExpanded.current ?? new Set<string>();
   const toggle = (id: string) => {
     const next = new Set(expanded);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setOpen(next);
   };
+
+  // The on-track list stays closed by default, but opens (and stays open) while
+  // any of its metrics is being edited, so a value that was just recorded is not
+  // hidden behind a collapsed section.
+  const [showOnTrack, setShowOnTrack] = useState(false);
+  const onTrackVisible = showOnTrack || onTrack.some((r) => expanded.has(r.metric.id));
 
   return (
     <div className="space-y-3">
@@ -109,19 +123,47 @@ export function MeetingScorecardReview({ metrics, cap }: Props) {
       })}
 
       {onTrack.length > 0 && (
-        <details className="rounded-lg border">
-          <summary className="cursor-pointer px-3 py-2 text-sm font-semibold flex items-center gap-2">
+        <div className="rounded-lg border">
+          <button
+            type="button"
+            onClick={() => setShowOnTrack(!onTrackVisible)}
+            aria-expanded={onTrackVisible}
+            className="w-full px-3 py-2 text-sm font-semibold flex items-center gap-2 text-left"
+          >
+            {onTrackVisible ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
             {onTrack.length} on track
-            <Badge variant="outline" className={cn('text-xs', PILL.on_track)}>Closed by default</Badge>
-          </summary>
-          <div className="flex flex-wrap gap-1.5 px-3 pb-3">
-            {onTrack.map(({ metric, latest }) => (
-              <Badge key={metric.id} variant="outline" className={cn('text-xs', PILL.on_track)}>
-                {metric.name} {formatLatest(latest, metric.unit)}
-              </Badge>
-            ))}
-          </div>
-        </details>
+            <Badge variant="outline" className={cn('text-xs', PILL.on_track)}>
+              {onTrackVisible ? 'Select a metric to record this week' : 'Closed by default'}
+            </Badge>
+          </button>
+          {onTrackVisible && (
+            <div className="space-y-2 px-3 pb-3">
+              <div className="flex flex-wrap gap-1.5">
+                {onTrack.map(({ metric, latest }) => (
+                  <button
+                    key={metric.id}
+                    type="button"
+                    onClick={() => toggle(metric.id)}
+                    aria-pressed={expanded.has(metric.id)}
+                    className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Badge
+                      variant="outline"
+                      className={cn('text-xs cursor-pointer', PILL.on_track, expanded.has(metric.id) && 'ring-1 ring-current')}
+                    >
+                      {metric.name} {formatLatest(latest, metric.unit)}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+              {onTrack
+                .filter(({ metric }) => expanded.has(metric.id))
+                .map(({ metric }) => (
+                  <ScorecardEntryGrid key={metric.id} metric={metric} />
+                ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
