@@ -2,7 +2,7 @@
 
 **Trigger:** ad-hoc. Rollout step 2 of the notification redesign ([design doc](../../kb/reference/notification-redesign-2026-11-17.md)): swap client-message routing to the owner-only resolver, with a shadow period and the 4-working-hour escalation.
 **Scope:** one migration that replaces `fn_tm_on_message_insert()`, adds a shadow trigger, a settings table, a shadow log, an escalation table and function, and an escalation job. Requires the step 1 foundation ([entry](2026-11-17-notification-routing-foundation.md)).
-**Status:** applied to `unicorn-qa` and proven. **Not applied to production**; that and each mode change need Carl's explicit go-ahead (see "Production steps").
+**Status:** applied to `unicorn-qa` and proven, then applied to production on 17 November 2026 (project `yxkgdalkbrriasiyyrwk`, version `20261117043824`, Carl's explicit go-ahead) **inert** (mode `legacy`, escalation off). The shadow period, the cutover and the escalation switch are not done and each needs its own go-ahead.
 
 ## What changed
 
@@ -23,15 +23,21 @@
 - **Not proven on QA:** the `pg_cron` job (not installed there), behaviour at production volume, and real CSC assignments (QA has two).
 - **Production preflight (read-only, 17 November 2026, ref `yxkgdalkbrriasiyyrwk`):** none of the nine new tables or eight new functions exist; `pg_cron` is installed with no `notification-` jobs; the helper functions exist; the live `fn_tm_on_message_insert` has md5 `f18ffa14c565d4d73ec93cb3d9050d03` (recorded so the rollback target can be checked).
 
-## Production steps (not done)
+## Production
 
-Order matters; each numbered step needs Carl's go-ahead.
+**Applied, inert, 17 November 2026 (Carl's go-ahead: "Apply both, inert").** Step 1 first (`20261117043730`, see [its entry](2026-11-17-notification-routing-foundation.md)), then this migration.
 
-1. Apply step 1 (foundation), then its seeds: AJ and Ezel as `all_csc` delegates, exempt rows for the test and duplicate accounts.
-2. Apply this migration unchanged. Inert: mode `legacy`, escalation off.
-3. **Shadow period:** set `message_routing_mode = 'shadow'` with an audited `UPDATE`. Compare `notification_routing_shadow_log` over a few working days (who legacy notified that the resolver would not, and any resolver-only recipient). Expected: one agreement per client-sent message for tenants with an active primary CSC, and Super Admins only for tenants without one.
-4. **Cutover:** set `message_routing_mode = 'resolver'` and `escalation_enabled = 'true'`; re-run the inbox cleanup (see [the cleanup entry](2026-11-17-notification-inbox-cleanup.md)) so inboxes start clean.
-5. Read-only postflight: unread message counts per staff member against the design; one escalation test.
+1. **Preflight, read-only:** none of the new objects existed; `pg_cron` installed with no `notification-` jobs; live `fn_tm_on_message_insert` md5 `f18ffa14c565d4d73ec93cb3d9050d03` (the rollback target).
+2. **Applied** through the Supabase MCP, text identical to the file on the PR branch. Recorded as `20261117043824 notification_message_routing`.
+3. **Postflight, read-only, matched the design:** settings are `message_routing_mode = legacy`, `escalation_enabled = false`, `escalation_hours = 4`; `tenant_messages` has the three existing triggers plus `trg_tm_zz_routing_shadow`, all enabled; the live function now contains the mode switch, one overload of each function; the escalation job `notification-escalate-unread-client-messages` (`*/15 * * * *`) is active; `authenticated` cannot execute any of the new internal functions and `anon` has no grant on the new tables; 0 shadow rows and 0 escalations; calling `escalate_unread_client_messages()` returned 0 and wrote nothing; the working-time function returned 7200 seconds for Friday 4 pm to Monday 10 am.
+4. **Not verified in production:** `legacy` mode on a live message. No client message arrived in the 15 minutes after the apply, so the unchanged behaviour is proven on `unicorn-qa` only. **Check on the first real client message:** its staff notifications should be the same recipients as before and carry `metadata.routing_reason = 'legacy_staff'`.
+
+**Still to do, each needing Carl's go-ahead:**
+
+1. The data step from the foundation entry (AJ and Ezel delegate links, exempt accounts).
+2. **Shadow period:** set `message_routing_mode = 'shadow'` with an audited `UPDATE`. Compare `notification_routing_shadow_log` over a few working days (who legacy notified that the resolver would not, and any resolver-only recipient). Expected: one agreement per client-sent message for tenants with an active primary CSC, and Super Admins only for tenants without one.
+3. **Cutover:** set `message_routing_mode = 'resolver'` and `escalation_enabled = 'true'`; re-run the inbox cleanup ([entry](2026-11-17-notification-inbox-cleanup.md)) so inboxes start clean.
+4. Read-only postflight: unread message counts per staff member against the design; one escalation test.
 
 ## Rollback
 
