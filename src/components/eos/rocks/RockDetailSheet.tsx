@@ -44,6 +44,7 @@ import { splitTodosByMilestone } from '@/utils/rockTodos';
 import { LinkMilestoneDialog } from '@/components/eos/rocks/linking/LinkMilestoneDialog';
 import { MilestoneHero } from '@/components/eos/rocks/detail/MilestoneHero';
 import { MilestoneTable } from '@/components/eos/rocks/detail/MilestoneTable';
+import { RockWorkStrip } from '@/components/eos/rocks/detail/RockWorkStrip';
 import { RockHistory } from '@/components/eos/rocks/detail/RockHistory';
 import { useAuth } from '@/hooks/useAuth';
 import { useEosRocks } from '@/hooks/useEos';
@@ -68,6 +69,7 @@ import { isRockMilestoneSchemaUnavailable } from '@/utils/rockMilestones';
 import type { MilestoneTaskLink } from '@/utils/rockMilestoneTasks';
 import { openBlocker, resolvedBlockers, type BlockerSubject } from '@/utils/rockBlocker';
 import { formatQuarter } from '@/utils/rockCarryover';
+import { rockStatusSignals, rockWorkSummary } from '@/utils/rockWork';
 import { linkTargetRocksFor } from '@/utils/rockLinking';
 import { dbToUiStatus, getStatusConfig } from '@/utils/rockStatusUtils';
 import type {
@@ -378,6 +380,11 @@ export function RockDetailSheet({
   const reopenRockOnTrack = () =>
     updateRock.mutate({ id: rock.id, status: 'on_track', completed_date: null });
 
+  // The Rock's linked To-Dos as one figure (its own and its milestones'), and where the status disagrees with them.
+  // Left out until they have loaded, so a Rock is never flagged against an empty list.
+  const work = rockWorkSummary(todosQuery.data ?? [], todayIso);
+  const workSignals = todosQuery.isSuccess ? rockStatusSignals({ status: uiStatus, hasMilestones: milestones.length > 0, todos: work }) : [];
+
   const dueLabel = formatDate(rock.due_date);
   const dueDays = rock.due_date && uiStatus !== 'complete'
     ? daysBetween(todayIso, rock.due_date.slice(0, 10))
@@ -503,6 +510,14 @@ export function RockDetailSheet({
             isError={carryoverQuery.isError}
             nameOf={nameOf}
             onOpenRock={onOpenRock}
+          />
+
+          <RockWorkStrip
+            work={work}
+            signals={workSignals}
+            canChangeStatus={canChangeStatus}
+            actionPending={updateRock.isPending}
+            onMarkComplete={markRockComplete}
           />
 
           <section className="space-y-4" aria-labelledby="rock-milestones-heading">

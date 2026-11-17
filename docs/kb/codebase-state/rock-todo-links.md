@@ -27,6 +27,16 @@ The live To-Do List segment shows this meeting's To-Dos (any status) plus every 
 
 Migration `supabase/migrations/20261029030000_rock_todo_links.sql` (rollback in `rollback/`): `eos_rock_todo_links` (select only for clients; a validation trigger holds "milestone belongs to the Rock" and the Rock's tenant), `add_rock_todo()`, `link_todo_to_rock()`, `unlink_todo_from_rock()` (all staff only, `SECURITY DEFINER`, empty `search_path`). Frontend: `src/utils/rockTodos.ts`, `src/hooks/useRockTodos.ts`, `src/components/eos/rocks/todos/` (`RockTodoList`, `TodoRockLink`), wired in `RockDetailSheet`, `MilestoneTable`, `LiveMeetingView`, `pages/EosTodos.tsx`, `rockDiscussion.ts` and the Discuss dialog and slide.
 
+## Rock-level roll-up and status lines (17 Nov 2026)
+
+The Rock details panel shows a **Rock work** strip above the milestones: one To-Dos figure for the whole Rock ("33 of 36 done", an overdue count and a thin bar), counting the Rock's own To-Dos and its milestones' together, once each, cancelled ones left out. The milestone summary figures are unchanged (milestone-level To-Dos only). Under the figure, a line appears wherever the status someone set disagrees with the To-Dos. The status stays a person's call; nothing here changes it or completes a Rock. The lines are deliberately narrow:
+
+- **Complete, but linked To-Dos are still open** (with how many are overdue).
+- **On Track, but linked To-Dos are overdue.** At Risk, Off Track and Blocked already say so, so they get no line.
+- **No milestones, every linked To-Do done, Rock not Complete or Blocked:** "If the work is finished, mark the Rock Complete", with a **Mark Rock Complete** button for people who can change the Rock's status (the same write the milestone mismatch banner uses).
+
+Not flagged on purpose: a Complete Rock with no milestones and no To-Dos. Production on 17 Nov 2026 had 21 of 46 Complete Individual Rocks in that state, so a line would be noise. Milestone progress against status keeps its own banner, unchanged. Lines wait until the To-Dos have loaded, so a Rock is never flagged against an empty list. Code: `src/utils/rockWork.ts` (rules and counts), `src/components/eos/rocks/detail/RockWorkStrip.tsx`, wired in `RockDetailSheet.tsx`; tests `src/utils/rockWork.test.ts`, `src/test/eos/rock-work-strip.test.tsx`. No schema, RLS or Edge Function change.
+
 ## Rules worth knowing
 
 - Writes to the link table go only through the three functions. Marking a To-Do done uses the same direct update the To-Do list already uses, so the existing To-Do rules apply (including the protection for To-Dos of a completed meeting).
@@ -35,4 +45,4 @@ Migration `supabase/migrations/20261029030000_rock_todo_links.sql` (rollback in 
 
 ## Not done
 
-The meeting Rock Review list's attention counts (outside the Discuss view) do not yet include overdue To-Dos. A To-Do can have only one link. The old GitHub rows were not removed by this change; Carl had them cleared separately on 29 Oct 2026 after a checked backup ([audit entry](../../audit-log/entries/2026-10-29-clear-github-task-snapshots.md)), so the "Linked tasks" box no longer appears. Existing eos_todos grants and policies were not changed; note that `anon` holds table-wide grants on `eos_todos` with row level security as the only guard, which predates this work and is flagged in the audit entry.
+The meeting Rock Review list's attention counts (outside the Discuss view) do not yet include overdue To-Dos, and the Rock cards and the Discuss slide do not yet show the Rock-level roll-up or the status lines above (panel only). A To-Do can have only one link. The old GitHub rows were not removed by this change; Carl had them cleared separately on 29 Oct 2026 after a checked backup ([audit entry](../../audit-log/entries/2026-10-29-clear-github-task-snapshots.md)), so the "Linked tasks" box no longer appears. Existing eos_todos grants and policies were not changed; note that `anon` holds table-wide grants on `eos_todos` with row level security as the only guard, which predates this work and is flagged in the audit entry.
