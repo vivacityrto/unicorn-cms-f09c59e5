@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-11-17 · **Reconsider by:** 2027-02-17 · **Confidence:** high for the current-state findings (read from live production on 17 November 2026, read-only); medium for the design, which is a proposal with open decisions and no code or migration yet.
 >
-> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decisions 1 and 2 settled on 17 November 2026, decisions 3 to 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
+> Standalone feature design, not one of the four tracked initiatives. Status: **proposed; decisions 1 to 3 settled on 17 November 2026, decisions 4 and 5 still open (see "Decisions")**. Nothing in this document has been built, migrated or applied.
 
 ## Why
 
@@ -111,9 +111,9 @@ Narrowing delivery risks a client message that nobody sees. Rules:
 
 One PR each, in this order. Every database step is hand-written and needs an audit entry under `docs/audit-log/entries/` per the AGENTS.md schema rules.
 
-1. **Foundation (database).** The three new tables, `notification_exempt`, the resolver and role defaults. No behaviour change: nothing calls the resolver yet. Includes the per-column `GRANT SELECT` for any new `public.users` column and the RPC-body sweep for any table whose constraints change.
+1. **Foundation (database).** The three new tables, `notification_exempt`, the resolver, role defaults, and the delegate RPC with its audit writes (decision 3). No behaviour change: nothing calls the resolver yet. Includes the per-column `GRANT SELECT` for any new `public.users` column and the RPC-body sweep for any table whose constraints change.
 2. **Messages.** Swap `fn_tm_on_message_insert` Branch B for the resolver. Use `DROP FUNCTION` first if the signature changes, then confirm exactly one overload remains. Verify on `unicorn-qa` with real assignments before production, and run a shadow period that logs what the resolver would have sent next to what was sent.
-3. **UI.** Bell gear popover, preference matrix, per-client overrides, delegates management for Super Admins.
+3. **UI.** Bell gear popover, preference matrix, per-client overrides, delegates management (Super Admins for anyone, CSCs for their own assistants).
 4. **Other categories.** Tickets, notes, tasks and package thresholds move to the resolver, and the client-side inserts are retired.
 5. **Clean-up.** Remove the legacy four-category tab and the superseded `event_settings.categories` path, once nothing reads them.
 
@@ -130,9 +130,10 @@ One PR each, in this order. Every database step is hand-written and needs an aud
 
 2. **Teams and email. Decided 17 November 2026 (Carl): one matrix for all channels.** In-app, Teams and email are columns of the same preference matrix, and owner-only routing from decision 1 applies to every channel. Teams delivery therefore moves off `notification_rules` onto `notification_preferences` and the resolver (rollout step 4 at the latest; `emit` already writes `notification_outbox` for Teams). Existing `notification_rules` rows are migrated into the matrix so nobody loses a Teams setting they already chose. Rejected: bell-only (Teams could still ping non-owners) and matrix-now-Teams-later.
 
+3. **Who maintains delegates. Decided 17 November 2026 (Carl): Super Admins, plus CSCs for their own assistants.** Super Admins can create or end a delegate link for anyone. A CSC can create or end links only where they are the `principal_user_id`, and only for tenants where they hold an active assignment in `tenant_csc_assignments` (a null tenant means "all my clients", which a CSC may grant only for themselves). Enforcement is by RLS and a `SECURITY DEFINER` RPC that checks the caller, not by the page: the RPC rejects a delegate who is not an active internal user, a `System Account` or an exempt account, and a principal other than the caller unless the caller is a Super Admin. Links are ended (`ended_at`), never deleted, and every create or end writes an `audit_events` row naming who granted what, so access to client messages and notes can be reviewed. Rejected: Super Admins only, and a CSC request flow with Super Admin approval. The cost of the chosen option is the RPC and audit trail, which are part of rollout step 1.
+
 Open:
 
-3. **Who maintains delegates.** Recommended: Super Admins only. Alternative: a CSC can add their own assistant.
 4. **Escalation timing and recipients** (proposed 4 working hours, then Super Admins).
 5. **Confirm the assistants** named in the brief against the new delegates model, since current data does not identify them as assistants.
 
