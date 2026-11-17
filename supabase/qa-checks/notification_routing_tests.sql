@@ -181,6 +181,29 @@ BEGIN
   SELECT count(*) INTO n FROM public.resolve_notification_recipients('client_message', 54) WHERE user_id = tm;
   INSERT INTO _t VALUES ('system account is never a recipient', n = 0, 'rows=' || n);
 
+  -- 12b. An assignment to someone who cannot be notified does not count as an owner:
+  --      the tenant is treated as unassigned, so Super Admins are told and delegates are not.
+  --      (tm is a system account at this point; int1 holds a support_ticket-only all_csc link.)
+  SELECT count(*), string_agg(user_id::text || ':' || reason, ',') INTO n, v_ids
+    FROM public.resolve_notification_recipients('client_message', 54);
+  INSERT INTO _t VALUES ('owner who is a system account: tenant is unassigned, Super Admin told',
+    n = 1 AND v_ids = sa::text || ':unassigned', coalesce(v_ids, 'none'));
+  SELECT count(*) INTO n FROM public.resolve_notification_recipients('support_ticket', 54) WHERE user_id = int1;
+  INSERT INTO _t VALUES ('delegates are not told when the only owner is ineligible', n = 0, 'rows=' || n);
+  UPDATE public.users SET is_system_account = false, disabled = true WHERE user_uuid = tm;
+  SELECT string_agg(user_id::text || ':' || reason, ',') INTO v_ids FROM public.resolve_notification_recipients('client_message', 54);
+  INSERT INTO _t VALUES ('owner who is disabled: tenant is unassigned', v_ids = sa::text || ':unassigned', coalesce(v_ids, 'none'));
+  UPDATE public.users SET disabled = false WHERE user_uuid = tm;
+  INSERT INTO public.notification_exempt_users (user_id, reason) VALUES (tm, 'qa test');
+  SELECT string_agg(user_id::text || ':' || reason, ',') INTO v_ids FROM public.resolve_notification_recipients('client_message', 54);
+  INSERT INTO _t VALUES ('owner who is exempt: tenant is unassigned', v_ids = sa::text || ':unassigned', coalesce(v_ids, 'none'));
+  DELETE FROM public.notification_exempt_users WHERE user_id = tm;
+  SELECT string_agg(user_id::text || ':' || reason, ',') INTO v_ids FROM public.resolve_notification_recipients('client_message', 54);
+  INSERT INTO _t VALUES ('an eligible owner is notified again once restored', v_ids = tm::text || ':primary_csc', coalesce(v_ids, 'none'));
+  SELECT string_agg(user_id::text || ':' || reason, ',' ORDER BY reason) INTO v_ids FROM public.resolve_notification_recipients('support_ticket', 54, tm);
+  INSERT INTO _t VALUES ('an owner who is the actor does not make the tenant unassigned',
+    v_ids = int1::text || ':delegate', coalesce(v_ids, 'none'));
+
   -- 13. Own-row RLS on preferences.
   PERFORM pg_temp.act(tl);
   INSERT INTO _t VALUES ('staff can write their own preference',
