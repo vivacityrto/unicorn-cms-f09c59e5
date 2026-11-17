@@ -32,6 +32,8 @@ export function NotificationPreferenceMatrix({ compact = false }: Props) {
   const { profile } = useAuth();
   const { categories, effective, isLoading, isSaving, setChannel, setScope } = useNotificationMatrix();
   const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+  // The label column may shrink (minmax(0, 1fr)) so the three channel columns never run past the card.
+  const GRID = compact ? 'grid-cols-[minmax(0,1fr)_repeat(3,3.25rem)]' : 'grid-cols-[minmax(0,1fr)_repeat(3,3.75rem)]';
 
   if (isLoading) {
     return (
@@ -48,11 +50,7 @@ export function NotificationPreferenceMatrix({ compact = false }: Props) {
 
   return (
     <div className="space-y-3">
-      <div
-        className={`grid items-center gap-x-3 text-xs font-medium text-muted-foreground ${
-          compact ? 'grid-cols-[1fr_repeat(3,3.5rem)]' : 'grid-cols-[1fr_repeat(3,4.5rem)]'
-        }`}
-      >
+      <div className={`grid items-center gap-x-3 text-xs font-medium text-muted-foreground ${GRID}`}>
         <span>Notify me about</span>
         {NOTIFICATION_CHANNELS.map((ch) => (
           <span key={ch} className="text-center">
@@ -66,11 +64,7 @@ export function NotificationPreferenceMatrix({ compact = false }: Props) {
           const scope = effective(category.key, 'in_app').scope;
           return (
             <div key={category.key} className="space-y-2 p-3">
-              <div
-                className={`grid items-center gap-x-3 ${
-                  compact ? 'grid-cols-[1fr_repeat(3,3.5rem)]' : 'grid-cols-[1fr_repeat(3,4.5rem)]'
-                }`}
-              >
+              <div className={`grid items-center gap-x-3 ${GRID}`}>
                 <span className="text-sm font-medium">{category.label}</span>
                 {NOTIFICATION_CHANNELS.map((channel) => {
                   const cell = effective(category.key, channel);
