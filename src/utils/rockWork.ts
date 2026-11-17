@@ -22,6 +22,38 @@ export function rockWorkSummary(todos: readonly RockTodo[], todayIso: string): R
   return { ...summary, percent: summary.total > 0 ? Math.round((summary.done / summary.total) * 100) : null };
 }
 
+/**
+ * The same figure for many Rocks at once, from the link rows and the To-Do rows that were fetched
+ * (cards and the Discuss slide). A link whose To-Do the viewer cannot read is skipped, and a To-Do
+ * linked to the same Rock twice is counted once. Rocks with no linked To-Dos have no entry.
+ */
+export function todoSummariesByRock(
+  links: ReadonlyArray<{ rock_id: string; todo_id: string }>,
+  todos: ReadonlyArray<{ id: string; status: string | null; due_date: string | null }>,
+  todayIso: string,
+): Record<string, RockWorkSummary> {
+  const byId = new Map(todos.map(t => [t.id, t]));
+  const grouped = new Map<string, RockTodo[]>();
+  const seen = new Set<string>();
+  for (const link of links) {
+    const todo = byId.get(link.todo_id);
+    const key = `${link.rock_id}|${link.todo_id}`;
+    if (!todo || seen.has(key)) continue;
+    seen.add(key);
+    const list = grouped.get(link.rock_id) ?? [];
+    list.push({
+      todoId: todo.id, linkId: '', rockId: link.rock_id, milestoneId: null, title: '', status: todo.status,
+      dueDate: todo.due_date, ownerId: null, ownerName: null,
+    });
+    grouped.set(link.rock_id, list);
+  }
+  const result: Record<string, RockWorkSummary> = {};
+  for (const [rockId, list] of grouped) result[rockId] = rockWorkSummary(list, todayIso);
+  return result;
+}
+
+export const NO_TODOS: RockWorkSummary = { total: 0, done: 0, open: 0, overdue: 0, percent: null };
+
 export type RockSignalId = 'complete_with_open_todos' | 'on_track_with_overdue_todos' | 'all_todos_done';
 
 export interface RockStatusSignal {

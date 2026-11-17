@@ -2,11 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { todayLocalIso } from '@/utils/localDate';
+import { todoSummariesByRock } from '@/utils/rockWork';
 import type { RockTodo, TodoRockLinkInfo } from '@/utils/rockTodos';
 
 /** Everything that shows a To-Do, a Rock's To-Dos or a milestone's progress refreshes when a link or To-Do changes. */
 const REFRESH = [
   ['eos-rock-todos'],
+  ['eos-rock-todo-summaries'],
   ['eos-todo-rock-links'],
   ['eos-rock-overdue-todos'],
   ['eos-linkable-todos'],
@@ -152,6 +155,43 @@ export function useLinkableTodos(enabled: boolean) {
       return todos.filter(t => !linked.has(t.id));
     },
     enabled: !!profile && enabled,
+  });
+}
+
+const FETCH_CHUNK = 80;
+const chunked = <T,>(items: readonly T[]): T[][] => {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += FETCH_CHUNK) out.push(items.slice(i, i + FETCH_CHUNK));
+  return out;
+};
+
+/**
+ * The To-Do figure for many Rocks at once (the Rock cards, the Discuss slide): two kinds of query for
+ * the whole list, in chunks so the request address stays short, never one per Rock. Counts the To-Dos
+ * linked to the Rock itself and to any of its milestones. Rocks with none have no entry.
+ */
+export function useRockTodoSummaries(rockIds: readonly string[], enabled = true) {
+  const { profile } = useAuth();
+  const key = Array.from(new Set(rockIds)).sort();
+  return useQuery({
+    queryKey: ['eos-rock-todo-summaries', key],
+    queryFn: async () => {
+      const links: Array<{ rock_id: string; todo_id: string }> = [];
+      for (const ids of chunked(key)) {
+        const { data, error } = await supabase.from('eos_rock_todo_links').select('rock_id, todo_id').in('rock_id', ids);
+        if (error) throw error;
+        links.push(...(data ?? []));
+      }
+      const todos: Array<{ id: string; status: string | null; due_date: string | null }> = [];
+      for (const ids of chunked(Array.from(new Set(links.map(l => l.todo_id))))) {
+        const { data, error } = await supabase.from('eos_todos').select('id, status, due_date').in('id', ids);
+        if (error) throw error;
+        todos.push(...(data ?? []));
+      }
+      return { links, todos };
+    },
+    select: ({ links, todos }) => todoSummariesByRock(links, todos, todayLocalIso()),
+    enabled: !!profile && enabled && key.length > 0,
   });
 }
 
