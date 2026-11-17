@@ -2,7 +2,7 @@
 
 **Trigger:** the team asked for client logins per RTO and courses finished as part of the EOS scorecard for the CST (the primary CSCs), with a breakdown and a redesigned L10 Scorecard segment.
 **Scope:** one migration (five functions, one snapshot table with RLS, one weekly job), a `scorecard-refresh` edge-function change, a CST report page, CST headline cards on the Scorecard page, and an exceptions-first L10 Scorecard segment. Definitions and decisions: [docs/kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md](../../kb/reference/cst-scorecard-metric-dictionary-2026-11-17.md).
-**Status:** applied to `unicorn-qa`, then to production on 17 November 2026 (version `20261117034338`, Carl's explicit go-ahead) with a read-only postflight that matched the design. **The snapshot table is still empty** (the backfill has not been run) and **no CST metrics have been created**. The `scorecard-refresh` change deployed when PR #1521 merged; that function has no scheduled caller, so it changes nothing until a metric using the new keys exists.
+**Status:** applied to `unicorn-qa`, then to production on 17 November 2026 (version `20261117034338`, Carl's explicit go-ahead) with a read-only postflight that matched the design. The snapshot was then backfilled for 13 weeks (741 rows, Carl's go-ahead, same day), and **no CST metrics have been created**. The `scorecard-refresh` change deployed when PR #1521 merged; that function has no scheduled caller, so it changes nothing until a metric using the new keys exists.
 
 ## What changed
 
@@ -42,7 +42,7 @@
 
 ## Known limits
 
-- History: membership and Live status are the current ones, so a past week is the current client base measured over that week. Page views exist only since 4 August 2026, so activity before then rests on timeline events alone.
+- History: membership and Live status are the current ones, so a past week is the current client base measured over that week. Page views exist only since 4 August 2026, so activity before then rests on timeline events alone. In the backfill this means the weeks ending 23 and 30 August have part of their 28-day window before 4 August and are likely understated. It also means "users never signed in" reads 30 in every backfilled week, because it is a point-in-time count taken on 17 November, not a history.
 - Certificate counts are small (1 to 4 a week). Month is the useful view.
 - Per-RTO rows are not shown on the Scorecard page, only on the report.
 - The 9 per-consultant copies of CHC, Validation and Projects On Track on the company scorecard are not merged (that is data, not code).
@@ -50,7 +50,7 @@
 
 ## Production
 
-Steps 1 to 3 were done on 17 November 2026; steps 4 and 5 are not done and need Carl's go-ahead.
+Steps 1 to 4 were done on 17 November 2026; step 5 is not done and needs Carl's go-ahead.
 
 1. **Done.** Target confirmed as production ref `yxkgdalkbrriasiyyrwk` (the `postgres` database; the same ref as `supabase/config.toml` and the migration's target marker). Preflight, read-only: none of the five functions, the table or the cron job existed; `pg_cron` was installed; `is_vivacity_team_safe` existed; 57 Live RTOs.
 2. **Done.** `20261117100000_cst_scorecard_activity_report.sql` applied through the Supabase MCP (`apply_migration`), text identical to the file on `main`. Recorded as `20261117034338 cst_scorecard_activity_report`.
@@ -61,8 +61,8 @@ Steps 1 to 3 were done on 17 November 2026; steps 4 and 5 are not done and need 
    - The cron job is listed and active: `30 16 * * 0`, `select public.snapshot_cst_week();`. The first run is Sunday 22 November 2026, 16:30 UTC (Monday 23 November, 03:30 Sydney).
    - `cst_activity_stats` over the last 28 days returned 191 client users, 38 active, 21 RTOs active, 30 never signed in: the same figures measured before the migration existed.
    - `get_cst_report` with no identity raises 42501. Called as a Vivacity Super Admin it returned 8 groups (7 primary CSCs plus unassigned) for all four periods. Week: 11 active users, 1 certificate (4 prior). Month: 25 active users, 5 certificates (15 prior). Year: 89 active users, 61 certificates, no prior year. Last 28 days: 38 active users, 21 RTOs active, 12 certificates (15 prior).
-   - The snapshot table holds 0 rows.
-4. **Not done.** Run `select public.backfill_cst_snapshots(13)` once as `service_role`. This writes the snapshot table only. Until it runs, `get_cst_team_metric` returns null for every week, so no CST metric entries are produced. The weekly job will write one week on 22 to 23 November regardless.
+   - The snapshot table held 0 rows at that point.
+4. **Done.** `select public.backfill_cst_snapshots(13)` run once on production (Carl's explicit go-ahead; run as the database owner, not through the app). It writes the snapshot table only. Pre-check: 0 rows, 57 Live RTOs, last ended Sunday 15 November 2026. Result: **741 rows written (57 RTOs × 13 weeks)**; read back afterwards: 741 rows, 13 weeks from 23 August to 15 November 2026, every week ending on a Sunday, exactly 57 rows in every week, no invalid rows (active users never exceed client users). `get_cst_team_metric` now returns a value for all five keys in each of the 13 weeks. Week ending 15 November: client activity rate 18.8%, RTOs with activity 34.5%, certificates 4, never signed in 30, RTOs with no activity 36. Week ending 20 September to 25 October: activity rate 19.9% to 26.2%. The weekly job adds the week ending 22 November on the night of 22 to 23 November.
 5. **Not done.** Create the five CST metrics from the Add Metric templates on the Scorecard page (a data change; set the real targets first), then call `scorecard-refresh` once for tenant 6372 to confirm entries appear.
 
 **Rollback:** `supabase/migrations/rollback/20261117100000_cst_scorecard_activity_report.down.sql` drops everything the migration added. No existing object was altered, and the snapshot is derived data that can be rebuilt.
