@@ -7,7 +7,7 @@
 -- swaps the message trigger over.
 --
 -- Adds:
---   public.users.notification_exempt                    flag: never a notification recipient (not exposed to clients)
+--   public.notification_exempt_users                    accounts that are never a notification recipient (service_role / Super Admin read only)
 --   public.notification_category                        lookup: category key, label, default audience
 --   public.notification_role_defaults                   defaults per RBAC role, category and channel
 --   public.notification_preferences                     a person's own matrix (RLS: own rows)
@@ -18,19 +18,22 @@
 --   public.create_notification_delegate(...)            Super Admin, or a CSC for their own assistants
 --   public.end_notification_delegate(uuid)
 --
--- Delegates and exempt flags are DATA, not seeded here: they are applied as a
+-- Delegates and exempt accounts are DATA, not seeded here: they are applied as a
 -- separate, audited production step (see the audit entry).
 
 -- ---------------------------------------------------------------------------
--- 0. Exempt flag on users. Deliberately NOT granted to `authenticated`: users
---    is a per-column-grant table, nothing in the app needs to read this, and the
---    resolver is SECURITY DEFINER.
+-- 0. Accounts that are never a notification recipient (test or duplicate
+--    accounts). A separate table, not a column on users: users carries
+--    table-wide INSERT/UPDATE grants for signed-in users, so a column there
+--    could be set by the user themselves. System accounts are excluded by role
+--    and is_system_account without needing a row here.
 -- ---------------------------------------------------------------------------
-ALTER TABLE public.users
-  ADD COLUMN IF NOT EXISTS notification_exempt boolean NOT NULL DEFAULT false;
-
-COMMENT ON COLUMN public.users.notification_exempt IS
-  'True for test or duplicate accounts that must never be a notification recipient. System accounts are excluded by role and is_system_account.';
+CREATE TABLE IF NOT EXISTS public.notification_exempt_users (
+  user_id    uuid PRIMARY KEY REFERENCES public.users (user_uuid) ON DELETE CASCADE,
+  reason     text NOT NULL,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
 -- ---------------------------------------------------------------------------
 -- 1. Category lookup
@@ -136,12 +139,13 @@ CREATE INDEX IF NOT EXISTS snd_delegate_active
 -- ---------------------------------------------------------------------------
 REVOKE ALL ON public.notification_category, public.notification_role_defaults,
               public.notification_preferences, public.notification_client_overrides,
-              public.staff_notification_delegates FROM PUBLIC, anon, authenticated;
+              public.staff_notification_delegates, public.notification_exempt_users
+  FROM PUBLIC, anon, authenticated;
 
 GRANT SELECT ON public.notification_category, public.notification_role_defaults TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.notification_preferences, public.notification_client_overrides TO authenticated;
-GRANT SELECT ON public.staff_notification_delegates TO authenticated;
-GRANT ALL ON public.notification_category, public.notification_role_defaults,
+GRANT SELECT ON public.staff_notification_delegates, public.notification_exempt_users TO authenticated;
+GRANT ALL ON public.notification_exempt_users, public.notification_category, public.notification_role_defaults,
              public.notification_preferences, public.notification_client_overrides,
              public.staff_notification_delegates TO service_role;
 
@@ -150,6 +154,10 @@ ALTER TABLE public.notification_role_defaults     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_preferences       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_client_overrides  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.staff_notification_delegates   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notification_exempt_users      ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY notification_exempt_users_super_admin_read ON public.notification_exempt_users
+  FOR SELECT TO authenticated USING (public.is_super_admin_safe(auth.uid()));
 
 CREATE POLICY notification_category_staff_read ON public.notification_category
   FOR SELECT TO authenticated USING (public.is_vivacity_team_safe(auth.uid()));
@@ -240,7 +248,7 @@ BEGIN
        AND COALESCE(u.disabled, false) = false
        AND COALESCE(u.is_system_account, false) = false
        AND u.unicorn_role IS DISTINCT FROM 'System Account'
-       AND u.notification_exempt = false
+       AND NOT EXISTS (SELECT 1 FROM public.notification_exempt_users x WHERE x.user_id = u.user_uuid)
        AND u.user_uuid IS DISTINCT FROM p_actor
   ),
   owners AS (
@@ -374,7 +382,7 @@ BEGIN
           AND COALESCE(u.disabled, false) = false
           AND COALESCE(u.is_system_account, false) = false
           AND u.unicorn_role IS DISTINCT FROM 'System Account'
-          AND u.notification_exempt = false) THEN
+          AND NOT EXISTS (SELECT 1 FROM public.notification_exempt_users x WHERE x.user_id = u.user_uuid)) THEN
     RAISE EXCEPTION 'The delegate must be an active internal staff member' USING ERRCODE = '22023';
   END IF;
 

@@ -542,6 +542,18 @@
       "owner": "Carl",
       "reason": "Rollback file. Unschedules only the job named cst-scorecard-weekly-snapshot, and only where pg_cron exists, then drops the objects the migration added.",
       "expires": "2026-12-17"
+    },
+    {
+      "id": "notification-routing-foundation",
+      "file": "supabase/migrations/20261117140000_notification_routing_foundation.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Design and decisions approved by Carl on 17 November 2026 (docs/kb/reference/notification-redesign-2026-11-17.md); not yet applied to production. Flagged lines: two INSERTs that seed the new notification_category and notification_role_defaults lookup tables (ON CONFLICT DO NOTHING, no existing row touched), and the INSERT / keyed UPDATE inside the bodies of create_notification_delegate() and end_notification_delegate(), which write only the new staff_notification_delegates table and audit_events when called by a signed-in Super Admin or CSC. The migration changes no existing table, row, policy, function or trigger. No behaviour change until rollout step 2.",
+      "expires": "2026-12-17"
     }
   ]
 }
