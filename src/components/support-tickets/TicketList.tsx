@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ProductBadge, TypeBadge, UrgencyBadge } from './TicketBadges';
-import { AssigneeSelect, StatusSelect, StopRowClick } from './TicketControls';
+import { AssigneeSelect, ProductSelect, StatusSelect, StopRowClick } from './TicketControls';
 import { formatDate, personName, ticketRef, type SortKey, type SortState, type TicketRow } from './ticketLogic';
 
 const PAGE_SIZE = 25;
@@ -99,6 +99,7 @@ export function TicketList(props: Props) {
             <col />
             <col className="w-40" />
             <col className="w-36" />
+            <col className="w-40" />
             <col className="w-44" />
             <col className="w-28" />
             <col className="w-48" />
@@ -108,6 +109,7 @@ export function TicketList(props: Props) {
             <tr>
               <SortHeader label="Ticket" k="title" sort={sort} onSort={onSortChange} className="pl-4 sm:pl-6" />
               <SortHeader label="Client" k="client" sort={sort} onSort={onSortChange} />
+              <th scope="col" className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Product</th>
               <th scope="col" className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Type</th>
               <SortHeader label="Status" k="status" sort={sort} onSort={onSortChange} />
               <SortHeader label="Urgency" k="urgency" sort={sort} onSort={onSortChange} />
@@ -131,11 +133,13 @@ export function TicketList(props: Props) {
                     <span className="block text-xs text-muted-foreground">{ticketRef(t.ticket_number)}</span>
                     <span className="line-clamp-2 break-words font-medium text-foreground">{t.title}</span>
                   </button>
-                  {t.product !== 'unicorn' && <ProductBadge product={t.product} className="mt-1" />}
                 </td>
                 <td className="truncate px-3 py-2.5 text-foreground" title={t.tenant?.name ?? undefined}>
                   <span className="block truncate">{t.tenant?.name ?? 'Unknown'}</span>
                   <span className="block truncate text-xs text-muted-foreground">{personName(t.reporter) || 'Unknown reporter'}</span>
+                </td>
+                <td className="px-3 py-2.5">
+                  <StopRowClick><ProductSelect ticket={t} compact /></StopRowClick>
                 </td>
                 <td className="px-3 py-2.5"><TypeBadge type={t.type} /></td>
                 <td className="px-3 py-2.5">
@@ -174,6 +178,7 @@ export function TicketList(props: Props) {
               {t.tenant?.name ?? 'Unknown'} · {personName(t.reporter) || 'Unknown reporter'} · <time dateTime={t.last_activity_at}>{formatDate(t.last_activity_at)}</time>
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
+              <ProductSelect ticket={t} compact />
               <StatusSelect ticket={t} compact onRequestClose={onRequestClose} />
               <AssigneeSelect ticket={t} compact />
             </div>

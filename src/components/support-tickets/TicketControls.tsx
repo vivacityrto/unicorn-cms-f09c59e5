@@ -113,11 +113,11 @@ export function TypeSelect({ ticket, className }: { ticket: Pick<TicketRow, 'id'
   );
 }
 
-export function ProductSelect({ ticket, className }: { ticket: Pick<TicketRow, 'id' | 'product' | 'ticket_number'>; className?: string }) {
+export function ProductSelect({ ticket, compact, className }: { ticket: Pick<TicketRow, 'id' | 'product' | 'ticket_number'>; compact?: boolean; className?: string }) {
   const update = useUpdateTicket();
   return (
     <Select value={ticket.product} onValueChange={(v) => update.mutate({ id: ticket.id, patch: { product: v as TicketProduct } })}>
-      <SelectTrigger aria-label={`Product for ${ticketRef(ticket.ticket_number)}`} className={cn('h-9 min-h-11 w-full sm:min-h-9', className)}>
+      <SelectTrigger aria-label={`Product for ${ticketRef(ticket.ticket_number)}`} className={cn(compact ? TRIGGER : 'h-9 min-h-11 sm:min-h-9', 'w-full', className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
