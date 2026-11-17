@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rockStatusSignals, rockWorkSummary } from '@/utils/rockWork';
+import { rockStatusSignals, rockWorkSummary, todoSummariesByRock } from '@/utils/rockWork';
 import type { RockTodo } from '@/utils/rockTodos';
 
 const TODAY = '2026-11-17';
@@ -26,6 +26,35 @@ describe('rockWorkSummary', () => {
   it('has no percentage when there is nothing to count', () => {
     expect(summary([])).toMatchObject({ total: 0, percent: null });
     expect(summary([todo({ status: 'Cancelled' })]).percent).toBeNull();
+  });
+});
+
+describe('todoSummariesByRock', () => {
+  const rows = [
+    { id: 't1', status: 'Complete', due_date: '2026-12-01' },
+    { id: 't2', status: 'Open', due_date: '2026-11-01' },
+    { id: 't3', status: 'Cancelled', due_date: null },
+    { id: 't4', status: 'Open', due_date: '2099-01-01' },
+  ];
+
+  it('groups the To-Dos by Rock, counting the same way as one Rock\'s figure', () => {
+    const result = todoSummariesByRock(
+      [{ rock_id: 'a', todo_id: 't1' }, { rock_id: 'a', todo_id: 't2' }, { rock_id: 'a', todo_id: 't3' }, { rock_id: 'b', todo_id: 't4' }],
+      rows,
+      TODAY,
+    );
+    expect(result.a).toMatchObject({ total: 2, done: 1, open: 1, overdue: 1, percent: 50 });
+    expect(result.b).toMatchObject({ total: 1, done: 0, open: 1, overdue: 0, percent: 0 });
+  });
+
+  it('counts a To-Do linked to the same Rock twice (Rock and milestone) once', () => {
+    const result = todoSummariesByRock([{ rock_id: 'a', todo_id: 't1' }, { rock_id: 'a', todo_id: 't1' }], rows, TODAY);
+    expect(result.a.total).toBe(1);
+  });
+
+  it('skips a link whose To-Do cannot be read, and gives Rocks with no To-Dos no entry', () => {
+    const result = todoSummariesByRock([{ rock_id: 'a', todo_id: 'gone' }], rows, TODAY);
+    expect(result).toEqual({});
   });
 });
 

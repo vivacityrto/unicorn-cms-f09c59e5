@@ -31,6 +31,8 @@ import {
 import { useOverflowTabs } from '@/hooks/useOverflowTabs';
 import { cn } from '@/lib/utils';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
+import { useRockTodoSummaries } from '@/hooks/useRockTodos';
+import { NO_TODOS } from '@/utils/rockWork';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useEosRockOwnerFilter } from '@/hooks/useEosRockOwnerFilter';
 import { usePermission } from '@/hooks/usePermission';
@@ -134,6 +136,16 @@ function RocksHierarchyContent() {
   const filteredCompanyRocks = filterRocks(companyRocks);
   const filteredTeamRocks = filterRocks(teamRocks);
   const filteredIndividualRocks = filterRocks(individualRocks);
+
+  // The linked-To-Do figure for every Rock of the quarter, in one batched fetch. It follows the quarter,
+  // not the filters or tabs, so typing in the search box or switching tabs never refetches it.
+  const quarterRockIds = useMemo(
+    () => [...(companyRocks ?? []), ...(teamRocks ?? []), ...(individualRocks ?? [])].map(r => r.id),
+    [companyRocks, teamRocks, individualRocks],
+  );
+  const todoSummaries = useRockTodoSummaries(quarterRockIds);
+  // Undefined until loaded (and if the fetch fails), so a card shows nothing rather than a wrong figure.
+  const todoWorkFor = (rockId: string) => (todoSummaries.isSuccess ? todoSummaries.data[rockId] ?? NO_TODOS : undefined);
 
   const ROCKS_TABS = [
     { key: 'company', label: 'Company', icon: Building2, count: filteredCompanyRocks.length },
@@ -540,6 +552,7 @@ function RocksHierarchyContent() {
                   getUserName={getUserName}
                   getUserInfo={getUserInfo}
                   getSeatName={getSeatName}
+                  todoWork={todoWorkFor(rock.id)}
                   showChildren={true}
                 />
               ))}
@@ -592,6 +605,7 @@ function RocksHierarchyContent() {
                           getUserName={getUserName}
                           getUserInfo={getUserInfo}
                           getSeatName={getSeatName}
+                          todoWork={todoWorkFor(rock.id)}
                           showParent={true}
                           showChildren={true}
                         />
@@ -634,6 +648,7 @@ function RocksHierarchyContent() {
                   getUserName={getUserName}
                   getUserInfo={getUserInfo}
                   getSeatName={getSeatName}
+                  todoWork={todoWorkFor(rock.id)}
                   showParent={true}
                   showChildren={false}
                 />
