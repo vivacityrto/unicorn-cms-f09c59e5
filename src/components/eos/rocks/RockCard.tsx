@@ -100,7 +100,11 @@ export function RockCard({
     (milestoneProgress === 100 && status !== 'complete')
   );
 
-  const workSignals = todoWork ? rockStatusSignals({ status, hasMilestones: milestoneTotal > 0, todos: todoWork }) : [];
+  // The status lines wait for the milestone figure too (`milestoneStats` only exists once the page's milestone query has
+  // loaded), so a card is never flagged, or told "the work may be finished", while its milestones are unknown or failed to load.
+  const workSignals = todoWork && rock.milestoneStats
+    ? rockStatusSignals({ status, hasMilestones: milestoneTotal > 0 || legacyMilestones.length > 0, todos: todoWork })
+    : [];
 
   const getStatusConfig = (s: string) => {
     const configs: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline'; icon: typeof TrendingUp; label: string; className?: string }> = {
