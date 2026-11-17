@@ -53,19 +53,6 @@ async function getTenantName(tenantId: number): Promise<string> {
 }
 
 /**
- * Get the primary CSC for a tenant from tenant_csc_assignments
- */
-async function getTenantCsc(tenantId: number): Promise<string | null> {
-  const { data } = await supabase
-    .from('tenant_csc_assignments')
-    .select('csc_user_id')
-    .eq('tenant_id', tenantId)
-    .eq('is_primary', true)
-    .maybeSingle();
-  return data?.csc_user_id || null;
-}
-
-/**
  * Truncate text for display in notifications
  */
 function truncateText(text: string, maxLen = 60): string {
@@ -77,7 +64,9 @@ function truncateText(text: string, maxLen = 60): string {
 /**
  * Send all note notifications:
  * 1. In-app + Teams to selected "Notify" users
- * 2. In-app + Teams to the CSC if the creator is not the CSC
+ * 2. In-app + Teams to the people who own the client (primary CSC, their assistants,
+ *    anyone watching), as chosen by the notification routing rules and each person's
+ *    own preferences. The author is never notified.
  */
 export async function sendNoteNotifications({
   noteId,
@@ -97,9 +86,8 @@ export async function sendNoteNotifications({
 
     // Fetch tenant name + CSC + all notified user names in parallel
     const allUserIds = [...new Set(notifyUserIds)];
-    const [clientName, cscUserId, userNamesResult] = await Promise.all([
+    const [clientName, userNamesResult] = await Promise.all([
       getTenantName(tenantId),
-      getTenantCsc(tenantId),
       allUserIds.length > 0
         ? supabase.from('users').select('user_uuid, first_name').in('user_uuid', allUserIds)
         : Promise.resolve({ data: [] as UserNameRow[] }),
@@ -152,23 +140,30 @@ export async function sendNoteNotifications({
       }
     }
 
-    // ── 2. Auto-notify CSC if creator is not the CSC ──
-    if (cscUserId && cscUserId !== currentUserId) {
-      const alreadyNotified = filteredNotifyIds.includes(cscUserId);
+    // ── 2. Auto-notify the owners of this client ──
+    // The database decides who: the primary CSC, assistants, and anyone watching or opted in,
+    // minus the author and anyone who has switched this category off.
+    const { data: owners, error: ownersError } = await supabase.rpc('get_client_notification_recipients', {
+      p_category: 'client_note',
+      p_tenant_id: tenantId,
+    });
+    if (ownersError) {
+      console.error('Could not resolve note recipients:', ownersError);
+    }
 
-      // Get CSC name for the return list
-      let cscName = nameMap.get(cscUserId);
-      if (!cscName) {
-        const { data: cscUser } = await supabase.from('users').select('first_name').eq('user_uuid', cscUserId).single();
-        cscName = cscUser?.first_name || 'CSC';
-      }
-      if (!alreadyNotified) {
-        notifiedNames.push(`${cscName} (CSC)`);
+    const ownerRows = (owners ?? []).filter(o => !filteredNotifyIds.includes(o.user_id));
+    if (ownerRows.length > 0) {
+      const ownerIds = ownerRows.map(o => o.user_id);
+      const missing = ownerIds.filter(id => !nameMap.has(id));
+      if (missing.length > 0) {
+        const { data: more } = await supabase.from('users').select('user_uuid, first_name').in('user_uuid', missing);
+        (more || []).forEach((u: UserNameRow) => nameMap.set(u.user_uuid, u.first_name || 'User'));
       }
 
-      if (!alreadyNotified) {
-        await supabase.from('user_notifications').insert({
-          user_id: cscUserId,
+      const inAppRows = ownerRows
+        .filter(o => o.in_app)
+        .map(o => ({
+          user_id: o.user_id,
           tenant_id: tenantId,
           title: 'New note added to your client',
           message: `${authorName} added a note: "${displayTitle}"`,
@@ -176,25 +171,34 @@ export async function sendNoteNotifications({
           link: deepLink,
           created_by: currentUserId,
           source_id: noteId,
-        } satisfies NotificationInsert);
+        }));
+      if (inAppRows.length > 0) {
+        await supabase.from('user_notifications').insert(inAppRows satisfies NotificationInsert[]);
       }
 
-      try {
-        await supabase.rpc('emit_notification', {
-          p_event_type: alreadyNotified ? 'note_shared' : 'note_added',
-          p_recipient_user_uuid: cscUserId,
-          p_record_type: 'note',
-          p_record_id: noteId,
-          p_payload: JSON.parse(JSON.stringify({
-            title: alreadyNotified ? 'Note shared with you' : 'New note added to your client',
-            client_name: clientName,
-            description: `${authorName} ${alreadyNotified ? 'shared' : 'added'} a note: "${displayTitle}"`,
-            deep_link: deepLink,
-          })),
-          p_tenant_id: tenantId,
-        });
-      } catch (e) {
-        console.error('Teams CSC notify failed:', e);
+      for (const o of ownerRows) {
+        const name = nameMap.get(o.user_id) || 'User';
+        const label = o.reason === 'primary_csc' ? ' (CSC)' : o.reason === 'delegate' ? ' (assistant)' : '';
+        if (o.in_app) notifiedNames.push(`${name}${label}`);
+
+        if (!o.teams) continue;
+        try {
+          await supabase.rpc('emit_notification', {
+            p_event_type: 'note_added',
+            p_recipient_user_uuid: o.user_id,
+            p_record_type: 'note',
+            p_record_id: noteId,
+            p_payload: JSON.parse(JSON.stringify({
+              title: 'New note added to your client',
+              client_name: clientName,
+              description: `${authorName} added a note: "${displayTitle}"`,
+              deep_link: deepLink,
+            })),
+            p_tenant_id: tenantId,
+          });
+        } catch (e) {
+          console.error('Teams owner notify failed:', e);
+        }
       }
     }
   } catch (err) {

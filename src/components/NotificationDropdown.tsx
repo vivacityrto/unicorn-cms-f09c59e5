@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, EyeOff, Eye, MailOpen } from 'lucide-react';
+import { ArrowLeft, Bell, EyeOff, Eye, MailOpen, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/hooks/useNotifications';
 import { NotePreviewDialog } from '@/components/notifications/NotePreviewDialog';
+import { NotificationPreferenceMatrix } from '@/components/notifications/NotificationPreferenceMatrix';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,6 +36,8 @@ export const NotificationDropdown = () => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [previewNotif, setPreviewNotif] = useState<Notification | null>(null);
   const [hideRead, setHideRead] = useState(false);
+  // The gear swaps the list for the preference checkboxes without leaving the popover.
+  const [showPrefs, setShowPrefs] = useState(false);
 
   // Count by type
   const typeCounts: Record<string, number> = {};
@@ -74,7 +77,7 @@ export const NotificationDropdown = () => {
 
   return (
     <>
-      <Popover>
+      <Popover onOpenChange={(open) => { if (!open) setShowPrefs(false); }}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -94,10 +97,47 @@ export const NotificationDropdown = () => {
           align="end"
           collisionPadding={8}
         >
+          {showPrefs ? (
+            <div className="flex max-h-[calc(100vh-2rem)] flex-col">
+              <div className="flex items-center justify-between gap-2 border-b p-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Back to notifications"
+                    onClick={() => setShowPrefs(false)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h3 className="text-base font-semibold">What you are notified about</h3>
+                </div>
+                <Button variant="link" size="sm" className="h-7 px-1 text-xs" onClick={() => navigate('/settings/notifications')}>
+                  All settings
+                </Button>
+              </div>
+              <ScrollArea className="h-[min(560px,calc(100vh-10rem))]">
+                <div className="p-4">
+                  <NotificationPreferenceMatrix compact />
+                </div>
+              </ScrollArea>
+            </div>
+          ) : (
+          <>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold text-base">Notifications</h3>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="Notification preferences"
+                title="Choose what you are notified about"
+                onClick={() => setShowPrefs(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
@@ -225,6 +265,8 @@ export const NotificationDropdown = () => {
               </div>
             )}
           </ScrollArea>
+          </>
+          )}
         </PopoverContent>
       </Popover>
 
