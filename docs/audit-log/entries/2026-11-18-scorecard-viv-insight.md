@@ -32,3 +32,7 @@
 ## Rollback
 
 Remove the function (or revert the PR); nothing else depends on it. The button then shows the function's error message.
+
+## Follow-up: first live run failed (18 November 2026)
+
+The first real use of Ask Viv returned "Viv could not read this measure". The function log showed Anthropic rejecting the request with a 400: `temperature` is deprecated for this model. The `ANTHROPIC_API_KEY` secret was fine. The `temperature: 0.3` setting was removed from `scorecard-insight/index.ts` and a test now guards against it coming back. No schema, RLS or data change. Other functions that send `temperature` through `_shared/anthropic-client.ts` were not touched and may hit the same error on this model; that is a separate check.

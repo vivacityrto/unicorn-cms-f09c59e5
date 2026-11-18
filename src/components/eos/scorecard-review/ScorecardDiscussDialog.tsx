@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { discussionAreas, wrapUp, type AreaOutcome } from '@/features/eos-scorecard/discussion';
 import { STATUS_LABEL, type Area, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { openIssueMetricIds, useMetricIssues, useScorecardNotes } from '@/features/eos-scorecard/useScorecardDiscussion';
+import { ScorecardNotesDictationContext, useScorecardNotesDictation } from '@/features/eos-scorecard/useScorecardNotesDictation';
+import { DictationStatus } from './DictationStatus';
 import { ScorecardDiscussSlide } from './ScorecardDiscussSlide';
 import { ScorecardWrapUp } from './ScorecardWrapUp';
 import { STATUS_STYLE } from './statusStyle';
@@ -59,6 +61,18 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
   const notesQuery = useScorecardNotes(meeting?.id, open);
   const notes = useMemo(() => notesQuery.data ?? [], [notesQuery.data]);
 
+  // One microphone and one set of drafts for the whole deck. The Next button saves the area being left and keeps listening.
+  const dictation = useScorecardNotesDictation(meeting?.id, notes, profile?.user_uuid ?? null);
+  const retarget = dictation.retarget;
+  const areaCategory = area?.category ?? null;
+  useEffect(() => {
+    retarget(areaCategory);
+  }, [areaCategory, retarget]);
+  const close = (next: boolean) => {
+    if (!next) void dictation.flushAll();
+    onOpenChange(next);
+  };
+
   useEffect(() => {
     if (area) setViewed((current) => (current.has(area.category) ? current : new Set(current).add(area.category)));
   }, [area]);
@@ -104,7 +118,8 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
   const totalNeedsRoom = useMemo(() => discussionAreas(areas, { needsRoomOnly: true }).length, [areas]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <ScorecardNotesDictationContext.Provider value={dictation}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent
         ref={contentRef}
         onKeyDown={onKeyDown}
@@ -172,7 +187,7 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
           ) : atWrapUp ? (
             <ScorecardWrapUp
               summary={summary}
-              onClose={() => onOpenChange(false)}
+              onClose={() => close(false)}
               onGoTo={(name) => {
                 const index = deck.findIndex((a) => a.name === name);
                 if (index >= 0) go(index);
@@ -205,9 +220,13 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
               <ChevronLeft className="h-4 w-4" aria-hidden />
               Previous
             </Button>
-            <p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>
+            <DictationStatus
+              currentCategory={area?.category ?? null}
+              nameOf={(category) => deck.find((a) => a.category === category)?.name ?? 'this area'}
+              fallback={<p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>}
+            />
             {atWrapUp ? (
-              <Button type="button" className="h-10 px-4" onClick={() => onOpenChange(false)}>Finish</Button>
+              <Button type="button" className="h-10 px-4" onClick={() => close(false)}>Finish</Button>
             ) : (
               <Button type="button" className="h-10 gap-1.5 px-4" onClick={() => go(position + 1)}>
                 {position === deck.length - 1 ? 'Wrap-up' : 'Next'}
@@ -218,6 +237,7 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
         )}
       </DialogContent>
     </Dialog>
+    </ScorecardNotesDictationContext.Provider>
   );
 }
 

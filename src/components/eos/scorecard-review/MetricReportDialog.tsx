@@ -314,10 +314,10 @@ export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekL
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] w-[min(96vw,64rem)] max-w-none gap-0 overflow-y-auto p-0">
+      <DialogContent className="max-h-[92dvh] w-[min(96vw,64rem)] max-w-none gap-0 overflow-y-auto p-0 [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100">
         <div className="space-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-5 py-4 pr-12 text-white">
           <DialogDescription className="text-xs font-semibold uppercase tracking-wide text-white/80">Report · Week of {weekLabel}</DialogDescription>
-          <DialogTitle className="text-2xl font-bold">{measure.name}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-white">{measure.name}</DialogTitle>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <span className="text-3xl font-bold tabular-nums">{formatValue(measure.unit, measure.value)}</span>
             <StatusPill status={measure.status} />

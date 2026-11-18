@@ -59,9 +59,9 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
   return (
     <article
       aria-label={`Area: ${area.name}`}
-      className="flex min-h-0 flex-col gap-3 lg:grid lg:flex-1 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]"
+      className="flex flex-col gap-3 lg:grid lg:min-h-full lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]"
     >
-      <div className="flex min-h-0 min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-3">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 ref={headingRef} tabIndex={-1} data-slide-heading className="break-words text-2xl font-bold leading-tight outline-none lg:text-3xl xl:text-4xl">{area.name}</h2>
           <StatusPill status={area.worst} />
@@ -78,12 +78,12 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
           </p>
         </section>
 
-        <ul className={cn('grid min-h-0 flex-1 auto-rows-fr gap-3', columnsFor(area.measures.length))}>
+        <ul className={cn('grid flex-1 auto-rows-fr gap-3', columnsFor(area.measures.length))}>
           {area.measures.map((m) => {
             const owner = m.ownerId ? ownerNames[m.ownerId] ?? null : null;
             const explained = breakdownKind(m.metric.metric_key) !== null;
             return (
-              <li key={m.id} className={cn('flex min-h-0 min-w-0 flex-col gap-2 rounded-xl border border-l-[5px] bg-card p-3 xl:p-4', STATUS_STYLE[m.status].edge)}>
+              <li key={m.id} className={cn('flex min-w-0 flex-col gap-2 rounded-xl border border-l-[5px] bg-card p-3 xl:p-4', STATUS_STYLE[m.status].edge)}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="break-words text-base font-bold leading-snug xl:text-lg">{m.name}</h3>
@@ -144,12 +144,11 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
         key={area.category}
         category={area.category}
         areaName={area.name}
-        meetingId={meeting?.id}
         notes={notes}
         myUserId={myUserId}
         ownerNames={ownerNames}
         onSaved={() => onOutcome(area.category, 'noted')}
-        className="lg:sticky lg:top-0 lg:h-full lg:max-h-full"
+        className="lg:sticky lg:top-0 lg:h-[calc(100dvh-9.5rem)] lg:min-h-[22rem] lg:self-start"
       />
       {outcomes.length > 0 && <p className="sr-only">Recorded: {outcomes.join(', ')}</p>}
 
