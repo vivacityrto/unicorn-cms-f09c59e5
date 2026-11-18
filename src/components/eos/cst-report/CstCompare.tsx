@@ -90,7 +90,7 @@ export function CstCompare({ period, anchor, label, inProgress = false }: CstCom
                     <span className="text-3xl font-bold leading-none tabular-nums">{formatValue(c.def.unit, c.comparison.current)}</span>
                     {previous && <DeltaChip unit={c.def.unit} delta={previous.delta} verdict={previous.verdict} />}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">{previous ? `${previous.label} was ${formatValue(c.def.unit, Math.round(previous.value * 10) / 10)}` : `No earlier ${noun} to compare`}</span>
+                  <span className="text-[11px] text-muted-foreground">{c.def.asOfToday ? 'Counted as of today, so it has no history here' : previous ? `${previous.label} was ${formatValue(c.def.unit, Math.round(previous.value * 10) / 10)}` : `No earlier ${noun} to compare`}</span>
                   <TrendChart points={c.points} labels={labels} unit={c.def.unit} compact summary={`${c.def.label} over the last ${c.points.length} ${noun}s.`} className="mt-1" />
                   {rankSentence(c.comparison, noun) && <span className="text-xs font-medium">{rankSentence(c.comparison, noun)}</span>}
                 </button>
@@ -104,7 +104,11 @@ export function CstCompare({ period, anchor, label, inProgress = false }: CstCom
               <p className="text-sm text-muted-foreground">{def.hint}</p>
             </div>
             {!enough ? (
-              <p className="text-sm text-muted-foreground">There is only one {noun} with a number, so there is nothing to compare yet.</p>
+              <p className="text-sm text-muted-foreground">
+                {def.asOfToday
+                  ? `This is counted as of today, so earlier ${noun}s would only repeat today’s number. To see how it changed week on week, open its Full Report in the scorecard, which keeps a weekly record.`
+                  : `There is only one ${noun} with a number, so there is nothing to compare yet.`}
+              </p>
             ) : (
               <>
                 <CompareSummary comparison={chosen.comparison} noun={noun} />

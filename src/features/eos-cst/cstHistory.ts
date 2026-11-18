@@ -35,6 +35,11 @@ export interface CstSeriesDef {
   hint: string;
   unit: string;
   direction: MetricDirection;
+  /**
+   * The number is counted as of today whatever period is on screen, so earlier periods would repeat today's count and
+   * look falsely steady. Only the latest period is kept; the rest are gaps.
+   */
+  asOfToday?: boolean;
   /** The number for a whole report or for one CSC. Null when there is nothing to divide by. */
   total: (t: CstReportTotals) => number | null;
   /** The same number for one client. */
@@ -75,6 +80,7 @@ export const CST_SERIES: readonly CstSeriesDef[] = [
     hint: 'Invited people with no sign-in, as of today.',
     unit: '',
     direction: 'lower_is_better',
+    asOfToday: true,
     total: (t) => t.never_signed_in,
     client: (r) => r.never_signed_in,
   },
@@ -87,7 +93,12 @@ const hasData = (r: CstReport | undefined): r is CstReport => !!r && r.totals.li
 
 /** The measure for each period, oldest first. A period that could not be loaded or has no clients is a gap. */
 export function totalSeries(def: CstSeriesDef, reports: readonly (CstReport | undefined)[]): (number | null)[] {
-  return reports.map((r) => (hasData(r) ? def.total(r.totals) : null));
+  return latestOnly(def, reports.map((r) => (hasData(r) ? def.total(r.totals) : null)));
+}
+
+/** For a number counted as of today, every period but the latest is a gap, because it has no history of its own. */
+function latestOnly(def: CstSeriesDef, series: (number | null)[]): (number | null)[] {
+  return def.asOfToday ? series.map((v, i) => (i === series.length - 1 ? v : null)) : series;
 }
 
 /** Each CSC's number for each period, oldest first. A CSC missing from a period is a gap there. */
@@ -96,10 +107,13 @@ export function cscSeriesByName(def: CstSeriesDef, reports: readonly (CstReport 
   for (const r of reports) if (hasData(r)) for (const c of r.csc) names.add(c.csc_name);
   return [...names].map((name) => ({
     name,
-    series: reports.map((r) => {
-      const group: CstReportCsc | undefined = hasData(r) ? r.csc.find((c) => c.csc_name === name) : undefined;
-      return group ? def.total(group) : null;
-    }),
+    series: latestOnly(
+      def,
+      reports.map((r) => {
+        const group: CstReportCsc | undefined = hasData(r) ? r.csc.find((c) => c.csc_name === name) : undefined;
+        return group ? def.total(group) : null;
+      }),
+    ),
   }));
 }
 
@@ -112,10 +126,13 @@ export function clientSeries(def: CstSeriesDef, reports: readonly (CstReport | u
     name: row.tenant_name,
     cscName: row.cscName,
     tenantId: row.tenant_id,
-    series: perReport.map((m) => {
-      const found = m.get(row.tenant_id);
-      return found ? def.client(found) : null;
-    }),
+    series: latestOnly(
+      def,
+      perReport.map((m) => {
+        const found = m.get(row.tenant_id);
+        return found ? def.client(found) : null;
+      }),
+    ),
   }));
 }
 

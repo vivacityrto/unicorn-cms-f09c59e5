@@ -77,6 +77,11 @@ describe('compareSeries', () => {
     expect(compareSeries([5, 6, 6], opts).streak).toBeNull();
   });
 
+  it('does not count a gap as a step in a streak', () => {
+    expect(compareSeries([1, 2, null, 7, 8], opts).streak).toEqual({ verdict: 'better', steps: 1 });
+    expect(compareSeries([1, 2, 3, null, 8], opts).streak).toBeNull();
+  });
+
   it('reads the overall shape', () => {
     expect(compareSeries([1, 2, 3, 4, 5], opts).trend).toBe('improving');
     expect(compareSeries([5, 4, 3, 2, 1], opts).trend).toBe('slipping');
@@ -84,6 +89,13 @@ describe('compareSeries', () => {
     expect(compareSeries([4, 5, 4, 5, 4], opts).trend).toBe('steady');
     expect(compareSeries([3, 3, 3], opts).trend).toBe('steady');
     expect(compareSeries([3, 4], opts).trend).toBeNull();
+  });
+
+  it('reads an exact-target measure moving toward the aim as improving, and away as slipping', () => {
+    const exact = { direction: 'equals_target' as const, target: 10 };
+    expect(compareSeries([2, 4, 6, 8], exact).trend).toBe('improving');
+    expect(compareSeries([8, 6, 4, 2], exact).trend).toBe('slipping');
+    expect(compareSeries([18, 16, 14, 12], exact).trend).toBe('improving');
   });
 });
 
@@ -113,6 +125,10 @@ describe('areaMovement', () => {
     const m = (history: (number | null)[], direction: 'higher_is_better' | 'lower_is_better' = 'higher_is_better') => ({ history, direction, target: 10 });
     expect(areaMovement([m([1, 2]), m([3, 2]), m([2, 2]), m([null, 2]), m([5, 2], 'lower_is_better'), m([1, null])])).toEqual({ better: 2, worse: 1, same: 1, unknown: 2 });
   });
+
+  it('does not compare with an older week when the week straight before has no number', () => {
+    expect(areaMovement([{ history: [1, null, 2], direction: 'higher_is_better', target: 5 }])).toEqual({ better: 0, worse: 0, same: 0, unknown: 1 });
+  });
 });
 
 describe('groupMoves', () => {
@@ -130,6 +146,11 @@ describe('groupMoves', () => {
     expect(moves[1]).toMatchObject({ delta: -5, verdict: 'worse' });
     expect(moves[2]).toMatchObject({ current: 15, previous: null, delta: null, verdict: null });
     expect(moves[3].current).toBeNull();
+  });
+
+  it('gives no change when the period straight before has no number, but still gives the earlier average', () => {
+    const [move] = groupMoves([{ name: 'Eli', series: [10, 20, null, 30] }], 'higher_is_better');
+    expect(move).toMatchObject({ current: 30, previous: null, delta: null, verdict: null, earlierAverage: 15 });
   });
 
   it('puts the lowest first when lower is better', () => {

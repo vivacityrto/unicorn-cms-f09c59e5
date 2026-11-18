@@ -57,9 +57,12 @@ describe('series from reports', () => {
     expect(totalSeries(seriesDef('certificates'), [report({}), r2])).toEqual([null, 3]);
   });
 
-  it('counts people who never signed in with lower being better', () => {
+  it('keeps only the latest period for a number counted as of today, so it never looks falsely steady', () => {
     expect(seriesDef('never').direction).toBe('lower_is_better');
-    expect(totalSeries(seriesDef('never'), [r1, r2])).toEqual([8, 5]);
+    expect(seriesDef('never').asOfToday).toBe(true);
+    expect(totalSeries(seriesDef('never'), [r1, r2])).toEqual([null, 5]);
+    expect(cscSeriesByName(seriesDef('never'), [r1, r2]).find((r) => r.name === 'Ana')?.series).toEqual([null, 5]);
+    expect(clientSeries(seriesDef('never'), [r1, r2]).find((r) => r.name === 'Beta')?.series).toEqual([null, 4]);
   });
 
   it('follows each CSC across the periods', () => {

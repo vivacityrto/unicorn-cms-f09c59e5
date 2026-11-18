@@ -109,9 +109,13 @@ export function compareSeries(points: Points, { direction, target = null, noun =
   const betterThan = earlier.filter((v) => score(current) > score(v) + EPS).length;
   const rank = earlier.length === 0 ? null : { place: 1 + earlier.filter((v) => score(v) > score(current) + EPS).length, of: numbers.length };
 
+  // A streak is moves between neighbouring periods. A gap ends it: a missing period is not a step.
   let streak: SeriesComparison['streak'] = null;
-  for (let i = numbers.length - 1; i > 0; i--) {
-    const v = verdictOf(numbers[i - 1], numbers[i], direction, target);
+  for (let i = last; i > 0; i--) {
+    const to = points[i];
+    const from = points[i - 1];
+    if (to === null || from === null) break;
+    const v = verdictOf(from, to, direction, target);
     if (v === 'same') break;
     if (streak && streak.verdict !== v) break;
     streak = { verdict: v, steps: (streak?.steps ?? 0) + 1 };
@@ -126,7 +130,11 @@ export function compareSeries(points: Points, { direction, target = null, noun =
     const range = Math.max(...numbers) - Math.min(...numbers);
     const rise = slope * (numbers.length - 1);
     if (range < EPS || Math.abs(rise) / range < 0.25) trend = 'steady';
-    else trend = verdictOf(0, rise, direction, target) === 'better' ? 'improving' : 'slipping';
+    else {
+      // Judge the fitted line's start against its end, so an exact-target measure moving toward the aim reads as improving.
+      const fitStart = my - slope * mx;
+      trend = verdictOf(fitStart, fitStart + rise, direction, target) === 'better' ? 'improving' : 'slipping';
+    }
   }
 
   return { current, count: numbers.length, benchmarks, rank, betterThan, earlier: earlier.length, streak, trend };
@@ -161,13 +169,14 @@ export interface Movement {
   unknown: number;
 }
 
-/** How many measures moved the right way since the last period that had a number. */
+/** How many measures moved the right way since the period straight before. */
 export function areaMovement(measures: readonly { history: Points; direction: MetricDirection; target: number }[]): Movement {
   const out: Movement = { better: 0, worse: 0, same: 0, unknown: 0 };
   for (const m of measures) {
     const current = m.history[m.history.length - 1];
-    const before = m.history.slice(0, -1).filter((v): v is number => v !== null).pop();
-    if (current === null || current === undefined || before === undefined) out.unknown += 1;
+    // Only the period straight before counts as "last week"; if it has no number there is nothing honest to compare.
+    const before = m.history[m.history.length - 2];
+    if (current === null || current === undefined || before === null || before === undefined) out.unknown += 1;
     else out[verdictOf(before, current, m.direction, m.target)] += 1;
   }
   return out;
@@ -197,7 +206,8 @@ export function groupMoves(groups: readonly GroupSeries[], direction: MetricDire
     const last = g.series.length - 1;
     const current = last >= 0 ? g.series[last] : null;
     const earlier = g.series.slice(0, last).filter((v): v is number => v !== null);
-    const previous = earlier.length > 0 ? earlier[earlier.length - 1] : null;
+    // "Last period" is the one straight before; a gap there means no change can be stated, not the change since an older one.
+    const previous = last >= 1 ? g.series[last - 1] : null;
     const usable = current !== null && previous !== null;
     return {
       name: g.name,
