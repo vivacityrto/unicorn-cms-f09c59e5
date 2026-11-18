@@ -30,7 +30,15 @@ const report: CstReport = {
   ],
 };
 
-vi.mock('@/features/eos-cst/useCstReport', () => ({ useCstReport: () => ({ data: report, isLoading: false, error: null, isFetching: false }) }));
+const earlier = (active: number, never: number, certs: number): CstReport => ({
+  ...report,
+  totals: { ...report.totals, active_users: active, never_signed_in: never, certificates: certs },
+  csc: report.csc.map((c) => ({ ...c, active_users: c.csc_name === 'Alex' ? active : 0 })),
+});
+vi.mock('@/features/eos-cst/useCstReport', () => ({
+  useCstReport: () => ({ data: report, isLoading: false, error: null, isFetching: false }),
+  useCstHistory: () => ({ anchors: ['2026-09-19', '2026-10-19', '2026-11-19'], reports: [earlier(2, 9, 1), earlier(4, 6, 5), report], isLoading: false, failed: 0 }),
+}));
 vi.mock('@/features/eos-scorecard/useMetricReport', () => ({
   useAcademyBetween: () => ({
     data: { enrolled: 9, selfEnrolled: 4, automatic: 5, other: 0, completed: 3, topCourses: [{ title: 'Intro to Compliance', enrolled: 6, completed: 2 }], stalled: [], byTenant: { 1: { enrolled: 9, completed: 3 } } },
@@ -43,6 +51,8 @@ vi.mock('@/features/eos-scorecard/useMetricReport', () => ({
 vi.mock('@/components/eos/scorecard-review/ClientDetailPanel', () => ({ ClientDetailPanel: ({ row }: { row: { name: string } }) => <p>People at {row.name}</p> }));
 
 import EosCstReport from './EosCstReport';
+
+const keyCard = (name: RegExp) => within(screen.getByRole('region', { name: 'Key numbers' })).getByRole('button', { name });
 
 const renderPage = () =>
   render(
@@ -60,27 +70,27 @@ describe('Client activity report cards', () => {
     renderPage();
     const cards = within(screen.getByRole('region', { name: 'Key numbers' })).getAllByRole('button');
     expect(cards).toHaveLength(4);
-    expect(screen.getByRole('button', { name: /Client users using the portal/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(keyCard(/Client users using the portal/)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('region', { name: 'Why use of the portal is where it is' })).toBeInTheDocument();
   });
 
   it('changes the section below when another card is chosen', async () => {
     const user = userEvent.setup();
     renderPage();
-    await user.click(screen.getByRole('button', { name: /Certificates issued/ }));
-    expect(screen.getByRole('button', { name: /Certificates issued/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(keyCard(/Certificates issued/));
+    expect(keyCard(/Certificates issued/)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('region', { name: 'What is behind the certificates' })).toBeInTheDocument();
     expect(screen.getByText('Sam Lee')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Why use of the portal is where it is' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Users who never signed in/ }));
+    await user.click(keyCard(/Users who never signed in/));
     expect(screen.getByText('Pat Doe')).toBeInTheDocument();
   });
 
   it('includes Academy analytics', async () => {
     const user = userEvent.setup();
     renderPage();
-    const card = screen.getByRole('button', { name: /Academy: courses finished/ });
+    const card = keyCard(/Academy: courses finished/);
     expect(card).toHaveTextContent('3');
     await user.click(card);
     const panel = screen.getByRole('region', { name: 'What is happening in the Academy' });
@@ -96,5 +106,19 @@ describe('Client activity report cards', () => {
     expect(screen.getByText('People at Client 3')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Back to Clients/ }));
     expect(within(screen.getByRole('region', { name: 'Why use of the portal is where it is' })).getByRole('button', { name: /Client 3/ })).toBeInTheDocument();
+  });
+
+  it('compares the period with the ones before it, and follows the measure that is chosen', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const region = screen.getByRole('region', { name: 'How it compares' });
+    expect(within(region).getAllByRole('button', { pressed: true })).toHaveLength(1);
+    expect(within(region).getByRole('heading', { name: 'Client users using the portal' })).toBeInTheDocument();
+    expect(within(region).getByText('Average, previous 2 months')).toBeInTheDocument();
+    expect(within(region).getByRole('columnheader', { name: 'Last month' })).toBeInTheDocument();
+    expect(within(region).getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
+
+    await user.click(within(region).getByRole('button', { name: /Users who never signed in/ }));
+    expect(within(region).getByRole('heading', { name: 'Users who never signed in' })).toBeInTheDocument();
   });
 });

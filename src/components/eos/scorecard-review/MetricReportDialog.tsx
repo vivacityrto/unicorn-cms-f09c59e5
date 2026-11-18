@@ -10,11 +10,14 @@ import {
   isActiveClient,
   isQuiet,
   weekChanges,
-  weeklySeries,
   type BreakdownKind,
   type CstClientRow,
 } from '@/features/eos-scorecard/cstBreakdown';
 import { addDays, aimText, formatValue, gapText, shortDate, sydneyDate, type Measure } from '@/features/eos-scorecard/scorecardView';
+import { groupMoves } from '@/features/eos-scorecard/comparison';
+import { clientDirection, clientUnit, clientWeekSeries, compareWeeks, cscWeekSeries } from '@/features/eos-scorecard/cstCompare';
+import { GroupCompare, Movers } from '@/components/eos/compare/GroupCompare';
+import { MeasureCompare } from '@/components/eos/compare/MeasureCompare';
 import { weekEndingOf } from '@/features/eos-scorecard/metricReport';
 import { useAcademyActivity, useCertificateDetail, useCstWeekRows, useNeverSignedInPeople } from '@/features/eos-scorecard/useMetricReport';
 import { AimInfo } from './AimInfo';
@@ -109,23 +112,6 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 const names = (rows: readonly CstClientRow[]) => rows.map((r) => r.name).join(', ');
-
-function WeekBars({ points, unit }: { points: { weekEnding: string; value: number | null }[]; unit: string }) {
-  const max = Math.max(1, ...points.map((p) => p.value ?? 0));
-  return (
-    <ol className="flex items-end gap-2" aria-label="Last weeks, oldest first">
-      {points.map((p) => (
-        <li key={p.weekEnding} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-          <span className="text-xs font-semibold tabular-nums">{p.value === null ? '–' : formatValue(unit, p.value)}</span>
-          <span className="flex h-16 w-full items-end">
-            <span className="block w-full rounded-t bg-primary/70" style={{ height: `${p.value === null ? 0 : Math.max(4, (p.value / max) * 100)}%` }} />
-          </span>
-          <span className="text-[11px] text-muted-foreground">{shortDate(p.weekEnding)}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 type ClientFilter = 'quiet' | 'active' | 'all';
 
@@ -240,6 +226,29 @@ function NeverSignedInSection({ tenantIds }: { tenantIds: number[] }) {
   );
 }
 
+/** How each CSC and each client moved against the weeks before, from the same weekly rows as the number itself. */
+function WhoMoved({ kind, measure, byWeek }: { kind: BreakdownKind; measure: Measure; byWeek: Record<string, CstClientRow[]> }) {
+  const weeks = useMemo(() => compareWeeks(byWeek), [byWeek]);
+  const cscMoves = useMemo(() => groupMoves(cscWeekSeries(kind, byWeek, weeks), measure.direction), [kind, byWeek, weeks, measure.direction]);
+  const clientMoves = useMemo(() => groupMoves(clientWeekSeries(kind, byWeek, weeks), clientDirection(kind)), [kind, byWeek, weeks]);
+  if (weeks.length < 2) return null;
+  const unit = clientUnit(kind);
+  return (
+    <Section title="Who moved" hint={`This week against the weeks before it, from the same weekly figures as the number above.${unit === '%' ? ' A client’s number is the share of its own users who were active.' : ''}`}>
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold">By CSC</h4>
+          <GroupCompare moves={cscMoves} unit={measure.unit} groupLabel="CSC" nowLabel="This week" beforeLabel="Last week" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold">Clients that moved most</h4>
+          <Movers moves={clientMoves} unit={unit} />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
 type Step =
   | (DrillStep & { kind: 'client'; row: CstClientRow })
   | (DrillStep & { kind: 'csc'; csc: string; rows: CstClientRow[] });
@@ -253,7 +262,6 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
   const breakdown = useMemo(() => (current.length > 0 ? buildBreakdown(kind, current, { value: measure.value, target: measure.target }) : null), [kind, current, measure.value, measure.target]);
   const previous = byWeek[addDays(weekEnding, -7)];
   const changes = useMemo(() => (previous ? weekChanges(previous, current) : null), [previous, current]);
-  const series = useMemo(() => weeklySeries(kind, byWeek), [kind, byWeek]);
   const activity = kind === 'clients_active' || kind === 'clients_quiet' || kind === 'people_active';
 
   if (isLoading) return <div className="h-48 animate-pulse rounded-xl bg-muted/50" aria-busy="true" />;
@@ -283,11 +291,11 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
         </Section>
       )}
 
-      {series.length > 1 && (
-        <Section title="The last few weeks">
-          <WeekBars points={series} unit={measure.unit} />
-        </Section>
-      )}
+      <Section title="How it compares" hint="This week against the aim, last week, the weeks before it and its best and weakest week.">
+        <MeasureCompare measure={measure} weekKey={weekKey} />
+      </Section>
+
+      <WhoMoved kind={kind} measure={measure} byWeek={byWeek} />
 
       <DrillCard<Step>
         title="By CSC"
@@ -343,11 +351,9 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
 
 /** Measures people type in have no breakdown, only their own recent numbers. */
 function HistoryOnly({ measure, weekKey }: { measure: Measure; weekKey: string }) {
-  const last = measure.history.length - 1;
-  const points = measure.history.map((value, i) => ({ weekEnding: addDays(weekEndingOf(weekKey), -7 * (last - i)), value }));
   return (
-    <Section title="The last few weeks" hint="Typed in each week by the owner. There is no breakdown behind this number.">
-      <WeekBars points={points} unit={measure.unit} />
+    <Section title="How it compares" hint="Typed in each week by the owner. There is no breakdown behind this number, so it is compared with its own weeks and its aim.">
+      <MeasureCompare measure={measure} weekKey={weekKey} />
     </Section>
   );
 }

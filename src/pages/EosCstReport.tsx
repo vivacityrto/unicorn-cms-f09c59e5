@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { CstCompare } from '@/components/eos/cst-report/CstCompare';
 import { CstWhyPanel, type WhyKey } from '@/components/eos/cst-report/CstWhyPanel';
 import { Ring } from '@/components/eos/cst-report/CstCharts';
 import { useAcademyBetween } from '@/features/eos-scorecard/useMetricReport';
@@ -240,6 +241,8 @@ export default function EosCstReport() {
           </section>
 
           <CstWhyPanel which={which} report={data} period={period} label={label} academy={{ data: academy.data, isLoading: academy.isLoading, error: academy.error as Error | null }} />
+
+          <CstCompare period={period} anchor={anchor} label={label} inProgress={atCurrent} />
 
           <section aria-label="By CSC" className="space-y-3">
             <div>

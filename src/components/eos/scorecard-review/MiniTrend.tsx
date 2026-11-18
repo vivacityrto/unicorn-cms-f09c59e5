@@ -9,7 +9,7 @@ const H = 44;
  * The recent weeks as small bars, with the aim as a dashed line, and one sentence on the latest change.
  * Gaps are left empty on purpose: a missing week should look missing.
  */
-export function MiniTrend({ measure, className, compact = false }: { measure: TrendMeasure; className?: string; compact?: boolean }) {
+export function MiniTrend({ measure, className, compact = false, caption = true }: { measure: TrendMeasure; className?: string; compact?: boolean; caption?: boolean }) {
   const weeks = measure.history;
   const numbers = weeks.filter((v): v is number => v !== null);
   if (numbers.length === 0) return <p className={className ?? 'text-xs text-muted-foreground'}>No history yet.</p>;
@@ -37,9 +37,9 @@ export function MiniTrend({ measure, className, compact = false }: { measure: Tr
         )}
         <line x1={0} x2={W} y1={y(measure.target)} y2={y(measure.target)} className="stroke-foreground" strokeWidth={1} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
       </svg>
-      <p className="truncate text-[11px] text-muted-foreground" title={`Last ${weeks.length} weeks, dashed line is the aim${change ? ` · ${change}` : ''}`}>
+      {caption && <p className="truncate text-[11px] text-muted-foreground" title={`Last ${weeks.length} weeks, dashed line is the aim${change ? ` · ${change}` : ''}`}>
         {compact ? (change ?? `Last ${weeks.length} weeks`) : `Last ${weeks.length} weeks, dashed line is the aim${change ? ` · ${change}` : ''}`}
-      </p>
+      </p>}
     </div>
   );
 }

@@ -92,6 +92,16 @@ The Client activity report page now has four cards that can be chosen: client us
 
 No new database object. The per-person page needs `get_cst_client_detail`, applied on 18 November 2026 (see its audit entry). Its "active" is the 28 days ending the period's last day (or today for the current period), which can differ from the period's own activity number.
 
+## Comparison analytics (19 November 2026)
+
+Three places now compare a number with more than the period before it. Nothing new in the database: the earlier periods are the same reports asked for earlier dates.
+
+- **Client activity report, "How it compares".** Four small trends (portal use, clients with someone active, certificates, never signed in) over the last 8 weeks, 6 months, 3 years or 6 blocks of 28 days, whichever period is chosen. Choosing one shows it against last period, the average of the periods before it, its best and weakest earlier period, where it ranks, any streak, and the overall shape. Below that: every CSC against its own last period and earlier average with a trend line, and the clients that moved most each way. A period that has not finished says so, because its counts can still grow. Earlier months and years use today's users and Live Clients, the same limit the report already states.
+- **Scorecard Full Report, "How it compares" and "Who moved".** Every measure, including the ones people type in, is shown over its last 8 weeks with the aim and the earlier average as lines, each week coloured by how it stood against the aim, and compared with last week, the average of the weeks before, the best and weakest week, and the aim. The automatic client measures also show each CSC and each client week on week, from the same weekly snapshot as the number itself.
+- **L10 deck.** Each measure card has one line: the change on last week, the average of the previous weeks and where it ranks ("3rd best of 8"). Each area heading says how many of its measures got better or worse since last week.
+
+"Better" and "worse" follow the measure's direction, so fewer people who never signed in reads as better. A period with no number is a gap, never a zero. A week-on-week change is shown only between periods that both have a number.
+
 ## Ask Viv: an AI read of one measure (built and deployed 18 November 2026)
 
 An "Ask Viv" button on each measure in the L10 deck, and at the top of every measure's full report, asks the `scorecard-insight` Edge Function for a short plain-language read: what is happening, what may be behind it, what to try this week and who it falls to. It runs only when someone presses the button, needs the staff AI permission (`staff.ai.use`), stores nothing and creates nothing, and is labelled as written by AI. The model sees the measure, its recent numbers and, for the automatic client measures, the same client facts as the breakdown (business names, counts, last active, CSC names). It never receives learner names or email addresses. Anthropic's API is called directly, as Ask Viv does.
