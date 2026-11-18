@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
-import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
+import { useEosRocks } from '@/hooks/useEos';
 import { useEosConfigurations } from '@/hooks/useEosConfigurations';
 import { useLiveMeetingViewingState } from '@/hooks/useLiveMeetingViewingState';
 import { useLiveMeetingSegmentNavigation } from '@/hooks/useLiveMeetingSegmentNavigation';
@@ -121,7 +121,6 @@ export const LiveMeetingView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myExistingPhrase]);
   const { rocks } = useEosRocks();
-  const { metrics } = useEosScorecardMetrics();
 
   // Live-meeting Configuration for this tenant/type (Stage 1 config-driven
   // constants). Resolved from the same useEosConfigurations hook Stage 1 uses;
@@ -131,7 +130,6 @@ export const LiveMeetingView = () => {
   const configuration = meeting?.meeting_type
     ? getConfigForType(meeting.meeting_type as ConfigMeetingType)
     : undefined;
-  const scorecardCap = configuration?.scorecard_metric_cap ?? 5;
   const rocksScope = configuration?.rocks_scope ?? ['company', 'team'];
 
   // Fetch owner names for rocks
@@ -655,16 +653,15 @@ export const LiveMeetingView = () => {
               </p>
               <ScorecardPrompt />
             </Card>
-            {metrics && metrics.length > 0 && (
-              <MeetingScorecardReview metrics={metrics} cap={scorecardCap} />
-            )}
-            {(!metrics || metrics.length === 0) && (
-              <Card className="p-6">
-                <p className="text-muted-foreground text-sm text-center">
-                  No scorecard metrics configured. Add metrics in the Scorecard section.
-                </p>
-              </Card>
-            )}
+            <MeetingScorecardReview
+              meeting={{
+                id: meetingId,
+                segmentId: segment.id,
+                type: meeting?.meeting_type,
+                // Other attendees' IDS queues refresh when an issue is raised from the Discuss view.
+                onIssueRaised: () => broadcastChange('issue_change'),
+              }}
+            />
           </div>
         );
 

@@ -21,6 +21,8 @@ export interface CstReportRto {
   never_signed_in: number;
   certificates: number;
   prior_certificates: number;
+  /** Latest client activity ever recorded for this RTO, or null if none. */
+  last_active_at?: string | null;
 }
 
 export interface CstReportTotals {
@@ -62,6 +64,25 @@ export function percent(part: number, whole: number): number | null {
 export function formatPercent(part: number, whole: number): string {
   const p = percent(part, whole);
   return p === null ? '–' : `${p}%`;
+}
+
+/** "Today", "3 days ago", "5 weeks ago", "Never": when a client last did anything in the portal. */
+export function lastActiveText(iso: string | null | undefined, now: Date = new Date()): string {
+  if (!iso) return 'Never';
+  const days = Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+/** One plain sentence that sums up the report for the chosen period. */
+export function reportHeadline(totals: CstReportTotals, label: string): string {
+  const pct = percent(totals.active_users, totals.client_users);
+  const users = pct === null ? 'No client users yet' : `${totals.active_users} of ${totals.client_users} client users (${pct}%) used the portal`;
+  const certs = `${totals.certificates} ${totals.certificates === 1 ? 'certificate was' : 'certificates were'} issued`;
+  return `${label}: ${users}, and ${certs}.`;
 }
 
 /** Signed difference against the prior period, or null when the year has no prior data to compare. */
