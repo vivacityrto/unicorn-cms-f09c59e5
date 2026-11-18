@@ -115,7 +115,7 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
 
                 {explained && <WhyThisNumber measure={m} weekKey={weekKey} onOpenReport={() => setReport({ measure: m, ask: false })} />}
 
-                <div className="mt-auto flex items-end gap-2">
+                <div className="mt-auto flex flex-wrap items-end gap-2">
                   {needsRoom(m) && (
                     <RaiseMeasureIssue
                       measure={m}
@@ -129,7 +129,7 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
                     />
                   )}
                   {m.value !== null && (
-                    <Button type="button" size="sm" variant="outline" className="h-8 min-w-0 flex-1 gap-1.5 px-2 text-xs" onClick={() => setReport({ measure: m, ask: true })}>
+                    <Button type="button" size="sm" variant="outline" className="h-8 min-w-[7.5rem] flex-1 gap-1.5 whitespace-nowrap px-2 text-xs" onClick={() => setReport({ measure: m, ask: true })}>
                       <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
                       Ask Viv
                     </Button>
