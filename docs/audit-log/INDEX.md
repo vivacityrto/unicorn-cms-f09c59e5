@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-11-18 — CST Live Client requires active lifecycle](entries/2026-11-18-cst-live-requires-active-lifecycle.md) — the CST report and scorecard cohort now also require lifecycle active, so suspended and closed clients stop counting (57 to 53). Two internal functions replaced in place; past snapshots untouched. Not yet applied to production.
 - [2026-11-18 — Scorecard "Ask Viv" insight](entries/2026-11-18-scorecard-viv-insight.md) — new staff-only Edge Function that gives a plain-language AI read of one scorecard measure (Anthropic, on demand, read-only, nothing stored). No schema change. Not yet deployed.
 - [2026-11-18 — Scorecard plain-language redesign](entries/2026-11-18-scorecard-plain-redesign.md) — Scorecard page, CST report and the L10 Scorecard segment rewritten for non-technical readers; the segment becomes a discussion deck (notes per area, raise to IDS) like Rock Review. Migration adds a notes table, an issue-to-measure link and `last_active_at` on the CST report. Proven on `unicorn-qa` with rolled-back checks under real roles; applied to production on 18 November 2026 with a read-only postflight that matched the design.
 - [2026-11-17 — Support ticket product is a category](entries/2026-11-17-support-ticket-product-category.md) — dropped the tenant rule that stopped staff changing a client's ticket to ComplyHub or Company; applied to production `yxkgdalkbrriasiyyrwk` with Carl's approval and verified read-only

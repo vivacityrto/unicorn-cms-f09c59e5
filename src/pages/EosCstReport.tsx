@@ -225,7 +225,7 @@ export default function EosCstReport() {
         <summary className="cursor-pointer font-semibold">How these numbers are worked out</summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <p>
-            <span className="font-semibold">Live Clients.</span> The same list as Manage Tenants: Active, On hold, In Arrears or Warning, not archived, RTO accounts only.
+            <span className="font-semibold">Live Clients.</span> Active, On hold, In Arrears or Warning, with a lifecycle status of active, not archived, RTO accounts only. Suspended and closed clients are left out, so this can be a few fewer than the Manage Tenants Live filter.
           </p>
           <p>
             <span className="font-semibold">Using the portal.</span> A client user viewed a page, logged in, sent or read a message, finished an Academy lesson, or enrolled themselves in a course.
