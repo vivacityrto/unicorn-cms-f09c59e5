@@ -170,6 +170,9 @@ Deno.serve(async (req) => {
       const tenantName = new Map((tenants.data ?? []).map((t: { id: number; name: string }) => [t.id, t.name]));
       const cscName = new Map((cscs.data ?? []).map((u: { user_uuid: string; first_name: string | null; last_name: string | null }) => [u.user_uuid, fullName(u.first_name, u.last_name) ?? "a CSC"]));
       const lastActive = new Map<number, string>(((lastSeen.data ?? []) as { tenant_id: number; last_active_at: string }[]).map((r) => [r.tenant_id, r.last_active_at]));
+      // If the last-activity read failed, say so rather than describing every client as never active.
+      if (lastSeen.error) console.error("[scorecard-insight] cst_last_activity failed:", lastSeen.error.message);
+      const activityKnown = !lastSeen.error;
       const now = Date.now();
 
       const facts: ClientFact[] = thisWeek.map((r) => {
@@ -181,7 +184,7 @@ Deno.serve(async (req) => {
           activeUsers: r.active_users_28d,
           neverSignedIn: r.never_signed_in,
           certificates: r.certificates_week,
-          lastActiveDays: seen ? Math.max(0, Math.floor((now - new Date(seen).getTime()) / 86_400_000)) : null,
+          lastActiveDays: !activityKnown ? undefined : seen ? Math.max(0, Math.floor((now - new Date(seen).getTime()) / 86_400_000)) : null,
         };
       });
       const previous: PreviousClientFact[] | null =

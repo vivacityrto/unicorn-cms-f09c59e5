@@ -78,6 +78,12 @@ describe("clientSections", () => {
     ]);
   });
 
+  it("leaves out last-active when it could not be read, instead of saying never active", () => {
+    const unknown = clientSections([client("Alpha Training", { clientUsers: 9, lastActiveDays: undefined })], null)[1];
+    assert.deepEqual(unknown.lines, ["Alpha Training (CSC Sam): 9 users, none active"]);
+    assert.ok(!unknown.lines[0].includes("never active"));
+  });
+
   it("includes changes since last week only when there is a previous week", () => {
     assert.ok(!clientSections(rows, null).some((s) => s.title === "Changes since last week"));
     const previous = [

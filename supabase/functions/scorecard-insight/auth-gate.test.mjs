@@ -66,6 +66,11 @@ describe("scorecard-insight", () => {
     assert.match(src, /json\(req, 502,/);
   });
 
+  it("does not call a client never active when the last-activity read failed", () => {
+    assert.match(src, /lastSeen\.error/);
+    assert.match(src, /!activityKnown \? undefined/);
+  });
+
   it("bounds the AI call with a timeout", () => {
     assert.match(src, /AbortController/);
     assert.match(src, /AI_TIMEOUT_MS/);

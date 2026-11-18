@@ -102,8 +102,8 @@ export interface ClientFact {
   activeUsers: number;
   neverSignedIn: number;
   certificates: number;
-  /** Whole days since the client's last activity; null when never. */
-  lastActiveDays: number | null;
+  /** Whole days since the client's last activity; null when never active; undefined when it could not be read. */
+  lastActiveDays?: number | null;
 }
 
 export interface PreviousClientFact {
@@ -113,7 +113,8 @@ export interface PreviousClientFact {
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const lastActive = (days: number | null) => (days === null ? "never active" : days === 0 ? "active today" : `last active ${plural(days, "day", "days")} ago`);
+const lastActive = (days: number | null | undefined) =>
+  days === undefined ? "" : `, ${days === null ? "never active" : days === 0 ? "active today" : `last active ${plural(days, "day", "days")} ago`}`;
 
 /** Facts about the Live Clients behind one of the automatic client measures. */
 export function clientSections(rows: readonly ClientFact[], previous: readonly PreviousClientFact[] | null): FactSection[] {
@@ -134,7 +135,7 @@ export function clientSections(rows: readonly ClientFact[], previous: readonly P
     },
     {
       title: "Clients with nobody active, most users first",
-      lines: quiet.slice(0, 15).map((r) => `${r.name} (CSC ${r.csc}): ${plural(r.clientUsers, "user", "users")}, none active, ${lastActive(r.lastActiveDays)}`),
+      lines: quiet.slice(0, 15).map((r) => `${r.name} (CSC ${r.csc}): ${plural(r.clientUsers, "user", "users")}, none active${lastActive(r.lastActiveDays)}`),
     },
   ];
 
