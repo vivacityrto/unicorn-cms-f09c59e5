@@ -27,25 +27,25 @@ export function WhyThisNumber({ measure, weekKey, onOpenReport }: WhyThisNumberP
 
   const first = breakdown.list.slice(0, 3);
   return (
-    <section aria-label={`What is behind ${measure.name}`} className="space-y-2 rounded-lg bg-muted/40 p-3">
-      <p className="text-sm font-medium leading-snug">{breakdown.sentence}</p>
-      <SplitBar split={breakdown.split} />
+    <section aria-label={`What is behind ${measure.name}`} className="flex flex-1 flex-col gap-1.5 rounded-lg bg-muted/40 p-2.5">
+      <p className="text-[13px] font-medium leading-snug">{breakdown.sentence}</p>
+      <SplitBar split={breakdown.split} compact />
       {breakdown.lift && (
-        <p className="flex items-start gap-1.5 text-sm font-semibold">
-          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <p className="flex items-start gap-1.5 text-[13px] font-semibold leading-snug">
+          <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
           {breakdown.lift}
         </p>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-0.5">
         {first.length > 0 ? (
-          <p className="min-w-0 truncate text-xs text-muted-foreground" title={first.map((r) => r.name).join(', ')}>
+          <p className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground" title={first.map((r) => r.name).join(', ')}>
             Start with: {first.map((r) => r.name).join(', ')}
           </p>
         ) : (
           <span />
         )}
-        <Button type="button" size="sm" variant="secondary" className="h-8 gap-1.5" onClick={onOpenReport}>
-          <FileBarChart className="h-4 w-4" aria-hidden />
+        <Button type="button" size="sm" variant="secondary" className="h-7 gap-1 px-2 text-xs" onClick={onOpenReport}>
+          <FileBarChart className="h-3.5 w-3.5" aria-hidden />
           Full report
         </Button>
       </div>
