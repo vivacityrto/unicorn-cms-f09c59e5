@@ -82,3 +82,7 @@ On Carl's explicit go-ahead, after the list was shown, the 14 active measures on
 **Targets as stored after this change:** People using the portal 30%; Clients using the portal 50%; Certificates issued 3; Users who never signed in 20 or fewer; Quiet RTOs 30 or fewer.
 
 **Revert:** the old names are in the table above; the old descriptions are in the preceding read in the session transcript (for example the three merged measures read "Company-wide measure across all clients. Replaces the three per-consultant copies, merged 17 November 2026.").
+
+## Production data change: one measure archived (18 November 2026)
+
+At Carl's choice, "People using the portal" (key `cst_client_activity_rate_pct`, tenant 6372) was archived the same way the app's archive button does it (`is_archived = true`, `is_active = false`), because it sat beside "Clients using the portal" and read almost the same to non-technical people. "Clients using the portal" stays. Its 13 weekly entries are kept, no issue was linked to it, its target of 30% is still stored, and the refresh no longer writes it. Thirteen measures are now active. **Revert:** un-archive it from the Scorecard's archived list, or set it active again.

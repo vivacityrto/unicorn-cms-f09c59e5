@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked for an AI read of the scorecard numbers (what is behind a number and what to do), built on the Anthropic API or Ask Viv, user friendly for non-technical readers.
 **Scope:** one new Edge Function, `scorecard-insight`, a shared prompt and validation module, a front-end panel and button. No migration, no schema, RLS or data change.
-**Status:** PR open (stacked on the why-this-number PR). **Not deployed.** Merging deploys the function through the repository's Edge Function workflow, so it needs Carl's go-ahead, and it needs the `ANTHROPIC_API_KEY` function secret, which is the one Ask Viv already uses (not checked from here).
+**Status:** merged in PR 1544 (commit `63f4091`) and deployed by the Edge Function workflow on 18 November 2026; the function shows ACTIVE (version 1) in production. It has not yet been run against the live Anthropic API, and the `ANTHROPIC_API_KEY` secret has not been checked from here.
 
 ## What it does
 
