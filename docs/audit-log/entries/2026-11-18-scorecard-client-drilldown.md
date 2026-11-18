@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked for an atomic breakdown behind the report's client and CSC tables, opening in place like a mini page on the same card, down to each person.
 **Scope:** one new read-only database function, `public.get_cst_client_detail(bigint, date)`, plus the in-place drill-down screens in the scorecard report.
-**Status:** migration written and reviewed in the PR. **Not yet applied to production** at the time of writing; the screens show an error line for the people list until it is applied. Apply only on Carl's explicit go-ahead.
+**Status:** merged in PR 1546 (commit `5906916`). Migration `20261118120000_cst_client_detail.sql` applied to production on 18 November 2026 on Carl's explicit go-ahead ("Merge, then apply").
 
 ## What changed
 
@@ -26,6 +26,6 @@
 
 ## Production
 
-Not applied yet. When applied, check: the function exists once, `anon` cannot execute it, a staff session gets rows, and a non-staff call is refused with `42501`.
+Applied with the exact merged SQL after a clean preflight (function absent, migration not recorded). Postflight: the function exists once; it is SECURITY DEFINER with `search_path=""`; `anon` cannot execute it, `authenticated` and `service_role` can; the migration is recorded; a call with no signed-in staff session is refused with `42501`. Not yet checked: a real staff session loading a client's people in the report.
 
 **Rollback:** `supabase/migrations/rollback/20261118120000_cst_client_detail.down.sql` (drops only that function).
