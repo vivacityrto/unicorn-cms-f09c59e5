@@ -2,7 +2,7 @@
 
 **Trigger:** Carl found the Scorecard page and the CST report confusing for non-technical people and asked for a redesign, plus an L10 Scorecard segment built like the Rocks segment (discuss per area, notes, raise to IDS, presentation style). Direction approved on 18 November 2026.
 **Scope:** one migration (a notes table with RLS, an issue link column, a helper function, an in-place replacement of `get_cst_report`), plus front-end only: the Scorecard page, the CST report and the L10 Scorecard segment, rewritten.
-**Status:** migration `20261118100000_scorecard_discussion.sql` applied to `unicorn-qa` only. **Not applied to production.** Until it is, the L10 deck cannot save notes or link issues to a measure, and the CST report hides its "Last active" line (the front end shows it only when the report carries `last_active_at`). The Scorecard page works without it. Applying it needs Carl's explicit go-ahead.
+**Status:** merged in PR 1539 (commit `0632dd0`). Migration `20261118100000_scorecard_discussion.sql` applied to `unicorn-qa`, then to production on 18 November 2026 on Carl's explicit go-ahead, with a read-only postflight that matched the design (see "Production").
 
 ## What changed
 
@@ -44,4 +44,16 @@
 
 ## Production
 
-Pending. Before applying: confirm project `yxkgdalkbrriasiyyrwk`, confirm the notes table and the issue column do not already exist, and confirm `get_cst_report` exists exactly once. After: the function exists once, `authenticated` has only select, insert, update and delete on the notes table, `anon` has none, and a staff-identity call to `get_cst_report` returns `last_active_at`.
+Applied on 18 November 2026 through the Supabase MCP (`apply_migration`, name `scorecard_discussion`), text identical to the file merged to `main`, on Carl's explicit go-ahead.
+
+1. **Target:** `yxkgdalkbrriasiyyrwk` (the ref in `supabase/config.toml` and the migration's target marker).
+2. **Preflight, read-only:** the notes table, the issue column and `cst_last_activity` did not exist; `get_cst_report` existed once; `is_vivacity_team_safe`, `is_super_admin` and `update_updated_at_column` existed; 57 Live RTOs; no migration with a 20261118 version was recorded.
+3. **Postflight, read-only:**
+   - `get_cst_report` and `cst_last_activity` each exist exactly once, both `SECURITY DEFINER` with an empty `search_path`.
+   - RLS is on for the notes table with four policies (select, insert, update, delete); `authenticated` holds only select, insert, update and delete; `anon` and `PUBLIC` hold nothing.
+   - `eos_issues.linked_scorecard_metric_id` exists.
+   - `anon` cannot execute `get_cst_report`; `authenticated` can. Neither `anon` nor `authenticated` can execute `cst_last_activity`.
+   - `cst_last_activity()` returns activity for 33 RTOs; the notes table is empty.
+4. **Not checked in production:** a staff-identity call to `get_cst_report` and a real note or issue write, because those need a signed-in session. The same checks passed on `unicorn-qa` under real roles.
+
+**Rollback:** `supabase/migrations/rollback/20261118100000_scorecard_discussion.down.sql` drops the table, column and index and keeps `cst_last_activity` and the new `get_cst_report`.
