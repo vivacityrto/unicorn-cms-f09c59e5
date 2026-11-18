@@ -69,6 +69,22 @@ Redesigned on 18 November 2026 after Carl's feedback that the first versions wer
 - **Client activity report** (`/eos/cst-report`): a headline sentence, three big numbers (client users using the portal, certificates issued with the change from the period before, users who never signed in), then a by-CSC list with a usage bar and "x of y users" in words, expanding to RTOs with "last active" (from `get_cst_report`'s new `last_active_at`). The definitions moved into a "How these numbers are worked out" panel. Period choice and CSV export are unchanged.
 - **L10 Scorecard segment**: the week as one sentence and a card per area, with a Discuss button that presents the areas one at a time, full screen (left and right arrow keys, filter to "Needs the room", wrap-up), the same pattern as Rock Review. Each slide shows the area's numbers against their aims, a question for the room, a note for the area (one per person per area per meeting, visible to the room), and "Raise it for IDS" on any measure not on track, which drafts the issue from the numbers and links it to the measure and the meeting (`eos_issues.linked_scorecard_metric_id`). Missing numbers can still be typed in from the segment. The configured `scorecard_metric_cap` no longer affects the segment.
 
+## Why-this-number breakdowns and full reports (18 November 2026)
+
+Each automatic client measure explains itself in the L10 Scorecard deck (a short strip on the card) and has a full report, opened from the deck, the Scorecard page's needs-attention card or the measure's row. The breakdown uses the weekly snapshot, one row per Live Client per week, so it always matches the headline; the certificate list and Academy activity read `academy_certificates`, `academy_enrollments` and `academy_courses` under the viewer's own staff access (no new database objects).
+
+| Measure | Breakdown | Full report adds |
+|---|---|---|
+| Clients using the portal, Quiet RTOs | Active against quiet clients, the clients to start with, how many more would reach the aim | What changed since last week, the last weeks, by CSC, every client with people active and last active |
+| Users who never signed in | Signed in against never signed in, the clients holding most of them | By CSC, by client, the people themselves as of today (name, client, date added) |
+| Certificates issued | Count and clients | Who earned each certificate and for which course, by course, by client, Academy activity over 28 days (enrolments and how they were made, completions, busiest courses, courses nobody finished) |
+
+Limits: the people list and last-active are as of today, not as of the week; "Enrolled, but nobody finished" only lists courses with three or more enrolments; manual measures have no breakdown. Ask Viv (below) is separate from these breakdowns and is on demand only.
+
+## Ask Viv: an AI read of one measure (built 18 November 2026, not yet deployed)
+
+An "Ask Viv" button on each measure in the L10 deck, and at the top of every measure's full report, asks the `scorecard-insight` Edge Function for a short plain-language read: what is happening, what may be behind it, what to try this week and who it falls to. It runs only when someone presses the button, needs the staff AI permission (`staff.ai.use`), stores nothing and creates nothing, and is labelled as written by AI. The model sees the measure, its recent numbers and, for the automatic client measures, the same client facts as the breakdown (business names, counts, last active, CSC names). It never receives learner names or email addresses. Anthropic's API is called directly, as Ask Viv does.
+
 ## Known defects found while scoping (unfixed)
 
 - Every automatic scorecard metric has zero entries: `scorecard-refresh` returns null for the CHC, Validation and Active ComplyHub Users keys, and no scheduled caller was found.

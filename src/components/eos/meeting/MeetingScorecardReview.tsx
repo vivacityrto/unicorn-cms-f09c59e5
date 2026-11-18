@@ -131,6 +131,8 @@ export function MeetingScorecardReview({ meeting }: Props) {
         ownerNames={ownerNames}
         startAtCategory={startAt}
         meeting={meeting}
+        onRecordNumber={saveNumber}
+        savingMeasureId={savingId}
       />
     </div>
   );
