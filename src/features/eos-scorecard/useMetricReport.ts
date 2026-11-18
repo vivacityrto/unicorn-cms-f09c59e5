@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCstReport } from '@/features/eos-cst/useCstReport';
 import { addDays } from '@/features/eos-scorecard/scorecardView';
+import { fetchAllPages } from '@/features/eos-scorecard/paging';
 import { useOwnerNames } from '@/features/eos-scorecard/useOwnerNames';
 import type { CstClientRow } from '@/features/eos-scorecard/cstBreakdown';
 import {
@@ -32,7 +33,8 @@ interface Query<T> extends PromiseLike<Result<T>> {
   gte(column: string, value: string): Query<T>;
   lt(column: string, value: string): Query<T>;
   lte(column: string, value: string): Query<T>;
-  limit(count: number): Query<T>;
+  order(column: string): Query<T>;
+  range(from: number, to: number): Query<T>;
 }
 
 const read = supabase as unknown as { from(table: string): { select<T>(columns: string): Query<T> } };
@@ -44,7 +46,6 @@ async function rows<T>(query: Query<T>): Promise<T[]> {
 }
 
 const STALE = 5 * 60_000;
-const ROW_LIMIT = 1000;
 const chunk = <T,>(items: readonly T[], size = 150): T[][] => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, i * size + size));
 const fullName = (first: string | null, last: string | null, fallback: string) => `${first ?? ''} ${last ?? ''}`.trim() || fallback;
 
@@ -70,13 +71,15 @@ export function useCstWeekRows(weekKey: string, enabled = true) {
     staleTime: STALE,
     enabled: !!profile && enabled,
     queryFn: async () => {
-      const data = await rows(
+      const data = await fetchAllPages((from, to) =>
         read
           .from('cst_scorecard_weekly_snapshot')
           .select<SnapshotRow>('tenant_id, week_ending, csc_user_id, client_users, active_users_28d, never_signed_in, certificates_week')
           .gte('week_ending', addDays(weekEnding, -49))
           .lte('week_ending', weekEnding)
-          .limit(ROW_LIMIT * 5),
+          .order('week_ending')
+          .order('tenant_id')
+          .range(from, to),
       );
       const ids = [...new Set(data.map((r) => r.tenant_id))];
       const names: Record<number, string> = {};
@@ -125,16 +128,19 @@ export function useCertificateDetail(weekKey: string, tenantIds: readonly number
       const from = addDays(weekEnding, -6);
       // Wide on purpose; the exact Sydney day is applied below.
       const certs = (
-        await rows(
+        await fetchAllPages((rangeFrom, rangeTo) =>
           read
             .from('academy_certificates')
             .select<{ id: string; course_id: string; user_id: string; tenant_id: number; issued_at: string; certificate_number: string | null }>('id, course_id, user_id, tenant_id, issued_at, certificate_number')
             .is('revoked_at', null)
+            .in('tenant_id', tenantIds)
             .gte('issued_at', `${addDays(from, -1)}T00:00:00Z`)
             .lt('issued_at', `${addDays(weekEnding, 2)}T00:00:00Z`)
-            .limit(ROW_LIMIT),
+            .order('issued_at')
+            .order('id')
+            .range(rangeFrom, rangeTo),
         )
-      ).filter((c) => inSydneyRange(c.issued_at, from, weekEnding) && tenantIds.includes(c.tenant_id));
+      ).filter((c) => inSydneyRange(c.issued_at, from, weekEnding));
       if (certs.length === 0) return [];
 
       const courseIds = [...new Set(certs.map((c) => c.course_id))];
@@ -174,12 +180,22 @@ export function useAcademyActivity(weekKey: string, tenantIds: readonly number[]
       const wide = { from: `${addDays(from, -1)}T00:00:00Z`, to: `${addDays(weekEnding, 2)}T00:00:00Z` };
       type Enrolment = { course_id: string; tenant_id: number; source: string | null; enrolled_at: string | null; completed_at: string | null };
       const columns = 'course_id, tenant_id, source, enrolled_at, completed_at';
-      const [enrolledRows, completedRows] = await Promise.all([
-        rows(read.from('academy_enrollments').select<Enrolment>(columns).is('revoked_at', null).gte('enrolled_at', wide.from).lt('enrolled_at', wide.to).limit(ROW_LIMIT)),
-        rows(read.from('academy_enrollments').select<Enrolment>(columns).is('revoked_at', null).gte('completed_at', wide.from).lt('completed_at', wide.to).limit(ROW_LIMIT)),
-      ]);
-      const enrolled = enrolledRows.filter((e) => tenantIds.includes(e.tenant_id) && inSydneyRange(e.enrolled_at, from, weekEnding));
-      const completed = completedRows.filter((e) => tenantIds.includes(e.tenant_id) && inSydneyRange(e.completed_at, from, weekEnding));
+      const window = (column: 'enrolled_at' | 'completed_at') =>
+        fetchAllPages((rangeFrom, rangeTo) =>
+          read
+            .from('academy_enrollments')
+            .select<Enrolment>(columns)
+            .is('revoked_at', null)
+            .in('tenant_id', tenantIds)
+            .gte(column, wide.from)
+            .lt(column, wide.to)
+            .order(column)
+            .order('id')
+            .range(rangeFrom, rangeTo),
+        );
+      const [enrolledRows, completedRows] = await Promise.all([window('enrolled_at'), window('completed_at')]);
+      const enrolled = enrolledRows.filter((e) => inSydneyRange(e.enrolled_at, from, weekEnding));
+      const completed = completedRows.filter((e) => inSydneyRange(e.completed_at, from, weekEnding));
       const courseIds = [...new Set([...enrolled, ...completed].map((e) => e.course_id))];
       const titles: Record<string, string> = {};
       for (const part of chunk(courseIds)) {
@@ -198,14 +214,15 @@ export function useNeverSignedInPeople(tenantIds: readonly number[], enabled = t
     enabled: enabled && tenantIds.length > 0,
     queryFn: async (): Promise<NeverSignedInPerson[]> => {
       const users = (
-        await rows(
+        await fetchAllPages((from, to) =>
           read
             .from('users')
             .select<{ user_uuid: string; first_name: string | null; last_name: string | null; created_at: string | null; archived: boolean | null; is_vivacity_internal: boolean | null }>(
               'user_uuid, first_name, last_name, created_at, archived, is_vivacity_internal',
             )
             .is('last_sign_in_at', null)
-            .limit(ROW_LIMIT),
+            .order('user_uuid')
+            .range(from, to),
         )
       ).filter((u) => !u.archived && !u.is_vivacity_internal);
       if (users.length === 0) return [];
