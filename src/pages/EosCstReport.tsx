@@ -2,7 +2,6 @@ import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useCstReport } from '@/features/eos-cst/useCstReport';
 import {
@@ -10,8 +9,10 @@ import {
   certificateDelta,
   csvFilename,
   formatPercent,
+  lastActiveText,
   percent,
   periodLabel,
+  reportHeadline,
   reportToCsv,
   shiftAnchor,
   sydneyToday,
@@ -19,36 +20,42 @@ import {
   type CstReport,
 } from '@/features/eos-cst/cstReport';
 
-function Meter({ part, whole }: { part: number; whole: number }) {
+function UsageBar({ part, whole }: { part: number; whole: number }) {
   const pct = percent(part, whole) ?? 0;
   return (
-    <span className="inline-flex items-center gap-2">
-      <span className="h-2 w-16 rounded-full bg-muted overflow-hidden" aria-hidden="true">
-        <span className="block h-full bg-primary" style={{ width: `${pct}%` }} />
-      </span>
-      <span className="tabular-nums text-sm">{formatPercent(part, whole)}</span>
+    <div className="min-w-0">
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1 text-sm">
+        <span className="font-semibold tabular-nums">{formatPercent(part, whole)}</span>{' '}
+        <span className="text-muted-foreground">
+          ({part} of {whole} {whole === 1 ? 'user' : 'users'})
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function CertificateNote({ period, current, prior }: { period: CstPeriod; current: number; prior: number }) {
+  const d = certificateDelta(period, current, prior);
+  if (!d) return <span className="text-xs text-muted-foreground">No earlier year to compare</span>;
+  const text = d.direction === 'flat' ? 'same as the period before' : `${Math.abs(d.delta)} ${d.direction === 'up' ? 'more' : 'fewer'} than the period before`;
+  return (
+    <span className={cn('text-xs', d.direction === 'down' && 'text-destructive', d.direction === 'up' && 'text-green-700 dark:text-green-400', d.direction === 'flat' && 'text-muted-foreground')}>
+      {d.direction === 'up' ? '▲' : d.direction === 'down' ? '▼' : '='} {text}
     </span>
   );
 }
 
-function Delta({ period, current, prior }: { period: CstPeriod; current: number; prior: number }) {
-  const d = certificateDelta(period, current, prior);
-  if (!d) return <span className="text-xs text-muted-foreground">no prior year</span>;
+function BigNumber({ label, value, note, children }: { label: string; value: string; note: string; children?: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="tabular-nums">{prior}</span>
-      <Badge
-        variant="outline"
-        className={cn(
-          'text-xs',
-          d.direction === 'down' && 'border-destructive/40 text-destructive',
-          d.direction === 'up' && 'border-green-600/40 text-green-700 dark:text-green-400',
-        )}
-      >
-        {d.delta > 0 ? '+' : ''}
-        {d.delta}
-      </Badge>
-    </span>
+    <div className="rounded-xl border p-4">
+      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+      <p className="mt-1 text-4xl font-bold leading-none tabular-nums">{value}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{note}</p>
+      {children && <div className="mt-1">{children}</div>}
+    </div>
   );
 }
 
@@ -84,15 +91,13 @@ export default function EosCstReport() {
     });
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">CST report</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Client activity and certificates issued for Live Clients, grouped by primary CSC.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Client activity report</h1>
+          <p className="mt-0.5 text-base text-muted-foreground">How much our Live Clients use the portal, and the certificates they earn, by CSC.</p>
         </div>
-        <div className="inline-flex rounded-lg bg-muted p-1 gap-1" role="group" aria-label="Report period">
+        <div className="inline-flex gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Report period">
           {CST_PERIOD_OPTIONS.map((o) => (
             <button
               key={o.value}
@@ -102,10 +107,7 @@ export default function EosCstReport() {
                 setPeriod(o.value);
                 setAnchor(today);
               }}
-              className={cn(
-                'px-3 py-1.5 text-sm font-semibold rounded-md transition-colors',
-                period === o.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
-              )}
+              className={cn('rounded-md px-3 py-1.5 text-sm font-semibold transition-colors', period === o.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
             >
               {o.label}
             </button>
@@ -119,29 +121,15 @@ export default function EosCstReport() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
         )}
-        <span className="font-semibold min-w-[11rem]">{label || 'Loading…'}</span>
+        <span className="min-w-[11rem] font-semibold">{label || 'Loading…'}</span>
         {!rolling && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Next period"
-            disabled={atCurrent}
-            onClick={() => setAnchor(shiftAnchor(anchor, period, 1))}
-          >
+          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Next period" disabled={atCurrent} onClick={() => setAnchor(shiftAnchor(anchor, period, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         )}
-        <Badge variant="secondary">Live Clients{data ? ` · ${data.totals.live_rtos}` : ''}</Badge>
         {isFetching && !isLoading && <span className="text-xs text-muted-foreground">Updating…</span>}
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-auto"
-          disabled={!data}
-          onClick={() => data && downloadCsv(data)}
-        >
-          <Download className="h-3.5 w-3.5 mr-1.5" />
+        <Button variant="outline" size="sm" className="ml-auto" disabled={!data} onClick={() => data && downloadCsv(data)}>
+          <Download className="mr-1.5 h-3.5 w-3.5" />
           Export CSV
         </Button>
       </div>
@@ -151,111 +139,105 @@ export default function EosCstReport() {
           The report could not be loaded. {(error as Error).message}
         </div>
       ) : isLoading || !data ? (
-        <div className="h-64 rounded-lg border bg-muted/40 animate-pulse" aria-busy="true" />
+        <div className="h-64 animate-pulse rounded-lg border bg-muted/40" aria-busy="true" />
       ) : (
-        <div className="rounded-lg border overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead>
-              <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-3 py-2 font-semibold">Primary CSC</th>
-                <th className="px-3 py-2 font-semibold text-right">Live RTOs</th>
-                <th className="px-3 py-2 font-semibold text-right">Client users</th>
-                <th className="px-3 py-2 font-semibold text-right">Active users</th>
-                <th className="px-3 py-2 font-semibold">Activity rate</th>
-                <th className="px-3 py-2 font-semibold text-right">RTOs active</th>
-                <th className="px-3 py-2 font-semibold text-right">Never signed in</th>
-                <th className="px-3 py-2 font-semibold text-right">Certificates</th>
-                <th className="px-3 py-2 font-semibold text-right">Prior period</th>
-              </tr>
-            </thead>
-            <tbody>
+        <>
+          <section aria-label="Summary" className="rounded-xl bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white">
+            <p className="text-2xl font-bold leading-snug sm:text-[1.7rem]">{reportHeadline(data.totals, label)}</p>
+            <p className="mt-1 text-sm text-white/85">Across {data.totals.live_rtos} Live Clients.</p>
+          </section>
+
+          <section aria-label="Key numbers" className="grid gap-4 sm:grid-cols-3">
+            <BigNumber label="Client users using the portal" value={formatPercent(data.totals.active_users, data.totals.client_users)} note={`${data.totals.active_users} of ${data.totals.client_users} users did something in this period.`} />
+            <BigNumber label="Certificates issued" value={String(data.totals.certificates)} note="Course certificates clients earned in this period.">
+              <CertificateNote period={period} current={data.totals.certificates} prior={data.totals.prior_certificates} />
+            </BigNumber>
+            <BigNumber label="Users who never signed in" value={String(data.totals.never_signed_in)} note="These people were invited but have never logged in." />
+          </section>
+
+          <section aria-label="By CSC" className="space-y-3">
+            <div>
+              <h2 className="text-xl font-bold">By CSC</h2>
+              <p className="text-sm text-muted-foreground">Each CSC looks after a group of RTOs. Open one to see its clients and when each last used the portal.</p>
+            </div>
+            <div className="overflow-hidden rounded-xl border">
+              <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
+                <span>CSC</span>
+                <span>Users using the portal</span>
+                <span>Never signed in</span>
+                <span>Certificates</span>
+              </div>
               {data.csc.map((c) => {
                 const key = c.csc_user_id ?? 'unassigned';
                 const isOpen = open.has(key);
                 return (
                   <Fragment key={key}>
-                    <tr
-                      className="border-b cursor-pointer hover:bg-muted/40"
-                      onClick={() => toggle(key)}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          toggle(key);
-                        }
-                      }}
+                    <button
+                      type="button"
                       aria-expanded={isOpen}
+                      onClick={() => toggle(key)}
+                      className="grid w-full grid-cols-1 items-center gap-2 border-b px-4 py-3 text-left hover:bg-muted/40 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-3"
                     >
-                      <td className="px-3 py-2 font-semibold">
-                        <span className="inline-flex items-center gap-1.5">
-                          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          {c.csc_name}
+                      <span className="flex items-center gap-2">
+                        {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" aria-hidden /> : <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />}
+                        <span>
+                          <span className="block font-semibold">{c.csc_name}</span>
+                          <span className="block text-sm text-muted-foreground">
+                            {c.live_rtos} {c.live_rtos === 1 ? 'RTO' : 'RTOs'}
+                          </span>
                         </span>
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.live_rtos}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.client_users}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.active_users}</td>
-                      <td className="px-3 py-2"><Meter part={c.active_users} whole={c.client_users} /></td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.rtos_active} of {c.rtos_with_users}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{c.never_signed_in}</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-semibold">{c.certificates}</td>
-                      <td className="px-3 py-2 text-right"><Delta period={period} current={c.certificates} prior={c.prior_certificates} /></td>
-                    </tr>
-                    {isOpen &&
-                      c.rtos.map((r) => (
-                        <tr key={r.tenant_id} className="border-b bg-muted/30 text-muted-foreground">
-                          <td className="pl-10 pr-3 py-1.5">
-                            <Link to={`/tenant/${r.tenant_id}`} className="text-foreground hover:underline">
-                              {r.tenant_name}
-                            </Link>
-                          </td>
-                          <td />
-                          <td className="px-3 py-1.5 text-right tabular-nums">{r.client_users}</td>
-                          <td className="px-3 py-1.5 text-right tabular-nums">{r.active_users}</td>
-                          <td className="px-3 py-1.5"><Meter part={r.active_users} whole={r.client_users} /></td>
-                          <td />
-                          <td className="px-3 py-1.5 text-right tabular-nums">{r.never_signed_in}</td>
-                          <td className="px-3 py-1.5 text-right tabular-nums">{r.certificates}</td>
-                          <td className="px-3 py-1.5 text-right tabular-nums">{r.prior_certificates}</td>
-                        </tr>
-                      ))}
+                      </span>
+                      <UsageBar part={c.active_users} whole={c.client_users} />
+                      <span className="text-sm">
+                        <span className="font-semibold tabular-nums">{c.never_signed_in}</span> <span className="text-muted-foreground">{c.never_signed_in === 1 ? 'user' : 'users'}</span>
+                      </span>
+                      <span className="flex flex-col">
+                        <span className="text-lg font-bold tabular-nums">{c.certificates}</span>
+                        <CertificateNote period={period} current={c.certificates} prior={c.prior_certificates} />
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <ul className="border-b bg-muted/30">
+                        {c.rtos.map((r) => (
+                          <li key={r.tenant_id} className="grid grid-cols-1 gap-1 border-t border-dashed px-4 py-2.5 pl-10 first:border-t-0 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-3">
+                            <span className="min-w-0">
+                              <Link to={`/tenant/${r.tenant_id}`} className="block truncate font-medium hover:underline">
+                                {r.tenant_name}
+                              </Link>
+                              {r.last_active_at !== undefined && <span className="block text-xs text-muted-foreground">Last active: {lastActiveText(r.last_active_at)}</span>}
+                            </span>
+                            <UsageBar part={r.active_users} whole={r.client_users} />
+                            <span className="text-sm tabular-nums">{r.never_signed_in}</span>
+                            <span className="text-sm tabular-nums">{r.certificates}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </Fragment>
                 );
               })}
-              <tr className="bg-muted/40 font-semibold">
-                <td className="px-3 py-2">All Live Clients</td>
-                <td className="px-3 py-2 text-right tabular-nums">{data.totals.live_rtos}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{data.totals.client_users}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{data.totals.active_users}</td>
-                <td className="px-3 py-2"><Meter part={data.totals.active_users} whole={data.totals.client_users} /></td>
-                <td className="px-3 py-2 text-right tabular-nums">{data.totals.rtos_active} of {data.totals.rtos_with_users}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{data.totals.never_signed_in}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{data.totals.certificates}</td>
-                <td className="px-3 py-2 text-right"><Delta period={period} current={data.totals.certificates} prior={data.totals.prior_certificates} /></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </section>
+        </>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-        <div className="rounded-lg border p-3 space-y-1">
-          <h3 className="font-semibold">Live Clients</h3>
-          <p className="text-muted-foreground">The same list as Manage Tenants: status Active, On hold, In Arears or Warning, not archived, RTO accounts only.</p>
+      <details className="rounded-xl border p-4 text-sm">
+        <summary className="cursor-pointer font-semibold">How these numbers are worked out</summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <p>
+            <span className="font-semibold">Live Clients.</span> The same list as Manage Tenants: Active, On hold, In Arrears or Warning, not archived, RTO accounts only.
+          </p>
+          <p>
+            <span className="font-semibold">Using the portal.</span> A client user viewed a page, logged in, sent or read a message, finished an Academy lesson, or enrolled themselves in a course.
+          </p>
+          <p>
+            <span className="font-semibold">Not counted.</span> Vivacity staff (including when they view as a client), documents staff share, automatic enrolments, system events and archived users.
+          </p>
+          <p>
+            <span className="font-semibold">Certificates and users.</span> A certificate counts on the day it was issued, unless it was revoked. Past periods use today's users and Live status.
+          </p>
         </div>
-        <div className="rounded-lg border p-3 space-y-1">
-          <h3 className="font-semibold">Counts as activity</h3>
-          <p className="text-muted-foreground">A client user's portal page view, login, message sent or read, Academy lesson completed, or a course they enrolled in themselves.</p>
-        </div>
-        <div className="rounded-lg border p-3 space-y-1">
-          <h3 className="font-semibold">Does not count</h3>
-          <p className="text-muted-foreground">Vivacity staff (including viewing as a client), documents staff share, automatic enrolments, system events and archived users.</p>
-        </div>
-        <div className="rounded-lg border p-3 space-y-1">
-          <h3 className="font-semibold">Certificates and users</h3>
-          <p className="text-muted-foreground">Certificates count the issue date of a non-revoked certificate. Client users exclude Vivacity staff and archived users. Past periods use current users and Live status.</p>
-        </div>
-      </div>
+      </details>
     </div>
   );
 }

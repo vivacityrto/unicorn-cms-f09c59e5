@@ -1,314 +1,268 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import {
-  Plus,
-  RefreshCw,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Zap,
-  Hand,
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { useScorecardMetrics } from '@/hooks/useScorecardMetrics';
-import { usePermission } from '@/hooks/usePermission';
-import { NeedsAttention } from '@/components/eos/scorecard2/NeedsAttention';
-import { CompanyScorecardTable } from '@/components/eos/scorecard2/CompanyScorecardTable';
-import { MissingDataPanel } from '@/components/eos/scorecard2/MissingDataPanel';
-import { MetricDetailDrawer } from '@/components/eos/scorecard2/MetricDetailDrawer';
-import { MetricEditorDialogV2 } from '@/components/eos/scorecard2/MetricEditorDialogV2';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
-import { CstSignalCards } from '@/components/eos/cst/CstSignalCards';
+import { MetricEditorDialogV2 } from '@/components/eos/scorecard2/MetricEditorDialogV2';
+import { AreaAccordion } from '@/components/eos/scorecard-review/AreaAccordion';
+import { MeasureCard } from '@/components/eos/scorecard-review/MeasureCard';
+import { NumberEntry } from '@/components/eos/scorecard-review/NumberEntry';
+import { StatusPill } from '@/components/eos/scorecard-review/StatusPill';
+import { usePermission } from '@/hooks/usePermission';
+import { useScorecardMetrics } from '@/hooks/useScorecardMetrics';
+import {
+  STATUS_LABEL,
+  STATUS_MARK,
+  aimText,
+  areaName,
+  buildMeasures,
+  countStatuses,
+  formatValue,
+  groupAreas,
+  headlineSentence,
+  lastCompletedWeekKey,
+  shiftWeek,
+  shortDate,
+  sortWorstFirst,
+  weekLabel,
+  type Measure,
+  type PlainStatus,
+} from '@/features/eos-scorecard/scorecardView';
+import { useOwnerNames } from '@/features/eos-scorecard/useOwnerNames';
 import type { ScorecardMetric } from '@/types/scorecard';
 
-export default function EosScorecard() {
-  return <ScorecardDashboard />;
-}
+/** How many weeks back the page lets you look. The scorecard keeps 13 weeks of entries in view. */
+const WEEKS_BACK = 11;
 
-function SummaryCard({
-  label,
-  value,
-  icon: Icon,
-  variant,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  variant: 'green' | 'red' | 'amber' | 'default' | 'muted';
-}) {
-  const colors: Record<string, string> = {
-    green: 'bg-green-500/10 text-green-700 dark:text-green-400',
-    red: 'bg-destructive/10 text-destructive',
-    amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-    default: 'bg-primary/10 text-primary',
-    muted: 'bg-muted text-muted-foreground',
-  };
+const LEGEND: { status: PlainStatus; text: string }[] = [
+  { status: 'on_track', text: 'at or better than the aim' },
+  { status: 'nearly', text: 'within 10% of the aim' },
+  { status: 'off_track', text: 'further away than that' },
+  { status: 'waiting', text: 'nothing recorded this week' },
+];
 
+function ArchivedMeasures({ onUnarchive }: { onUnarchive: (id: string) => void }) {
+  const { metrics, isLoading } = useScorecardMetrics(true);
+  if (isLoading) return <Skeleton className="h-16 w-full" />;
+  if (metrics.length === 0) return <p className="text-sm text-muted-foreground">Nothing is archived.</p>;
   return (
-    <div className={cn('flex flex-col items-center justify-center rounded-lg p-3 gap-1 text-center min-w-[90px]', colors[variant])}>
-      <Icon className="h-4 w-4 opacity-80 mb-0.5" />
-      <span className="text-xl font-bold leading-none">{value}</span>
-      <span className="text-xs opacity-80 leading-tight">{label}</span>
-    </div>
+    <ul className="divide-y rounded-lg border">
+      {metrics.map((m) => (
+        <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+          <span className="min-w-0 truncate font-medium">{m.name}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => onUnarchive(m.id)}>
+            Bring back
+          </Button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function ScorecardDashboard() {
-  const [showArchived, setShowArchived] = useState(false);
+export default function EosScorecard() {
+  const { metrics, isLoading, createMetric, updateMetric, archiveMetric, recordEntry } = useScorecardMetrics(false);
+  const ownerNames = useOwnerNames();
+  const canManage = usePermission('eos.scorecard.manage');
+
+  const latestKey = useMemo(() => lastCompletedWeekKey(), []);
+  const [weekKey, setWeekKey] = useState(latestKey);
+  const [editing, setEditing] = useState<ScorecardMetric | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [editingMetric, setEditingMetric] = useState<ScorecardMetric | null>(null);
-  const [detailMetric, setDetailMetric] = useState<ScorecardMetric | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [archiving, setArchiving] = useState<Measure | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  const canManageScorecard = usePermission('eos.scorecard.manage');
-  const canEditVTO = () => canManageScorecard;
-  const {
-    metrics,
-    isLoading,
-    createMetric,
-    updateMetric,
-    archiveMetric,
-    deleteMetric,
-    recordEntry,
-  } = useScorecardMetrics(showArchived);
+  const measures = useMemo(() => buildMeasures(metrics, weekKey), [metrics, weekKey]);
+  const counts = useMemo(() => countStatuses(measures), [measures]);
+  const attention = useMemo(() => sortWorstFirst(measures.filter((m) => m.status === 'off_track' || m.status === 'nearly')), [measures]);
+  const waiting = useMemo(() => measures.filter((m) => m.status === 'waiting'), [measures]);
+  const areas = useMemo(() => groupAreas(measures), [measures]);
+  const ownerOf = (m: Measure) => (m.ownerId ? ownerNames[m.ownerId] ?? null : null);
 
-  const lastRefreshed = format(new Date(), 'h:mm a');
+  const saveNumber = (measure: Measure, value: number) => {
+    setSavingId(measure.id);
+    recordEntry.mutate({ metric: measure.metric, value, weekEnding: weekKey }, { onSettled: () => setSavingId(null) });
+  };
 
-  const summary = useMemo(() => {
-    const active = metrics.filter((m) => !m.is_archived && m.is_active);
-    return {
-      onTrack: active.filter((m) => m.latestStatus === 'green').length,
-      offTrack: active.filter((m) => m.latestStatus === 'red').length,
-      atRisk: active.filter((m) => m.latestStatus === 'amber').length,
-      noData: active.filter((m) => m.latestStatus === 'no_data').length,
-      automatic: active.filter((m) => m.metric_source === 'automatic').length,
-      manual: active.filter((m) => m.metric_source === 'manual').length,
-      total: active.length,
-    };
-  }, [metrics]);
-
-  const existingNames = metrics.map((m) => m.name);
-
-  const handleEdit = (m: ScorecardMetric) => {
-    setEditingMetric(m);
+  const openEditor = (metric: ScorecardMetric | null) => {
+    setEditing(metric);
     setEditorOpen(true);
   };
 
-  const handleViewHistory = (m: ScorecardMetric) => {
-    setDetailMetric(m);
-    setDetailOpen(true);
-  };
-
-  const handleRecord = (
-    metric: ScorecardMetric,
-    value: number,
-    notes?: string,
-    weekEnding?: string,
-  ) => {
-    recordEntry.mutate({ metric, value, notes, weekEnding: weekEnding! });
-  };
-
-  const handleMissingRecord = (m: ScorecardMetric) => {
-    // Open detail drawer which allows inline entry
-    setDetailMetric(m);
-    setDetailOpen(true);
-  };
-
-  const handleSave = (payload: Partial<ScorecardMetric> & { id?: string }) => {
+  const save = (payload: Partial<ScorecardMetric> & { id?: string }) => {
     if (payload.id) {
-      updateMetric.mutate(
-        { id: payload.id, ...payload },
-        { onSuccess: () => { setEditorOpen(false); setEditingMetric(null); } },
-      );
+      updateMetric.mutate({ id: payload.id, ...payload }, { onSuccess: () => { setEditorOpen(false); setEditing(null); } });
     } else {
-      createMetric.mutate(payload, {
-        onSuccess: () => { setEditorOpen(false); },
-      });
+      createMetric.mutate(payload, { onSuccess: () => setEditorOpen(false) });
     }
   };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    // In production this triggers the automation edge function
-    // For now, just re-query
-    setTimeout(() => setIsRefreshing(false), 1200);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">Loading scorecard…</p>
-        </div>
-      </div>
-    );
-  }
-
-  const activeMetrics = metrics.filter((m) => !m.is_archived && m.is_active);
-  const showMetricWarning = activeMetrics.length > 15;
+  const canGoBack = weekKey > shiftWeek(latestKey, -WEEKS_BACK);
+  const canGoForward = weekKey < latestKey;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Scorecard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Weekly EOS health — one owner, one measurable, one target
+          <h1 className="text-3xl font-bold tracking-tight">Scorecard</h1>
+          <p className="mt-0.5 text-base text-muted-foreground">
+            Week of {weekLabel(weekKey)}. What we measure each week, and whether we are hitting the aim.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-            <Label htmlFor="show-archived" className="text-sm text-muted-foreground cursor-pointer">
-              Show archived
-            </Label>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', isRefreshing && 'animate-spin')} />
-            Refresh
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" className="gap-1" disabled={!canGoBack} onClick={() => setWeekKey(shiftWeek(weekKey, -1))}>
+            <ChevronLeft className="h-4 w-4" aria-hidden /> Previous week
           </Button>
-          {!showArchived && (
-            <PermissionTooltip permission="vto:edit" action="add scorecard metrics">
-              <Button
-                size="sm"
-                onClick={() => { setEditingMetric(null); setEditorOpen(true); }}
-                disabled={!canEditVTO()}
-              >
-                <Plus className="h-4 w-4 mr-1.5" /> Add Metric
-              </Button>
-            </PermissionTooltip>
-          )}
+          <Button type="button" variant="outline" size="sm" className="gap-1" disabled={!canGoForward} onClick={() => setWeekKey(shiftWeek(weekKey, 1))}>
+            Next week <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+          <PermissionTooltip permission="vto:edit" action="add scorecard measures">
+            <Button type="button" size="sm" className="gap-1.5" disabled={!canManage} onClick={() => openEditor(null)}>
+              <Plus className="h-4 w-4" aria-hidden /> Add a measure
+            </Button>
+          </PermissionTooltip>
         </div>
       </div>
 
-      {/* Summary Strip */}
-      <div className="flex flex-wrap gap-2">
-        <SummaryCard label="On Track" value={summary.onTrack} icon={CheckCircle2} variant="green" />
-        <SummaryCard label="Off Track" value={summary.offTrack} icon={XCircle} variant="red" />
-        <SummaryCard label="At Risk" value={summary.atRisk} icon={AlertCircle} variant="amber" />
-        <SummaryCard label="No Data" value={summary.noData} icon={AlertCircle} variant="muted" />
-        <div className="flex-1 min-w-[60px]" />
-        <SummaryCard label="Automated" value={summary.automatic} icon={Zap} variant="default" />
-        <SummaryCard label="Manual" value={summary.manual} icon={Hand} variant="muted" />
-        <div className="hidden sm:flex flex-col items-center justify-center text-xs text-muted-foreground px-3">
-          <span className="font-medium">Refreshed</span>
-          <span>{lastRefreshed}</span>
+      {isLoading ? (
+        <div className="space-y-4" aria-busy="true">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
-      </div>
-
-      {/* CST headline numbers for Live Clients (client activity and certificates) */}
-      <CstSignalCards />
-
-      {/* Metric count warning */}
-      {showMetricWarning && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          EOS scorecards work best with fewer than 15 active metrics. You currently have {activeMetrics.length}.
+      ) : measures.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed py-16 text-center">
+          <h2 className="text-lg font-semibold">No measures yet</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add your first measure to start tracking the scorecard. You can start from a ready-made one.</p>
+          <PermissionTooltip permission="vto:edit" action="add scorecard measures">
+            <Button type="button" className="mt-4 gap-1.5" disabled={!canManage} onClick={() => openEditor(null)}>
+              <Plus className="h-4 w-4" aria-hidden /> Add your first measure
+            </Button>
+          </PermissionTooltip>
         </div>
-      )}
+      ) : (
+        <>
+          <section aria-label="This week at a glance" className="space-y-3 rounded-xl bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white">
+            <p className="text-2xl font-bold leading-snug sm:text-[1.7rem]">{headlineSentence(counts)}</p>
+            <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/90">
+              {LEGEND.map((l) => (
+                <li key={l.status}>
+                  <span aria-hidden="true">{STATUS_MARK[l.status]}</span> {STATUS_LABEL[l.status]}: {l.text}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-      {/* Empty State */}
-      {metrics.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 rounded-lg border-2 border-dashed border-border">
-          <div className="text-4xl mb-4">📊</div>
-          <h3 className="text-lg font-semibold mb-2">No scorecard metrics yet</h3>
-          <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
-            Add your first metric to start tracking your EOS scorecard. Use a template to get started quickly.
-          </p>
-          {!showArchived && (
-            <PermissionTooltip permission="vto:edit" action="add scorecard metrics">
-              <Button
-                onClick={() => { setEditingMetric(null); setEditorOpen(true); }}
-                disabled={!canEditVTO()}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Your First Metric
-              </Button>
-            </PermissionTooltip>
+          {attention.length > 0 && (
+            <section aria-label="Needs attention this week" className="space-y-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-xl font-bold">
+                  Needs attention this week <StatusPill status="off_track" className="!px-2" />
+                </h2>
+                <p className="text-sm text-muted-foreground">These are what the L10 will ask about. Nothing here needs fixing on this page.</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {attention.map((m) => (
+                  <MeasureCard
+                    key={m.id}
+                    measure={m}
+                    areaName={areaName(m.category)}
+                    ownerName={ownerOf(m)}
+                    action={
+                      m.category === 'CST' ? (
+                        <Link to="/eos/cst-report" className="font-semibold text-primary hover:underline">
+                          See which clients &rsaquo;
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                ))}
+              </div>
+            </section>
           )}
-        </div>
+
+          {waiting.length > 0 && (
+            <section aria-label="Waiting for a number" className="space-y-3">
+              <div>
+                <h2 className="text-xl font-bold">
+                  Waiting for a number <span className="ml-1 text-base font-semibold text-muted-foreground">({waiting.length})</span>
+                </h2>
+                <p className="text-sm text-muted-foreground">Nothing has been recorded for this week. Type the number in and save it, or leave it for the owner.</p>
+              </div>
+              <ul className="space-y-2">
+                {waiting.map((m) => (
+                  <li key={m.id} className="grid items-center gap-3 rounded-lg border p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]">
+                    <div className="min-w-0">
+                      <p className="font-semibold">{m.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aim: {aimText(m)} &middot; Owner: {ownerOf(m) ?? 'Nobody yet'} &middot;{' '}
+                        {m.lastEntry ? `Last number: ${formatValue(m.unit, m.lastEntry.value)} (week of ${shortDate(m.lastEntry.weekEnding)})` : 'No number has ever been recorded'}
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{m.description}</p>
+                    {m.source === 'automatic' ? (
+                      <p className="text-sm text-muted-foreground">Fills in by itself on Monday morning.</p>
+                    ) : (
+                      <NumberEntry label={`This week’s number for ${m.name}`} unit={m.unit} saving={savingId === m.id} onSave={(v) => saveNumber(m, v)} />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section aria-label="All measures" className="space-y-3">
+            <div>
+              <h2 className="text-xl font-bold">All measures, by area</h2>
+              <p className="text-sm text-muted-foreground">Open an area, then a measure, for its history and how the number is worked out.</p>
+            </div>
+            <AreaAccordion
+              areas={areas}
+              ownerNames={ownerNames}
+              canManage={canManage}
+              savingId={savingId}
+              onSaveNumber={saveNumber}
+              onEdit={(m) => openEditor(m.metric)}
+              onArchive={setArchiving}
+            />
+          </section>
+        </>
       )}
 
-      {/* Section 1: Needs Attention */}
-      {activeMetrics.length > 0 && (
-        <NeedsAttention metrics={activeMetrics} onViewHistory={handleViewHistory} />
-      )}
+      <section aria-label="Archived measures" className="space-y-2">
+        <Button type="button" variant="link" className="h-auto p-0" aria-expanded={showArchived} onClick={() => setShowArchived((v) => !v)}>
+          {showArchived ? 'Hide archived measures' : 'Show archived measures'}
+        </Button>
+        {showArchived && (
+          <ArchivedMeasures onUnarchive={(id) => updateMetric.mutate({ id, is_archived: false, is_active: true })} />
+        )}
+      </section>
 
-      {/* Section 2: Company Scorecard */}
-      {activeMetrics.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-base font-semibold flex items-center gap-2">
-            Company Scorecard
-            <Badge variant="secondary" className="text-xs">{activeMetrics.length} metrics</Badge>
-          </h2>
-          <CompanyScorecardTable
-            metrics={activeMetrics}
-            onEdit={handleEdit}
-            onArchive={(id) => archiveMetric.mutate(id)}
-            onDelete={(id) => deleteMetric.mutate(id)}
-            onRecord={handleRecord}
-            onViewHistory={handleViewHistory}
-            isArchiving={archiveMetric.isPending}
-            isDeleting={deleteMetric.isPending}
-          />
-        </section>
-      )}
-
-      {/* Show archived metrics */}
-      {showArchived && metrics.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-base font-semibold text-muted-foreground">Archived Metrics</h2>
-          <CompanyScorecardTable
-            metrics={metrics}
-            onEdit={handleEdit}
-            onArchive={(id) => archiveMetric.mutate(id)}
-            onDelete={(id) => deleteMetric.mutate(id)}
-            onRecord={handleRecord}
-            onViewHistory={handleViewHistory}
-            isArchiving={archiveMetric.isPending}
-            isDeleting={deleteMetric.isPending}
-          />
-        </section>
-      )}
-
-      {/* Section 3: Missing Data */}
-      {activeMetrics.length > 0 && (
-        <MissingDataPanel metrics={activeMetrics} onRecord={handleMissingRecord} />
-      )}
-
-      {/* Metric Detail Drawer */}
-      <MetricDetailDrawer
-        metric={detailMetric}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        onEdit={(m) => {
-          setDetailOpen(false);
-          setTimeout(() => handleEdit(m), 100);
+      <ConfirmDialog
+        open={archiving !== null}
+        onOpenChange={(open) => {
+          if (!open) setArchiving(null);
+        }}
+        title="Archive this measure"
+        description={`Archive "${archiving?.name ?? ''}"? It leaves the scorecard and the L10, and its history is kept. You can bring it back from the archived list.`}
+        confirmText={archiveMetric.isPending ? 'Archiving...' : 'Archive'}
+        isLoading={archiveMetric.isPending}
+        onConfirm={() => {
+          if (archiving) archiveMetric.mutate(archiving.id, { onSettled: () => setArchiving(null) });
         }}
       />
 
-      {/* Metric Editor Dialog */}
       <MetricEditorDialogV2
         open={editorOpen}
-        onOpenChange={(v) => {
-          setEditorOpen(v);
-          if (!v) setEditingMetric(null);
+        onOpenChange={(open) => {
+          setEditorOpen(open);
+          if (!open) setEditing(null);
         }}
-        metric={editingMetric}
-        onSave={handleSave}
+        metric={editing}
+        onSave={save}
         isSaving={createMetric.isPending || updateMetric.isPending}
-        existingNames={existingNames}
+        existingNames={metrics.map((m) => m.name)}
       />
     </div>
   );

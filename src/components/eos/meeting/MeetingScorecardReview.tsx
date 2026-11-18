@@ -1,170 +1,137 @@
-import { useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useMemo, useState } from 'react';
+import { Presentation } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
+import { NumberEntry } from '@/components/eos/scorecard-review/NumberEntry';
+import { ScorecardDiscussDialog } from '@/components/eos/scorecard-review/ScorecardDiscussDialog';
+import { StatusPill } from '@/components/eos/scorecard-review/StatusPill';
+import { STATUS_STYLE } from '@/components/eos/scorecard-review/statusStyle';
 import { useScorecardMetrics } from '@/hooks/useScorecardMetrics';
-import type { EosScorecardMetric } from '@/types/eos';
-import { BUCKET_LABEL, classifyForReview, sortForReview, type ReviewBucket } from './scorecardReview';
+import { discussionAreas } from '@/features/eos-scorecard/discussion';
+import {
+  aimText,
+  buildMeasures,
+  countStatuses,
+  groupAreas,
+  headlineSentence,
+  lastCompletedWeekKey,
+  weekLabel,
+  type Measure,
+} from '@/features/eos-scorecard/scorecardView';
+import { useOwnerNames } from '@/features/eos-scorecard/useOwnerNames';
 
 interface Props {
-  metrics: EosScorecardMetric[];
-  /** Configuration scorecard_metric_cap: how many to-discuss metrics start expanded. The rest stay one tap away. */
-  cap: number;
-}
-
-const PILL: Record<ReviewBucket, string> = {
-  off_track: 'bg-destructive/10 text-destructive border-destructive/30',
-  at_risk: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30',
-  stale: 'bg-muted text-muted-foreground border-border',
-  no_data: 'bg-muted text-muted-foreground border-border',
-  on_track: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30',
-};
-
-function formatLatest(value: number | undefined, unit: string | undefined): string {
-  if (value === undefined || value === null) return 'no entry';
-  return `${value}${unit && unit !== 'Count' ? ` ${unit}` : ''}`;
+  /** The live meeting, so an issue raised or a note written lands in this meeting. */
+  meeting?: { id?: string; segmentId?: string; type?: string | null; onIssueRaised?: () => void };
 }
 
 /**
- * L10 Scorecard segment body: every active metric, exceptions first.
- * Replaces "the first N metrics by display order" (which hid anything after
- * position N, including the CST metrics) with the metrics that actually
- * need the room's attention. On-track metrics stay closed.
+ * L10 Scorecard segment: the week's scorecard as a short list of areas, with a Discuss button that
+ * presents them one at a time. Read the number, do not solve it here: anything off track goes to IDS.
  */
-export function MeetingScorecardReview({ metrics, cap }: Props) {
-  const { metrics: statusMetrics } = useScorecardMetrics();
+export function MeetingScorecardReview({ meeting }: Props) {
+  const { metrics, isLoading, recordEntry } = useScorecardMetrics(false);
+  const ownerNames = useOwnerNames();
+  const weekKey = useMemo(() => lastCompletedWeekKey(), []);
+  const [discussOpen, setDiscussOpen] = useState(false);
+  const [startAt, setStartAt] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  const rows = useMemo(() => {
-    const byId = new Map(statusMetrics.map((m) => [m.id, m]));
-    const now = new Date();
-    return sortForReview(
-      metrics.map((metric) => {
-        const live = byId.get(metric.id);
-        return {
-          metric,
-          bucket: classifyForReview(live?.latestStatus, live?.latestEntry?.week_ending, now),
-          latest: live?.latestEntry ? (live.latestEntry.actual_value ?? live.latestEntry.value) : undefined,
-        };
-      }),
-    );
-  }, [metrics, statusMetrics]);
+  const measures = useMemo(() => buildMeasures(metrics, weekKey), [metrics, weekKey]);
+  const areas = useMemo(() => groupAreas(measures), [measures]);
+  const counts = useMemo(() => countStatuses(measures), [measures]);
+  const needRoom = useMemo(() => discussionAreas(areas, { needsRoomOnly: true }).length, [areas]);
+  const waiting = measures.filter((m) => m.status === 'waiting' && m.source !== 'automatic');
 
-  const attention = rows.filter((r) => r.bucket !== 'on_track');
-  const onTrack = rows.filter((r) => r.bucket === 'on_track');
-
-  // Which metrics show their entry form. The default (the first `cap` to-discuss
-  // metrics) is captured once, when the status data first arrives. Re-deriving it
-  // on every render would drop a metric's form the moment recording a value turns
-  // it green and moves it out of the to-discuss list.
-  const defaultExpanded = useRef<Set<string> | null>(null);
-  if (defaultExpanded.current === null && statusMetrics.length > 0) {
-    defaultExpanded.current = new Set(attention.slice(0, Math.max(cap, 0)).map((r) => r.metric.id));
-  }
-  const [open, setOpen] = useState<Set<string> | null>(null);
-  const expanded = open ?? defaultExpanded.current ?? new Set<string>();
-  const toggle = (id: string) => {
-    const next = new Set(expanded);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setOpen(next);
+  const open = (category: string | null) => {
+    setStartAt(category);
+    setDiscussOpen(true);
   };
 
-  // The on-track list stays closed by default, but opens (and stays open) while
-  // any of its metrics is being edited, so a value that was just recorded is not
-  // hidden behind a collapsed section.
-  const [showOnTrack, setShowOnTrack] = useState(false);
-  const onTrackVisible = showOnTrack || onTrack.some((r) => expanded.has(r.metric.id));
+  const saveNumber = (m: Measure, value: number) => {
+    setSavingId(m.id);
+    recordEntry.mutate({ metric: m.metric, value, weekEnding: weekKey }, { onSettled: () => setSavingId(null) });
+  };
+
+  if (isLoading) return <Skeleton className="h-48 w-full rounded-xl" aria-busy="true" />;
+
+  if (measures.length === 0) {
+    return (
+      <Card className="p-6">
+        <p className="text-center text-sm text-muted-foreground">No scorecard measures yet. Add them on the Scorecard page.</p>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        <span>
-          <span className="font-semibold tabular-nums">{attention.length}</span> to discuss
-        </span>
-        <span className="text-muted-foreground">
-          <span className="tabular-nums">{onTrack.length}</span> on track
-        </span>
-        <span className="text-muted-foreground text-xs">
-          Read the number, do not discuss it. Anything off track goes to IDS or becomes a To-Do.
-        </span>
-      </div>
+    <div className="space-y-4">
+      <Card className="space-y-3 border-0 bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white">
+        <p className="text-sm font-semibold text-white/80">Week of {weekLabel(weekKey)}</p>
+        <p className="text-2xl font-bold leading-snug">{headlineSentence(counts)}</p>
+        <Button type="button" variant="secondary" className="gap-2" onClick={() => open(null)}>
+          <Presentation className="h-4 w-4" aria-hidden />
+          Discuss the scorecard
+        </Button>
+      </Card>
 
-      {attention.length === 0 && (
-        <Card className="p-4 text-sm text-muted-foreground">Every metric is on track. Nothing to carry forward.</Card>
-      )}
+      <p className="text-sm text-muted-foreground">
+        {needRoom === 0 ? 'No area needs the room.' : `${needRoom} ${needRoom === 1 ? 'area needs' : 'areas need'} the room.`} Read the number, do not solve it here. Anything off track goes to IDS.
+      </p>
 
-      {attention.map(({ metric, bucket, latest }) => {
-        const isOpen = expanded.has(metric.id);
-        return (
-          <div key={metric.id} className="space-y-2">
-            <button
-              type="button"
-              onClick={() => toggle(metric.id)}
-              aria-expanded={isOpen}
-              className="w-full flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left hover:bg-muted/40"
-            >
-              {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-              <span className="font-semibold min-w-0 flex-1 truncate">{metric.name}</span>
-              <span className="text-sm tabular-nums text-muted-foreground whitespace-nowrap">
-                {formatLatest(latest, metric.unit)}
-                {metric.target_value !== undefined && metric.target_value !== null && (
-                  <> of {metric.target_value}{metric.unit && metric.unit !== 'Count' ? ` ${metric.unit}` : ''}</>
-                )}
-              </span>
-              <Badge variant="outline" className={cn('text-xs whitespace-nowrap', PILL[bucket])}>
-                {BUCKET_LABEL[bucket]}
-              </Badge>
-            </button>
-            {isOpen && <ScorecardEntryGrid metric={metric} />}
-          </div>
-        );
-      })}
-
-      {onTrack.length > 0 && (
-        <div className="rounded-lg border">
-          <button
-            type="button"
-            onClick={() => setShowOnTrack(!onTrackVisible)}
-            aria-expanded={onTrackVisible}
-            className="w-full px-3 py-2 text-sm font-semibold flex items-center gap-2 text-left"
-          >
-            {onTrackVisible ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-            {onTrack.length} on track
-            <Badge variant="outline" className={cn('text-xs', PILL.on_track)}>
-              {onTrackVisible ? 'Select a metric to record this week' : 'Closed by default'}
-            </Badge>
-          </button>
-          {onTrackVisible && (
-            <div className="space-y-2 px-3 pb-3">
-              <div className="flex flex-wrap gap-1.5">
-                {onTrack.map(({ metric, latest }) => (
-                  <button
-                    key={metric.id}
-                    type="button"
-                    onClick={() => toggle(metric.id)}
-                    aria-pressed={expanded.has(metric.id)}
-                    className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Badge
-                      variant="outline"
-                      className={cn('text-xs cursor-pointer', PILL.on_track, expanded.has(metric.id) && 'ring-1 ring-current')}
-                    >
-                      {metric.name} {formatLatest(latest, metric.unit)}
-                    </Badge>
-                  </button>
-                ))}
+      <ul className="grid gap-3 md:grid-cols-2">
+        {areas.map((a) => {
+          const c = countStatuses(a.measures);
+          return (
+            <li key={a.category} className={cn('flex flex-col gap-2 rounded-xl border border-l-[5px] bg-card p-4', STATUS_STYLE[a.worst].edge)}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-lg font-bold">{a.name}</h3>
+                <StatusPill status={a.worst} />
               </div>
-              {onTrack
-                .filter(({ metric }) => expanded.has(metric.id))
-                .map(({ metric }) => (
-                  <ScorecardEntryGrid key={metric.id} metric={metric} />
-                ))}
-            </div>
-          )}
-        </div>
+              <p className="text-sm text-muted-foreground">
+                {c.on_track} of {c.total} on track
+                {c.nearly > 0 ? ` · ${c.nearly} nearly` : ''}
+                {c.off_track > 0 ? ` · ${c.off_track} off track` : ''}
+                {c.waiting > 0 ? ` · ${c.waiting} waiting for a number` : ''}
+              </p>
+              <Button type="button" variant="outline" size="sm" className="mt-auto self-start" onClick={() => open(a.category)}>
+                Discuss this area
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {waiting.length > 0 && (
+        <section aria-label="Waiting for a number" className="space-y-2">
+          <h3 className="text-base font-bold">Waiting for a number ({waiting.length})</h3>
+          <ul className="space-y-2">
+            {waiting.map((m) => (
+              <li key={m.id} className="grid items-center gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="min-w-0">
+                  <p className="font-semibold">{m.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Aim: {aimText(m)} · Owner: {m.ownerId ? ownerNames[m.ownerId] ?? 'Nobody yet' : 'Nobody yet'}
+                  </p>
+                </div>
+                <NumberEntry label={`This week’s number for ${m.name}`} unit={m.unit} saving={savingId === m.id} onSave={(v) => saveNumber(m, v)} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
+
+      <ScorecardDiscussDialog
+        open={discussOpen}
+        onOpenChange={setDiscussOpen}
+        areas={areas}
+        weekKey={weekKey}
+        weekLabel={weekLabel(weekKey)}
+        ownerNames={ownerNames}
+        startAtCategory={startAt}
+        meeting={meeting}
+      />
     </div>
   );
 }

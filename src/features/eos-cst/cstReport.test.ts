@@ -3,8 +3,10 @@ import {
   certificateDelta,
   csvFilename,
   formatPercent,
+  lastActiveText,
   percent,
   periodLabel,
+  reportHeadline,
   reportToCsv,
   shiftAnchor,
   sydneyToday,
@@ -139,5 +141,33 @@ describe('reportToCsv', () => {
 describe('csvFilename', () => {
   it('names the period and its first day', () => {
     expect(csvFilename(report())).toBe('cst-report-month-2026-10-31.csv');
+  });
+});
+
+describe('lastActiveText', () => {
+  const now = new Date('2026-11-18T03:00:00Z');
+  it('says never when there is no activity', () => {
+    expect(lastActiveText(null, now)).toBe('Never');
+    expect(lastActiveText(undefined, now)).toBe('Never');
+  });
+  it('says how long ago in plain words', () => {
+    expect(lastActiveText('2026-11-18T01:00:00Z', now)).toBe('Today');
+    expect(lastActiveText('2026-11-17T01:00:00Z', now)).toBe('Yesterday');
+    expect(lastActiveText('2026-11-10T03:00:00Z', now)).toBe('8 days ago');
+    expect(lastActiveText('2026-10-14T03:00:00Z', now)).toBe('5 weeks ago');
+    expect(lastActiveText('2026-07-01T03:00:00Z', now)).toBe('4 months ago');
+  });
+});
+
+describe('reportHeadline', () => {
+  const totals = { live_rtos: 57, client_users: 191, active_users: 36, rtos_active: 21, rtos_with_users: 55, never_signed_in: 30, certificates: 4, prior_certificates: 2 };
+  it('sums up users and certificates in one sentence', () => {
+    expect(reportHeadline(totals, 'November 2026')).toBe('November 2026: 36 of 191 client users (19%) used the portal, and 4 certificates were issued.');
+  });
+  it('uses the singular for one certificate', () => {
+    expect(reportHeadline({ ...totals, certificates: 1 }, 'Week')).toContain('1 certificate was issued');
+  });
+  it('copes with no client users', () => {
+    expect(reportHeadline({ ...totals, client_users: 0, active_users: 0 }, 'Week')).toContain('No client users yet');
   });
 });
