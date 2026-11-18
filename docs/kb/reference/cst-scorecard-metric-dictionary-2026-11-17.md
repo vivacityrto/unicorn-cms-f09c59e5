@@ -81,7 +81,7 @@ Each automatic client measure explains itself in the L10 Scorecard deck (a short
 
 Limits: the people list and last-active are as of today, not as of the week; "Enrolled, but nobody finished" only lists courses with three or more enrolments; manual measures have no breakdown. Ask Viv (below) is separate from these breakdowns and is on demand only.
 
-## Ask Viv: an AI read of one measure (built 18 November 2026, not yet deployed)
+## Ask Viv: an AI read of one measure (built and deployed 18 November 2026)
 
 An "Ask Viv" button on each measure in the L10 deck, and at the top of every measure's full report, asks the `scorecard-insight` Edge Function for a short plain-language read: what is happening, what may be behind it, what to try this week and who it falls to. It runs only when someone presses the button, needs the staff AI permission (`staff.ai.use`), stores nothing and creates nothing, and is labelled as written by AI. The model sees the measure, its recent numbers and, for the automatic client measures, the same client facts as the breakdown (business names, counts, last active, CSC names). It never receives learner names or email addresses. Anthropic's API is called directly, as Ask Viv does.
 
@@ -91,6 +91,14 @@ An "Ask Viv" button on each measure in the L10 deck, and at the top of every mea
 - The L10 Scorecard segment used a different component from the Scorecard page, with binary status and a five-metric cap that showed only the first five by display order, so new CST metrics would never have appeared in the meeting. **Addressed** by the exceptions-first segment, then replaced by the discussion deck (see Screens). The older entry grid is no longer used by the segment.
 - Likely week-key mismatch (not confirmed against data): the refresh function keys entries by Sunday, the L10 grid by Monday.
 - The last 8 L10s averaged 94 minutes against 90 planned.
+
+## Decisions made on 18 November 2026
+
+- **Cohort:** a Live Client also needs lifecycle status active (53 clients, was 57). Applied to production.
+- **Owners:** unchanged. Angela Connell-Richards owns the portal, certificate and compliance measures and the manual non-sales numbers; Dave Richards owns the five sales and revenue measures. No separate CST lead was named.
+- **Entries recorded as Carl:** the 65 automatic entries stay as recorded (source "system", entered by Carl Simpao). Nothing in the app shows who entered a number today; if that is added, show "Automatic" for source "system".
+- **Two portal measures:** "People using the portal" archived; "Clients using the portal" stays.
+- **Targets:** unchanged (portal 50% of clients, certificates 3 a week, never signed in 20 or fewer, quiet RTOs 30 or fewer).
 
 ## Open decisions
 

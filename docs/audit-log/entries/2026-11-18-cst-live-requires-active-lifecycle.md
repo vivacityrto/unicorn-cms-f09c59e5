@@ -2,7 +2,7 @@
 
 **Trigger:** Carl chose, from the open scorecard discussion items, that "Live Client" for the CST report and scorecard must also be lifecycle-active, so suspended and closed clients stop counting.
 **Scope:** one migration replacing two internal functions in place (same signatures), plus the report's definition text, the metric dictionary and a static test.
-**Status:** PR open. Not yet applied to production; applying needs Carl's explicit go-ahead.
+**Status:** merged in PR 1542 (commit `19a79ba`). Migration `20261118110000_cst_live_requires_active_lifecycle.sql` applied to production on 18 November 2026 on Carl's explicit go-ahead, with a read-only postflight that matched the design (see "Production").
 
 ## What changed
 
@@ -22,3 +22,16 @@
 - The Manage Tenants "Live" filter is unchanged and still counts suspended and closed clients, so it will read 57 against this report's 53. Its CSC load chips already use lifecycle active.
 - Absolute Medical Response's status should be checked by whoever owns client records.
 - Rollback: `supabase/migrations/rollback/20261118110000_cst_live_requires_active_lifecycle.down.sql`.
+
+## Production
+
+Applied on 18 November 2026 through the Supabase MCP (`apply_migration`, name `cst_live_requires_active_lifecycle`), text identical to the file merged to `main`.
+
+1. **Target:** `yxkgdalkbrriasiyyrwk`.
+2. **Preflight, read-only:** each function existed once and neither had the lifecycle condition; 57 Live Clients; no migration with that version recorded.
+3. **Postflight, read-only:** each function still exists exactly once and now carries `lifecycle_status = 'active'`; both are `SECURITY DEFINER` with an empty `search_path`; `anon` and `authenticated` cannot execute either, `service_role` can; the Live cohort reads 53 and none of the clients left is non-active; `cst_last_activity()` returns activity for 34 RTOs; the 57 rows of the week-ending 15 November snapshot are untouched; the migration is recorded.
+4. **Not checked:** a signed-in staff load of the CST report or Scorecard after the change.
+
+**Effect:** the report and the Scorecard measures count 53 Live Clients instead of 57 from the next run. Past snapshots keep their original cohort, so the trend can step down once.
+
+**Rollback:** `supabase/migrations/rollback/20261118110000_cst_live_requires_active_lifecycle.down.sql`.
