@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { breakdownKind } from '@/features/eos-scorecard/cstBreakdown';
 import { aimText, formatValue, shortDate, type Area, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { AimBar } from './AimBar';
+import { AimInfo } from './AimInfo';
 import { MiniTrend } from './MiniTrend';
 import { NumberEntry } from './NumberEntry';
 import { StatusPill } from './StatusPill';
@@ -69,7 +70,7 @@ function MeasureRow({ measure, ownerNames, canManage, savingId, onSaveNumber, on
             )}
           </div>
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Against the aim</h4>
+            <h4 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Against the aim <AimInfo measure={measure} /></h4>
             <AimBar measure={measure} />
           </div>
           <div className="space-y-3">

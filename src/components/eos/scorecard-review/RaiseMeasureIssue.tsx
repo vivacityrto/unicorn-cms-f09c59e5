@@ -56,7 +56,7 @@ export function RaiseMeasureIssue({ measure, weekKey, ownerName, existing, exist
   };
 
   return (
-    <div className="space-y-2" aria-label={`Raise an issue about ${measure.name}`}>
+    <div className="min-w-[7.5rem] flex-1 space-y-1.5" aria-label={`Raise an issue about ${measure.name}`}>
       {raisedNow && (
         <p role="status" className="flex items-start gap-2 text-sm text-green-700 dark:text-green-400">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -77,7 +77,7 @@ export function RaiseMeasureIssue({ measure, weekKey, ownerName, existing, exist
       {/* The form opens over the card rather than inside it, so raising an issue never pushes the slide taller. */}
       <Popover open={expanded} onOpenChange={setExpanded}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={existingState === 'loading'}>
+          <Button type="button" variant="outline" size="sm" className="h-8 w-full gap-1.5 whitespace-nowrap px-2 text-xs" disabled={existingState === 'loading'}>
             {open.length > 0 || raisedNow ? <Plus className="h-4 w-4" aria-hidden /> : <MessageSquareWarning className="h-4 w-4" aria-hidden />}
             {open.length > 0 || raisedNow ? 'Raise another issue' : 'Raise it for IDS'}
           </Button>

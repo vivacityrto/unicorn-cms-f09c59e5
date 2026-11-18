@@ -7,6 +7,7 @@ import { breakdownKind } from '@/features/eos-scorecard/cstBreakdown';
 import { needsRoom, type AreaOutcome } from '@/features/eos-scorecard/discussion';
 import type { MetricIssue, ScorecardNote } from '@/features/eos-scorecard/useScorecardDiscussion';
 import { AimBar } from './AimBar';
+import { AimInfo } from './AimInfo';
 import { AreaNotes } from './AreaNotes';
 import { MetricReportDialog } from './MetricReportDialog';
 import { MiniTrend } from './MiniTrend';
@@ -40,8 +41,8 @@ interface ScorecardDiscussSlideProps {
 function columnsFor(count: number): string {
   if (count <= 1) return 'grid-cols-1';
   if (count === 2) return 'grid-cols-1 md:grid-cols-2';
-  if (count === 3) return 'grid-cols-1 md:grid-cols-2 2xl:grid-cols-3';
-  if (count === 4) return 'grid-cols-1 md:grid-cols-2 2xl:grid-cols-4';
+  if (count === 3) return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+  if (count === 4) return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4';
   if (count <= 6) return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
   return 'grid-cols-1 md:grid-cols-3 2xl:grid-cols-4';
 }
@@ -59,11 +60,11 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
   return (
     <article
       aria-label={`Area: ${area.name}`}
-      className="flex flex-col gap-3 lg:grid lg:min-h-full lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]"
+      className="flex flex-col gap-3 lg:grid lg:min-h-full lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-4 xl:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]"
     >
       <div className="flex min-w-0 flex-col gap-3">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 ref={headingRef} tabIndex={-1} data-slide-heading className="break-words text-2xl font-bold leading-tight outline-none lg:text-3xl xl:text-4xl">{area.name}</h2>
+          <h2 ref={headingRef} tabIndex={-1} data-slide-heading className="break-words text-xl font-bold leading-tight outline-none lg:text-2xl xl:text-3xl">{area.name}</h2>
           <StatusPill status={area.worst} />
           <span className="text-sm text-muted-foreground">
             {area.measures.length} {area.measures.length === 1 ? 'measure' : 'measures'}
@@ -71,9 +72,9 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
           </span>
         </header>
 
-        <section aria-label="What to ask the room" className="rounded-xl border-l-4 border-l-primary bg-muted/40 px-3 py-2">
-          <p className="flex items-start gap-2.5 text-base font-medium leading-snug xl:text-lg">
-            <Lightbulb className="mt-1 h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <section aria-label="What to ask the room" className="rounded-lg border-l-4 border-l-primary bg-muted/40 px-3 py-1.5">
+          <p className="flex items-start gap-2 text-sm font-medium leading-snug xl:text-base">
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
             {areaCue(area)}
           </p>
         </section>
@@ -83,38 +84,38 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
             const owner = m.ownerId ? ownerNames[m.ownerId] ?? null : null;
             const explained = breakdownKind(m.metric.metric_key) !== null;
             return (
-              <li key={m.id} className={cn('flex min-w-0 flex-col gap-2 rounded-xl border border-l-[5px] bg-card p-3 xl:p-4', STATUS_STYLE[m.status].edge)}>
+              <li key={m.id} className={cn('flex min-w-0 flex-col gap-2 rounded-xl border border-l-[5px] bg-card p-3', STATUS_STYLE[m.status].edge)}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="break-words text-base font-bold leading-snug xl:text-lg">{m.name}</h3>
-                    <p className="text-xs text-muted-foreground xl:text-sm">
-                      Owner: {owner ?? 'Nobody yet'} · Aim: {aimText(m)}
+                    <h3 className="break-words text-sm font-bold leading-snug xl:text-base">{m.name}</h3>
+                    <p className="text-[11px] text-muted-foreground xl:text-xs">
+                      Owner: {owner ?? 'Nobody yet'} · Aim: {aimText(m)} <AimInfo measure={m} />
                     </p>
                   </div>
                   <StatusPill status={m.status} />
                 </div>
 
                 <div className="grid items-end gap-x-3 gap-y-1 grid-cols-[auto_minmax(0,1fr)]">
-                  <span className="text-4xl font-bold leading-none tabular-nums xl:text-5xl">{formatValue(m.unit, m.value)}</span>
+                  <span className="text-3xl font-bold leading-none tabular-nums xl:text-4xl">{formatValue(m.unit, m.value)}</span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold">{gapText(m)}</p>
+                    <p className="text-xs font-semibold">{gapText(m)}</p>
                     <AimBar measure={m} showCaption={false} />
                   </div>
                 </div>
-                <MiniTrend measure={m} className="hidden min-w-0 2xl:block" />
+                <MiniTrend measure={m} compact className="min-w-0" />
 
-                {!dense && m.description && <p className="line-clamp-2 text-sm text-muted-foreground">{m.description}</p>}
+                {!dense && m.description && <p className="line-clamp-2 text-xs text-muted-foreground" title={m.description}>{m.description}</p>}
 
                 {m.value === null && m.source !== 'automatic' && onRecordNumber && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-muted/50 p-2.5">
-                    <p className="text-sm text-muted-foreground">Type this week’s number. It saves to the scorecard.</p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-muted/50 p-2">
+                    <p className="text-xs text-muted-foreground">Type this week’s number. It saves to the scorecard.</p>
                     <NumberEntry label={`This week’s number for ${m.name}`} unit={m.unit} saving={savingMeasureId === m.id} onSave={(v) => onRecordNumber(m, v)} />
                   </div>
                 )}
 
                 {explained && <WhyThisNumber measure={m} weekKey={weekKey} onOpenReport={() => setReport({ measure: m, ask: false })} />}
 
-                <div className="mt-auto flex flex-wrap items-start gap-2">
+                <div className="mt-auto flex flex-wrap items-end gap-2">
                   {needsRoom(m) && (
                     <RaiseMeasureIssue
                       measure={m}
@@ -128,8 +129,8 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
                     />
                   )}
                   {m.value !== null && (
-                    <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => setReport({ measure: m, ask: true })}>
-                      <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+                    <Button type="button" size="sm" variant="outline" className="h-8 min-w-[7.5rem] flex-1 gap-1.5 whitespace-nowrap px-2 text-xs" onClick={() => setReport({ measure: m, ask: true })}>
+                      <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
                       Ask Viv
                     </Button>
                   )}
@@ -148,7 +149,7 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
         myUserId={myUserId}
         ownerNames={ownerNames}
         onSaved={() => onOutcome(area.category, 'noted')}
-        className="lg:sticky lg:top-0 lg:h-[calc(100dvh-9.5rem)] lg:min-h-[22rem] lg:self-start"
+        className="lg:min-h-[16rem]"
       />
       {outcomes.length > 0 && <p className="sr-only">Recorded: {outcomes.join(', ')}</p>}
 

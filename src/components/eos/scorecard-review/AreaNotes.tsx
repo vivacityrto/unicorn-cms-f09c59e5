@@ -62,12 +62,12 @@ export function AreaNotes({ category, areaName, notes, myUserId, ownerNames, onS
 
   return (
     <section aria-label={`Notes for ${areaName}`} className={cn('flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-sm', className)}>
-      <header className="flex items-center gap-3 border-b bg-gradient-to-r from-[#44235F]/15 to-[#7130A0]/10 px-4 py-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <NotebookPen className="h-5 w-5" aria-hidden />
+      <header className="flex items-center gap-2.5 border-b bg-gradient-to-r from-[#44235F]/15 to-[#7130A0]/10 px-3 py-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <NotebookPen className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold leading-tight">Meeting notes</h3>
+          <h3 className="text-sm font-bold leading-tight">Meeting notes</h3>
           <p className="truncate text-xs text-muted-foreground">{areaName}</p>
         </div>
         <Button
@@ -84,7 +84,7 @@ export function AreaNotes({ category, areaName, notes, myUserId, ownerNames, onS
         </Button>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
         {others.length > 0 && (
           <ul className="space-y-2">
             {others.map((n) => {
@@ -153,7 +153,7 @@ export function AreaNotes({ category, areaName, notes, myUserId, ownerNames, onS
             maxLength={MAX}
             placeholder="What was said, decided or agreed? Type, or press Dictate and talk."
             disabled={!meetingId}
-            className="min-h-32 flex-1 resize-none text-base leading-relaxed"
+            className="min-h-32 flex-1 resize-none text-sm leading-relaxed"
           />
           {listeningHere && (
             <p className="flex items-center gap-1.5 text-xs text-red-700 dark:text-red-300" role="status">

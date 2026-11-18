@@ -8,18 +8,18 @@ const TONE = {
 } as const;
 
 /** Two parts of a whole as one bar, with each part named and counted underneath, so colour is never the only signal. */
-export function SplitBar({ split, className }: { split: readonly Split[]; className?: string }) {
+export function SplitBar({ split, className, compact = false }: { split: readonly Split[]; className?: string; compact?: boolean }) {
   const total = split.reduce((sum, part) => sum + part.count, 0);
   if (split.length === 0 || total === 0) return null;
   const summary = split.map((part) => `${part.count} ${part.label.toLowerCase()}`).join(', ');
   return (
     <div className={className}>
-      <div role="img" aria-label={summary} className="flex h-3 overflow-hidden rounded-full bg-muted">
+      <div role="img" aria-label={summary} className={cn('flex overflow-hidden rounded-full bg-muted', compact ? 'h-2' : 'h-3')}>
         {split.map((part) => (
           <div key={part.label} className={cn('h-full', TONE[part.tone].bar)} style={{ width: `${(part.count / total) * 100}%` }} />
         ))}
       </div>
-      <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
+      <ul className={cn('flex flex-wrap gap-y-0', compact ? 'mt-1 gap-x-3 text-xs' : 'mt-1.5 gap-x-4 text-sm')}>
         {split.map((part) => {
           const Mark = TONE[part.tone].mark;
           return (
