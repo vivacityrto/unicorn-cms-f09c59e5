@@ -9,7 +9,7 @@
 | Term | Meaning here | Source of truth |
 |---|---|---|
 | **CST** | The primary CSCs: one primary assignment per RTO that has not ended. | `tenant_csc_assignments` where `is_primary` and `ended_at` is null (the lookup Manage Tenants uses) |
-| **Live Clients** | RTOs with status Active, On hold, In Arears or Warning, not archived, RTO accounts only (tenant metadata has no `academy_solo`). 57 RTOs on 17 November 2026. | Manage Tenants `LIVE_STATUSES` and its default "Live" filter |
+| **Live Clients** | RTOs with status Active, On hold, In Arears or Warning, lifecycle status active, not archived, RTO accounts only (tenant metadata has no `academy_solo`). 57 RTOs on 17 November 2026 under the earlier rule; 53 on 18 November 2026 once lifecycle active is required (the four dropped are suspended or closed). | Manage Tenants `LIVE_STATUSES` and its default "Live" filter, plus the lifecycle condition the CSC load chips already use. The Manage Tenants "Live" filter alone still counts suspended and closed clients |
 | **Client user** | A `tenant_users` row of a Live RTO whose profile is not `is_vivacity_internal` and not archived. 191 users on 17 November 2026, against 215 raw rows (18 are Vivacity staff). | `tenant_users` joined to `users` |
 | **Client activity** | Any of these by a client user of that RTO: a portal page view, a `client_login` timeline event, a message sent or read, an Academy lesson completed, or an Academy enrolment the learner made themselves (`metadata.source` is `self_enrol`). List approved by Carl on 17 November 2026, then narrowed on the enrolment item (next row). | `client_portal_page_views`, `client_timeline_events` |
 | **Enrolments that do not count** | `auto_package` and `auto_all_clients` (the system enrolled the learner: 382 of 626 enrolment events in the last 180 days), `staff_impersonation` and `manual`. They are recorded against the learner but are not something the client did, so counting them would report activity nobody performed. | `client_timeline_events.metadata.source` |
@@ -47,7 +47,7 @@ For each Live RTO: take the client users above; take distinct `(tenant_id, user_
 - Manage Tenants' member count is every `tenant_users` row, including Vivacity staff and archived users. It is not the denominator.
 - `tenant_members` (used by the Academy staff-stats RPC) disagrees with `tenant_users`: 13 rows only in `tenant_members`, 5 only in `tenant_users`, across Live RTOs. Treat as a flag for the CST, not a silent correction.
 - `user_activity.tenant_id` is null on all 1,690 rows, so that table cannot give per-RTO activity.
-- Manage Tenants' CSC load chips use `lifecycle_status = 'active'` (54 RTOs), not the Live definition (57). **Open:** choose one cohort for both screens.
+- Manage Tenants' CSC load chips use `lifecycle_status = 'active'`, not the earlier Live definition. **Decided 18 November 2026:** the scorecard and CST report now require lifecycle active too (53 RTOs), matching the chips. The Manage Tenants "Live" filter is unchanged. Absolute Medical Response has status Active but lifecycle closed, which looks like a stale record to check.
 
 ## Data design (built; applied to `unicorn-qa` and production)
 
@@ -78,7 +78,7 @@ Redesigned on 18 November 2026 after Carl's feedback that the first versions wer
 
 ## Open decisions
 
-1. Cohort: Live (57) or lifecycle-active (54) for Manage Tenants chips and this scorecard.
+1. ~~Cohort~~ Decided 18 November 2026: Live and lifecycle active (53).
 2. Targets: the CST sets the five values above.
 3. CSC attribution when an assignment changes mid-period: recommend the CSC as at that week, which the snapshot design provides.
 4. Where the CST report lives (EOS area or the Manage Tenants area).
