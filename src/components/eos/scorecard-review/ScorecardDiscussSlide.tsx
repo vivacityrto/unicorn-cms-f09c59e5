@@ -8,6 +8,7 @@ import { needsRoom, type AreaOutcome } from '@/features/eos-scorecard/discussion
 import type { MetricIssue, ScorecardNote } from '@/features/eos-scorecard/useScorecardDiscussion';
 import { AimBar } from './AimBar';
 import { AimInfo } from './AimInfo';
+import { AreaMovement, CompareLine } from '@/components/eos/compare/CompareLine';
 import { AreaNotes } from './AreaNotes';
 import { MetricReportDialog } from './MetricReportDialog';
 import { MiniTrend } from './MiniTrend';
@@ -66,6 +67,7 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
         <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 ref={headingRef} tabIndex={-1} data-slide-heading className="break-words text-xl font-bold leading-tight outline-none lg:text-2xl xl:text-3xl">{area.name}</h2>
           <StatusPill status={area.worst} />
+          <AreaMovement measures={area.measures} />
           <span className="text-sm text-muted-foreground">
             {area.measures.length} {area.measures.length === 1 ? 'measure' : 'measures'}
             {area.who ? ` · ${area.who}` : ''}
@@ -102,7 +104,8 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
                     <AimBar measure={m} showCaption={false} />
                   </div>
                 </div>
-                <MiniTrend measure={m} compact className="min-w-0" />
+                <MiniTrend measure={m} compact caption={false} className="min-w-0" />
+                <CompareLine measure={m} />
 
                 {!dense && m.description && <p className="line-clamp-2 text-xs text-muted-foreground" title={m.description}>{m.description}</p>}
 
