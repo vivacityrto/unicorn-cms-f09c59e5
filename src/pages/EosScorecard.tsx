@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,6 +7,8 @@ import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { MetricEditorDialogV2 } from '@/components/eos/scorecard2/MetricEditorDialogV2';
 import { AreaAccordion } from '@/components/eos/scorecard-review/AreaAccordion';
 import { MeasureCard } from '@/components/eos/scorecard-review/MeasureCard';
+import { MetricReportDialog } from '@/components/eos/scorecard-review/MetricReportDialog';
+import { breakdownKind } from '@/features/eos-scorecard/cstBreakdown';
 import { NumberEntry } from '@/components/eos/scorecard-review/NumberEntry';
 import { StatusPill } from '@/components/eos/scorecard-review/StatusPill';
 import { usePermission } from '@/hooks/usePermission';
@@ -74,6 +75,7 @@ export default function EosScorecard() {
   const [editing, setEditing] = useState<ScorecardMetric | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [archiving, setArchiving] = useState<Measure | null>(null);
+  const [reporting, setReporting] = useState<Measure | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -173,10 +175,10 @@ export default function EosScorecard() {
                     areaName={areaName(m.category)}
                     ownerName={ownerOf(m)}
                     action={
-                      m.category === 'CST' ? (
-                        <Link to="/eos/cst-report" className="font-semibold text-primary hover:underline">
-                          See which clients &rsaquo;
-                        </Link>
+                      breakdownKind(m.metric.metric_key) ? (
+                        <button type="button" onClick={() => setReporting(m)} className="font-semibold text-primary hover:underline">
+                          Full report &rsaquo;
+                        </button>
                       ) : undefined
                     }
                   />
@@ -228,6 +230,7 @@ export default function EosScorecard() {
               onSaveNumber={saveNumber}
               onEdit={(m) => openEditor(m.metric)}
               onArchive={setArchiving}
+              onOpenReport={setReporting}
             />
           </section>
         </>
@@ -241,6 +244,8 @@ export default function EosScorecard() {
           <ArchivedMeasures onUnarchive={(id) => updateMetric.mutate({ id, is_archived: false, is_active: true })} />
         )}
       </section>
+
+      {reporting && <MetricReportDialog open onOpenChange={(open) => !open && setReporting(null)} measure={reporting} weekKey={weekKey} weekLabel={weekLabel(weekKey)} />}
 
       <ConfirmDialog
         open={archiving !== null}
