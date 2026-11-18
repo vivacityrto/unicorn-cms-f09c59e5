@@ -47,6 +47,13 @@ async function rows<T>(query: Query<T>): Promise<T[]> {
 
 const STALE = 5 * 60_000;
 const chunk = <T,>(items: readonly T[], size = 150): T[][] => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, i * size + size));
+
+/** Runs a lookup over a long list of ids a batch at a time, so no single request is too long. */
+export async function inChunks<T>(ids: readonly (string | number)[], run: (part: (string | number)[]) => Query<T>): Promise<T[]> {
+  const out: T[] = [];
+  for (const part of chunk(ids)) out.push(...(await rows(run(part))));
+  return out;
+}
 const fullName = (first: string | null, last: string | null, fallback: string) => `${first ?? ''} ${last ?? ''}`.trim() || fallback;
 
 interface SnapshotRow {
@@ -120,12 +127,16 @@ export function useCstWeekRows(weekKey: string, enabled = true) {
 /** The certificates issued in the week: who earned each one, from which client, for which course. */
 export function useCertificateDetail(weekKey: string, tenantIds: readonly number[], enabled = true) {
   const weekEnding = weekEndingOf(weekKey);
+  return useCertificatesBetween(addDays(weekEnding, -6), weekEnding, tenantIds, enabled);
+}
+
+/** The certificates issued between two Sydney days, inclusive: who earned each one, from which client, for which course. */
+export function useCertificatesBetween(from: string, to: string, tenantIds: readonly number[], enabled = true) {
   return useQuery({
-    queryKey: ['scorecard-certificate-detail', weekEnding, tenantIds.length],
+    queryKey: ['scorecard-certificate-detail', from, to, tenantIds.length],
     staleTime: STALE,
     enabled: enabled && tenantIds.length > 0,
     queryFn: async (): Promise<CertificateRow[]> => {
-      const from = addDays(weekEnding, -6);
       // Wide on purpose; the exact Sydney day is applied below.
       const certs = (
         await fetchAllPages((rangeFrom, rangeTo) =>
@@ -135,21 +146,22 @@ export function useCertificateDetail(weekKey: string, tenantIds: readonly number
             .is('revoked_at', null)
             .in('tenant_id', tenantIds)
             .gte('issued_at', `${addDays(from, -1)}T00:00:00Z`)
-            .lt('issued_at', `${addDays(weekEnding, 2)}T00:00:00Z`)
+            .lt('issued_at', `${addDays(to, 2)}T00:00:00Z`)
             .order('issued_at')
             .order('id')
             .range(rangeFrom, rangeTo),
         )
-      ).filter((c) => inSydneyRange(c.issued_at, from, weekEnding));
+      ).filter((c) => inSydneyRange(c.issued_at, from, to));
       if (certs.length === 0) return [];
 
       const courseIds = [...new Set(certs.map((c) => c.course_id))];
       const userIds = [...new Set(certs.map((c) => c.user_id))];
       const clientIds = [...new Set(certs.map((c) => c.tenant_id))];
+      // A year can have hundreds of recipients, which would overflow the request URL in one go, so each lookup is batched.
       const [courses, users, clients] = await Promise.all([
-        rows(read.from('academy_courses').select<{ id: string; title: string }>('id, title').in('id', courseIds)),
-        rows(read.from('users').select<{ user_uuid: string; first_name: string | null; last_name: string | null }>('user_uuid, first_name, last_name').in('user_uuid', userIds)),
-        rows(read.from('tenants').select<{ id: number; name: string }>('id, name').in('id', clientIds)),
+        inChunks(courseIds, (part) => read.from('academy_courses').select<{ id: string; title: string }>('id, title').in('id', part)),
+        inChunks(userIds, (part) => read.from('users').select<{ user_uuid: string; first_name: string | null; last_name: string | null }>('user_uuid, first_name, last_name').in('user_uuid', part)),
+        inChunks(clientIds, (part) => read.from('tenants').select<{ id: number; name: string }>('id, name').in('id', part)),
       ]);
       const courseTitle = new Map(courses.map((c) => [c.id, c.title]));
       const person = new Map(users.map((u) => [u.user_uuid, fullName(u.first_name, u.last_name, 'A learner')]));
@@ -171,13 +183,17 @@ export function useCertificateDetail(weekKey: string, tenantIds: readonly number
 /** Academy activity for the Live Clients over the 28 days ending with the week: enrolments, how, completions and courses. */
 export function useAcademyActivity(weekKey: string, tenantIds: readonly number[], enabled = true) {
   const weekEnding = weekEndingOf(weekKey);
+  return useAcademyBetween(addDays(weekEnding, -27), weekEnding, tenantIds, enabled);
+}
+
+/** Academy activity for the Live Clients between two Sydney days, inclusive: enrolments, how, completions and courses. */
+export function useAcademyBetween(from: string, to: string, tenantIds: readonly number[], enabled = true) {
   return useQuery({
-    queryKey: ['scorecard-academy-activity', weekEnding, tenantIds.length],
+    queryKey: ['scorecard-academy-activity', from, to, tenantIds.length],
     staleTime: STALE,
     enabled: enabled && tenantIds.length > 0,
     queryFn: async (): Promise<AcademyActivity> => {
-      const from = addDays(weekEnding, -27);
-      const wide = { from: `${addDays(from, -1)}T00:00:00Z`, to: `${addDays(weekEnding, 2)}T00:00:00Z` };
+      const wide = { from: `${addDays(from, -1)}T00:00:00Z`, to: `${addDays(to, 2)}T00:00:00Z` };
       type Enrolment = { course_id: string; tenant_id: number; source: string | null; enrolled_at: string | null; completed_at: string | null };
       const columns = 'course_id, tenant_id, source, enrolled_at, completed_at';
       const window = (column: 'enrolled_at' | 'completed_at') =>
@@ -194,8 +210,8 @@ export function useAcademyActivity(weekKey: string, tenantIds: readonly number[]
             .range(rangeFrom, rangeTo),
         );
       const [enrolledRows, completedRows] = await Promise.all([window('enrolled_at'), window('completed_at')]);
-      const enrolled = enrolledRows.filter((e) => inSydneyRange(e.enrolled_at, from, weekEnding));
-      const completed = completedRows.filter((e) => inSydneyRange(e.completed_at, from, weekEnding));
+      const enrolled = enrolledRows.filter((e) => inSydneyRange(e.enrolled_at, from, to));
+      const completed = completedRows.filter((e) => inSydneyRange(e.completed_at, from, to));
       const courseIds = [...new Set([...enrolled, ...completed].map((e) => e.course_id))];
       const titles: Record<string, string> = {};
       for (const part of chunk(courseIds)) {

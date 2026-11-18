@@ -81,6 +81,17 @@ Each automatic client measure explains itself in the L10 Scorecard deck (a short
 
 Limits: the people list and last-active are as of today, not as of the week; "Enrolled, but nobody finished" only lists courses with three or more enrolments; manual measures have no breakdown. Ask Viv (below) is separate from these breakdowns and is on demand only.
 
+## Client activity report: choose a number, see why (18 November 2026)
+
+The Client activity report page now has four cards that can be chosen: client users using the portal, certificates issued, users who never signed in, and Academy courses finished. Choosing one slides a section in below the cards showing what is behind it, for the period picked at the top (week, month, year or last 28 days).
+
+- **Portal use:** the active and quiet split, how clients are spread by the share of their own users who were active, use by CSC, the most active clients, and a Clients table. Choosing a client opens its people in place (the same per-person page used in the scorecard report, from `get_cst_client_detail`).
+- **Certificates:** when they were issued (per day, or per month for a year), by course, by client and by CSC, and who earned each one.
+- **Never signed in:** by CSC and by client, and the people waiting, longest first (as of today).
+- **Academy:** enrolments, how people got on a course, finished courses, busiest courses, courses nobody finished, the clients using it most, and the Live Clients with no activity. Enrolments count on the day made and completions on the day finished, for Live Clients only; revoked enrolments are left out.
+
+No new database object. The per-person page needs `get_cst_client_detail`, applied on 18 November 2026 (see its audit entry). Its "active" is the 28 days ending the period's last day (or today for the current period), which can differ from the period's own activity number.
+
 ## Ask Viv: an AI read of one measure (built and deployed 18 November 2026)
 
 An "Ask Viv" button on each measure in the L10 deck, and at the top of every measure's full report, asks the `scorecard-insight` Edge Function for a short plain-language read: what is happening, what may be behind it, what to try this week and who it falls to. It runs only when someone presses the button, needs the staff AI permission (`staff.ai.use`), stores nothing and creates nothing, and is labelled as written by AI. The model sees the measure, its recent numbers and, for the automatic client measures, the same client facts as the breakdown (business names, counts, last active, CSC names). It never receives learner names or email addresses. Anthropic's API is called directly, as Ask Viv does.
