@@ -40,7 +40,7 @@
 
 - The `scorecard_metric_cap` configuration no longer changes the segment. The setting is still in the configuration editor and is now unused.
 - `ScorecardEntryGrid` has no remaining callers and can be retired separately.
-- Renaming the metrics to plain names and rewriting their descriptions is a production data change that has not been made; it waits for the PR and migration to land.
+- Two renames rest on a reading of the old text, not a confirmed answer: "Clarity Calls held" (the old description said calls booked; the key is still `discovery_calls_booked_count`) and "New clients signed" (the old description said invoice sent). Revert either if the team counts the other thing.
 
 ## Production
 
@@ -57,3 +57,28 @@ Applied on 18 November 2026 through the Supabase MCP (`apply_migration`, name `s
 4. **Not checked in production:** a staff-identity call to `get_cst_report` and a real note or issue write, because those need a signed-in session. The same checks passed on `unicorn-qa` under real roles.
 
 **Rollback:** `supabase/migrations/rollback/20261118100000_scorecard_discussion.down.sql` drops the table, column and index and keeps `cst_last_activity` and the new `get_cst_report`.
+
+## Production data change: plain metric names (18 November 2026)
+
+On Carl's explicit go-ahead, after the list was shown, the 14 active measures on tenant 6372 had their name and description rewritten in one `UPDATE` by id (14 rows, expected 14). Keys, targets, units, directions, owners, sources and entries were not touched, so `scorecard-refresh` (which finds measures by key) is unaffected. Read-back confirmed all 14 keys, targets and owners unchanged.
+
+| Old name | New name |
+|---|---|
+| CST: Client activity rate % | People using the portal |
+| CST: RTOs with client activity % | Clients using the portal |
+| CST: Certificates issued | Certificates issued |
+| CST: Users never signed in | Users who never signed in |
+| CST: Live RTOs with no activity | Quiet RTOs |
+| Clients with Current CHC % | Clients with a current CHC |
+| Clients with Current Validation % | Clients with a current validation |
+| Projects On Track % | Projects on track |
+| Active ComplyHub Users % | ComplyHub subscribers using it |
+| Qualified Leads | Qualified leads |
+| Proposals Sent | Proposals sent |
+| New Revenue Booked | New revenue booked (ex-GST added to the description) |
+| Clarity Calls Completed | Clarity Calls held |
+| New Clients Signed | New clients signed |
+
+**Targets as stored after this change:** People using the portal 30%; Clients using the portal 50%; Certificates issued 3; Users who never signed in 20 or fewer; Quiet RTOs 30 or fewer.
+
+**Revert:** the old names are in the table above; the old descriptions are in the preceding read in the session transcript (for example the three merged measures read "Company-wide measure across all clients. Replaces the three per-consultant copies, merged 17 November 2026.").
