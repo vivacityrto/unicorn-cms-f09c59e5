@@ -7,6 +7,7 @@ import { breakdownKind } from '@/features/eos-scorecard/cstBreakdown';
 import { needsRoom, type AreaOutcome } from '@/features/eos-scorecard/discussion';
 import type { MetricIssue, ScorecardNote } from '@/features/eos-scorecard/useScorecardDiscussion';
 import { AimBar } from './AimBar';
+import { AimInfo } from './AimInfo';
 import { AreaNotes } from './AreaNotes';
 import { MetricReportDialog } from './MetricReportDialog';
 import { MiniTrend } from './MiniTrend';
@@ -88,7 +89,7 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
                   <div className="min-w-0">
                     <h3 className="break-words text-sm font-bold leading-snug xl:text-base">{m.name}</h3>
                     <p className="text-[11px] text-muted-foreground xl:text-xs">
-                      Owner: {owner ?? 'Nobody yet'} · Aim: {aimText(m)}
+                      Owner: {owner ?? 'Nobody yet'} · Aim: {aimText(m)} <AimInfo measure={m} />
                     </p>
                   </div>
                   <StatusPill status={m.status} />

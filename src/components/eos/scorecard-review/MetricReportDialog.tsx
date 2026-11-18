@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { lastActiveText } from '@/features/eos-cst/cstReport';
@@ -14,9 +14,10 @@ import {
   type BreakdownKind,
   type CstClientRow,
 } from '@/features/eos-scorecard/cstBreakdown';
-import { addDays, formatValue, gapText, shortDate, sydneyDate, type Measure } from '@/features/eos-scorecard/scorecardView';
+import { addDays, aimText, formatValue, gapText, shortDate, sydneyDate, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { weekEndingOf } from '@/features/eos-scorecard/metricReport';
 import { useAcademyActivity, useCertificateDetail, useCstWeekRows, useNeverSignedInPeople } from '@/features/eos-scorecard/useMetricReport';
+import { AimInfo } from './AimInfo';
 import { ClientDetailPanel } from './ClientDetailPanel';
 import { DrillCard, type DrillStep } from './DrillCard';
 import { SplitBar } from './SplitBar';
@@ -354,20 +355,39 @@ function HistoryOnly({ measure, weekKey }: { measure: Measure; weekKey: string }
 /** The full report for one measure: Viv's read first, then what the number is made of, who to look at, and what changed. */
 export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekLabel, autoAsk = false }: MetricReportDialogProps) {
   const kind = breakdownKind(measure.metric.metric_key);
+  const [expanded, setExpanded] = useState(false);
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] w-[min(96vw,64rem)] max-w-none gap-0 overflow-y-auto p-0 [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100">
-        <div className="space-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-5 py-4 pr-12 text-white">
+      <DialogContent
+        className={cn(
+          'max-w-none gap-0 overflow-y-auto p-0 [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100',
+          expanded
+            ? 'left-0 top-0 h-[100dvh] max-h-none w-screen translate-x-0 translate-y-0 rounded-none border-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0'
+            : 'max-h-[92dvh] w-[min(96vw,64rem)]',
+        )}
+      >
+        <div className="relative space-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-5 py-4 pr-24 text-white">
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            aria-pressed={expanded}
+            aria-label={expanded ? 'Shrink the report' : 'Make the report full screen'}
+            title={expanded ? 'Shrink' : 'Full screen'}
+            className="absolute right-14 top-3 flex h-11 w-11 items-center justify-center rounded-sm text-white opacity-90 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            {expanded ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
+          </button>
           <DialogDescription className="text-xs font-semibold uppercase tracking-wide text-white/80">Report · Week of {weekLabel}</DialogDescription>
-          <DialogTitle className="text-2xl font-bold text-white">{measure.name}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold !text-white">{measure.name}</DialogTitle>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <span className="text-3xl font-bold tabular-nums">{formatValue(measure.unit, measure.value)}</span>
             <StatusPill status={measure.status} />
             <span className="text-sm text-white/85">{gapText(measure)}</span>
+            <span className="inline-flex items-center gap-1 text-sm text-white/85">Aim: {aimText(measure)} <AimInfo measure={measure} onDark /></span>
           </div>
         </div>
-        <div className="space-y-4 p-4 sm:p-5">
+        <div className={cn('space-y-4 p-4 sm:p-5', expanded && 'mx-auto w-full max-w-7xl')}>
           <VivInsight measure={measure} weekKey={weekKey} autoStart={autoAsk} />
           {kind ? <Report measure={measure} weekKey={weekKey} kind={kind} /> : <HistoryOnly measure={measure} weekKey={weekKey} />}
         </div>
