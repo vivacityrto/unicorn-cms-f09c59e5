@@ -46,7 +46,7 @@ function MeasureRow({ measure, ownerNames, canManage, savingId, onSaveNumber, on
           </span>
         </span>
         <span className="text-xl font-bold tabular-nums">{formatValue(measure.unit, measure.value)}</span>
-        <span className="hidden items-center gap-1 text-sm sm:flex">Aim: {aimText(measure)} <AimInfo measure={measure} /></span>
+        <span className="hidden text-sm sm:block">Aim: {aimText(measure)}</span>
         <StatusPill status={measure.status} className="justify-self-start sm:justify-self-end" />
       </button>
       {open && (
@@ -70,7 +70,7 @@ function MeasureRow({ measure, ownerNames, canManage, savingId, onSaveNumber, on
             )}
           </div>
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Against the aim</h4>
+            <h4 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Against the aim <AimInfo measure={measure} /></h4>
             <AimBar measure={measure} />
           </div>
           <div className="space-y-3">
