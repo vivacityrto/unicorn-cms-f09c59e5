@@ -71,6 +71,10 @@ describe("scorecard-insight", () => {
     assert.match(src, /!activityKnown \? undefined/);
   });
 
+  it("does not send a temperature, which the current model rejects with a 400", () => {
+    assert.doesNotMatch(src, /^\s*temperature\s*:/m);
+  });
+
   it("bounds the AI call with a timeout", () => {
     assert.match(src, /AbortController/);
     assert.match(src, /AI_TIMEOUT_MS/);

@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { discussionAreas, wrapUp, type AreaOutcome } from '@/features/eos-scorecard/discussion';
 import { STATUS_LABEL, type Area, type Measure } from '@/features/eos-scorecard/scorecardView';
-import { openIssueMetricIds, useMetricIssues, useScorecardNotes } from '@/features/eos-scorecard/useScorecardDiscussion';
+import { openIssueMetricIds, useMetricIssues, useScorecardNotes, type ScorecardNote } from '@/features/eos-scorecard/useScorecardDiscussion';
+import { ScorecardNotesDictationContext, useOptionalScorecardNotesDictation, useScorecardNotesDictation } from '@/features/eos-scorecard/useScorecardNotesDictation';
+import { DictationStatus } from './DictationStatus';
 import { ScorecardDiscussSlide } from './ScorecardDiscussSlide';
 import { ScorecardWrapUp } from './ScorecardWrapUp';
 import { STATUS_STYLE } from './statusStyle';
@@ -35,7 +37,7 @@ const isTyping = (target: EventTarget | null) =>
  * room on the area in front of them. Left and right arrows move; Escape leaves. The deck is fixed when it
  * opens, so an area does not vanish from under the room.
  */
-function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, startNeedsRoomOnly = false, startAtCategory = null, meeting, onRecordNumber, savingMeasureId = null }: ScorecardDiscussDialogProps) {
+function Deck({ notes, open, onOpenChange, areas, weekKey, weekLabel, ownerNames, startNeedsRoomOnly = false, startAtCategory = null, meeting, onRecordNumber, savingMeasureId = null }: ScorecardDiscussDialogProps & { notes: readonly ScorecardNote[] }) {
   const { profile } = useAuth();
   const [needsRoomOnly, setNeedsRoomOnly] = useState(startNeedsRoomOnly);
   // Which areas are in the deck, and in what order, is fixed when it opens. Their numbers stay live, so a number typed in
@@ -56,8 +58,18 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
   const issuesQuery = useMetricIssues(allMetricIds, open);
   const issues = useMemo(() => issuesQuery.data ?? [], [issuesQuery.data]);
   const issuesState = issuesQuery.isError ? 'error' : issuesQuery.isLoading ? 'loading' : 'ready';
-  const notesQuery = useScorecardNotes(meeting?.id, open);
-  const notes = useMemo(() => notesQuery.data ?? [], [notesQuery.data]);
+
+  // The microphone and the drafts live above this view (see ScorecardDiscussDialog), so closing it can wait for the last phrase.
+  const dictation = useOptionalScorecardNotesDictation();
+  const retarget = dictation?.retarget;
+  const areaCategory = area?.category ?? null;
+  useEffect(() => {
+    retarget?.(areaCategory);
+  }, [areaCategory, retarget]);
+  const close = (next: boolean) => {
+    if (!next) void dictation?.flushAll();
+    onOpenChange(next);
+  };
 
   useEffect(() => {
     if (area) setViewed((current) => (current.has(area.category) ? current : new Set(current).add(area.category)));
@@ -104,7 +116,7 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
   const totalNeedsRoom = useMemo(() => discussionAreas(areas, { needsRoomOnly: true }).length, [areas]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent
         ref={contentRef}
         onKeyDown={onKeyDown}
@@ -172,7 +184,7 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
           ) : atWrapUp ? (
             <ScorecardWrapUp
               summary={summary}
-              onClose={() => onOpenChange(false)}
+              onClose={() => close(false)}
               onGoTo={(name) => {
                 const index = deck.findIndex((a) => a.name === name);
                 if (index >= 0) go(index);
@@ -205,9 +217,13 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
               <ChevronLeft className="h-4 w-4" aria-hidden />
               Previous
             </Button>
-            <p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>
+            <DictationStatus
+              currentCategory={area?.category ?? null}
+              nameOf={(category) => deck.find((a) => a.category === category)?.name ?? 'this area'}
+              fallback={<p className="hidden text-xs text-muted-foreground lg:block">Use the ← and → keys to move. Esc leaves.</p>}
+            />
             {atWrapUp ? (
-              <Button type="button" className="h-10 px-4" onClick={() => onOpenChange(false)}>Finish</Button>
+              <Button type="button" className="h-10 px-4" onClick={() => close(false)}>Finish</Button>
             ) : (
               <Button type="button" className="h-10 gap-1.5 px-4" onClick={() => go(position + 1)}>
                 {position === deck.length - 1 ? 'Wrap-up' : 'Next'}
@@ -221,8 +237,19 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
   );
 }
 
-/** Mounted only while open: every opening starts from a fresh deck, and nothing in it fetches while closed. */
+/**
+ * The deck itself is mounted only while open, so every opening starts fresh and nothing fetches while closed. The notes
+ * and the microphone sit here, above it: closing the deck stops the microphone, waits for the phrase still being
+ * recognised, and saves, which a controller that unmounted with the deck could not do.
+ */
 export function ScorecardDiscussDialog(props: ScorecardDiscussDialogProps) {
-  if (!props.open) return null;
-  return <Deck {...props} />;
+  const { profile } = useAuth();
+  const notesQuery = useScorecardNotes(props.meeting?.id, props.open);
+  const notes = useMemo(() => notesQuery.data ?? [], [notesQuery.data]);
+  const dictation = useScorecardNotesDictation(props.meeting?.id, notes, profile?.user_uuid ?? null);
+  return (
+    <ScorecardNotesDictationContext.Provider value={dictation}>
+      {props.open ? <Deck {...props} notes={notes} /> : null}
+    </ScorecardNotesDictationContext.Provider>
+  );
 }

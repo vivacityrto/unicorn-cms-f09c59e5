@@ -242,8 +242,8 @@ Deno.serve(async (req) => {
         messages: [{ role: "user", content: prompt }],
         tools: [INSIGHT_TOOL as unknown as { name: string; description: string; input_schema: Record<string, unknown> }],
         tool_choice: { type: "tool", name: INSIGHT_TOOL.name },
+        // No temperature: the current Claude models reject it ("temperature is deprecated for this model") and the call fails.
         max_tokens: 1200,
-        temperature: 0.3,
         signal: controller.signal,
       });
       insight = parseInsight(extractToolUses(response)[0]?.input);

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { lastActiveText } from '@/features/eos-cst/cstReport';
@@ -16,6 +17,8 @@ import {
 import { addDays, formatValue, gapText, shortDate, sydneyDate, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { weekEndingOf } from '@/features/eos-scorecard/metricReport';
 import { useAcademyActivity, useCertificateDetail, useCstWeekRows, useNeverSignedInPeople } from '@/features/eos-scorecard/useMetricReport';
+import { ClientDetailPanel } from './ClientDetailPanel';
+import { DrillCard, type DrillStep } from './DrillCard';
 import { SplitBar } from './SplitBar';
 import { StatusPill } from './StatusPill';
 import { VivInsight } from './VivInsight';
@@ -42,7 +45,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-function Table({ head, rows, empty }: { head: string[]; rows: ReactNode[][]; empty: string }) {
+function Table({ head, rows, empty, onRowClick }: { head: string[]; rows: ReactNode[][]; empty: string; onRowClick?: (index: number) => void }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
     <div className="overflow-x-auto">
@@ -56,9 +59,18 @@ function Table({ head, rows, empty }: { head: string[]; rows: ReactNode[][]; emp
         </thead>
         <tbody>
           {rows.map((cells, i) => (
-            <tr key={i} className="border-b last:border-0">
+            <tr key={i} onClick={onRowClick ? () => onRowClick(i) : undefined} className={cn('border-b last:border-0', onRowClick && 'cursor-pointer hover:bg-muted/50')}>
               {cells.map((cell, j) => (
-                <td key={j} className={cn('px-2 py-1.5 align-top', j === 0 && 'font-medium')}>{cell}</td>
+                <td key={j} className={cn('px-2 py-1.5 align-top', j === 0 && 'font-medium')}>
+                  {onRowClick && j === 0 ? (
+                    <button type="button" className="group inline-flex items-center gap-1 text-left font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      {cell}
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden />
+                    </button>
+                  ) : (
+                    cell
+                  )}
+                </td>
               ))}
             </tr>
           ))}
@@ -116,8 +128,8 @@ function WeekBars({ points, unit }: { points: { weekEnding: string; value: numbe
 
 type ClientFilter = 'quiet' | 'active' | 'all';
 
-function ClientTable({ rows }: { rows: CstClientRow[] }) {
-  const [filter, setFilter] = useState<ClientFilter>('quiet');
+function ClientTable({ rows, onOpen, initial = 'quiet', filters = true }: { rows: CstClientRow[]; onOpen: (row: CstClientRow) => void; initial?: ClientFilter; filters?: boolean }) {
+  const [filter, setFilter] = useState<ClientFilter>(initial);
   const shown = useMemo(() => {
     const picked = filter === 'quiet' ? rows.filter(isQuiet) : filter === 'active' ? rows.filter(isActiveClient) : rows.filter((r) => r.clientUsers > 0);
     return [...picked].sort((a, b) => b.clientUsers - a.clientUsers || a.name.localeCompare(b.name));
@@ -129,7 +141,7 @@ function ClientTable({ rows }: { rows: CstClientRow[] }) {
   ];
   return (
     <div className="space-y-2">
-      <div role="group" aria-label="Which clients" className="inline-flex gap-1 rounded-lg bg-muted p-1">
+      {filters && <div role="group" aria-label="Which clients" className="inline-flex gap-1 rounded-lg bg-muted p-1">
         {options.map((o) => (
           <button
             key={o.value}
@@ -141,10 +153,11 @@ function ClientTable({ rows }: { rows: CstClientRow[] }) {
             {o.label}
           </button>
         ))}
-      </div>
+      </div>}
       <Table
         head={['Client', 'CSC', 'People active', 'Last active']}
         empty="No clients in this view."
+        onRowClick={(i) => onOpen(shown[i])}
         rows={shown.map((r) => [r.name, r.cscName, `${r.activeUsers} of ${r.clientUsers}`, r.lastActiveAt === undefined ? '–' : lastActiveText(r.lastActiveAt)])}
       />
     </div>
@@ -226,6 +239,12 @@ function NeverSignedInSection({ tenantIds }: { tenantIds: number[] }) {
   );
 }
 
+type Step =
+  | (DrillStep & { kind: 'client'; row: CstClientRow })
+  | (DrillStep & { kind: 'csc'; csc: string; rows: CstClientRow[] });
+
+const clientStep = (row: CstClientRow): Step => ({ key: `client:${row.tenantId}`, label: row.name, kind: 'client', row });
+
 function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string; kind: BreakdownKind }) {
   const { byWeek, current, isLoading, error } = useCstWeekRows(weekKey);
   const weekEnding = weekEndingOf(weekKey);
@@ -269,18 +288,42 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
         </Section>
       )}
 
-      <Section title="By CSC" hint={kind === 'certificates' ? 'Certificates earned by each CSC’s clients.' : undefined}>
-        <Table
-          head={['CSC', kind === 'clients_active' || kind === 'clients_quiet' ? 'Clients with nobody active' : kind === 'people_active' ? 'People active' : kind === 'never_signed_in' ? 'Never signed in' : 'Certificates', kind === 'certificates' ? 'Clients' : 'Out of']}
-          empty="No clients."
-          rows={breakdown.byCsc.map((c) => [c.name, c.count, c.of])}
-        />
-      </Section>
+      <DrillCard<Step>
+        title="By CSC"
+        hint={kind === 'certificates' ? 'Certificates earned by each CSC’s clients. Choose a CSC to see their clients.' : 'Choose a CSC to see their clients.'}
+        root={(open) => (
+          <Table
+            head={['CSC', kind === 'clients_active' || kind === 'clients_quiet' ? 'Clients with nobody active' : kind === 'people_active' ? 'People active' : kind === 'never_signed_in' ? 'Never signed in' : 'Certificates', kind === 'certificates' ? 'Clients' : 'Out of']}
+            empty="No clients."
+            rows={breakdown.byCsc.map((c) => [c.name, c.count, c.of])}
+            onRowClick={(i) => {
+              const name = breakdown.byCsc[i].name;
+              open({ key: `csc:${name}`, label: name, kind: 'csc', csc: name, rows: current.filter((r) => r.cscName === name) });
+            }}
+          />
+        )}
+        page={(step, open) =>
+          step.kind === 'client' ? (
+            <ClientDetailPanel row={step.row} weekEnding={weekEnding} />
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-xl font-bold">{step.csc}</h3>
+                <p className="text-sm text-muted-foreground">{step.rows.length} {step.rows.length === 1 ? 'client' : 'clients'}. Choose one to see its people.</p>
+              </div>
+              <ClientTable rows={step.rows} onOpen={(r) => open(clientStep(r))} initial="all" />
+            </div>
+          )
+        }
+      />
 
       {activity && (
-        <Section title="Clients" hint="Biggest first. “People active” counts client users who did something in the last 28 days.">
-          <ClientTable rows={current} />
-        </Section>
+        <DrillCard<Step>
+          title="Clients"
+          hint="Biggest first. “People active” counts client users who did something in the last 28 days. Choose a client to see its people."
+          root={(open) => <ClientTable rows={current} onOpen={(r) => open(clientStep(r))} />}
+          page={(step) => (step.kind === 'client' ? <ClientDetailPanel row={step.row} weekEnding={weekEnding} /> : null)}
+        />
       )}
 
       {kind === 'never_signed_in' && (
@@ -314,10 +357,10 @@ export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekL
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] w-[min(96vw,64rem)] max-w-none gap-0 overflow-y-auto p-0">
+      <DialogContent className="max-h-[92dvh] w-[min(96vw,64rem)] max-w-none gap-0 overflow-y-auto p-0 [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100">
         <div className="space-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-5 py-4 pr-12 text-white">
           <DialogDescription className="text-xs font-semibold uppercase tracking-wide text-white/80">Report · Week of {weekLabel}</DialogDescription>
-          <DialogTitle className="text-2xl font-bold">{measure.name}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-white">{measure.name}</DialogTitle>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <span className="text-3xl font-bold tabular-nums">{formatValue(measure.unit, measure.value)}</span>
             <StatusPill status={measure.status} />
