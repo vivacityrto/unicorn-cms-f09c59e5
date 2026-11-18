@@ -18,6 +18,7 @@ import { weekEndingOf } from '@/features/eos-scorecard/metricReport';
 import { useAcademyActivity, useCertificateDetail, useCstWeekRows, useNeverSignedInPeople } from '@/features/eos-scorecard/useMetricReport';
 import { SplitBar } from './SplitBar';
 import { StatusPill } from './StatusPill';
+import { VivInsight } from './VivInsight';
 
 interface MetricReportDialogProps {
   open: boolean;
@@ -25,6 +26,8 @@ interface MetricReportDialogProps {
   measure: Measure;
   weekKey: string;
   weekLabel: string;
+  /** Ask Viv as soon as the report opens. */
+  autoAsk?: boolean;
 }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
@@ -294,10 +297,21 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
   );
 }
 
-/** The full report behind one automatic client measure: what it is made of, who to look at, and what changed. */
-export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekLabel }: MetricReportDialogProps) {
+/** Measures people type in have no breakdown, only their own recent numbers. */
+function HistoryOnly({ measure, weekKey }: { measure: Measure; weekKey: string }) {
+  const last = measure.history.length - 1;
+  const points = measure.history.map((value, i) => ({ weekEnding: addDays(weekEndingOf(weekKey), -7 * (last - i)), value }));
+  return (
+    <Section title="The last few weeks" hint="Typed in each week by the owner. There is no breakdown behind this number.">
+      <WeekBars points={points} unit={measure.unit} />
+    </Section>
+  );
+}
+
+/** The full report for one measure: Viv's read first, then what the number is made of, who to look at, and what changed. */
+export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekLabel, autoAsk = false }: MetricReportDialogProps) {
   const kind = breakdownKind(measure.metric.metric_key);
-  if (!open || !kind) return null;
+  if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] w-[min(96vw,64rem)] max-w-none gap-0 overflow-y-auto p-0">
@@ -311,7 +325,8 @@ export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekL
           </div>
         </div>
         <div className="space-y-4 p-4 sm:p-5">
-          <Report measure={measure} weekKey={weekKey} kind={kind} />
+          <VivInsight measure={measure} weekKey={weekKey} autoStart={autoAsk} />
+          {kind ? <Report measure={measure} weekKey={weekKey} kind={kind} /> : <HistoryOnly measure={measure} weekKey={weekKey} />}
         </div>
       </DialogContent>
     </Dialog>

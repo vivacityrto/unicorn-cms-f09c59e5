@@ -79,7 +79,11 @@ Each automatic client measure explains itself in the L10 Scorecard deck (a short
 | Users who never signed in | Signed in against never signed in, the clients holding most of them | By CSC, by client, the people themselves as of today (name, client, date added) |
 | Certificates issued | Count and clients | Who earned each certificate and for which course, by course, by client, Academy activity over 28 days (enrolments and how they were made, completions, busiest courses, courses nobody finished) |
 
-Limits: the people list and last-active are as of today, not as of the week; "Enrolled, but nobody finished" only lists courses with three or more enrolments; manual measures have no breakdown. An optional AI read of the numbers is not built.
+Limits: the people list and last-active are as of today, not as of the week; "Enrolled, but nobody finished" only lists courses with three or more enrolments; manual measures have no breakdown. Ask Viv (below) is separate from these breakdowns and is on demand only.
+
+## Ask Viv: an AI read of one measure (built 18 November 2026, not yet deployed)
+
+An "Ask Viv" button on each measure in the L10 deck, and at the top of every measure's full report, asks the `scorecard-insight` Edge Function for a short plain-language read: what is happening, what may be behind it, what to try this week and who it falls to. It runs only when someone presses the button, needs the staff AI permission (`staff.ai.use`), stores nothing and creates nothing, and is labelled as written by AI. The model sees the measure, its recent numbers and, for the automatic client measures, the same client facts as the breakdown (business names, counts, last active, CSC names). It never receives learner names or email addresses. Anthropic's API is called directly, as Ask Viv does.
 
 ## Known defects found while scoping (unfixed)
 

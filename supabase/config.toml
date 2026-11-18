@@ -471,3 +471,8 @@ verify_jwt = false
 # Auth is enforced in-function via requireCaller (staff.ai.use).
 [functions.summarise-rock-notes]
 verify_jwt = false
+
+# "Ask Viv" read of one scorecard measure (Anthropic). Read-only: nothing is stored or created.
+# Auth is enforced in-function via requireCaller (staff.ai.use).
+[functions.scorecard-insight]
+verify_jwt = false

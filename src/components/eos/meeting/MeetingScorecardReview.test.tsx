@@ -7,6 +7,7 @@ import { lastCompletedWeekKey } from '@/features/eos-scorecard/scorecardView';
 const raiseMutate = vi.fn().mockResolvedValue({ id: 'issue-1' });
 const saveMutate = vi.fn().mockResolvedValue(undefined);
 const recordMutate = vi.fn();
+const askViv = vi.fn();
 const weekKey = lastCompletedWeekKey();
 
 const metric = (over: Partial<ScorecardMetric>): ScorecardMetric => ({
@@ -22,6 +23,9 @@ let metrics: ScorecardMetric[] = [];
 
 vi.mock('@/hooks/useScorecardMetrics', () => ({
   useScorecardMetrics: () => ({ metrics, isLoading: false, recordEntry: { mutate: recordMutate } }),
+}));
+vi.mock('@/features/eos-scorecard/useScorecardInsight', () => ({
+  useScorecardInsight: () => ({ result: null, isAsking: false, error: null, ask: askViv }),
 }));
 vi.mock('@/features/eos-scorecard/useOwnerNames', () => ({ useOwnerNames: () => ({}) }));
 
@@ -148,5 +152,16 @@ describe('MeetingScorecardReview', () => {
     const report = await screen.findByRole('dialog', { name: 'Quiet RTOs' });
     expect(within(report).getByRole('region', { name: 'By CSC' })).toBeInTheDocument();
     expect(within(report).getByRole('region', { name: 'Clients' })).toBeInTheDocument();
+  });
+
+  it("opens Viv's read for a measure from the Ask Viv button", async () => {
+    const user = userEvent.setup();
+    render(<MeetingScorecardReview meeting={meeting} />);
+    await user.click(screen.getAllByRole('button', { name: 'Discuss this area' })[0]);
+    const slide = await screen.findByRole('article', { name: 'Area: Client engagement' });
+    await user.click(within(slide).getAllByRole('button', { name: 'Ask Viv' })[0]);
+    const report = await screen.findByRole('dialog', { name: 'Quiet RTOs' });
+    expect(within(report).getByRole('region', { name: 'Ask Viv' })).toBeInTheDocument();
+    expect(askViv).toHaveBeenCalled();
   });
 });

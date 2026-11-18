@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { areaCue, aimText, formatValue, gapText, type Area, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { breakdownKind } from '@/features/eos-scorecard/cstBreakdown';
@@ -51,7 +52,7 @@ function columnsFor(count: number): string {
  */
 export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, notes, myUserId, issues, issuesState, outcomes, raisedMeasureIds, meeting, onOutcome, onRecordNumber, savingMeasureId = null }: ScorecardDiscussSlideProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const [report, setReport] = useState<Measure | null>(null);
+  const [report, setReport] = useState<{ measure: Measure; ask: boolean } | null>(null);
   useEffect(() => headingRef.current?.focus({ preventScroll: true }), [area.category]);
   const dense = area.measures.length > 4;
 
@@ -111,10 +112,10 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
                   </div>
                 )}
 
-                {explained && <WhyThisNumber measure={m} weekKey={weekKey} onOpenReport={() => setReport(m)} />}
+                {explained && <WhyThisNumber measure={m} weekKey={weekKey} onOpenReport={() => setReport({ measure: m, ask: false })} />}
 
-                {needsRoom(m) && (
-                  <div className="mt-auto">
+                <div className="mt-auto flex flex-wrap items-start gap-2">
+                  {needsRoom(m) && (
                     <RaiseMeasureIssue
                       measure={m}
                       weekKey={weekKey}
@@ -125,8 +126,14 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
                       meeting={meeting}
                       onRaised={() => onOutcome(area.category, 'raised', m.id)}
                     />
-                  </div>
-                )}
+                  )}
+                  {m.value !== null && (
+                    <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => setReport({ measure: m, ask: true })}>
+                      <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+                      Ask Viv
+                    </Button>
+                  )}
+                </div>
               </li>
             );
           })}
@@ -146,7 +153,7 @@ export function ScorecardDiscussSlide({ area, weekKey, weekLabel, ownerNames, no
       />
       {outcomes.length > 0 && <p className="sr-only">Recorded: {outcomes.join(', ')}</p>}
 
-      {report && <MetricReportDialog open onOpenChange={(open) => !open && setReport(null)} measure={report} weekKey={weekKey} weekLabel={weekLabel} />}
+      {report && <MetricReportDialog open onOpenChange={(open) => !open && setReport(null)} measure={report.measure} autoAsk={report.ask} weekKey={weekKey} weekLabel={weekLabel} />}
     </article>
   );
 }
