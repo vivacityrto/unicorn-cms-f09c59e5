@@ -47,6 +47,13 @@ async function rows<T>(query: Query<T>): Promise<T[]> {
 
 const STALE = 5 * 60_000;
 const chunk = <T,>(items: readonly T[], size = 150): T[][] => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, i * size + size));
+
+/** Runs a lookup over a long list of ids a batch at a time, so no single request is too long. */
+export async function inChunks<T>(ids: readonly (string | number)[], run: (part: (string | number)[]) => Query<T>): Promise<T[]> {
+  const out: T[] = [];
+  for (const part of chunk(ids)) out.push(...(await rows(run(part))));
+  return out;
+}
 const fullName = (first: string | null, last: string | null, fallback: string) => `${first ?? ''} ${last ?? ''}`.trim() || fallback;
 
 interface SnapshotRow {
@@ -150,10 +157,11 @@ export function useCertificatesBetween(from: string, to: string, tenantIds: read
       const courseIds = [...new Set(certs.map((c) => c.course_id))];
       const userIds = [...new Set(certs.map((c) => c.user_id))];
       const clientIds = [...new Set(certs.map((c) => c.tenant_id))];
+      // A year can have hundreds of recipients, which would overflow the request URL in one go, so each lookup is batched.
       const [courses, users, clients] = await Promise.all([
-        rows(read.from('academy_courses').select<{ id: string; title: string }>('id, title').in('id', courseIds)),
-        rows(read.from('users').select<{ user_uuid: string; first_name: string | null; last_name: string | null }>('user_uuid, first_name, last_name').in('user_uuid', userIds)),
-        rows(read.from('tenants').select<{ id: number; name: string }>('id, name').in('id', clientIds)),
+        inChunks(courseIds, (part) => read.from('academy_courses').select<{ id: string; title: string }>('id, title').in('id', part)),
+        inChunks(userIds, (part) => read.from('users').select<{ user_uuid: string; first_name: string | null; last_name: string | null }>('user_uuid, first_name, last_name').in('user_uuid', part)),
+        inChunks(clientIds, (part) => read.from('tenants').select<{ id: number; name: string }>('id, name').in('id', part)),
       ]);
       const courseTitle = new Map(courses.map((c) => [c.id, c.title]));
       const person = new Map(users.map((u) => [u.user_uuid, fullName(u.first_name, u.last_name, 'A learner')]));
