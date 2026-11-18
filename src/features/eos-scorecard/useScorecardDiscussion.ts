@@ -79,6 +79,8 @@ export function useScorecardNotes(meetingId: string | undefined, enabled = true)
       return (data ?? []).map((n) => ({ id: n.id, category: n.category, body: n.body, createdBy: n.created_by, updatedAt: n.updated_at }));
     },
     enabled: !!profile && enabled && !!meetingId,
+    // Others write notes during the meeting; poll so the room sees them and the wrap-up stays current.
+    refetchInterval: 10_000,
   });
 }
 

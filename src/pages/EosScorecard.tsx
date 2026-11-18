@@ -33,8 +33,11 @@ import {
 import { useOwnerNames } from '@/features/eos-scorecard/useOwnerNames';
 import type { ScorecardMetric } from '@/types/scorecard';
 
-/** How many weeks back the page lets you look. The scorecard keeps 13 weeks of entries in view. */
-const WEEKS_BACK = 11;
+/**
+ * How many weeks back the page lets you look. The metrics hook loads 91 days of entries and each measure
+ * shows an 8-week history, so going further back would draw recorded weeks as missing.
+ */
+const WEEKS_BACK = 4;
 
 const LEGEND: { status: PlainStatus; text: string }[] = [
   { status: 'on_track', text: 'at or better than the aim' },

@@ -23,12 +23,13 @@ export function AreaNotes({ category, areaName, meetingId, notes, myUserId, owne
   const [draft, setDraft] = useState(mine?.body ?? '');
   // Pick up the saved note when it first arrives, without overwriting what is being typed.
   const [seeded, setSeeded] = useState(!!mine);
+  const [touched, setTouched] = useState(false);
   useEffect(() => {
-    if (mine && !seeded) {
+    if (mine && !seeded && !touched) {
       setDraft(mine.body);
       setSeeded(true);
     }
-  }, [mine, seeded]);
+  }, [mine, seeded, touched]);
 
   const dirty = draft.trim() !== (mine?.body ?? '');
   const submit = async () => {
@@ -69,7 +70,10 @@ export function AreaNotes({ category, areaName, meetingId, notes, myUserId, owne
         <Textarea
           id={`area-note-${category}`}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setTouched(true);
+            setDraft(e.target.value);
+          }}
           rows={3}
           maxLength={5000}
           placeholder="What was said, decided or agreed?"
