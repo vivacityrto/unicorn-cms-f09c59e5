@@ -44,11 +44,12 @@ export function AimInfo({ measure, onDark = false, className }: AimInfoProps) {
           <CircleHelp className="h-4 w-4" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[min(92vw,22rem)] space-y-3 p-4 text-foreground">
+      {/* The shared popover caps at 400px with a hidden scrollbar, which silently cut this off. Give it the room the screen has. */}
+      <PopoverContent align="start" collisionPadding={12} className="max-h-[min(85dvh,var(--radix-popover-content-available-height))] w-[min(92vw,21rem)] space-y-2.5 p-3.5 text-foreground">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">How the aim works</p>
-          <h4 className="text-base font-bold leading-snug">Aim: {aimText(measure)}</h4>
-          <p className="text-sm text-muted-foreground">{directionSentence(measure)}</p>
+          <h4 className="text-sm font-bold leading-snug">Aim: {aimText(measure)}</h4>
+          <p className="text-xs text-muted-foreground">{directionSentence(measure)}</p>
         </div>
 
         <div className="space-y-1.5">
@@ -61,16 +62,16 @@ export function AimInfo({ measure, onDark = false, className }: AimInfoProps) {
           <p className="text-[11px] text-muted-foreground">“Nearly there” means within 10% of the aim.</p>
         </div>
 
-        <p className="rounded-lg bg-muted/50 p-2 text-sm font-medium">{standingSentence(measure)}</p>
+        <p className="rounded-lg bg-muted/50 p-2 text-xs font-semibold leading-snug">{standingSentence(measure)}</p>
 
         <div className="space-y-1">
           <h5 className="text-xs font-bold">Reading the bar</h5>
-          <p className="text-xs text-muted-foreground">The coloured bar is this week’s number. The dark tick is the aim. The nearer the bar ends to the tick, the closer the week is to the aim; the colour is the status.</p>
+          <p className="text-[11px] leading-snug text-muted-foreground">The coloured bar is this week’s number and the dark tick is the aim. The colour is the status.</p>
         </div>
 
         <div className="space-y-1">
           <h5 className="text-xs font-bold">Where the number comes from</h5>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] leading-snug text-muted-foreground">
             {measure.source === 'automatic'
               ? 'Unicorn works this number out by itself every week. Nobody types it in.'
               : 'The measure’s owner types this number in each week. Until they do, it shows “Needs a number”.'}{' '}
