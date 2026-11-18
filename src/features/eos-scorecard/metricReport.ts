@@ -25,6 +25,11 @@ export interface CourseActivity {
   completed: number;
 }
 
+export interface TenantAcademy {
+  enrolled: number;
+  completed: number;
+}
+
 export interface AcademyActivity {
   enrolled: number;
   selfEnrolled: number;
@@ -34,11 +39,14 @@ export interface AcademyActivity {
   topCourses: CourseActivity[];
   /** Courses people were put on but nobody finished. */
   stalled: CourseActivity[];
+  /** Enrolments and completions per client, so the report can say which clients use the Academy. */
+  byTenant: Record<number, TenantAcademy>;
 }
 
 export interface EnrolmentLite {
   course_id: string;
   source: string | null;
+  tenant_id?: number;
 }
 
 function courseTotals(enrolled: readonly EnrolmentLite[], completed: readonly EnrolmentLite[], titles: Readonly<Record<string, string>>): CourseActivity[] {
@@ -64,6 +72,10 @@ export function buildAcademyActivity(enrolled: readonly EnrolmentLite[], complet
     else bySource.other += 1;
   }
   const courses = courseTotals(enrolled, completed, titles);
+  const byTenant: Record<number, TenantAcademy> = {};
+  const tenant = (id: number) => (byTenant[id] ??= { enrolled: 0, completed: 0 });
+  for (const e of enrolled) if (e.tenant_id !== undefined) tenant(e.tenant_id).enrolled += 1;
+  for (const c of completed) if (c.tenant_id !== undefined) tenant(c.tenant_id).completed += 1;
   return {
     enrolled: enrolled.length,
     selfEnrolled: bySource.self,
@@ -75,6 +87,7 @@ export function buildAcademyActivity(enrolled: readonly EnrolmentLite[], complet
       .filter((c) => c.enrolled >= 3 && c.completed === 0)
       .sort((a, b) => b.enrolled - a.enrolled || a.title.localeCompare(b.title))
       .slice(0, 5),
+    byTenant,
   };
 }
 

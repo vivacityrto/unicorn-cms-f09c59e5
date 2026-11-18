@@ -1,6 +1,10 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { CstWhyPanel, type WhyKey } from '@/components/eos/cst-report/CstWhyPanel';
+import { Ring } from '@/components/eos/cst-report/CstCharts';
+import { useAcademyBetween } from '@/features/eos-scorecard/useMetricReport';
+import { flattenRtos, periodDates } from '@/features/eos-cst/cstInsights';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useCstReport } from '@/features/eos-cst/useCstReport';
@@ -48,14 +52,46 @@ function CertificateNote({ period, current, prior }: { period: CstPeriod; curren
   );
 }
 
-function BigNumber({ label, value, note, children }: { label: string; value: string; note: string; children?: React.ReactNode }) {
+interface InsightCardProps {
+  selected: boolean;
+  onSelect: () => void;
+  label: string;
+  value: string;
+  note: string;
+  ring: { pct: number | null; caption: string; tone?: 'primary' | 'bad' | 'good'; text: string };
+  children?: React.ReactNode;
+}
+
+/** A headline number that can be chosen: the section below changes to show what is behind it. */
+function InsightCard({ selected, onSelect, label, value, note, ring, children }: InsightCardProps) {
   return (
-    <div className="rounded-xl border p-4">
+    <button
+      type="button"
+      aria-pressed={selected}
+      aria-controls="cst-why"
+      onClick={onSelect}
+      className={cn(
+        'group flex h-full flex-col rounded-xl border-2 p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none',
+        selected ? 'border-primary bg-primary/5 shadow-md' : 'border-border bg-card hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-sm motion-reduce:hover:translate-y-0',
+      )}
+    >
       <p className="text-sm font-semibold text-muted-foreground">{label}</p>
-      <p className="mt-1 text-4xl font-bold leading-none tabular-nums">{value}</p>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <p className="text-4xl font-bold leading-none tabular-nums">{value}</p>
+        <div className="flex flex-col items-center gap-0.5">
+          <Ring pct={ring.pct} size={52} stroke={7} tone={ring.tone} label={`${ring.text} ${ring.caption}`}>
+            <span className="text-[11px]">{ring.text}</span>
+          </Ring>
+          <span className="max-w-[5.5rem] text-center text-[10px] leading-tight text-muted-foreground">{ring.caption}</span>
+        </div>
+      </div>
       <p className="mt-2 text-sm text-muted-foreground">{note}</p>
       {children && <div className="mt-1">{children}</div>}
-    </div>
+      <span className="mt-auto flex items-center gap-1 pt-3 text-xs font-semibold text-primary">
+        {selected ? 'Showing why below' : 'See why'}
+        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform motion-reduce:transition-none', selected ? 'rotate-180' : 'group-hover:translate-y-0.5')} aria-hidden />
+      </span>
+    </button>
   );
 }
 
@@ -75,7 +111,15 @@ export default function EosCstReport() {
   const [period, setPeriod] = useState<CstPeriod>('month');
   const [anchor, setAnchor] = useState<string>(() => sydneyToday());
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [which, setWhich] = useState<WhyKey>('portal');
   const { data, isLoading, error, isFetching } = useCstReport(period, anchor);
+  const dates = useMemo(() => (data ? periodDates(data) : { from: '', to: '' }), [data]);
+  const tenantIds = useMemo(() => (data ? flattenRtos(data).map((r) => r.tenant_id) : []), [data]);
+  const academy = useAcademyBetween(dates.from, dates.to, tenantIds, !!data);
+  const choose = (next: WhyKey) => {
+    setWhich(next);
+    requestAnimationFrame(() => document.getElementById('cst-why')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }));
+  };
 
   const label = useMemo(() => (data ? periodLabel(period, data.start, data.end) : ''), [data, period]);
   const rolling = period === 'days28';
@@ -90,12 +134,15 @@ export default function EosCstReport() {
       return next;
     });
 
+  const certClients = data ? flattenRtos(data).filter((r) => r.certificates > 0).length : 0;
+  const academyClients = academy.data ? Object.values(academy.data.byTenant).filter((t) => t.enrolled + t.completed > 0).length : 0;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Client activity report</h1>
-          <p className="mt-0.5 text-base text-muted-foreground">How much our Live Clients use the portal, and the certificates they earn, by CSC.</p>
+          <p className="mt-0.5 text-base text-muted-foreground">How much our Live Clients use the portal, the certificates they earn and what they do in the Academy, by CSC.</p>
         </div>
         <div className="inline-flex gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Report period">
           {CST_PERIOD_OPTIONS.map((o) => (
@@ -147,13 +194,52 @@ export default function EosCstReport() {
             <p className="mt-1 text-sm text-white/85">Across {data.totals.live_rtos} Live Clients.</p>
           </section>
 
-          <section aria-label="Key numbers" className="grid gap-4 sm:grid-cols-3">
-            <BigNumber label="Client users using the portal" value={formatPercent(data.totals.active_users, data.totals.client_users)} note={`${data.totals.active_users} of ${data.totals.client_users} users did something in this period.`} />
-            <BigNumber label="Certificates issued" value={String(data.totals.certificates)} note="Course certificates clients earned in this period.">
-              <CertificateNote period={period} current={data.totals.certificates} prior={data.totals.prior_certificates} />
-            </BigNumber>
-            <BigNumber label="Users who never signed in" value={String(data.totals.never_signed_in)} note="These people were invited but have never logged in." />
+          <section aria-label="Key numbers" className="space-y-2">
+            <p className="text-sm text-muted-foreground">Choose a number to see what is behind it.</p>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <InsightCard
+                selected={which === 'portal'}
+                onSelect={() => choose('portal')}
+                label="Client users using the portal"
+                value={formatPercent(data.totals.active_users, data.totals.client_users)}
+                note={`${data.totals.active_users} of ${data.totals.client_users} users did something in this period.`}
+                ring={{ pct: percent(data.totals.active_users, data.totals.client_users), caption: 'of users', text: formatPercent(data.totals.active_users, data.totals.client_users) }}
+              />
+              <InsightCard
+                selected={which === 'certificates'}
+                onSelect={() => choose('certificates')}
+                label="Certificates issued"
+                value={String(data.totals.certificates)}
+                note="Course certificates clients earned in this period."
+                ring={{
+                  pct: percent(certClients, data.totals.live_rtos),
+                  caption: 'of clients earned one',
+                  tone: 'good',
+                  text: `${certClients}`,
+                }}
+              >
+                <CertificateNote period={period} current={data.totals.certificates} prior={data.totals.prior_certificates} />
+              </InsightCard>
+              <InsightCard
+                selected={which === 'never'}
+                onSelect={() => choose('never')}
+                label="Users who never signed in"
+                value={String(data.totals.never_signed_in)}
+                note="These people were invited but have never logged in."
+                ring={{ pct: percent(data.totals.never_signed_in, data.totals.client_users), caption: 'of users', tone: 'bad', text: formatPercent(data.totals.never_signed_in, data.totals.client_users) }}
+              />
+              <InsightCard
+                selected={which === 'academy'}
+                onSelect={() => choose('academy')}
+                label="Academy: courses finished"
+                value={academy.data ? String(academy.data.completed) : academy.isLoading ? '…' : '–'}
+                note={academy.data ? `${academy.data.enrolled} enrolments, ${academy.data.selfEnrolled} chosen by the learner.` : 'Enrolments and completions in this period.'}
+                ring={{ pct: percent(academyClients, data.totals.live_rtos), caption: 'of clients used it', tone: 'good', text: `${academyClients}` }}
+              />
+            </div>
           </section>
+
+          <CstWhyPanel which={which} report={data} period={period} label={label} academy={{ data: academy.data, isLoading: academy.isLoading, error: academy.error as Error | null }} />
 
           <section aria-label="By CSC" className="space-y-3">
             <div>
@@ -232,6 +318,9 @@ export default function EosCstReport() {
           </p>
           <p>
             <span className="font-semibold">Not counted.</span> Vivacity staff (including when they view as a client), documents staff share, automatic enrolments, system events and archived users.
+          </p>
+          <p>
+            <span className="font-semibold">Academy.</span> Enrolments are counted on the day they were made and finished courses on the day they were completed, for Live Clients only. Revoked enrolments are left out.
           </p>
           <p>
             <span className="font-semibold">Certificates and users.</span> A certificate counts on the day it was issued, unless it was revoked. Past periods use today's users and Live status.
