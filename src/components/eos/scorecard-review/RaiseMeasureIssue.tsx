@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { issueDraft, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { useRaiseScorecardIssue, type MetricIssue } from '@/features/eos-scorecard/useScorecardDiscussion';
@@ -73,36 +74,40 @@ export function RaiseMeasureIssue({ measure, weekKey, ownerName, existing, exist
           ))}
         </ul>
       )}
-      {!expanded ? (
-        <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={existingState === 'loading'} onClick={() => setExpanded(true)}>
-          {open.length > 0 || raisedNow ? <Plus className="h-4 w-4" aria-hidden /> : <MessageSquareWarning className="h-4 w-4" aria-hidden />}
-          {open.length > 0 || raisedNow ? 'Raise another issue' : 'Raise it for IDS'}
-        </Button>
-      ) : (
-        <form
-          className="space-y-2 rounded-lg border bg-card p-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor={`issue-title-${measure.id}`}>Issue</Label>
-            <Input id={`issue-title-${measure.id}`} value={title} onChange={(e) => setEditedTitle(e.target.value)} maxLength={140} required aria-required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`issue-note-${measure.id}`}>What does the room need to decide? (optional, the numbers are added for you)</Label>
-            <Textarea id={`issue-note-${measure.id}`} value={note} onChange={(e) => setNote(e.target.value)} rows={1} maxLength={500} placeholder="e.g. Do we change the aim, or fix what is behind it?" />
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" className="flex-1 gap-2" disabled={raise.isPending || !title.trim()}>
-              {raise.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-              Add to IDS queue
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setExpanded(false)} disabled={raise.isPending}>Not now</Button>
-          </div>
-        </form>
-      )}
+      {/* The form opens over the card rather than inside it, so raising an issue never pushes the slide taller. */}
+      <Popover open={expanded} onOpenChange={setExpanded}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={existingState === 'loading'}>
+            {open.length > 0 || raisedNow ? <Plus className="h-4 w-4" aria-hidden /> : <MessageSquareWarning className="h-4 w-4" aria-hidden />}
+            {open.length > 0 || raisedNow ? 'Raise another issue' : 'Raise it for IDS'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[min(92vw,24rem)] space-y-0 p-3">
+          <form
+            className="space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor={`issue-title-${measure.id}`}>Issue</Label>
+              <Input id={`issue-title-${measure.id}`} value={title} onChange={(e) => setEditedTitle(e.target.value)} maxLength={140} required aria-required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`issue-note-${measure.id}`}>What does the room need to decide? (optional, the numbers are added for you)</Label>
+              <Textarea id={`issue-note-${measure.id}`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} placeholder="e.g. Do we change the aim, or fix what is behind it?" />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={raise.isPending || !title.trim()}>
+                {raise.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                Add to IDS queue
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setExpanded(false)} disabled={raise.isPending}>Not now</Button>
+            </div>
+          </form>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

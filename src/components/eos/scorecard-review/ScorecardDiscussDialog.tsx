@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { discussionAreas, wrapUp, type AreaOutcome } from '@/features/eos-scorecard/discussion';
-import { STATUS_LABEL, type Area } from '@/features/eos-scorecard/scorecardView';
+import { STATUS_LABEL, type Area, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { openIssueMetricIds, useMetricIssues, useScorecardNotes } from '@/features/eos-scorecard/useScorecardDiscussion';
 import { ScorecardDiscussSlide } from './ScorecardDiscussSlide';
 import { ScorecardWrapUp } from './ScorecardWrapUp';
@@ -22,6 +22,9 @@ interface ScorecardDiscussDialogProps {
   startNeedsRoomOnly?: boolean;
   startAtCategory?: string | null;
   meeting?: { id?: string; segmentId?: string; type?: string | null; onIssueRaised?: () => void };
+  /** Type in a number that has not been recorded for the week. Without it, the deck only reads numbers. */
+  onRecordNumber?: (measure: Measure, value: number) => void;
+  savingMeasureId?: string | null;
 }
 
 const isTyping = (target: EventTarget | null) =>
@@ -32,11 +35,14 @@ const isTyping = (target: EventTarget | null) =>
  * room on the area in front of them. Left and right arrows move; Escape leaves. The deck is fixed when it
  * opens, so an area does not vanish from under the room.
  */
-function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, startNeedsRoomOnly = false, startAtCategory = null, meeting }: ScorecardDiscussDialogProps) {
+function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, startNeedsRoomOnly = false, startAtCategory = null, meeting, onRecordNumber, savingMeasureId = null }: ScorecardDiscussDialogProps) {
   const { profile } = useAuth();
   const [needsRoomOnly, setNeedsRoomOnly] = useState(startNeedsRoomOnly);
-  const [deck, setDeck] = useState<Area[]>(() => discussionAreas(areas, { needsRoomOnly: startNeedsRoomOnly }));
-  const [position, setPosition] = useState(() => Math.max(0, deck.findIndex((a) => a.category === startAtCategory)));
+  // Which areas are in the deck, and in what order, is fixed when it opens. Their numbers stay live, so a number typed in
+  // during the meeting shows straight away.
+  const [fixedDeck, setDeck] = useState<Area[]>(() => discussionAreas(areas, { needsRoomOnly: startNeedsRoomOnly }));
+  const deck = useMemo(() => fixedDeck.map((a) => areas.find((x) => x.category === a.category) ?? a), [fixedDeck, areas]);
+  const [position, setPosition] = useState(() => Math.max(0, fixedDeck.findIndex((a) => a.category === startAtCategory)));
   const [outcomes, setOutcomes] = useState<Record<string, AreaOutcome[]>>({});
   const [raisedMeasures, setRaisedMeasures] = useState<ReadonlySet<string>>(new Set());
   const [viewed, setViewed] = useState<ReadonlySet<string>>(new Set());
@@ -156,7 +162,7 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5 lg:px-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-5 lg:px-6">
           {deck.length === 0 ? (
             <div className="mx-auto max-w-xl space-y-4 py-16 text-center">
               <h2 tabIndex={-1} data-slide-heading className="text-2xl font-semibold outline-none">{needsRoomOnly ? 'Nothing needs the room' : 'No measures to review'}</h2>
@@ -177,6 +183,7 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
               key={area.category}
               area={area}
               weekKey={weekKey}
+              weekLabel={weekLabel}
               ownerNames={ownerNames}
               notes={notes}
               myUserId={profile?.user_uuid ?? null}
@@ -186,6 +193,8 @@ function Deck({ open, onOpenChange, areas, weekKey, weekLabel, ownerNames, start
               raisedMeasureIds={raisedMeasures}
               meeting={meeting}
               onOutcome={record}
+              onRecordNumber={onRecordNumber}
+              savingMeasureId={savingMeasureId}
             />
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Archive, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
+import { Archive, ChevronDown, ChevronRight, FileBarChart, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { breakdownKind } from '@/features/eos-scorecard/cstBreakdown';
 import { aimText, formatValue, shortDate, type Area, type Measure } from '@/features/eos-scorecard/scorecardView';
 import { AimBar } from './AimBar';
 import { MiniTrend } from './MiniTrend';
@@ -15,6 +16,8 @@ interface AreaAccordionProps {
   onSaveNumber: (measure: Measure, value: number) => void;
   onEdit: (measure: Measure) => void;
   onArchive: (measure: Measure) => void;
+  /** Open the full report behind an automatic client measure. */
+  onOpenReport?: (measure: Measure) => void;
 }
 
 function sourceSentence(m: Measure, owner: string | null): string {
@@ -23,7 +26,7 @@ function sourceSentence(m: Measure, owner: string | null): string {
   return `Typed in by ${owner ?? 'the owner'} each week.`;
 }
 
-function MeasureRow({ measure, ownerNames, canManage, savingId, onSaveNumber, onEdit, onArchive }: Omit<AreaAccordionProps, 'areas'> & { measure: Measure }) {
+function MeasureRow({ measure, ownerNames, canManage, savingId, onSaveNumber, onEdit, onArchive, onOpenReport }: Omit<AreaAccordionProps, 'areas'> & { measure: Measure }) {
   const [open, setOpen] = useState(false);
   const owner = measure.ownerId ? ownerNames[measure.ownerId] ?? null : null;
   return (
@@ -56,6 +59,11 @@ function MeasureRow({ measure, ownerNames, canManage, savingId, onSaveNumber, on
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Where the number comes from</h4>
               <p className="text-sm">{sourceSentence(measure, owner)}</p>
             </div>
+            {onOpenReport && breakdownKind(measure.metric.metric_key) && (
+              <Button type="button" size="sm" variant="secondary" className="gap-1.5" onClick={() => onOpenReport(measure)}>
+                <FileBarChart className="h-4 w-4" aria-hidden /> Full report
+              </Button>
+            )}
             {measure.lastEntry && measure.value === null && (
               <p className="text-sm text-muted-foreground">Last number: {formatValue(measure.unit, measure.lastEntry.value)} (week of {shortDate(measure.lastEntry.weekEnding)}).</p>
             )}
