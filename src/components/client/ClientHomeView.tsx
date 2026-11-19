@@ -74,21 +74,20 @@ export function ClientHomeView(p: ClientHomeViewProps) {
 
         {totals && <HomeKpiTiles totals={totals} />}
 
-        {/* What Vivacity has sent and what is coming due, side by side and compact. If only one has anything to
-            show it takes the full row. */}
-        {(p.messages || p.reminders) && (
-          <div className="grid items-start gap-4 lg:grid-cols-2 lg:[&>*:only-child]:col-span-2">
-            {p.messages}
-            {p.reminders}
-          </div>
-        )}
-
         <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
           <div className="min-w-0 space-y-6">
             <HomePackageCards rows={p.packages} isLoading={p.packagesLoading} />
             {p.academy}
             {p.regulatory}
             <HomeRecentActivitySection events={p.feed.recentActivity} isLoading={p.feed.isLoading} />
+            {/* What Vivacity has sent and what is coming due, side by side and compact, inside this column under
+                Recent activity. If only one has anything to show it takes the full width. */}
+            {(p.messages || p.reminders) && (
+              <div className="grid items-start gap-4 lg:grid-cols-2 lg:[&>*:only-child]:col-span-2">
+                {p.messages}
+                {p.reminders}
+              </div>
+            )}
             {p.audits}
           </div>
 
