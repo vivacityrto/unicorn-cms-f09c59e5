@@ -13,7 +13,6 @@ import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 
 import { AskVivPanel } from "@/components/ask-viv";
 import { StaffMessengerDock } from "@/components/staff/StaffMessengerDock";
-import { AskVivAssistantWidget } from "@/components/ask-viv-assistant/AskVivAssistantWidget";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { HelpCenterProvider } from "@/components/help-center";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
@@ -731,8 +730,6 @@ export const DashboardLayout = ({
         <AskVivPanel />
         {/* The messenger bubble for Vivacity staff (bottom right): Ask Viv, and the conversations that are yours by the routing. */}
         <StaffMessengerDock />
-        {/* Ask Viv Assistant - new, separate conversational RAG bot (self-gated, rollout-flagged) */}
-        <AskVivAssistantWidget />
         <ScrollToTopButton />
 
       </div>
