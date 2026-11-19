@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked to build the client check-ins designed in the package analytics review: a way to collect input from clients inside the package feature.
 **Scope:** one new table `public.package_checkins` (with row security), two new client-facing functions `submit_package_checkin` and `get_package_checkin_state`, one internal helper `package_checkin_caller_ok` (migration `20261120030000_package_checkins.sql`), and the portal card. No existing table, policy or data is changed.
-**Status:** Written and dry-run in production (everything rolled back). **Not yet applied**: needs Carl's explicit go-ahead. Until it is applied the check-in card shows nothing (the state call fails quietly) and the rest of the page is unchanged.
+**Status:** Applied to production on 20 November 2026 on Carl's explicit go-ahead ("Apply it"), after a dry run and two review fixes. Postflight below. The portal card goes live when this pull request is merged.
 
 ## What is collected
 
@@ -30,6 +30,10 @@ Run in a block that creates the table and functions, acts as real users, then ra
 
 - **Staff with a membership:** a staff account that also holds a full-access membership of an organisation used to pass the gate. The helper now also refuses Vivacity team, super admins and internal or admin accounts. Verified in a rolled-back production test by giving a real staff user a temporary membership: submit refused, state not eligible.
 - **Overlapping submissions:** two requests from the same person at the same moment could both pass the rate-limit checks. The function now takes a per-person, per-package advisory lock before the checks, so they run one after another.
+
+## Production
+
+Preflight: table and functions absent, migration not recorded, helpers `app.is_vivacity_team` and `app.is_super_admin` present. Applied with the exact migration SQL (including both review fixes). Postflight: row security on; 2 select policies (own rows, staff) and no write policy; `authenticated` holds SELECT only on the table, `anon` nothing; one overload each of `submit_package_checkin` and `get_package_checkin_state`, executable by `authenticated`, not by `anon`; the internal helper is not executable by `authenticated`; the table is empty. No existing table or data changed.
 
 ## Not built (follow-up)
 

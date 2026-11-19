@@ -93,9 +93,9 @@ Home, Packages and Academy Activity each have a "Viv's insight" card with an "As
 - Errors read in plain words (not switched on, today's limit reached, busy, could not write a summary).
 - Not built: an AI-drafted weekly snapshot for packages, and AI summaries of client check-in comments (the check-ins themselves are not built).
 
-## Package check-ins (in review)
+## Package check-ins (database applied)
 
-Each package card has a short check-in for people with full access (`PackageCheckIn`, `use-package-checkin.ts`, audit entry `2026-11-20-package-checkins`, migration written and dry-run, **not yet applied**): a two-weekly pulse (1 to 5 with a word for each number, optional note), a weekly "how confident are you about your next audit" rating, and a "Something is blocking me" flag (category plus a short description). People see only their own answers and a small trend; their consultant can read all of them.
+Each package card has a short check-in for people with full access (`PackageCheckIn`, `use-package-checkin.ts`, audit entry `2026-11-20-package-checkins`, migration applied to production): a two-weekly pulse (1 to 5 with a word for each number, optional note), a weekly "how confident are you about your next audit" rating, and a "Something is blocking me" flag (category plus a short description). People see only their own answers and a small trend; their consultant can read all of them.
 
 - Written only through `submit_package_checkin` (no direct writes), which takes the person from the sign-in and the organisation from the package, refuses staff and anyone without full access, and rate-limits (one pulse per 13 days, one confidence per 6, three blockers a day). One tap per question, never more than one prompt per kind per person in its window, to keep survey fatigue low.
 - Answers are a separate qualitative input: not scored, not part of any health score, and never sent to AI (a test guards this).
