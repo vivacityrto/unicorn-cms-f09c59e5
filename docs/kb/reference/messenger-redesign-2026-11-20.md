@@ -38,6 +38,10 @@ One kit, `src/components/messenger/`, fed by thread sources:
 
 Broadcasts are delivered by `send-broadcast-campaign` and the scheduled-delivery path with the service role: one conversation per organisation (`type = 'broadcast'`), the sender plus every `tenant_users` row as participants, and read tracking in `broadcast_recipients` through `fn_mark_conversation_read`. The messenger treats them as read-only threads under "From Vivacity", and the Inbox source marks them read through that function so `broadcast_recipients.read_at` and the audit entries keep working. Staff Communications, bulk message history and scheduling are not changed by phases 1 to 4.
 
+## Staff Ask Viv inside the bubble
+
+The bottom-left Ask Viv widget (`AskVivAssistantWidget`) and the old top-bar `AskVivButton` are retired. Ask Viv for staff is now the first thread in the staff bubble (`StaffAskVivChat`), shown only where the assistant's own rollout gate (`useAskVivAssistantAccess`) allows it, as the widget was. It uses the same hooks, conversations, usage limit and suggestions; replies only to a question that was sent; and is kept mounted while the bubble is closed so an answer on its way is not lost. Its header has its own full page button (keeps the conversation), so it has no "Open in the Inbox" link. Anything that still calls `useAskVivAssistantWidget().openWidget()` opens the bubble on Ask Viv (bridge in `StaffMessengerDock`). Each portal now has one bubble. Tests: `StaffAskVivChat.test.tsx`, `StaffMessengerDock.test.tsx`. Not yet checked in a signed-in browser.
+
 ## Open items
 
 - Resolved by PR 1604 (migration applied 20 November 2026): broadcast recipients are active `tenant_members` (ADR-019); 4 active members with no `tenant_users` row are now reached, and an immediate send adds only recipients as participants.

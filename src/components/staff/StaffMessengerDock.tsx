@@ -7,8 +7,9 @@ import {
   type DockThreadApi,
   type MessengerThread,
 } from '@/components/messenger';
-import { useAskViv } from '@/hooks/useAskViv';
-import { useAskVivFeatureFlags } from '@/hooks/useAskVivFeatureFlags';
+import { StaffAskVivChat } from '@/components/ask-viv-assistant/StaffAskVivChat';
+import { useAskVivAssistantAccess } from '@/hooks/useAskVivAssistantAccess';
+import { useAskVivAssistantWidget } from '@/hooks/useAskVivAssistantWidget';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useStaffConversationPane } from '@/hooks/useStaffConversationPane';
 import { useStaffMessenger } from '@/hooks/useStaffMessenger';
@@ -20,23 +21,24 @@ const ASK_VIV_THREAD: MessengerThread = {
   id: ASK_VIV_THREAD_ID,
   kind: 'ask_viv',
   title: 'Ask Viv',
-  preview: 'The knowledge assistant',
+  preview: 'Ask about a client, a note or an audit',
   unread: false,
   pinned: true,
 };
 
-/** Ask Viv for staff has its own panel; choosing it here closes the bubble and opens that panel. */
-function AskVivHandoff() {
-  const { closeDock, select } = useMessengerDock();
-  const { openPanel } = useAskViv();
+/**
+ * Anything that still asks the old Ask Viv widget to open (it used to be a separate floating widget at the bottom left) opens
+ * the bubble on Ask Viv instead.
+ */
+function useOldWidgetOpensTheBubble(enabled: boolean) {
+  const { openDock } = useMessengerDock();
+  const widgetOpen = useAskVivAssistantWidget((s) => s.isOpen);
+  const closeWidget = useAskVivAssistantWidget((s) => s.closeWidget);
   useEffect(() => {
-    closeDock();
-    select(null);
-    openPanel();
-    // Once, when the thread is chosen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return null;
+    if (!widgetOpen) return;
+    if (enabled) openDock(ASK_VIV_THREAD_ID);
+    closeWidget();
+  }, [widgetOpen, enabled, openDock, closeWidget]);
 }
 
 function StaffThread({ thread, api, tenantId, mine }: { thread: MessengerThread; api: DockThreadApi; tenantId: number | null; mine: boolean }) {
@@ -54,9 +56,11 @@ export function StaffMessengerDock() {
   const isStaff = isSuperAdmin || isVivacityTeam;
   const [allClients, setAllClients] = useState(false);
   const { threads: convoThreads, totalUnread, isLoading, scope, hasScope } = useStaffMessenger(allClients, isStaff);
-  // Ask Viv appears here exactly when its own floating launcher used to (feature flag on, for Vivacity staff).
-  const { flags } = useAskVivFeatureFlags();
-  const threads = useMemo(() => (flags.floatingLauncherEnabled ? [ASK_VIV_THREAD, ...convoThreads] : convoThreads), [flags.floatingLauncherEnabled, convoThreads]);
+  // Ask Viv appears here exactly when the old bottom-left widget did: the assistant's own rollout gate (master flag, then Super
+  // Admin, named beta users or all staff).
+  const { enabled: askVivEnabled } = useAskVivAssistantAccess();
+  const threads = useMemo(() => (askVivEnabled ? [ASK_VIV_THREAD, ...convoThreads] : convoThreads), [askVivEnabled, convoThreads]);
+  useOldWidgetOpensTheBubble(askVivEnabled);
 
   if (!isStaff) return null;
 
@@ -66,7 +70,9 @@ export function StaffMessengerDock() {
       threadsLoading={isLoading}
       unreadTotal={totalUnread}
       title="Messages"
-      fullPageHref={() => '/communications'}
+      keepMounted={[ASK_VIV_THREAD_ID]}
+      // Ask Viv has its own full page button inside its header (it keeps the conversation); the rest open Communications.
+      fullPageHref={(t) => (t?.id === ASK_VIV_THREAD_ID ? null : '/communications')}
       emptyThreads={
         <p className="px-3 py-8 text-center text-xs text-muted-foreground">
           {hasScope || allClients ? 'No conversations yet.' : 'No clients are assigned to you yet. Switch to All clients to browse.'}
@@ -89,7 +95,7 @@ export function StaffMessengerDock() {
       }
       renderThread={(thread, api) =>
         thread.id === ASK_VIV_THREAD_ID ? (
-          <AskVivHandoff />
+          <StaffAskVivChat active={api.active} onBack={api.onBack} headerActions={api.headerActions} />
         ) : (
           <StaffThread thread={thread} api={api} tenantId={thread.tenantId ?? null} mine={thread.tenantId != null && scope.has(thread.tenantId)} />
         )
