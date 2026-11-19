@@ -8,6 +8,7 @@ import { NotificationPreferenceMatrix } from '@/components/notifications/Notific
 import { NotificationsDrawer } from '@/components/notifications/NotificationsDrawer';
 import type { DrawerItem } from '@/components/notifications/drawerModel';
 import { useNavigate } from 'react-router-dom';
+import { staffNotificationTarget } from '@/components/notifications/staffNotificationTarget';
 
 const NOTE_TYPES = new Set(['note_shared', 'note_added']);
 
@@ -31,16 +32,10 @@ export const NotificationDropdown = () => {
 
     if (NOTE_TYPES.has(notification.type)) {
       setPreviewNotif(notification);
-    } else if (notification.type === 'message') {
-      const convId = notification.source_id
-        ?? new URLSearchParams(notification.link?.split('?')[1] ?? '').get('conversation');
-      navigate(convId ? `/communications?thread=${convId}` : '/communications');
-    } else if (notification.type === 'support_ticket') {
-      // Legacy Client Messages notifications: source_id is a help thread id that is now also the ticket id.
-      navigate(notification.source_id ? `/support-tickets/${notification.source_id}` : '/support-tickets');
-    } else if (notification.link) {
-      // ticket_submitted, ticket_reply, ticket_assigned and ticket_resolved carry their own link.
-      navigate(notification.link);
+    } else {
+      // Messages go to Team Communications; legacy support_ticket ones use their source id; the rest carry their own link.
+      const target = staffNotificationTarget(notification);
+      if (target) navigate(target);
     }
   };
 
