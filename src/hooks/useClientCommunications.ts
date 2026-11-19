@@ -70,6 +70,70 @@ export function useConversationRealtime(conversationId: string | null) {
   }, [conversationId, qc, isAcademyOnly]);
 }
 
+/**
+ * The messages of one conversation, with who sent each and its attachments, kept fresh by realtime. Used by the client
+ * portal (through useClientCommunications) and by the staff messenger, so both read a conversation the same way.
+ */
+export function useConversationMessagesQuery(conversationId: string | null, enabled = true) {
+  // Realtime keeps this conversation's message list fresh.
+  useConversationRealtime(enabled ? conversationId : null);
+
+  return useQuery({
+    queryKey: ["conversation-messages", conversationId],
+    queryFn: async (): Promise<ConversationMessage[]> => {
+      if (!conversationId) return [];
+
+      const { data, error } = await supabase
+        .from("tenant_messages")
+        .select("id, conversation_id, sender_user_uuid, sender_type, body, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      if (!data?.length) return [];
+
+      const senderIds = Array.from(new Set(data.map((m) => m.sender_user_uuid)));
+      const profiles = await fetchSenderProfiles(conversationId, senderIds);
+
+      const messageIds = data.map((m) => m.id);
+      const attMap = new Map<string, ConversationMessageAttachment[]>();
+      if (messageIds.length > 0) {
+        const { data: attRows } = await supabase
+          .from("tenant_message_attachments")
+          .select("*")
+          .in("message_id", messageIds);
+        (attRows || []).forEach((a) => {
+          const arr = attMap.get(a.message_id) || [];
+          arr.push(a as ConversationMessageAttachment);
+          attMap.set(a.message_id, arr);
+        });
+      }
+
+      const mapped: ConversationMessage[] = data.map((m) => {
+        const profile = profiles.get(m.sender_user_uuid);
+        const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
+        return {
+          id: m.id,
+          conversation_id: m.conversation_id,
+          sender_id: m.sender_user_uuid,
+          sender_type: m.sender_type ?? null,
+          body: m.body,
+          created_at: m.created_at,
+          sender_name: displayName(profile, fallback),
+          sender_avatar_url: profile?.avatar_url ?? null,
+          // Only the database may say someone is staff. A message's own sender_type is written by the sender, so it
+          // is never used for the badge (it is still used above as the fallback label for a name we cannot resolve).
+          sender_is_staff: profile?.is_staff === true,
+          attachments: attMap.get(m.id) || [],
+        };
+      });
+
+      return mapped;
+    },
+    enabled: !!conversationId && enabled,
+  });
+}
+
 export function useClientCommunications() {
   const { activeTenantId, isAcademyOnly } = useClientTenant();
   const qc = useQueryClient();
@@ -119,65 +183,7 @@ export function useClientCommunications() {
   });
 
   // Fetch messages for a specific conversation
-  const useConversationMessages = (conversationId: string | null) => {
-    // Realtime keeps this conversation's message list fresh.
-    useConversationRealtime(conversationId);
-
-    return useQuery({
-      queryKey: ["conversation-messages", conversationId],
-      queryFn: async (): Promise<ConversationMessage[]> => {
-        if (!conversationId) return [];
-
-        const { data, error } = await supabase
-          .from("tenant_messages")
-          .select("id, conversation_id, sender_user_uuid, sender_type, body, created_at")
-          .eq("conversation_id", conversationId)
-          .order("created_at", { ascending: true });
-
-        if (error) throw error;
-        if (!data?.length) return [];
-
-        const senderIds = Array.from(new Set(data.map((m) => m.sender_user_uuid)));
-        const profiles = await fetchSenderProfiles(conversationId, senderIds);
-
-        const messageIds = data.map((m) => m.id);
-        const attMap = new Map<string, ConversationMessageAttachment[]>();
-        if (messageIds.length > 0) {
-          const { data: attRows } = await supabase
-            .from("tenant_message_attachments")
-            .select("*")
-            .in("message_id", messageIds);
-          (attRows || []).forEach((a) => {
-            const arr = attMap.get(a.message_id) || [];
-            arr.push(a as ConversationMessageAttachment);
-            attMap.set(a.message_id, arr);
-          });
-        }
-
-        const mapped: ConversationMessage[] = data.map((m) => {
-          const profile = profiles.get(m.sender_user_uuid);
-          const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
-          return {
-            id: m.id,
-            conversation_id: m.conversation_id,
-            sender_id: m.sender_user_uuid,
-            sender_type: m.sender_type ?? null,
-            body: m.body,
-            created_at: m.created_at,
-            sender_name: displayName(profile, fallback),
-            sender_avatar_url: profile?.avatar_url ?? null,
-            // Only the database may say someone is staff. A message's own sender_type is written by the sender, so it
-            // is never used for the badge (it is still used above as the fallback label for a name we cannot resolve).
-            sender_is_staff: profile?.is_staff === true,
-            attachments: attMap.get(m.id) || [],
-          };
-        });
-
-        return mapped;
-      },
-      enabled: !!conversationId && !isAcademyOnly,
-    });
-  };
+  const useConversationMessages = (conversationId: string | null) => useConversationMessagesQuery(conversationId, !isAcademyOnly);
 
   // Send a message
   const sendMessage = useMutation({

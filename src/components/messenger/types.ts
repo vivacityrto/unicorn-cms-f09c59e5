@@ -69,6 +69,8 @@ export interface MessengerThread {
   avatarUrl?: string | null;
   /** Where you had read up to when the list loaded. The thread opens at "New messages" after this. */
   myLastReadAt?: string | null;
+  /** The client organisation this thread belongs to, for surfaces that work across organisations (the staff bubble). */
+  tenantId?: number | null;
   /** True for threads people cannot reply to (for example a broadcast). */
   readOnly?: boolean;
 }
