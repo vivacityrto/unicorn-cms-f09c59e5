@@ -7,6 +7,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { staffNotificationTarget } from "./staffNotificationTarget";
 
 function stripHtml(text: string) {
   return (text || "").replace(/<[^>]*>/g, "").trim();
@@ -51,7 +52,8 @@ export function StaffNotificationReview() {
     if (!notification) return;
     markAsRead(notification.id);
     setOpen(false);
-    if (notification.link) navigate(notification.link);
+    const target = staffNotificationTarget(notification);
+    if (target) navigate(target);
   };
 
   if (!notification) return null;
@@ -86,7 +88,7 @@ export function StaffNotificationReview() {
           <p className="mt-6 whitespace-pre-wrap text-[15px] leading-7 text-foreground">{stripHtml(notification.message) || "There is a new update available."}</p>
         </div>
         <DialogFooter className="border-t bg-muted/20 px-6 py-4 sm:px-8">
-          {notification.link && <Button variant="ghost" onClick={openNotification} className="gap-2 sm:mr-auto"><ExternalLink className="h-4 w-4" />Open details</Button>}
+          {staffNotificationTarget(notification) && <Button variant="ghost" onClick={openNotification} className="gap-2 sm:mr-auto"><ExternalLink className="h-4 w-4" />Open details</Button>}
           <Button onClick={continueReview} className="gap-2">{currentIndex === unreadNotifications.length - 1 ? "Done" : "Continue"}<ChevronRight className="h-4 w-4" /></Button>
         </DialogFooter>
       </DialogContent>

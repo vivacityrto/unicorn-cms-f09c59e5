@@ -3,6 +3,7 @@ import { Bell, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications, type Notification } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
+import { staffNotificationTarget } from "./staffNotificationTarget";
 
 function stripHtml(text: string) {
   return (text || "").replace(/<[^>]*>/g, "").trim();
@@ -31,7 +32,7 @@ export function StaffLiveNotificationBanner() {
   const viewNotification = () => {
     markAsRead(notification.id);
     setNotification(null);
-    navigate(notification.link || "/inbox");
+    navigate(staffNotificationTarget(notification) || "/inbox");
   };
 
   return (

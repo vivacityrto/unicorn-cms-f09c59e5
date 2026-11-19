@@ -65,5 +65,5 @@ The old `components/messaging` list, thread, rail and topic-badge components and
 - Resolved by PR 1604 (migration applied 20 November 2026): broadcast recipients are active `tenant_members` (ADR-019); 4 active members with no `tenant_users` row are now reached, and an immediate send adds only recipients as participants.
 - Whether a user added to an organisation after a broadcast should be added to earlier broadcasts as a participant (the access change hides broadcasts they were never in).
 - A later primary CSC reassignment does not update participants on existing threads.
-- `fn_tm_on_message_insert` writes `/client/inbox?...` as the link for everyone, including staff.
+- `fn_tm_on_message_insert` still writes `/client/inbox?...` as the link for everyone. Staff are routed correctly in the app instead (`staffNotificationTarget`: bell, live banner and review dialog open `/communications?thread=<id>`); fixing the stored link needs a migration and is not done.
 - Staff realtime channels with fixed names (`useTeamUnreadCount`, `TeamCommunicationsPage`) could still collide (`ClientMessagesTab`'s was removed in 5b).
