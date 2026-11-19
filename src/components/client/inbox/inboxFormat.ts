@@ -1,13 +1,13 @@
-import { format, formatDistanceToNowStrict, isThisWeek, isToday, isYesterday } from 'date-fns';
+import { format, formatDistanceToNowStrict, isSameDay, isSameWeek, subDays } from 'date-fns';
 
 export type DayGroup = 'Today' | 'Yesterday' | 'This week' | 'Earlier';
 const ORDER: DayGroup[] = ['Today', 'Yesterday', 'This week', 'Earlier'];
 
 /** Which heading an item sits under in a feed. Weeks start on Monday. */
 export function dayGroup(date: Date, now: Date = new Date()): DayGroup {
-  if (isToday(date)) return 'Today';
-  if (isYesterday(date)) return 'Yesterday';
-  if (isThisWeek(date, { weekStartsOn: 1 })) return 'This week';
+  if (isSameDay(date, now)) return 'Today';
+  if (isSameDay(date, subDays(now, 1))) return 'Yesterday';
+  if (isSameWeek(date, now, { weekStartsOn: 1 })) return 'This week';
   return 'Earlier';
 }
 
@@ -23,8 +23,8 @@ export function groupByDay<T>(items: readonly T[], getDate: (item: T) => string 
 
 /** The divider shown between days inside a conversation. */
 export function dayDivider(date: Date, now: Date = new Date()): string {
-  if (isToday(date)) return 'Today';
-  if (isYesterday(date)) return 'Yesterday';
+  if (isSameDay(date, now)) return 'Today';
+  if (isSameDay(date, subDays(now, 1))) return 'Yesterday';
   return format(date, date.getFullYear() === now.getFullYear() ? 'EEEE d MMMM' : 'd MMMM yyyy');
 }
 
