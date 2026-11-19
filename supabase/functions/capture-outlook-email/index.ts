@@ -306,11 +306,13 @@ Deno.serve(async (req) => {
       .select("id, unlinked_at")
       .eq("user_uuid", userId)
       .eq("external_message_id", message_id)
+      .eq("tenant_id", tenantIdNum)
       .maybeSingle();
 
+    // One email can be linked to several clients, but only once per client.
     if (existingEmail && !existingEmail.unlinked_at) {
       return new Response(
-        JSON.stringify({ error: "Email already linked", email_id: existingEmail.id }),
+        JSON.stringify({ error: "This email is already linked to this client", email_id: existingEmail.id }),
         { status: 409, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }

@@ -199,7 +199,7 @@ serve(async (req) => {
     const { data: emailRecord, error: insertError } = await supabaseAdmin
       .from('email_messages')
       .upsert(emailData, {
-        onConflict: 'user_uuid,external_message_id',
+        onConflict: 'user_uuid,external_message_id,tenant_id',
         ignoreDuplicates: false,
       })
       .select('id, external_message_id, subject, sender_email, sender_name, received_at, has_attachments, client_id, package_id, task_id, body_preview, web_link, graph_enriched')
