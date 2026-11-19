@@ -7,6 +7,7 @@ import { useClientPackageHoursRecent } from "@/hooks/use-client-package-hours-re
 import { useClientPackageHoursTimeline } from "@/hooks/use-client-package-hours-timeline";
 import { useClientPackageActivity } from "@/hooks/use-client-package-activity";
 import { PackageAnalytics } from "@/components/client/package-dashboard/PackageAnalytics";
+import { PackageCheckIn } from "@/components/client/package-dashboard/PackageCheckIn";
 import { ClientInsightCard } from "@/components/client/insight/ClientInsightCard";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
 import { PackageHoursBreakdown } from "@/components/client/package-dashboard/PackageHoursBreakdown";
@@ -407,6 +408,9 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           hoursTotal={Number(dashboard?.hours_total ?? 0)}
           percentUsed={Math.min(100, Math.max(0, Math.round(Number(dashboard?.hours_pct_used ?? 0) * 100)))}
         />
+
+        {/* A short check-in for the people with full access: pulse, confidence and a blocker flag. */}
+        {dashboard && !dashboard.is_complete && <PackageCheckIn packageInstanceId={packageInstanceId} />}
 
         {/* Stat tiles */}
         {dashboardLoading ? (
