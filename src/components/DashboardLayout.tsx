@@ -7,6 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { TopBar } from "@/components/layout/TopBar";
+import { StaffSidebar } from "@/components/layout/StaffSidebar";
+import { SIDEBAR_GRADIENT } from "@/components/layout/sidebarKit";
+import { buildStaffSections, roleLabel } from "@/components/layout/staffMenu";
 import { UtilityFooter } from "@/components/layout/UtilityFooter";
 import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
@@ -24,153 +27,6 @@ import { useSupportTicketsBadge } from "@/hooks/useSupportTicketsBadge";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 import { StaffLiveNotificationBanner } from "@/components/notifications/StaffLiveNotificationBanner";
 import { StaffNotificationReview } from "@/components/notifications/StaffNotificationReview";
-
-// ============================================================
-// VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
-// ============================================================
-
-// 1. WORK Section - All Vivacity Team Roles
-const workMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Sparkles, label: "Ask Viv", path: "/ask-viv" },
-  { icon: LayoutDashboard, label: "Triage Dashboard", path: "/triage-dashboard" },
-  { icon: BarChart3, label: "Executive Dashboard", path: "/executive", leadershipOnly: true },
-  { icon: Inbox, label: "Inbox", path: "/inbox" },
-  { icon: Mail, label: "Email Triage", path: "/email-triage", emailTriageStaffOnly: true },
-  { icon: Briefcase, label: "My Work", path: "/my-work" },
-  { icon: ListTodo, label: "Tasks", path: "/tasks" },
-  { icon: Gauge, label: "KPI", path: "/kpi" },
-  { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
-  { icon: Calendar, label: "My Calendar", path: "/work/calendar" },
-  { icon: Video, label: "Meetings", path: "/work/meetings" },
-  { icon: Calendar, label: "Event Calendar", path: "/calendar" },
-  { icon: GraduationCap, label: "Vivacity Academy", path: "/academy" },
-];
-
-const EMAIL_TRIAGE_ROLES = new Set(["Super Admin", "Team Member", "CSC", "Integrator", "BGT"]);
-
-// 2. CLIENTS Section - All Vivacity Team Roles
-const clientsMenuItems = [
-  { icon: Building2, label: "Clients", path: "/manage-tenants" },
-  { icon: Activity, label: "Client Activity", path: "/client-activity" },
-
-  { icon: FileText, label: "Documents", path: "/manage-documents" },
-  { icon: Mail, label: "Communications", path: "/communications" },
-  { icon: LifeBuoy, label: "Support Tickets", path: "/support-tickets" },
-  { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
-  { icon: ClipboardCheck, label: "Audits", path: "/audits" },
-  { icon: Download, label: "Cert & Contact Register", path: "/clients/bulk-membership-certificates", cscOrSuperAdminOnly: true },
-];
-
-// 3. EOS Section - Role-Aware Visibility
-// Super Admin & Team Leader: full access
-// Team Member: hide Leadership Dashboard, Accountability Chart
-const eosMenuItems = [
-  { icon: Target, label: "EOS Overview", path: "/eos" },
-  { icon: ShieldCheck, label: "Leadership Dashboard", path: "/eos/leadership", leadershipOnly: true },
-  { icon: BarChart3, label: "Scorecard", path: "/eos/scorecard" },
-  { icon: Gauge, label: "CST Report", path: "/eos/cst-report" },
-  { icon: Flag, label: "Mission Control", path: "/eos/vto" },
-  { icon: TrendingUp, label: "Rocks", path: "/eos/rocks" },
-  { icon: Rocket, label: "Flight Plan", path: "/eos/flight-plan" },
-  { icon: Shield, label: "Risks & Opportunities", path: "/eos/risks-opportunities" },
-  { icon: ListTodo, label: "To-Dos", path: "/eos/todos" },
-  { icon: Calendar, label: "Meetings", path: "/eos/meetings" },
-  { icon: Users, label: "Quarterly Conversations", path: "/eos/qc" },
-  { icon: Briefcase, label: "Accountability Chart", path: "/eos/accountability" },
-  { icon: TrendingUp, label: "GWC Trends", path: "/eos/gwc-trends" },
-  { icon: Target, label: "Rock Analysis", path: "/eos/rock-analysis" },
-  { icon: BarChart3, label: "Client Impact", path: "/eos/client-impact" },
-  { icon: FileText, label: "Processes", path: "/processes" },
-];
-
-// 4. RESOURCE MANAGEMENT Section - Super Admin & Team Leader only
-// Admin-style management views, not browsing
-const resourceManagementMenuItems = [
-  { icon: Library, label: "Content Dashboard", path: "/resource-hub" },
-  { icon: FileText, label: "Templates Manager", path: "/resource-hub/templates" },
-  { icon: CheckSquare, label: "Checklists Manager", path: "/resource-hub/checklists" },
-  { icon: ClipboardList, label: "Registers & Forms Manager", path: "/resource-hub/registers-forms" },
-  { icon: Search, label: "Audit & Evidence Library", path: "/resource-hub/audit-evidence" },
-  { icon: Video, label: "Training & Webinar Library", path: "/resource-hub/training-webinars" },
-  { icon: BookOpen, label: "Guides & How-To Library", path: "/resource-hub/guides-howto" },
-  { icon: TrendingUp, label: "CI Tools Library", path: "/resource-hub/ci-tools" },
-  { icon: ScrollText, label: "Updates Log Manager", path: "/resource-hub/updates" },
-];
-
-// 5. ADMINISTRATION Section
-// Super Admin: full access
-// Team Leader: read-only access to Team Users and Tenant Users
-// Team Member: hidden
-interface AdministrationMenuItem {
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  saOrIntegratorOnly?: boolean;
-  saOrTeamLeaderOnly?: boolean;
-  superAdminOnly?: boolean;
-}
-const administrationMenuItems: AdministrationMenuItem[] = [
-  { icon: Shield, label: "Team Users", path: "/admin/team-users" },
-  { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
-  { icon: UsersRound, label: "Contact Directory", path: "/administration/contacts" },
-  { icon: Users, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true },
-
-  { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
-  { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
-  { icon: UserPlus, label: "Bulk Invite", path: "/admin/bulk-invite", superAdminOnly: true },
-  { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
-  { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
-];
-
-// 6. ACADEMY BUILDER Section - Super Admin Only
-const academyBuilderMenuItems = [
-  { icon: ShieldCheck, label: "Academy Customers", path: "/superadmin/academy/tenant-access" },
-  { icon: Users, label: "Enrolments", path: "/superadmin/academy/enrollments" },
-  { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
-  { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
-  { icon: Search, label: "Course Cleanup", path: "/superadmin/academy/course-cleanup" },
-  { icon: Tags, label: "Tag Management", path: "/superadmin/academy/tag-management" },
-  { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
-  { icon: ClipboardList, label: "Workforce PDP", path: "/superadmin/workforce-pdp" },
-];
-
-// 7. SYSTEM CONFIG Section - Super Admin Only
-const systemConfigMenuItems = [
-  { icon: Package2, label: "Manage Packages", path: "/admin/manage-packages" },
-  { icon: Blocks, label: "Manage Stages", path: "/admin/stages" },
-  { icon: Sparkles, label: "Stage Builder", path: "/admin/stage-builder" },
-  { icon: BarChart3, label: "Stage Analytics", path: "/admin/stage-analytics" },
-  { icon: Cog, label: "EOS Processes", path: "/admin/eos-processes" },
-  { icon: Library, label: "Knowledge Library", path: "/admin/knowledge" },
-  { icon: Bot, label: "AI Assistant", path: "/admin/assistant" },
-  { icon: Flag, label: "Ask Viv Flags", path: "/internal/ask-viv/flags" },
-  { icon: Puzzle, label: "Add-in Settings", path: "/admin/addin-settings" },
-  { icon: Activity, label: "Add-in Diagnostics", path: "/admin/addin-diagnostics" },
-  { icon: MapPin, label: "ClickUp Mapping", path: "/admin/clickup-mapping" },
-  { icon: Download, label: "ClickUp Import", path: "/admin/clickup-import" },
-  { icon: Database, label: "Code Tables", path: "/admin/code-tables" },
-  { icon: ShieldCheck, label: "Role Permissions", path: "/administration/role-permissions" },
-  { icon: ClipboardList, label: "Lifecycle Checklists", path: "/admin/lifecycle-checklists" },
-  { icon: Tags, label: "Merge Field Tags", path: "/admin/merge-field-tags" },
-  { icon: Globe, label: "SharePoint Sites", path: "/admin/sharepoint-sites" },
-  { icon: BellRing, label: "Reporting Obligations", path: "/admin/settings/reporting-obligations" },
-  { icon: Activity, label: "Operations Dashboard", path: "/admin/operations" },
-  { icon: FileCheck, label: "Compliance Packs", path: "/admin/compliance-packs" },
-  { icon: AlertTriangle, label: "Zero-Progress Packages", path: "/admin/diagnostics/zero-progress-packages" },
-];
-
-// 7b. STRATEGIC INTELLIGENCE Section - Regulator Watch is available to all
-// internal staff; the remaining cross-tenant tools stay Super Admin only.
-// Cross-tenant analytics/orchestration tools surfaced as widgets on the Executive Dashboard
-const strategicIntelligenceMenuItems = [
-  { icon: Globe, label: "Regulator Watch", path: "/admin/regulator-watch" },
-  { icon: Radar, label: "Risk Radar", path: "/admin/risk-radar" },
-  { icon: Search, label: "Template Gap Analysis", path: "/admin/template-gap-analysis" },
-  { icon: Compass, label: "Strategic Command", path: "/admin/strategic-command" },
-  { icon: TrendingUp, label: "Workflow Optimisation", path: "/admin/workflow-optimisation" },
-  { icon: Network, label: "Strategic Orchestration", path: "/admin/strategic-orchestration" },
-];
 
 // Client-facing menu items (for Admin/User roles and "View as Client" mode)
 const baseMenuItems = [
@@ -269,48 +125,22 @@ export const DashboardLayout = ({
   // Determine if we should show Vivacity Team menu or Client menu
   const showVivacityMenu = isVivacityTeam && !isViewingAsClient;
 
-  // Filter EOS items based on role
-  const filteredEosItems = useMemo(() => {
-    const base = eosMenuItems.filter(item => {
-      if (item.leadershipOnly) {
-        // Only Super Admin and Team Leader can see leadership-only items
-        return isSuperAdmin || isTeamLeader;
-      }
-      return true;
-    });
-    // KPI module lives in the Work section (/kpi) with an in-page reviewer toggle.
-    return base;
-  }, [isSuperAdmin, isTeamLeader]);
-
-  // Filter Work items based on role
-  const filteredWorkItems = useMemo(() => {
-    const isEmailTriageStaff = EMAIL_TRIAGE_ROLES.has(userRole);
-    return workMenuItems.filter(item => {
-      if (item.leadershipOnly) {
-        return isSuperAdmin || isTeamLeader;
-      }
-      if (item.emailTriageStaffOnly) {
-        return isEmailTriageStaff;
-      }
-      return true;
-    });
-  }, [isSuperAdmin, isTeamLeader, userRole]);
-
-  // Filter Administration items based on role
-  const filteredAdminItems = useMemo(() => {
-    return administrationMenuItems.filter(item => {
-      if (item.saOrIntegratorOnly) {
-        return isSuperAdmin || isIntegrator;
-      }
-      if (item.saOrTeamLeaderOnly) {
-        return isSuperAdmin || isTeamLeader;
-      }
-      if (item.superAdminOnly) {
-        return isSuperAdmin;
-      }
-      return true;
-    });
-  }, [isSuperAdmin, isIntegrator, isTeamLeader]);
+  // The staff menu: same groups and pages, same order, filtered by role (see staffMenu.ts).
+  const staffSections = useMemo(
+    () =>
+      buildStaffSections({
+        userRole,
+        isSuperAdmin,
+        isTeamLeader,
+        isIntegrator,
+        isCSC,
+        isVivacityTeam,
+        teamUnreadCount,
+        myAssignedConvosCount,
+        supportTicketsCount,
+      }),
+    [userRole, isSuperAdmin, isTeamLeader, isIntegrator, isCSC, isVivacityTeam, teamUnreadCount, myAssignedConvosCount, supportTicketsCount],
+  );
 
   // Legacy menu items for client view
   const clientMenuItems = useMemo(() => {
@@ -380,50 +210,6 @@ export const DashboardLayout = ({
     );
   };
 
-  // Render section with collapsible header
-  const renderSection = (
-    key: string,
-    title: string,
-    items: { icon: LucideIcon; label: string; path: string }[],
-    sectionKey: keyof typeof sectionsOpen,
-    showAlertDot?: boolean
-  ) => {
-    if (items.length === 0) return null;
-
-    return (
-      <Collapsible
-        open={sectionsOpen[sectionKey]}
-        onOpenChange={(open) =>
-          setSectionsOpen((prev) => ({ ...prev, [sectionKey]: open }))
-        }
-        className="mt-6"
-      >
-        {sidebarOpen && (
-          <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 mb-2 py-2 rounded transition-colors ${
-            showVivacityMenu ? "hover:bg-white/5" : "hover:bg-muted/20"
-          }`}>
-            <span className="flex items-center gap-1.5">
-              <p className={`text-xs font-semibold uppercase tracking-wider ${
-                showVivacityMenu ? "text-white/70" : "text-secondary"
-              }`}>
-                {title}
-              </p>
-              {showAlertDot && (
-                <span className="h-2 w-2 rounded-full bg-destructive flex-shrink-0" aria-label={`${title} has unread items`} />
-              )}
-            </span>
-            {sectionsOpen[sectionKey] ? (
-              <ChevronDown className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
-            ) : (
-              <ChevronRight className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
-            )}
-          </CollapsibleTrigger>
-        )}
-        <CollapsibleContent>{items.map(renderMenuItem)}</CollapsibleContent>
-      </Collapsible>
-    );
-  };
-
   return (
     <HelpCenterProvider>
     <div className="min-h-screen bg-background overflow-x-clip">
@@ -451,16 +237,28 @@ export const DashboardLayout = ({
           // Base styles
           "sidebar-motion flex flex-col fixed left-0 top-0 h-screen z-30",
           // Responsive width
-          sidebarOpen ? "w-64" : "w-20",
+          sidebarOpen ? "w-60" : "w-16",
           // Mobile: slide in/out, hidden by default
           "max-md:translate-x-0 max-md:w-[85vw] max-md:max-w-72",
           !sidebarOpen && "max-md:-translate-x-full",
           // White-first for client, gradient for Vivacity team
           showVivacityMenu
-            ? "bg-gradient-sidebar border-r border-border/20"
+            ? "overflow-hidden"
             : "bg-card border-r border-border"
         )}
+        style={showVivacityMenu ? { background: SIDEBAR_GRADIENT } : undefined}
       >
+        {showVivacityMenu ? (
+          <StaffSidebar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            sections={staffSections}
+            pathname={location.pathname}
+            roleName={roleLabel(userRole)}
+            isViewingAsClient={isViewingAsClient}
+          />
+        ) : (
+        <>
         {/* Sidebar Header */}
         {sidebarOpen ? (
           <div className={`relative px-3 pt-0 pb-4 border-b ${showVivacityMenu ? "border-white/10" : "border-border"}`}>
@@ -519,111 +317,7 @@ export const DashboardLayout = ({
               <ChevronUp className={`w-5 h-5 ${showVivacityMenu ? "text-white/60" : "text-secondary/40"}`} />
             </div>
           )}
-          {showVivacityMenu ? (
-            <>
-              {/* 1. WORK Section - All Vivacity Team */}
-              <Collapsible
-                open={sectionsOpen.work}
-                onOpenChange={(open) =>
-                  setSectionsOpen((prev) => ({ ...prev, work: open }))
-                }
-              >
-                {sidebarOpen && (
-                  <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 mb-2 py-2 rounded transition-colors ${
-                    showVivacityMenu ? "hover:bg-white/5" : "hover:bg-muted/20"
-                  }`}>
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${
-                      showVivacityMenu ? "text-white/70" : "text-secondary"
-                    }`}>
-                      Work
-                    </p>
-                    {sectionsOpen.work ? (
-                      <ChevronDown className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
-                    ) : (
-                      <ChevronRight className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
-                    )}
-                  </CollapsibleTrigger>
-                )}
-                <CollapsibleContent>
-                  {filteredWorkItems.map(renderMenuItem)}
-                </CollapsibleContent>
-              </Collapsible>
-
-              {/* 2. CLIENTS Section - All Vivacity Team */}
-              {renderSection(
-                "clients",
-                "Clients",
-                clientsMenuItems
-                  .map(item => {
-                    if (item.path === "/communications") {
-                      const total = (teamUnreadCount || 0) + (myAssignedConvosCount || 0);
-                      return { ...item, badge: total || undefined };
-                    }
-                    if (item.path === "/support-tickets")
-                      return { ...item, badge: supportTicketsCount || undefined };
-                    return item;
-                  })
-                  .filter(item => {
-                    if (item.cscOrSuperAdminOnly) {
-                      return isSuperAdmin || userRole === 'CSC';
-                    }
-                    return true;
-                  }),
-                "clients",
-                (teamUnreadCount || 0) + (myAssignedConvosCount || 0) + (supportTicketsCount || 0) > 0
-              )}
-
-              {/* 3. EOS Section - Role-Aware */}
-              {renderSection("eos", "EOS", filteredEosItems, "eos")}
-
-              {/* 4. RESOURCE MANAGEMENT Section - Super Admin & Team Leader only */}
-              {(isSuperAdmin || isTeamLeader) &&
-                renderSection(
-                  "resourceManagement",
-                  "Resource Management",
-                  resourceManagementMenuItems,
-                  "resourceManagement"
-                )}
-
-              {/* 5. ADMINISTRATION Section - Super Admin full, Team Leader & Integrator partial,
-                  visible to all Vivacity staff so items without a role flag (e.g. Contact
-                  Directory) are reachable by everyone; individual items still gate themselves. */}
-              {isVivacityTeam &&
-                renderSection(
-                  "administration",
-                  "Administration",
-                  filteredAdminItems,
-                  "administration"
-                )}
-
-              {/* 6. ACADEMY BUILDER Section - SA, TL, Integrator, CSC all have full parity */}
-              {(isSuperAdmin || isTeamLeader || isIntegrator || isCSC) &&
-                renderSection(
-                  "academyBuilder",
-                  "Academy",
-                  academyBuilderMenuItems,
-                  "academyBuilder"
-                )}
-
-              {/* 7. SYSTEM CONFIG Section - Super Admin Only */}
-              {isSuperAdmin &&
-                renderSection(
-                  "systemConfig",
-                  "System Config",
-                  systemConfigMenuItems,
-                  "systemConfig"
-                )}
-
-              {/* 8. STRATEGIC INTELLIGENCE Section */}
-              {isVivacityTeam &&
-                renderSection(
-                  "strategicIntelligence",
-                  "Strategic Intelligence",
-                  isSuperAdmin ? strategicIntelligenceMenuItems : [strategicIntelligenceMenuItems[0]],
-                  "strategicIntelligence"
-                )}
-            </>
-          ) : (
+          {(
             <>
               {/* Client Menu - for Admin/User roles or when viewing as client */}
               <Collapsible
@@ -690,6 +384,8 @@ export const DashboardLayout = ({
 
         {/* Bottom spacing */}
         <div className="pb-4" />
+        </>
+        )}
       </aside>
 
       {/* Main Content */}
@@ -698,7 +394,7 @@ export const DashboardLayout = ({
           // Critical layout contract: flex-1 w-full min-w-0 for proper content sizing
           "sidebar-content-motion flex flex-col min-h-screen w-full min-w-0 overflow-x-clip",
           // Use padding-left (not margin-left) because sidebar is fixed; prevents content shifting off-canvas
-          sidebarOpen ? "md:pl-64" : "md:pl-20",
+          sidebarOpen ? "md:pl-60" : "md:pl-16",
           // Mobile: no padding, full width
           "pl-0"
         )}
@@ -720,7 +416,7 @@ export const DashboardLayout = ({
           className={cn(
             // z-20 keeps the footer below the mobile sidebar (z-30), which opens over it.
             "sidebar-content-motion fixed bottom-0 left-0 right-0 z-20 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)]",
-            sidebarOpen ? "md:left-64" : "md:left-20"
+            sidebarOpen ? "md:left-60" : "md:left-16"
           )}
         >
           {showVivacityMenu ? <UtilityFooter /> : <ClientFooter />}

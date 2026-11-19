@@ -1,3 +1,4 @@
+import { RailTip, SIDEBAR_GRADIENT } from "@/components/layout/sidebarKit";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -106,23 +107,6 @@ function StartOpenPin({ pinned, onChange }: { pinned: boolean; onChange: (open: 
   );
 }
 
-/**
- * The floating label for the collapsed icon rail: what the item is, and one line about it, beside the icon on hover and on
- * keyboard focus. When the sidebar is open the words are already on screen, so it does nothing.
- */
-function RailTip({ show, label, description, children }: { show: boolean; label: string; description: string; children: React.ReactNode }) {
-  if (!show) return <>{children}</>;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side="right" sideOffset={12} className="max-w-[16rem] rounded-xl border-border bg-popover px-3 py-2 shadow-lg">
-        <p className="text-[13px] font-semibold leading-tight text-foreground">{label}</p>
-        <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{description}</p>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
 function NavItem({ item, isActive, sidebarOpen: sOpen }: { item: SidebarMenuItem; isActive: boolean; sidebarOpen: boolean }) {
   const Icon = item.icon;
   return (
@@ -218,7 +202,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, defaultOpen = false
           !sidebarOpen && "max-md:-translate-x-full"
         )}
         style={{
-          background: "linear-gradient(180deg, hsl(270 55% 41%) 0%, hsl(330 86% 51%) 100%)",
+          background: SIDEBAR_GRADIENT,
         }}
       >
         {/* Header */}
