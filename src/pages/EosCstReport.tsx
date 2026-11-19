@@ -190,7 +190,7 @@ export default function EosCstReport() {
         <div className="h-64 animate-pulse rounded-lg border bg-muted/40" aria-busy="true" />
       ) : (
         <>
-          <section aria-label="Summary" className="rounded-xl bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white">
+          <section aria-label="Summary" className="rounded-xl bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white brand-surface">
             <p className="text-2xl font-bold leading-snug sm:text-[1.7rem]">{reportHeadline(data.totals, label)}</p>
             <p className="mt-1 text-sm text-white/85">Across {data.totals.live_rtos} Live Clients.</p>
           </section>

@@ -82,10 +82,10 @@ export default function CourseCard({
 
   return (
     <div
-      className="flex flex-col overflow-hidden bg-white cursor-pointer"
+      className="flex flex-col overflow-hidden bg-card cursor-pointer"
       onClick={onClick}
       style={{
-        border: "1px solid #e8e4ef",
+        border: "1px solid hsl(var(--border))",
         borderRadius: 14,
         transition: "transform 0.2s ease, box-shadow 0.2s ease",
       }}

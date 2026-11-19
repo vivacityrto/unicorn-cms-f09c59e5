@@ -144,7 +144,7 @@ export default function AcademyDashboardPage() {
         {roleTiles.map((tile) => (
           <Link key={tile.route} to={tile.route} className="block group">
             <Card
-              className="bg-white hover:shadow-lg transition-shadow h-full"
+              className="bg-card hover:shadow-lg transition-shadow h-full"
               style={{ borderLeft: `4px solid ${tile.accent}` }}
             >
               <CardContent className="py-5 px-5 flex items-center gap-4">

@@ -489,11 +489,10 @@
     --sidebar-border: 0 0% 100% / 0.16;
   }
 
-  /* Client portal is out of scope for dark mode (staff-only feature for now)
-     and is mounted under the same html.dark ancestor as the rest of the app
-     (ThemeProvider wraps the whole router) — .light re-declares every token
-     .dark overrides so ClientLayout's root div (class="light") stays on the
-     light palette regardless of the staff user's theme preference. */
+  /* Light-only scope, now used by the Academy learner shell (AcademyLayout), which has no
+     dark mode yet. The client portal no longer uses it: it follows the chosen theme.
+     .light re-declares every token .dark overrides so the shell stays on the light palette
+     even when html carries .dark. */
   .light {
     color-scheme: light;
 
@@ -613,6 +612,17 @@
   .light h1,
   .light h2 {
     color: hsl(var(--secondary));
+  }
+
+  /* A brand-coloured surface (the purple gradient banners and dialog headers) is dark in
+     every theme, so the text on it must stay light. The heading rules above follow the theme,
+     which left dark titles on the purple in dark mode. Put .brand-surface on the banner and its
+     headings, links and description keep the banner's own colour. */
+  .brand-surface {
+    color: #fff;
+  }
+  .brand-surface :is(h1, h2, h3, h4, h5, h6) {
+    color: inherit;
   }
 
   h3 {

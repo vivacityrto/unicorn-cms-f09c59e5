@@ -50,17 +50,17 @@ const STATUS_ICON_MAP: Record<string, React.ElementType> = {
 };
 
 const STATUS_COLOR_MAP: Record<string, string> = {
-  open: 'bg-slate-100 text-slate-700',
+  open: 'bg-muted text-foreground',
   in_progress: 'bg-blue-100 text-blue-700',
   blocked: 'bg-red-100 text-red-700',
   done: 'bg-green-100 text-green-700',
   cancelled: 'bg-muted text-muted-foreground',
-  todo: 'bg-slate-100 text-slate-700',
+  todo: 'bg-muted text-foreground',
   waiting_client: 'bg-amber-100 text-amber-700',
 };
 
 const PRIORITY_COLOR_MAP: Record<string, string> = {
-  low: 'bg-slate-100 text-slate-600',
+  low: 'bg-muted text-muted-foreground',
   normal: 'bg-blue-100 text-blue-700',
   medium: 'bg-blue-100 text-blue-700',
   high: 'bg-orange-100 text-orange-700',
@@ -468,10 +468,10 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
               <div className="space-y-2">
                 {filteredItems.map(item => {
                    const statusLabel = actionStatusOptions.find(s => s.value === item.status)?.label || item.status;
-                   const statusColor = STATUS_COLOR_MAP[item.status] || 'bg-slate-100 text-slate-700';
+                   const statusColor = STATUS_COLOR_MAP[item.status] || 'bg-muted text-foreground';
                    const StatusIcon = STATUS_ICON_MAP[item.status] || Circle;
                    const priorityLabel = priorityOptions.find(p => p.value === item.priority)?.label || item.priority;
-                   const priorityColor = PRIORITY_COLOR_MAP[item.priority] || 'bg-slate-100 text-slate-600';
+                   const priorityColor = PRIORITY_COLOR_MAP[item.priority] || 'bg-muted text-muted-foreground';
                    const isOverdue = item.due_date && isPast(new Date(item.due_date)) && 
                                    !isToday(new Date(item.due_date)) && 
                                    item.status !== 'done' && item.status !== 'cancelled';
