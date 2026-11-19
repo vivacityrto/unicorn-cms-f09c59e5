@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode, type RefObject } from 'react';
 import { ArrowLeft, Bell, CalendarClock, CheckCheck, ClipboardCheck, LifeBuoy, MessageSquare, Settings2, StickyNote, type LucideIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
@@ -20,6 +20,8 @@ interface Props {
   /** When given, a gear in the header swaps the list for this (what you are notified about). */
   preferences?: ReactNode;
   onAllSettings?: () => void;
+  /** The bell that opened the drawer. Focus goes back to it when the drawer closes, so keyboard users are not lost. */
+  returnFocusTo?: RefObject<HTMLElement>;
 }
 
 function iconFor(type: string): LucideIcon {
@@ -38,7 +40,7 @@ const iconButton =
  * Notifications as a drawer on the right, the same for staff and clients: what is new at the top, grouped by day, one calm card
  * each. Choosing one opens it and closes the drawer; the card's own tick marks it read without leaving.
  */
-export function NotificationsDrawer({ open, onOpenChange, items, loading, onOpenItem, onMarkRead, onMarkAllRead, onViewAll, preferences, onAllSettings }: Props) {
+export function NotificationsDrawer({ open, onOpenChange, items, loading, onOpenItem, onMarkRead, onMarkAllRead, onViewAll, preferences, onAllSettings, returnFocusTo }: Props) {
   const [view, setView] = useState<ReadView>('all');
   const [type, setType] = useState<string | null>(null);
   const [showPrefs, setShowPrefs] = useState(false);
@@ -61,7 +63,16 @@ export function NotificationsDrawer({ open, onOpenChange, items, loading, onOpen
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-hidden bg-background p-0 sm:max-w-[440px]">
+      <SheetContent
+        side="right"
+        onCloseAutoFocus={(e) => {
+          // There is no trigger inside the drawer to hand focus back to, so give it to the bell explicitly.
+          if (returnFocusTo?.current) {
+            e.preventDefault();
+            returnFocusTo.current.focus();
+          }
+        }}
+        className="flex w-full flex-col gap-0 overflow-hidden bg-background p-0 sm:max-w-[440px]">
         {showPrefs && preferences ? (
           <>
             <div className="flex items-center gap-2 border-b border-border px-4 py-4 pr-16">

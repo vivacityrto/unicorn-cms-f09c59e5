@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { NotificationsDrawer } from './NotificationsDrawer';
 import { filterItems, groupByDay, typeCounts, plainText, type DrawerItem } from './drawerModel';
@@ -102,3 +102,16 @@ describe('NotificationsDrawer', () => {
     expect(screen.queryByRole('button', { name: 'Notification preferences' })).not.toBeInTheDocument();
   });
 });
+
+describe('focus when the drawer closes', () => {
+  it('goes back to the bell that opened it', async () => {
+    const bell = document.createElement('button');
+    document.body.appendChild(bell);
+    const ref = { current: bell };
+    const { rerender } = render(<NotificationsDrawer open onOpenChange={vi.fn()} items={items} onOpenItem={vi.fn()} onMarkRead={vi.fn()} onMarkAllRead={vi.fn()} returnFocusTo={ref} />);
+    rerender(<NotificationsDrawer open={false} onOpenChange={vi.fn()} items={items} onOpenItem={vi.fn()} onMarkRead={vi.fn()} onMarkAllRead={vi.fn()} returnFocusTo={ref} />);
+    await waitFor(() => expect(document.activeElement).toBe(bell));
+    bell.remove();
+  });
+});
+

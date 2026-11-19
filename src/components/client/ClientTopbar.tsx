@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useCondensedHeader } from "@/hooks/useCondensedHeader";
@@ -66,6 +66,7 @@ function ThemeToggle() {
 export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   
   const [notifOpen, setNotifOpen] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
@@ -218,6 +219,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
         {/* Notifications */}
         <Button
+          ref={bellRef}
           variant="ghost"
           size="icon"
           className="h-9 w-9 relative text-muted-foreground hover:text-foreground"
@@ -241,6 +243,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <NotificationsDrawer
           open={notifOpen}
           onOpenChange={setNotifOpen}
+          returnFocusTo={bellRef}
           items={drawerItems}
           onOpenItem={(id) => {
             const n = notifications.find((x) => x.id === id);

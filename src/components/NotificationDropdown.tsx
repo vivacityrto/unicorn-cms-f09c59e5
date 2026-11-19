@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -16,6 +16,7 @@ export const NotificationDropdown = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
   const [previewNotif, setPreviewNotif] = useState<Notification | null>(null);
 
   const items = useMemo<DrawerItem[]>(
@@ -46,6 +47,7 @@ export const NotificationDropdown = () => {
   return (
     <>
       <Button
+        ref={bellRef}
         variant="ghost"
         size="icon"
         className="relative h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
@@ -64,6 +66,7 @@ export const NotificationDropdown = () => {
       <NotificationsDrawer
         open={open}
         onOpenChange={setOpen}
+        returnFocusTo={bellRef}
         items={items}
         loading={loading}
         onOpenItem={handleOpenItem}
