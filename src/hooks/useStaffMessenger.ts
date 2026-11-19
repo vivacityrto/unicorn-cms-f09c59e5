@@ -46,7 +46,7 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean) {
     queryKey: ['staff-messenger', 'threads', me, allClients, scopeKey],
     enabled: enabled && !!me && scopeQuery.isSuccess,
     refetchInterval: REFRESH_MS,
-    queryFn: async (): Promise<{ threads: MessengerThread[]; totalUnread: number }> => {
+    queryFn: async (): Promise<{ threads: MessengerThread[]; totalUnread: number; tenants: Array<{ id: number; name: string }> }> => {
       const tenantIds = (scopeRows ?? []).map((r) => r.tenant_id);
       let q = supabase
         .from('tenant_conversations')
@@ -54,7 +54,7 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean) {
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .limit(CONVERSATION_LIMIT);
       if (!allClients) {
-        if (tenantIds.length === 0) return { threads: [], totalUnread: 0 };
+        if (tenantIds.length === 0) return { threads: [], totalUnread: 0, tenants: [] };
         q = q.in('tenant_id', tenantIds);
       }
       const { data: convos, error } = await q;
@@ -73,13 +73,16 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean) {
       const unreadIds = new Set((notesRes.data ?? []).map((n) => n.source_id).filter((id): id is string => !!id));
       const myReadAt = new Map((partRes.data ?? []).map((p) => [p.conversation_id, p.last_read_at]));
       const threads = buildStaffThreads({ conversations: rows, scope, tenantNames, unreadConversationIds: unreadIds, myReadAt });
-      return { threads, totalUnread: threads.filter((t) => t.unread).length };
+      const tenants = Array.from(tenantNames, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+      return { threads, totalUnread: threads.filter((t) => t.unread).length, tenants };
     },
   });
 
   return {
     threads: query.data?.threads ?? [],
     totalUnread: query.data?.totalUnread ?? 0,
+    /** The organisations that have a conversation in this view, by name, for a client picker. */
+    tenants: query.data?.tenants ?? [],
     isLoading: scopeQuery.isLoading || query.isLoading,
     scope,
     hasScope: (scopeRows ?? []).length > 0,
