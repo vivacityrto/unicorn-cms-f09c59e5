@@ -196,13 +196,13 @@ describe("AddinSettings shell integration", () => {
     expect(contentWrapper).not.toBeNull();
   });
 
-  it("main content wrapper uses flex-col min-h-screen for footer positioning", () => {
+  it("pins the footer to the bottom of the window, beside the sidebar", () => {
     renderPage();
 
-    // The DashboardLayout main content div uses min-h-screen and flex-col
+    // The DashboardLayout wraps the footer in a fixed bar so it stays in view whatever the scroll position.
     const footer = screen.getByTestId("footer");
-    const mainWrapper = footer.parentElement;
-    expect(mainWrapper?.className).toMatch(/min-h-screen/);
-    expect(mainWrapper?.className).toMatch(/flex-col/);
+    const pinned = footer.parentElement;
+    expect(pinned?.className).toMatch(/fixed/);
+    expect(pinned?.className).toMatch(/bottom-0/);
   });
 });

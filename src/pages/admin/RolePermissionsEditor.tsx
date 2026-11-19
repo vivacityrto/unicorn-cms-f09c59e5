@@ -55,17 +55,17 @@ const PERMISSION_META: Record<
   full: {
     label: "Full",
     symbol: "●",
-    className: "bg-purple-100 text-purple-800 border-purple-200",
+    className: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30",
   },
   limited: {
     label: "Limited",
     symbol: "◐",
-    className: "bg-cyan-100 text-cyan-800 border-cyan-200",
+    className: "bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30",
   },
   owner_only: {
     label: "Owner only",
     symbol: "★",
-    className: "bg-amber-100 text-amber-800 border-amber-200",
+    className: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
   },
   none: {
     label: "None",
@@ -314,7 +314,7 @@ export default function RolePermissionsEditor() {
         )}
 
         {gapCount > 0 && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>
               <strong>{gapCount}</strong> unconfigured permission{gapCount === 1 ? "" : "s"} — review and set below.
@@ -489,7 +489,7 @@ function PermissionCell({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="inline-flex items-center gap-1.5 rounded-md border bg-purple-100 text-purple-800 border-purple-200 px-2 py-1 text-xs">
+          <div className="inline-flex items-center gap-1.5 rounded-md border bg-purple-100 text-purple-800 border-purple-200 px-2 py-1 text-xs dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30">
             <Lock className="h-3 w-3" />
             <span>● Full</span>
           </div>

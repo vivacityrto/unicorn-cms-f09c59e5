@@ -53,9 +53,9 @@ const SOURCE_VALUES = ["manual", "auto_package", "auto_package_backfill"] as con
 type SourceValue = (typeof SOURCE_VALUES)[number];
 
 const sourceTone = (s?: string | null) => {
-  if (s === "manual") return "bg-slate-100 text-slate-700 border-slate-200";
-  if (s === "auto_package") return "bg-purple-100 text-purple-700 border-purple-200";
-  if (s === "auto_package_backfill") return "bg-amber-100 text-amber-700 border-amber-200";
+  if (s === "manual") return "bg-slate-100 text-slate-700 border-slate-200 dark:bg-muted dark:text-foreground dark:border-border";
+  if (s === "auto_package") return "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30";
+  if (s === "auto_package_backfill") return "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30";
   return "bg-muted text-muted-foreground";
 };
 
@@ -254,10 +254,10 @@ export default function AcademyEnrolmentsPage() {
     const expired = isExpired(e);
     const label = expired ? "expired" : e.status || "—";
     let tone = "bg-muted text-muted-foreground";
-    if (expired) tone = "bg-red-100 text-red-700";
-    else if (e.status === "active") tone = "bg-green-100 text-green-700";
-    else if (e.status === "completed") tone = "bg-blue-100 text-blue-700";
-    else if (e.status === "revoked") tone = "bg-red-100 text-red-700";
+    if (expired) tone = "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
+    else if (e.status === "active") tone = "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300";
+    else if (e.status === "completed") tone = "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300";
+    else if (e.status === "revoked") tone = "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
     return (
       <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize", tone)}>
         {label}

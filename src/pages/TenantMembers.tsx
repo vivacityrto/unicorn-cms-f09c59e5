@@ -190,7 +190,7 @@ export default function TenantMembers() {
                       <Badge 
                         variant="outline"
                         className={member.status === "active" 
-                          ? "border-green-500 bg-green-500/10 text-green-600" 
+                          ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-300" 
                           : "border-muted bg-muted/10 text-muted-foreground"
                         }
                       >

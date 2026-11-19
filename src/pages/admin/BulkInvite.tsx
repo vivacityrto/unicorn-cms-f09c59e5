@@ -431,7 +431,7 @@ export default function BulkInvite() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg bg-white">
+            <div className="rounded-lg bg-white dark:bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -515,7 +515,7 @@ export default function BulkInvite() {
             </CardHeader>
             <CardContent>
               {previewVariables ? (
-                <div className="rounded-lg border bg-white p-5 text-sm space-y-3" style={{ color: BRAND.acai }}>
+                <div className="keep-light rounded-lg border bg-white p-5 text-sm space-y-3" style={{ color: BRAND.acai }}>
                   <p>Hi <strong>{previewVariables.first_name}</strong>,</p>
                   <p>
                     <strong>{previewVariables.inviter_name}</strong> has invited you to join <strong>{previewVariables.tenant_name}</strong> on Unicorn as a <strong>{previewVariables.role_label}</strong>.

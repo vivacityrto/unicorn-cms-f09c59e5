@@ -2,50 +2,23 @@
  * RegulatoryUpdatesPage – client-portal list of regulator change events.
  * Read-only mirror of the SuperAdmin Regulator Change Watch feature.
  */
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Globe, AlertTriangle, ExternalLink } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { getRegulatorySummarySections } from "@/features/regulatory-updates/summaryFormatting";
-
-const IMPACT_COLORS: Record<string, string> = {
-  low: "bg-blue-100 text-blue-800",
-  moderate: "bg-yellow-100 text-yellow-800",
-  high: "bg-orange-100 text-orange-800",
-  critical: "bg-red-100 text-red-800",
-};
-
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[#>*_`~-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-interface RegulatorWatchlist {
-  name: string | null;
-  url: string | null;
-  category: string | null;
-}
-
-interface RegulatorChangeEventSummary {
-  id: string;
-  detected_at: string | null;
-  impact_level: string | null;
-  change_summary_md: string | null;
-  regulator_watchlist: RegulatorWatchlist | null;
-}
+import { FilterPills, SearchBox } from "@/components/client/inbox/InboxParts";
+import { ImpactCards, MonthSection, RegulatoryBanner } from "@/components/client/regulatory/RegulatoryParts";
+import {
+  groupByMonth,
+  impactCounts,
+  matchesUpdate,
+  toUpdateSummary,
+  type ImpactLevel,
+  type RegulatorChangeEventRow,
+} from "@/features/regulatory-updates/regulatoryView";
 
 export default function RegulatoryUpdatesPage() {
-  const navigate = useNavigate();
-
   const { data, isLoading, error } = useQuery({
     queryKey: ["client-regulator-change-events"],
     queryFn: async () => {
@@ -54,118 +27,91 @@ export default function RegulatoryUpdatesPage() {
         .select(`*, regulator_watchlist(name, url, category)`)
         .order("detected_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as unknown as RegulatorChangeEventSummary[];
+      return (data || []) as unknown as RegulatorChangeEventRow[];
     },
   });
 
+  const [impact, setImpact] = useState<ImpactLevel | "all">("all");
+  const [regulator, setRegulator] = useState<string>("all");
+  const [search, setSearch] = useState("");
+
+  const updates = useMemo(() => (data ?? []).map(toUpdateSummary), [data]);
+  const stats = useMemo(() => impactCounts(updates), [updates]);
+  const regulators = useMemo(() => Array.from(new Set(updates.map((u) => u.regulator))).sort(), [updates]);
+  const shown = useMemo(
+    () =>
+      updates.filter(
+        (u) => (impact === "all" || u.impact === impact) && (regulator === "all" || u.regulator === regulator) && matchesUpdate(u, search),
+      ),
+    [updates, impact, regulator, search],
+  );
+  const groups = useMemo(() => groupByMonth(shown), [shown]);
+  const urgent = stats.counts.critical + stats.counts.high;
+
   return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-secondary">Regulatory Updates</h1>
-          <p className="text-muted-foreground mt-1">
-            Changes to RTO standards, guidance, and legislation that may affect you.
-          </p>
+    <div className="w-full min-w-0 space-y-5">
+      <RegulatoryBanner eyebrow="Stay ahead of the regulator" title="Regulatory updates">
+        <p className="mt-1 max-w-2xl text-sm text-white/80">Changes to RTO standards, guidance and legislation that may affect you, with how much each one matters.</p>
+        {!isLoading && !error && updates.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Summary">
+            <li className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">{updates.length} {updates.length === 1 ? "update" : "updates"}</li>
+            <li className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">{stats.recent} in the last 30 days</li>
+            <li className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">{urgent} high or critical</li>
+          </ul>
+        )}
+      </RegulatoryBanner>
+
+      {isLoading && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
+          </div>
         </div>
+      )}
 
-        {isLoading && (
-          <div className="space-y-4">
-            {[0, 1, 2].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-5 space-y-3">
-                  <Skeleton className="h-5 w-1/3" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-4 w-1/4" />
-                </CardContent>
-              </Card>
-            ))}
+      {!isLoading && error && (
+        <div className="rounded-xl border bg-card px-6 py-10 text-center">
+          <AlertTriangle className="mx-auto mb-3 h-9 w-9 text-destructive" aria-hidden />
+          <p className="text-muted-foreground">Couldn't load regulatory updates. Try refreshing.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && updates.length === 0 && (
+        <div className="rounded-xl border bg-card px-6 py-12 text-center">
+          <Globe className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" aria-hidden />
+          <p className="font-medium text-muted-foreground">No regulatory updates yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">We'll notify you here when something relevant to your RTO's compliance changes.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && updates.length > 0 && (
+        <>
+          <ImpactCards counts={stats.counts} total={stats.total} active={impact} onSelect={setImpact} />
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-full sm:w-72"><SearchBox value={search} onChange={setSearch} placeholder="Search updates" /></div>
+            {regulators.length > 1 && (
+              <FilterPills<string>
+                label="Filter by regulator"
+                value={regulator}
+                onChange={setRegulator}
+                options={[{ value: "all", label: "All regulators" }, ...regulators.map((r) => ({ value: r, label: r }))]}
+              />
+            )}
           </div>
-        )}
 
-        {!isLoading && error && (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <AlertTriangle className="h-10 w-10 mx-auto mb-3 text-destructive" />
-              <p className="text-muted-foreground">
-                Couldn't load regulatory updates. Try refreshing.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {!isLoading && !error && (data?.length ?? 0) === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Globe className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground font-medium">No regulatory updates yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                We'll notify you here when something relevant to your RTO's compliance changes.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {!isLoading && !error && (data?.length ?? 0) > 0 && (
-          <div className="space-y-4">
-            {data!.map((event) => {
-              const wl = event.regulator_watchlist;
-              const summary = event.change_summary_md
-                ? getRegulatorySummarySections(event.change_summary_md)
-                : null;
-              const excerpt = summary
-                ? stripMarkdown(summary.changeSummary).slice(0, 200)
-                : null;
-              return (
-                <Card
-                  key={event.id}
-                  className="cursor-pointer transition-colors hover:bg-muted/40"
-                  onClick={() => navigate(`/client/regulatory-updates/${event.id}`)}
-                >
-                  <CardContent className="p-5 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                        <h3 className="min-w-0 break-words font-semibold text-secondary">
-                          {wl?.name || "Regulator update"}
-                        </h3>
-                        {wl?.url && (
-                          <a
-                            href={wl.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-primary hover:text-primary/80"
-                            aria-label="Open regulator source"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                        {wl?.category && (
-                          <Badge variant="outline" className="text-[10px]">{wl.category}</Badge>
-                        )}
-                      </div>
-                      {event.impact_level && (
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${IMPACT_COLORS[event.impact_level] || ""}`}
-                        >
-                          {event.impact_level}
-                        </span>
-                      )}
-                    </div>
-
-                    {excerpt && (
-                      <p className="text-sm text-muted-foreground line-clamp-3">{excerpt}…</p>
-                    )}
-
-                    {event.detected_at && (
-                      <p className="text-xs text-muted-foreground">
-                        Detected {formatDistanceToNow(new Date(event.detected_at), { addSuffix: true })}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+          {groups.length === 0 ? (
+            <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">No updates match these filters.</div>
+          ) : (
+            <div className="space-y-6">
+              {groups.map((g) => <MonthSection key={g.label} label={g.label} items={g.items} />)}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

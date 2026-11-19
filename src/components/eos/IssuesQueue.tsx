@@ -35,9 +35,9 @@ export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitato
     const priorityNum = typeof priority === 'string' 
       ? (priority === 'high' ? 3 : priority === 'medium' ? 2 : 1)
       : priority;
-    if (priorityNum >= 3) return 'bg-red-100 text-red-800 border-red-200';
-    if (priorityNum >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    return 'bg-blue-100 text-blue-800 border-blue-200';
+    if (priorityNum >= 3) return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30';
+    if (priorityNum >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/15 dark:text-yellow-300 dark:border-yellow-500/30';
+    return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30';
   };
 
   const getPriorityLabel = (priority?: number | string) => {
@@ -115,7 +115,7 @@ export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitato
                     issue.meeting_id === currentMeetingId ? (
                       <Badge variant="outline" className="text-xs">This Meeting</Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Backlog</Badge>
+                      <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">Backlog</Badge>
                     )
                   )}
                   <ClientBadge clientId={issue.client_id} />

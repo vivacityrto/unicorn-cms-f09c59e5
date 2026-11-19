@@ -27,7 +27,7 @@ export default function EosOverview() {
       value: activeRocks, 
       icon: Target, 
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      bgColor: 'bg-blue-50 dark:bg-blue-500/15',
       link: '/eos/rocks'
     },
     { 
@@ -35,7 +35,7 @@ export default function EosOverview() {
       value: openIssues, 
       icon: AlertCircle, 
       color: 'text-red-600',
-      bgColor: 'bg-red-50',
+      bgColor: 'bg-red-50 dark:bg-red-500/15',
       link: '/eos/risks-opportunities'
     },
     { 
@@ -43,7 +43,7 @@ export default function EosOverview() {
       value: pendingTodos, 
       icon: ListTodo, 
       color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      bgColor: 'bg-green-50 dark:bg-green-500/15',
       link: '/eos/todos'
     },
     { 
@@ -51,7 +51,7 @@ export default function EosOverview() {
       value: upcomingMeetings, 
       icon: Calendar, 
       color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
+      bgColor: 'bg-purple-50 dark:bg-purple-500/15',
       link: '/eos/meetings'
     },
   ];

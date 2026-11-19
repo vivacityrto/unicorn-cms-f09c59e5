@@ -40,7 +40,7 @@ export const QCSignoffBar = ({
           </p>
         </div>
         {fullySignedOff && (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">
             <CheckCircle className="h-3 w-3 mr-1" />
             Completed
           </Badge>

@@ -174,7 +174,7 @@ function TicketDetail({
             const logged = commByKey[def.key];
             if (logged) {
               return (
-                <div key={def.key} className="flex items-center gap-2 px-3 py-2 rounded-md border border-emerald-200 bg-emerald-50 text-sm">
+                <div key={def.key} className="flex items-center gap-2 px-3 py-2 rounded-md border border-emerald-200 bg-emerald-50 text-sm dark:bg-emerald-500/15 dark:border-emerald-500/30">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <span className="font-medium">{def.label}</span>
                   <span className="text-xs text-emerald-700 ml-auto">

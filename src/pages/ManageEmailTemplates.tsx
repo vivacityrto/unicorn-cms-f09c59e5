@@ -100,14 +100,14 @@ export default function ManageEmailTemplates() {
     switch (status) {
       case "active":
         return (
-          <Badge className="bg-green-500/10 text-green-600 border border-green-600">
+          <Badge className="bg-green-500/10 text-green-700 dark:text-green-300 border border-green-600">
             <CheckCircle className="h-3 w-3 mr-1" />
             Active
           </Badge>
         );
       case "draft":
         return (
-          <Badge className="bg-yellow-500/10 text-yellow-600 border border-yellow-600">
+          <Badge className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border border-yellow-600">
             <Clock className="h-3 w-3 mr-1" />
             Draft
           </Badge>

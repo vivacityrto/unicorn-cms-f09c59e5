@@ -41,7 +41,7 @@ export default function SupportTicketsPortalPage() {
         title="Support"
         subtitle="Send us a message and track it here"
         actions={
-          <Button onClick={() => setNewOpen(true)} className="min-h-11 w-full gap-1.5 bg-white font-semibold text-brand-acai hover:bg-white/90 sm:w-auto">
+          <Button onClick={() => setNewOpen(true)} className="keep-light min-h-11 w-full gap-1.5 bg-white font-semibold text-brand-acai hover:bg-white/90 sm:w-auto">
             <MessageSquarePlus aria-hidden className="h-4 w-4" />
             New message
           </Button>

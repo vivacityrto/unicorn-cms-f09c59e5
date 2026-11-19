@@ -37,9 +37,9 @@ interface Citation {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  high: "bg-red-500/10 text-red-600 border-red-600",
-  medium: "bg-amber-500/10 text-amber-600 border-amber-600",
-  low: "bg-blue-500/10 text-blue-600 border-blue-600",
+  high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-600",
+  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-600",
+  low: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-600",
 };
 
 export default function ResearchJobDetail() {

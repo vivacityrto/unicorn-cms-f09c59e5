@@ -245,7 +245,7 @@ export default function ExecutiveFinancialControls() {
                   <TableCell className="font-medium capitalize">{r.control_type.replace(/_/g, ' ')}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
-                      r.status === 'ok' ? 'bg-green-100 text-green-700' :
+                      r.status === 'ok' ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' :
                       r.status === 'overdue' || r.status === 'flagged' ? 'bg-destructive/10 text-destructive' :
                       'bg-muted text-muted-foreground'
                     }`}>{r.status}</span>

@@ -231,7 +231,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
     
     if (hasMissingFields) {
       return (
-        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500 text-xs gap-1">
+        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500 text-xs gap-1">
           <AlertCircle className="h-3 w-3" />
           Pending Info
         </Badge>
@@ -239,7 +239,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
     }
     
     return (
-      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500 text-xs gap-1">
+      <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500 text-xs gap-1">
         <CheckCircle2 className="h-3 w-3" />
         Ready
       </Badge>
@@ -345,7 +345,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
                           size="sm"
                           onClick={() => handleExcelGenerate(doc)}
                           disabled={isDocumentGenerating(doc.id)}
-                          className="gap-2 bg-green-500/10 text-green-600 border-green-500 hover:bg-green-500/20"
+                          className="gap-2 bg-green-500/10 text-green-700 dark:text-green-300 border-green-500 hover:bg-green-500/20"
                         >
                           {isDocumentGenerating(doc.id) ? (
                             <>

@@ -1,137 +1,136 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink, HelpCircle, Activity, FileText } from "lucide-react";
+import { Check, Copy, HelpCircle, LifeBuoy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useHelpCenter } from "@/components/help-center";
+import { cn } from "@/lib/utils";
 
 interface UtilityFooterProps {
+  /** Shown only when a client or tenant is selected. Omitted otherwise, so the footer never claims a context it doesn't have. */
   activeTenantName?: string | null;
 }
 
+const BUILD_ID = import.meta.env.VITE_BUILD_ID as string | undefined;
+
+/** Time in Sydney, the way the team reads it ("3:45 pm AEDT"). */
+export function sydneyTime(now: Date): string {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Sydney",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("hour")}:${get("minute")} ${get("dayPeriod").toLowerCase()} ${get("timeZoneName")}`;
+}
+
+function useOnline(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      window.addEventListener("online", notify);
+      window.addEventListener("offline", notify);
+      return () => {
+        window.removeEventListener("online", notify);
+        window.removeEventListener("offline", notify);
+      };
+    },
+    () => navigator.onLine,
+    () => true,
+  );
+}
+
+function useSydneyClock(): string {
+  const [text, setText] = useState(() => sydneyTime(new Date()));
+  useEffect(() => {
+    const id = window.setInterval(() => setText(sydneyTime(new Date())), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  return text;
+}
+
+const divider = <span aria-hidden className="hidden h-3 w-px shrink-0 bg-border sm:block" />;
+const link =
+  "inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * Staff footer, pinned to the bottom of the window. The bar is a fixed 25px tall (unchanged), so everything inside is
+ * sized to fit it: who you are and which client you are working on on the left, the time and connection in the
+ * middle where there is room, and help, support and the build on the right.
+ */
 export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
   const { profile } = useAuth();
-  const [sessionStartTime, setSessionStartTime] = useState<string>("");
-
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
+  const online = useOnline();
+  const clock = useSydneyClock();
+  const [copied, setCopied] = useState(false);
   const userRole = profile?.unicorn_role || "User";
+  const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
+  const showBuild = !!BUILD_ID && BUILD_ID !== "__BUILD_ID__";
 
-  // Format session start time on mount
-  useEffect(() => {
-    const now = new Date();
-    const formattedTime = now.toLocaleString("en-AU", {
-      timeZone: "Australia/Sydney",
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-    setSessionStartTime(formattedTime);
-  }, []);
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "Super Admin":
-        return "default";
-      case "Team Leader":
-        return "secondary";
-      case "Team Member":
-        return "outline";
-      default:
-        return "outline";
+  const copyBuild = async () => {
+    try {
+      await navigator.clipboard.writeText(BUILD_ID ?? "");
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* Clipboard can be blocked; the build id is still visible. */
     }
   };
 
-  const quickLinks = [
-    {
-      label: "Help Centre",
-      href: "https://help.vivacity.com.au",
-      icon: HelpCircle,
-    },
-    {
-      label: "System Status",
-      href: "https://status.vivacity.com.au",
-      icon: Activity,
-    },
-    {
-      label: "Release Notes",
-      href: "/suggestions?tab=released",
-      icon: FileText,
-      internal: true,
-    },
-  ];
-
   return (
-    <footer className="w-full bg-muted/30 border-t py-2 px-6">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        {/* Left: Tenant & Role Info */}
-        <div className="flex items-center gap-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* shrink-0: without it, flexbox's default shrink behaviour was
-                    squeezing this span well below its own max-w-[200px] (even
-                    "No tenant selected" truncated to "No ten…" at 1000px with
-                    plenty of total footer width free) since it's the only
-                    unprotected shrinkable item on this side of the footer. */}
-                <span className="font-medium text-foreground/80 truncate max-w-[200px] shrink-0">
-                  {activeTenantName || "No tenant selected"}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Active tenant context</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <span className="text-muted-foreground/50">|</span>
-
-          {/* leading-none: text-xs's default line-height (16.8px) overflows the
-              h-5 badge's available content box (20px - 2px border - 4px padding
-              = 14px), so the pill border visually cut through the text's
-              ascenders/descenders. Tightening line-height to 1 (12px) fits it
-              cleanly within the fixed height. */}
-          <Badge variant={getRoleBadgeVariant(userRole)} className="text-xs h-5 leading-none">
-            {userRole}
-          </Badge>
-
-          <span className="text-muted-foreground/50">|</span>
-
-          <span className="text-muted-foreground">
-            Session started {sessionStartTime}
-          </span>
+    <footer className="box-border h-[25px] w-full border-t bg-card px-4 text-[11px] leading-none md:px-6">
+      <div className="flex h-full items-center justify-between gap-3 text-muted-foreground">
+        {/* Left: who and where */}
+        <div className="flex min-w-0 items-center gap-2.5">
+          {name && <span className="hidden max-w-[160px] truncate font-medium text-foreground/80 md:inline">{name}</span>}
+          <Badge variant="outline" className="h-4 shrink-0 px-1.5 text-[10px] leading-none">{userRole}</Badge>
+          {activeTenantName && (
+            <>
+              {divider}
+              <span className="max-w-[200px] truncate font-medium text-foreground/80 lg:max-w-[320px]" title={activeTenantName}>{activeTenantName}</span>
+            </>
+          )}
         </div>
 
-        {/* Right: Quick Links */}
-        <div className="flex items-center gap-4">
-          {quickLinks.map((link) =>
-            link.internal ? (
-              <Link
-                key={link.label}
-                to={link.href}
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group"
+        {/* Middle: time and connection, only where there is room */}
+        <div className="hidden min-w-0 items-center gap-3 lg:flex">
+          <span className="tabular-nums" title="Sydney time">{clock}</span>
+          {divider}
+          <span className="inline-flex items-center gap-1.5" role="status" aria-label={online ? "Online" : "Offline"}>
+            <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", online ? "bg-emerald-500" : "bg-destructive")} />
+            {online ? "Online" : "Offline: changes may not save"}
+          </span>
+          <span aria-hidden className="hidden text-muted-foreground/60 2xl:inline">We make Compliance Simple!</span>
+        </div>
+
+        {/* Right: help, support, build */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          {/* Only offered where the Help Centre can open; otherwise the click would do nothing. */}
+          {canAccessHelpCenter && (
+            <button type="button" onClick={() => openHelpCenter()} aria-label="Help Centre" className={link}>
+              <HelpCircle aria-hidden className="h-3 w-3" />
+              <span className="hidden sm:inline">Help Centre</span>
+            </button>
+          )}
+          <Link to="/support-tickets" aria-label="Support Tickets" className={link}>
+            <LifeBuoy aria-hidden className="h-3 w-3" />
+            <span className="hidden sm:inline">Support Tickets</span>
+          </Link>
+          {showBuild && (
+            <>
+              {divider}
+              <button
+                type="button"
+                onClick={copyBuild}
+                title="Build version. Click to copy"
+                className={cn(link, "hidden font-mono text-[10px] text-muted-foreground/70 md:inline-flex")}
               >
-                <link.icon className="h-3.5 w-3.5" />
-                <span>{link.label}</span>
-              </Link>
-            ) : (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group"
-              >
-                <link.icon className="h-3.5 w-3.5" />
-                <span>{link.label}</span>
-                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
-            )
+                {copied ? <Check aria-hidden className="h-3 w-3" /> : <Copy aria-hidden className="h-3 w-3" />}
+                {copied ? "Copied" : `Build ${BUILD_ID}`}
+              </button>
+            </>
           )}
         </div>
       </div>

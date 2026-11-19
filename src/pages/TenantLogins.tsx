@@ -175,7 +175,7 @@ export default function TenantLogins() {
                     <TableCell className="font-mono text-sm border-r border-border/50">{record.ip_address}</TableCell>
                     <TableCell className="text-muted-foreground border-r border-border/50">{record.device}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-green-500 bg-green-500/10 text-green-600">
+                      <Badge variant="outline" className="border-green-500 bg-green-500/10 text-green-700 dark:text-green-300">
                         {record.status}
                       </Badge>
                     </TableCell>

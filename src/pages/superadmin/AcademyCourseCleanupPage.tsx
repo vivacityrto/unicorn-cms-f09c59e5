@@ -42,9 +42,9 @@ function descriptionStatus(course: AdminCourse): DescStatus {
 }
 
 const descStatusTone: Record<DescStatus, string> = {
-  missing: "bg-red-100 text-red-700 border-red-200",
-  partial: "bg-amber-100 text-amber-800 border-amber-200",
-  present: "bg-green-100 text-green-800 border-green-200",
+  missing: "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30",
+  partial: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+  present: "bg-green-100 text-green-800 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30",
 };
 
 const descStatusLabel: Record<DescStatus, string> = {
@@ -381,7 +381,7 @@ export default function AcademyCourseCleanupPage() {
                           {course.estimated_minutes ? (
                             <span className="text-sm text-foreground">{formatDuration(course.estimated_minutes)}</span>
                           ) : (
-                            <Badge variant="outline" className="font-medium bg-red-100 text-red-700 border-red-200">
+                            <Badge variant="outline" className="font-medium bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30">
                               Missing
                             </Badge>
                           )}

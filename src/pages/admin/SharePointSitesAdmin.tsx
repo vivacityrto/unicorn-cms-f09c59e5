@@ -54,10 +54,10 @@ const PURPOSE_LABELS: Record<string, string> = {
 };
 
 const PURPOSE_COLORS: Record<string, string> = {
-  client_success_files: 'bg-blue-50 text-blue-800 border-blue-200',
-  client_files: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  governance_client_files: 'bg-purple-50 text-purple-800 border-purple-200',
-  master_documents: 'bg-amber-50 text-amber-800 border-amber-200',
+  client_success_files: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30',
+  client_files: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30',
+  governance_client_files: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30',
+  master_documents: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30',
 };
 
 export default function SharePointSitesAdmin() {
@@ -294,12 +294,12 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
           </div>
           <div className="flex items-center gap-2">
             {isConfigured ? (
-              <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 text-xs">
+              <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 text-xs dark:bg-emerald-500/15 dark:text-emerald-300">
                 <CheckCircle2 className="h-3 w-3" />
                 Configured
               </Badge>
             ) : (
-              <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800 text-xs">
+              <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800 text-xs dark:bg-orange-500/15 dark:text-orange-300">
                 <AlertCircle className="h-3 w-3" />
                 Missing IDs
               </Badge>

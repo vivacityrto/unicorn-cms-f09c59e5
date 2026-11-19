@@ -114,6 +114,8 @@ serve(async (req) => {
       .select('id, subject')
       .eq('external_message_id', body.external_message_id)
       .eq('user_uuid', tokenPayload.user_uuid)
+      // One row per client: find the link to the client these attachments belong to.
+      .eq('client_id', parseInt(body.client_id, 10))
       .maybeSingle();
 
     if (emailError) {

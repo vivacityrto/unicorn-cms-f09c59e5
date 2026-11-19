@@ -16,18 +16,18 @@ interface AuditSchedulerSectionProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  overdue: { label: 'Overdue', className: 'bg-red-100 text-red-700 border-red-200' },
-  due_soon: { label: 'Due soon', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-  never_audited: { label: 'Never audited', className: 'bg-gray-100 text-gray-600 border-gray-200' },
-  in_progress: { label: 'In progress', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-  on_track: { label: 'On track', className: 'bg-green-100 text-green-700 border-green-200' },
+  overdue: { label: 'Overdue', className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' },
+  due_soon: { label: 'Due soon', className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' },
+  never_audited: { label: 'Never audited', className: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-muted dark:text-muted-foreground dark:border-border' },
+  in_progress: { label: 'In progress', className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30' },
+  on_track: { label: 'On track', className: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' },
 };
 
 const RISK_COLORS: Record<string, string> = {
-  low: 'bg-green-100 text-green-700',
-  medium: 'bg-amber-100 text-amber-700',
-  high: 'bg-red-100 text-red-700',
-  critical: 'bg-red-200 text-red-900',
+  low: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+  high: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+  critical: 'bg-red-200 text-red-900 dark:bg-red-500/15 dark:text-red-300',
 };
 
 export function AuditSchedulerSection({ onStartCHC }: AuditSchedulerSectionProps) {
@@ -55,9 +55,9 @@ export function AuditSchedulerSection({ onStartCHC }: AuditSchedulerSectionProps
           <div className="flex items-center gap-3">
             <CardTitle className="text-base">Audit Scheduler</CardTitle>
             <div className="flex gap-2">
-              {overdueCount > 0 && <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200 text-[10px]">{overdueCount} overdue</Badge>}
-              {dueSoonCount > 0 && <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">{dueSoonCount} due within 90 days</Badge>}
-              {neverCount > 0 && <Badge variant="outline" className="bg-gray-100 text-gray-600 text-[10px]">{neverCount} never audited</Badge>}
+              {overdueCount > 0 && <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200 text-[10px] dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30">{overdueCount} overdue</Badge>}
+              {dueSoonCount > 0 && <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">{dueSoonCount} due within 90 days</Badge>}
+              {neverCount > 0 && <Badge variant="outline" className="bg-gray-100 text-gray-600 text-[10px] dark:bg-muted dark:text-muted-foreground">{neverCount} never audited</Badge>}
             </div>
           </div>
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

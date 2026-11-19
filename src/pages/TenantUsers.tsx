@@ -491,7 +491,7 @@ export default function TenantUsers() {
   const getRoleBadge = (userType: string) => {
     switch (userType) {
       case 'Client Parent':
-        return <Badge className="bg-blue-600 hover:bg-blue-700">Parent</Badge>;
+        return <Badge className="border-transparent text-white bg-blue-700 hover:bg-blue-800">Parent</Badge>;
       case 'Client Child':
         return <Badge variant="secondary">Child</Badge>;
       case 'Client':
@@ -831,7 +831,7 @@ export default function TenantUsers() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
+                            <AvatarFallback className="bg-blue-100 text-blue-700 text-sm dark:bg-blue-500/15 dark:text-blue-300">
                               {getInitials(user.first_name, user.last_name)}
                             </AvatarFallback>
                           </Avatar>

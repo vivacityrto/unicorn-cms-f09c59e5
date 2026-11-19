@@ -41,7 +41,7 @@ export function MeetingsFilters({ filter, onFilterChange, stats }: MeetingsFilte
           size="sm"
           className={cn(
             'gap-2',
-            highlight && filter !== value && 'border-amber-300 text-amber-600 hover:bg-amber-50'
+            highlight && filter !== value && 'border-amber-300 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/20'
           )}
           onClick={() => onFilterChange(value)}
         >
@@ -53,7 +53,7 @@ export function MeetingsFilters({ filter, onFilterChange, stats }: MeetingsFilte
               filter === value 
                 ? 'bg-primary-foreground/20 text-primary-foreground'
                 : highlight 
-                  ? 'bg-amber-100 text-amber-700'
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
                   : 'bg-muted text-muted-foreground'
             )}>
               {count}

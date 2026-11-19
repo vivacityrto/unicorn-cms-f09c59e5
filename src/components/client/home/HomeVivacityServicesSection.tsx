@@ -1,8 +1,6 @@
 import { CalendarPlus, Sparkles, GraduationCap, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { HomeReportingRemindersCard } from "./HomeReportingRemindersCard";
-import { useClientReportingReminders } from "@/hooks/use-client-reporting-reminders";
 
 interface ServiceCard {
   icon: LucideIcon;
@@ -29,54 +27,31 @@ const SERVICES: ServiceCard[] = [
 ];
 
 export function HomeVivacityServicesSection() {
-  const { data, isLoading } = useClientReportingReminders();
-  const remindersVisible = isLoading || (data && data.length > 0);
-
   return (
     <section>
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">
         From Vivacity
       </h2>
-      <div className="space-y-3">
-        {remindersVisible && <HomeReportingRemindersCard />}
-        <div
-          className={
-            remindersVisible
-              ? "grid grid-cols-1 sm:grid-cols-3 gap-3"
-              : "grid grid-cols-1 sm:grid-cols-3 gap-3"
-          }
-        >
-          {SERVICES.map((s) => {
-            const Icon = s.icon;
-            return (
-              <Card
-                key={s.title}
-                className="border-border hover:border-purple-300 transition-colors"
-              >
-                <CardContent className="p-4 flex gap-3">
-                  <div className="shrink-0">
-                    <div className="h-9 w-9 rounded-md bg-purple-100 flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-purple-600" />
-                    </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {SERVICES.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.title} className="border-border hover:border-primary/50 transition-colors">
+              <CardContent className="flex gap-3 p-4">
+                <div className="h-9 w-9 shrink-0 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Icon className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">{s.title}</h3>
+                    <Badge variant="secondary" className="text-[10px] shrink-0">Coming soon</Badge>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">
-                        {s.title}
-                      </h3>
-                      <Badge variant="secondary" className="text-[10px] shrink-0">
-                        Coming soon
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {s.subtitle}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.subtitle}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </section>
   );

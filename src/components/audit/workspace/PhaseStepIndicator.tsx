@@ -35,7 +35,7 @@ export function PhaseStepIndicator({ phases, activePhase, onPhaseClick }: PhaseS
               className={cn(
                 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0',
                 phase.isComplete
-                  ? 'bg-green-100 text-green-700'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300'
                   : activePhase === phase.key
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground'

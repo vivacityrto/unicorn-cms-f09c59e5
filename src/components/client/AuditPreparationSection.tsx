@@ -16,10 +16,10 @@ import { cn } from '@/lib/utils';
 type EvidenceRequestRow = EvidenceRequest & { evidence_request_items: EvidenceRequestItem[] };
 
 const ITEM_STATUS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Awaiting', color: 'bg-gray-100 text-gray-600' },
-  received: { label: 'Uploaded', color: 'bg-blue-100 text-blue-700' },
-  accepted: { label: 'Accepted', color: 'bg-green-100 text-green-700' },
-  resubmit_requested: { label: 'Revision needed', color: 'bg-amber-100 text-amber-700' },
+  pending: { label: 'Awaiting', color: 'bg-muted text-muted-foreground' },
+  received: { label: 'Uploaded', color: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' },
+  accepted: { label: 'Accepted', color: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' },
+  resubmit_requested: { label: 'Revision needed', color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' },
 };
 
 export function AuditPreparationSection() {
@@ -133,7 +133,7 @@ export function AuditPreparationSection() {
                         )}
 
                         {item.status === 'resubmit_requested' && item.review_notes && (
-                          <div className="bg-amber-50 border border-amber-200 rounded p-2">
+                          <div className="bg-amber-50 border border-amber-200 rounded p-2 dark:bg-amber-500/15 dark:border-amber-500/30">
                             <p className="text-xs text-amber-800">
                               <AlertTriangle className="h-3 w-3 inline mr-1" />
                               Your consultant has requested a revision: {item.review_notes}

@@ -111,18 +111,18 @@ interface ClientStructuredNotesTabProps {
 
 // Icon and color mapping for note types (visual only)
 const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string }> = {
-  'general': { icon: StickyNote, color: 'bg-slate-100 text-slate-700' },
-  'follow-up': { icon: ArrowRight, color: 'bg-purple-100 text-purple-700' },
-  'phone-call': { icon: MessageSquare, color: 'bg-cyan-100 text-cyan-700' },
-  'meeting': { icon: Users, color: 'bg-blue-100 text-blue-700' },
-  'action': { icon: CheckCircle, color: 'bg-green-100 text-green-700' },
-  'email': { icon: Mail, color: 'bg-indigo-100 text-indigo-700' },
-  'tenant': { icon: FileText, color: 'bg-amber-100 text-amber-700' },
-  'risk': { icon: AlertTriangle, color: 'bg-red-100 text-red-700' },
-  'escalation': { icon: AlertTriangle, color: 'bg-orange-100 text-orange-700' },
+  'general': { icon: StickyNote, color: 'bg-muted text-foreground' },
+  'follow-up': { icon: ArrowRight, color: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300' },
+  'phone-call': { icon: MessageSquare, color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300' },
+  'meeting': { icon: Users, color: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' },
+  'action': { icon: CheckCircle, color: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' },
+  'email': { icon: Mail, color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' },
+  'tenant': { icon: FileText, color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' },
+  'risk': { icon: AlertTriangle, color: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300' },
+  'escalation': { icon: AlertTriangle, color: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' },
 };
 
-const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-slate-100 text-slate-700' };
+const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-muted text-foreground' };
 
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
   const membership = useTenantMemberships(tenantId);

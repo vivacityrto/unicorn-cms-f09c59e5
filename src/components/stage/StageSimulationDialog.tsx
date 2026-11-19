@@ -395,7 +395,7 @@ function SummaryTab({ summary }: { summary: SimulationData['summary'] }) {
             <Badge variant="secondary">v{version_label}</Badge>
           )}
           {stage.is_certified && (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+            <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20">
               <Shield className="h-3 w-3 mr-1" />
               Certified
             </Badge>
@@ -476,12 +476,12 @@ function SummaryTab({ summary }: { summary: SimulationData['summary'] }) {
         </h5>
         <div className="flex items-center gap-2">
           {quality_check.status === 'pass' ? (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+            <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20">
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Pass
             </Badge>
           ) : quality_check.status === 'warn' ? (
-            <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+            <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20">
               <AlertTriangle className="h-3 w-3 mr-1" />
               Warnings
             </Badge>
@@ -671,7 +671,7 @@ function EmailsTab({
                   </Button>
                 </div>
                 <div 
-                  className="text-sm prose prose-sm max-w-none bg-white p-3 rounded border max-h-[300px] overflow-auto"
+                  className="text-sm keep-light prose prose-sm max-w-none bg-white p-3 rounded border max-h-[300px] overflow-auto dark:bg-card"
                   dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(email.rendered_body) }}
                 />
               </div>

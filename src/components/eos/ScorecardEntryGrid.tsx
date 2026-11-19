@@ -103,7 +103,7 @@ export function ScorecardEntryGrid({ metric, onEdit, onArchive, onDelete, isArch
     if (isOffTrack(latestEntry.value)) {
       return <Badge variant="destructive" className="text-xs">Off Track</Badge>;
     }
-    return <Badge className="bg-green-600 text-xs">On Track</Badge>;
+    return <Badge className="border-transparent text-white bg-green-700 hover:bg-green-700 text-xs">On Track</Badge>;
   };
 
   return (

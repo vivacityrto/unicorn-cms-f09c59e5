@@ -98,7 +98,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge className="bg-emerald-600 text-primary-foreground">Published</Badge>;
+        return <Badge className="bg-emerald-700 text-white">Published</Badge>;
       case 'draft':
         return <Badge variant="secondary">Draft</Badge>;
       case 'archived':

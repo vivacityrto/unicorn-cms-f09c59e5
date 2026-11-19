@@ -292,7 +292,7 @@ export function NoteEditorModal({ open, onOpenChange, mode, existing, onSubmit, 
                           : 'border-brand-acai-300 hover:border-brand-purple-600',
                       )}
                     >
-                      {it.done && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                      {it.done && <span className="h-1.5 w-1.5 rounded-full bg-white dark:bg-card" />}
                     </button>
                     <input
                       ref={(el) => { itemInputsRef.current[it.id] = el; }}

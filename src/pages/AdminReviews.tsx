@@ -83,13 +83,13 @@ export default function AdminReviews() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
       case 'rejected':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
       case 'in_review':
-        return <Badge className="bg-blue-100 text-blue-800"><Play className="h-3 w-3 mr-1" />In Review</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300"><Play className="h-3 w-3 mr-1" />In Review</Badge>;
       case 'requested':
-        return <Badge className="bg-amber-100 text-amber-800"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -119,7 +119,7 @@ export default function AdminReviews() {
 
         {/* Quick Stats */}
         {myPending.length > 0 && (
-          <Card className="border-amber-200 bg-amber-50">
+          <Card className="border-amber-200 bg-amber-50 dark:bg-amber-500/15 dark:border-amber-500/30">
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-amber-600" />

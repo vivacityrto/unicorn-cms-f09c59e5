@@ -657,11 +657,11 @@ export default function ManageTenants() {
 
   const getStatusBadge = (status: string) => {
     const styleConfig: Record<string, { icon: typeof CheckCircle2; className: string }> = {
-      active: { icon: CheckCircle2, className: "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600" },
-      disabled: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600" },
-      on_hold: { icon: Pause, className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600" },
-      overrun: { icon: AlertCircle, className: "bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-600" },
-      terminated: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600" },
+      active: { icon: CheckCircle2, className: "bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/20 border-green-600" },
+      disabled: { icon: XCircle, className: "bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border-red-600" },
+      on_hold: { icon: Pause, className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border-amber-600" },
+      overrun: { icon: AlertCircle, className: "bg-orange-500/10 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20 border-orange-600" },
+      terminated: { icon: XCircle, className: "bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border-red-600" },
       cancelled: { icon: XCircle, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border" },
     };
     const ddLabel = statusOptions.find(s => s.value === status)?.description;
@@ -691,10 +691,10 @@ export default function ManageTenants() {
             className={cn(
               invoicePillClass,
               tenant.xero_invoice_paid
-                ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600"
+                ? "bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/20 border-green-600"
                 : overdue
-                  ? "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600"
-                  : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600"
+                  ? "bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border-red-600"
+                  : "bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border-amber-600"
             )}
           >
             {tenant.xero_invoice_paid ? (
@@ -859,7 +859,7 @@ export default function ManageTenants() {
 
       {moneyAtRiskOnly && (
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 pl-2.5 pr-1.5 py-1 border-red-600/40 text-red-600 bg-red-500/10">
+          <Badge variant="outline" className="gap-1.5 pl-2.5 pr-1.5 py-1 border-red-600/40 text-red-700 dark:text-red-300 bg-red-500/10">
             Money at risk only
             <button
               type="button"
@@ -1381,10 +1381,10 @@ export default function ManageTenants() {
                     <TableCell className="py-4 border-r border-border/50 whitespace-nowrap w-[120px] min-w-[120px] px-3 align-middle">
                       {isAcademyAccount ? <span className="text-xs text-muted-foreground">Not applicable</span> : (() => {
                         const riskColors: Record<string, string> = {
-                          low: "bg-emerald-500/10 text-emerald-600 border-emerald-600",
-                          medium: "bg-amber-500/10 text-amber-600 border-amber-600",
-                          high: "bg-orange-500/10 text-orange-600 border-orange-600",
-                          critical: "bg-red-500/10 text-red-600 border-red-600",
+                          low: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-600",
+                          medium: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-600",
+                          high: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-600",
+                          critical: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-600",
                         };
                         const riskClass = riskColors[tenant.risk_level] || "bg-muted text-muted-foreground border-border";
                         return (

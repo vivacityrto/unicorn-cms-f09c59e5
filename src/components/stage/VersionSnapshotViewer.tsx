@@ -80,7 +80,7 @@ export function VersionSnapshotViewer({
                   {snapshot.stage.is_certified && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Certified</span>
-                      <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20">
                         Yes
                       </Badge>
                     </div>

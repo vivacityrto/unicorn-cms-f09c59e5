@@ -264,15 +264,15 @@ export default function ExecutiveDecisionQueue() {
                     <TableCell>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
                         r.impact_level === 'critical' ? 'bg-destructive/10 text-destructive' :
-                        r.impact_level === 'high' ? 'bg-amber-100 text-amber-700' :
+                        r.impact_level === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' :
                         'bg-muted text-muted-foreground'
                       }`}>{r.impact_level}</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{r.recommended_option ?? '—'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
-                        r.status === 'decided' ? 'bg-green-100 text-green-700' :
-                        r.status === 'deferred' ? 'bg-amber-100 text-amber-700' :
+                        r.status === 'decided' ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' :
+                        r.status === 'deferred' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' :
                         'bg-muted text-muted-foreground'
                       }`}>{r.status}</span>
                     </TableCell>

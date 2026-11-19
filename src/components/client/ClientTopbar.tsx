@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { Link } from "react-router-dom";
 import {
   HelpCircle,
+  Moon,
+  Sun,
   Settings,
   LogOut,
+  Download,
   Bell,
   Eye,
   ChevronDown,
@@ -31,11 +35,31 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useHelpCenter } from "@/components/help-center";
+import { InstallAppDialog } from "@/components/layout/InstallAppDialog";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
 
 interface ClientTopbarProps {
   isPreview: boolean;
+}
+
+/** Light/dark switch. The choice is remembered in this browser. */
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const label = isDark ? "Switch to light mode" : "Switch to dark mode";
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={label}
+      title={label}
+      className="h-9 w-9 text-muted-foreground hover:text-foreground"
+    >
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </Button>
+  );
 }
 
 export function ClientTopbar({ isPreview }: ClientTopbarProps) {
@@ -49,6 +73,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const { actingUserId, actingUserOptions, setActingUserId } = useClientPreview();
 
   const [elapsedMin, setElapsedMin] = useState(0);
+  const [installOpen, setInstallOpen] = useState(false);
 
   useEffect(() => {
     if (!isPreview) return;
@@ -97,10 +122,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
   return (
     <header
-      className="h-[72px] bg-card border-b flex items-center justify-between px-4 md:px-6"
-      style={{
-        borderColor: "hsl(270 20% 88%)",
-      }}
+      className="h-[72px] bg-card border-b border-border flex items-center justify-between px-4 md:px-6"
     >
       {/* Left: Unicorn + Vivacity logos */}
       <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
@@ -122,11 +144,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <div className="flex-1 flex items-center justify-center min-w-0 px-4">
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border max-w-full"
-            style={{
-              backgroundColor: "hsl(270 60% 97%)",
-              borderColor: "hsl(270 30% 80%)",
-              color: "hsl(270 55% 41%)",
-            }}
+            style={{ backgroundColor: "hsl(var(--muted))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
           >
             <Eye className="h-3.5 w-3.5 flex-shrink-0" />
             <span className="text-muted-foreground">Viewing as</span>
@@ -183,6 +201,8 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             <HelpCircle className="h-4 w-4" />
           </Button>
         )}
+
+        <ThemeToggle />
 
         {/* Notifications */}
         <Popover>
@@ -297,14 +317,11 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 ml-1">
-              <Avatar className="h-8 w-8 border-2" style={{ borderColor: "hsl(270 20% 88%)" }}>
+              <Avatar className="h-8 w-8 border-2 border-border">
                 <AvatarImage src={displayUser?.avatar_url || ""} alt={getUserDisplayName()} />
                 <AvatarFallback
                   className="text-xs font-semibold"
-                  style={{
-                    backgroundColor: "hsl(270 20% 88%)",
-                    color: "hsl(270 55% 41%)",
-                  }}
+                  style={{ backgroundColor: "hsl(var(--muted))", color: "hsl(var(--foreground))" }}
                 >
                   {getInitials()}
                 </AvatarFallback>
@@ -325,6 +342,10 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                 Profile Settings
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onSelect={() => setInstallOpen(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Install Unicorn app
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -336,6 +357,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </header>
   );
 }

@@ -149,7 +149,7 @@ export function MembershipActivityFeed({
                       key={task.id}
                       className={cn(
                         'p-2 rounded-lg border transition-colors',
-                        isOverdue ? 'bg-red-50 border-red-200' : 'hover:bg-muted/50'
+                        isOverdue ? 'bg-red-50 border-red-200 dark:bg-red-500/15 dark:border-red-500/30' : 'hover:bg-muted/50'
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">

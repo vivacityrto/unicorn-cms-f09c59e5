@@ -406,10 +406,10 @@ export default function TenantNotes() {
 
   const getPriorityBadge = (priority: string | null) => {
     switch (priority) {
-      case 'urgent': return <Badge className="bg-red-100 text-red-700 border-red-200"><Flag className="h-3 w-3 mr-1 fill-red-500" />Urgent</Badge>;
-      case 'high': return <Badge className="bg-orange-100 text-orange-700 border-orange-200"><Flag className="h-3 w-3 mr-1 fill-orange-500" />High</Badge>;
-      case 'normal': return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />Normal</Badge>;
-      case 'low': return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />Low</Badge>;
+      case 'urgent': return <Badge className="bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30"><Flag className="h-3 w-3 mr-1 fill-red-500" />Urgent</Badge>;
+      case 'high': return <Badge className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30"><Flag className="h-3 w-3 mr-1 fill-orange-500" />High</Badge>;
+      case 'normal': return <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30"><CheckCircle2 className="h-3 w-3 mr-1" />Normal</Badge>;
+      case 'low': return <Badge className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30"><Clock className="h-3 w-3 mr-1" />Low</Badge>;
       default: return <span className="text-sm text-muted-foreground">Not set</span>;
     }
   };
@@ -432,7 +432,7 @@ export default function TenantNotes() {
           </div>
           <div className="flex flex-wrap items-center gap-4">
             {noteSource === 'notes' && (
-              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2">
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30">
                 <Timer className="h-4 w-4" />
                 <span>Package used: {formatDuration(totalDuration)}</span>
               </Badge>

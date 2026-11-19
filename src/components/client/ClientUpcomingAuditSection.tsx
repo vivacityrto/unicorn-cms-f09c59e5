@@ -120,7 +120,7 @@ export function ClientUpcomingAuditSection() {
     return (
       <div className="flex gap-3 relative">
         <div className="flex flex-col items-center">
-          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isCompleted ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>
+          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isCompleted ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' : 'bg-primary/10 text-primary'}`}>
             {icon}
           </div>
           <div className="w-px flex-1 bg-border" />

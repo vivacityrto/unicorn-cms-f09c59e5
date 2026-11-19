@@ -20,7 +20,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border border-primary bg-primary/10 text-primary hover:bg-primary/20",
+        default: "border border-primary bg-primary/10 text-[var(--badge-default-fg)] hover:bg-primary/20",
         // Themed via CSS vars (--badge-*), not dark: utilities - see the
         // comment on --badge-warning-bg in index.css for why: a dark:
         // utility matches ANY .dark ancestor regardless of a nearer

@@ -9,6 +9,13 @@ import {
 } from "@/components/ui/tooltip";
 import type { ClientPackageStageRow } from "@/hooks/use-client-package-stages";
 import { htmlToText } from "@/lib/sanitize";
+import { format, parseISO } from "date-fns";
+
+const doneOn = (iso: string | null) => {
+  if (!iso) return null;
+  const d = parseISO(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
 
 interface Props {
   stages: ClientPackageStageRow[];
@@ -102,6 +109,11 @@ export function PackageStageStepper({ stages, isLoading, isError }: Props) {
                 <span className="text-xs text-muted-foreground mt-2 truncate w-full text-center px-1">
                   {stage.stage_shortname}
                 </span>
+                {stage.node_state === "complete" && doneOn(stage.completion_date) && (
+                  <span className="text-[11px] text-emerald-700 dark:text-emerald-300 truncate w-full text-center px-1">
+                    {format(doneOn(stage.completion_date)!, "d MMM")}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -145,6 +157,11 @@ function StageNode({ stage }: { stage: ClientPackageStageRow }) {
       </TooltipTrigger>
       <TooltipContent>
         <div className="text-xs font-medium">{stage.stage_name}</div>
+        {stage.node_state === "complete" && doneOn(stage.completion_date) ? (
+          <div className="text-xs text-muted-foreground mt-0.5">Completed {format(doneOn(stage.completion_date)!, "d MMM yyyy")}</div>
+        ) : stage.node_state === "current" ? (
+          <div className="text-xs text-muted-foreground mt-0.5">In progress now</div>
+        ) : null}
         {stage.stage_description ? (
           <div className="text-xs text-muted-foreground mt-0.5 max-w-[16rem]">
             {htmlToText(stage.stage_description, 220)}

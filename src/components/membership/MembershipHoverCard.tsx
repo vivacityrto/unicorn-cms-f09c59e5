@@ -81,7 +81,7 @@ export function MembershipHoverCard({ membership, children }: MembershipHoverCar
 
           {/* Risk Flags */}
           {membership.health_score.risk_factors.length > 0 && (
-            <div className="p-2 rounded bg-amber-50 border border-amber-200">
+            <div className="p-2 rounded bg-amber-50 border border-amber-200 dark:bg-amber-500/15 dark:border-amber-500/30">
               <div className="flex items-center gap-1.5 mb-1">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                 <span className="text-xs font-medium text-amber-700">Risk Flags</span>
@@ -96,9 +96,9 @@ export function MembershipHoverCard({ membership, children }: MembershipHoverCar
 
           {/* Next Action */}
           <div className={`p-2 rounded border ${
-            nextAction.priority === 'high' ? 'bg-red-50 border-red-200' :
-            nextAction.priority === 'medium' ? 'bg-blue-50 border-blue-200' :
-            'bg-slate-50 border-slate-200'
+            nextAction.priority === 'high' ? 'bg-red-50 border-red-200 dark:bg-red-500/15 dark:border-red-500/30' :
+            nextAction.priority === 'medium' ? 'bg-blue-50 border-blue-200 dark:bg-blue-500/15 dark:border-blue-500/30' :
+            'bg-slate-50 border-slate-200 dark:bg-muted dark:border-border'
           }`}>
             <div className="flex items-center gap-1.5 mb-1">
               <Calendar className="h-3.5 w-3.5" />

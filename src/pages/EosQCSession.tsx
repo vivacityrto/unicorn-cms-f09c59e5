@@ -202,7 +202,7 @@ export default function EosQCSession() {
           </div>
           <div className="flex items-center gap-3">
             {isMeetingMode ? (
-              <Badge variant="default" className="bg-green-600">
+              <Badge variant="default" className="border-transparent text-white bg-green-700 hover:bg-green-700">
                 <Play className="h-3 w-3 mr-1" />
                 Meeting Mode
               </Badge>
