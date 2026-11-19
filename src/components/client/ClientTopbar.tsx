@@ -144,7 +144,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <div className="flex-1 flex items-center justify-center min-w-0 px-4">
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border max-w-full"
-            style={{ backgroundColor: "hsl(var(--accent))", borderColor: "hsl(var(--border))", color: "hsl(var(--accent-foreground))" }}
+            style={{ backgroundColor: "hsl(var(--muted))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
           >
             <Eye className="h-3.5 w-3.5 flex-shrink-0" />
             <span className="text-muted-foreground">Viewing as</span>
@@ -321,7 +321,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                 <AvatarImage src={displayUser?.avatar_url || ""} alt={getUserDisplayName()} />
                 <AvatarFallback
                   className="text-xs font-semibold"
-                  style={{ backgroundColor: "hsl(var(--muted))", color: "hsl(var(--accent-foreground))" }}
+                  style={{ backgroundColor: "hsl(var(--muted))", color: "hsl(var(--foreground))" }}
                 >
                   {getInitials()}
                 </AvatarFallback>
