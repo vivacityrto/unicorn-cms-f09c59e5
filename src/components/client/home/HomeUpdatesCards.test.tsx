@@ -40,3 +40,10 @@ describe('Home update cards', () => {
     expect(screen.getByRole('link', { name: 'All updates' })).toHaveAttribute('href', '/client/regulatory-updates');
   });
 });
+
+describe('broadcast cache key', () => {
+  it('lives under the inbox invalidation prefix so new broadcasts refresh the Home card', async () => {
+    const source = (await import('node:fs')).readFileSync('src/hooks/use-client-home-updates.ts', 'utf8');
+    expect(source).toMatch(/queryKey: \['client-conversations', 'home-broadcasts'/);
+  });
+});

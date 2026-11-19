@@ -40,11 +40,12 @@ export function plainExcerpt(markdown: string | null | undefined, max = EXCERPT_
 /**
  * The latest messages Vivacity broadcast to this organisation (conversations of type "broadcast"), newest first, with
  * the start of each message and whether this person has read it. Skipped for Academy-only users, who have no inbox.
+ * The key sits under 'client-conversations' so the inbox's realtime invalidation of that prefix refreshes this card too.
  */
 export function useClientHomeBroadcasts(limit = 3) {
   const { activeTenantId, isAcademyOnly } = useClientTenant();
   return useQuery({
-    queryKey: ['client-home-broadcasts', activeTenantId, limit],
+    queryKey: ['client-conversations', 'home-broadcasts', activeTenantId, limit],
     enabled: !!activeTenantId && !isAcademyOnly,
     staleTime: 60_000,
     queryFn: async (): Promise<HomeBroadcast[]> => {
