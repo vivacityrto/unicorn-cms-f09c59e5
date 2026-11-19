@@ -75,4 +75,30 @@ describe('ScrollToTopButton', () => {
     expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     expect(button()).toHaveAttribute('aria-hidden', 'true');
   });
+
+  it('adds up slow scrolling in small steps instead of resetting each time', () => {
+    render(<ScrollToTopButton />);
+    scrollTo(5000);
+    // Four steps of 2px: each is under the jitter limit, together they are 8px up.
+    [4998, 4996, 4994, 4992].forEach(scrollTo);
+    expect(button()).toHaveAttribute('aria-hidden', 'false');
+  });
+
+  it('keyboard focus keeps it open even after the pointer leaves', () => {
+    render(<ScrollToTopButton />);
+    scrollTo(5000);
+    scrollTo(4800);
+    fireEvent.focus(button());
+    fireEvent.mouseEnter(button());
+    fireEvent.mouseLeave(button());
+    act(() => {
+      vi.advanceTimersByTime(HIDE_AFTER_MS * 3);
+    });
+    expect(button()).toHaveAttribute('aria-hidden', 'false');
+    fireEvent.blur(button());
+    act(() => {
+      vi.advanceTimersByTime(HIDE_AFTER_MS + 50);
+    });
+    expect(button()).toHaveAttribute('aria-hidden', 'true');
+  });
 });

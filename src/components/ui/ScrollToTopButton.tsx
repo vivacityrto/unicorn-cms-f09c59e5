@@ -27,7 +27,10 @@ export function ScrollToTopButton() {
   const [visible, setVisible] = useState(false);
   const lastY = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const held = useRef(false);
+  // Pointer and keyboard focus each hold it open on their own, so letting go of one does not drop the other.
+  const pointerOn = useRef(false);
+  const focusOn = useRef(false);
+  const isHeld = () => pointerOn.current || focusOn.current;
 
   const clearTimer = () => {
     if (timer.current) clearTimeout(timer.current);
@@ -36,15 +39,18 @@ export function ScrollToTopButton() {
   const armTimer = useCallback(() => {
     clearTimer();
     timer.current = setTimeout(() => {
-      if (!held.current) setVisible(false);
+      if (!isHeld()) setVisible(false);
     }, HIDE_AFTER_MS);
   }, []);
 
   useEffect(() => {
     lastY.current = window.scrollY;
+    // lastY is an anchor that only moves once the page has moved far enough, so slow scrolling in small steps still adds
+    // up to a direction instead of every tiny event resetting the baseline.
     const onScroll = () => {
       const y = window.scrollY;
       const previous = lastY.current;
+      if (y >= NEAR_TOP_PX && Math.abs(y - previous) < MIN_MOVE_PX) return;
       lastY.current = y;
       if (y < NEAR_TOP_PX) {
         clearTimer();
@@ -52,7 +58,7 @@ export function ScrollToTopButton() {
       } else if (wantsBackToTop(y, previous, window.innerHeight)) {
         setVisible(true);
         armTimer();
-      } else if (y - previous >= MIN_MOVE_PX && !held.current) {
+      } else if (y - previous >= MIN_MOVE_PX && !isHeld()) {
         // Heading down again: out of the way.
         clearTimer();
         setVisible(false);
@@ -65,13 +71,13 @@ export function ScrollToTopButton() {
     };
   }, [armTimer]);
 
-  const hold = () => {
-    held.current = true;
+  const hold = (source: "pointer" | "focus") => {
+    (source === "pointer" ? pointerOn : focusOn).current = true;
     clearTimer();
   };
-  const release = () => {
-    held.current = false;
-    if (visible) armTimer();
+  const release = (source: "pointer" | "focus") => {
+    (source === "pointer" ? pointerOn : focusOn).current = false;
+    if (visible && !isHeld()) armTimer();
   };
 
   const goTop = () => {
@@ -84,10 +90,10 @@ export function ScrollToTopButton() {
     <button
       type="button"
       onClick={goTop}
-      onMouseEnter={hold}
-      onMouseLeave={release}
-      onFocus={hold}
-      onBlur={release}
+      onMouseEnter={() => hold("pointer")}
+      onMouseLeave={() => release("pointer")}
+      onFocus={() => hold("focus")}
+      onBlur={() => release("focus")}
       aria-label="Back to top"
       tabIndex={visible ? 0 : -1}
       aria-hidden={!visible}
