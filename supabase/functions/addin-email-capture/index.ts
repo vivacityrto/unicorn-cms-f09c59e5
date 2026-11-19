@@ -152,7 +152,7 @@ serve(async (req) => {
       .select('id')
       .eq('external_message_id', body.external_message_id)
       .eq('user_uuid', tokenPayload.user_uuid)
-      .eq('tenant_id', tenantId)
+      .eq('client_id', parseInt(body.link.client_id, 10))
       .limit(1);
     const isUpdate = (ownRows?.length ?? 0) > 0;
 
@@ -212,7 +212,7 @@ serve(async (req) => {
       .from('email_messages')
       .upsert(emailData, {
         // Keyed on the current constraint. Per-client keys wait for the decision in PR #1572.
-        onConflict: 'user_uuid,external_message_id',
+        onConflict: 'user_uuid,external_message_id,client_id',
         ignoreDuplicates: false,
       })
       .select('id, external_message_id, subject, sender_email, sender_name, received_at, has_attachments, client_id, package_id, task_id, body_preview, web_link, graph_enriched')
