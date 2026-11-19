@@ -148,7 +148,7 @@ export default function EosScorecard() {
         </div>
       ) : (
         <>
-          <section aria-label="This week at a glance" className="space-y-3 rounded-xl bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white">
+          <section aria-label="This week at a glance" className="space-y-3 rounded-xl bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 brand-surface text-white">
             <p className="text-2xl font-bold leading-snug sm:text-[1.7rem]">{headlineSentence(counts)}</p>
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/90">
               {LEGEND.map((l) => (

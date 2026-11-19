@@ -163,6 +163,8 @@ import { chartPalette } from '@/styles/brand';
 - **Primary:** Purple 500–600 (adjusted for contrast)
 - **Light Purple:** Never used as text in dark mode
 - **All colors reference token system**
+- **Client portal:** follows the chosen theme (light by default, toggle in the top bar, remembered per browser). It is no longer pinned to light. The Academy learner shell (`AcademyLayout`) is still light-only.
+- **Brand banners:** the purple gradient surfaces are dark in every theme, so put `brand-surface` on them (keeps headings white; headings otherwise follow the theme and went dark on the purple). Use theme tokens (`bg-muted`, `bg-card`, `border-border`) rather than fixed pale colours (`bg-white`, `bg-slate-100`) for surfaces. `src/test/dark-mode-guard.test.ts` fails on both mistakes in client screens.
 
 ---
 

@@ -432,7 +432,7 @@ export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekL
             : 'max-h-[92dvh] w-[min(96vw,64rem)] overflow-y-auto',
         )}
       >
-        <div className="relative flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-4 py-2.5 pr-24 text-white">
+        <div className="relative flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-4 py-2.5 pr-24 text-white brand-surface">
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}

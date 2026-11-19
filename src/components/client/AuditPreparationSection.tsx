@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 type EvidenceRequestRow = EvidenceRequest & { evidence_request_items: EvidenceRequestItem[] };
 
 const ITEM_STATUS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Awaiting', color: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Awaiting', color: 'bg-muted text-muted-foreground' },
   received: { label: 'Uploaded', color: 'bg-blue-100 text-blue-700' },
   accepted: { label: 'Accepted', color: 'bg-green-100 text-green-700' },
   resubmit_requested: { label: 'Revision needed', color: 'bg-amber-100 text-amber-700' },

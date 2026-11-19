@@ -111,7 +111,7 @@ interface ClientStructuredNotesTabProps {
 
 // Icon and color mapping for note types (visual only)
 const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string }> = {
-  'general': { icon: StickyNote, color: 'bg-slate-100 text-slate-700' },
+  'general': { icon: StickyNote, color: 'bg-muted text-foreground' },
   'follow-up': { icon: ArrowRight, color: 'bg-purple-100 text-purple-700' },
   'phone-call': { icon: MessageSquare, color: 'bg-cyan-100 text-cyan-700' },
   'meeting': { icon: Users, color: 'bg-blue-100 text-blue-700' },
@@ -122,7 +122,7 @@ const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string 
   'escalation': { icon: AlertTriangle, color: 'bg-orange-100 text-orange-700' },
 };
 
-const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-slate-100 text-slate-700' };
+const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-muted text-foreground' };
 
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
   const membership = useTenantMemberships(tenantId);

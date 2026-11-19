@@ -67,7 +67,7 @@ export function MeetingScorecardReview({ meeting }: Props) {
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-3 border-0 bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white">
+      <Card className="space-y-3 border-0 bg-gradient-to-r from-[#44235F] to-[#7130A0] p-5 text-white brand-surface">
         <p className="text-sm font-semibold text-white/80">Week of {weekLabel(weekKey)}</p>
         <p className="text-2xl font-bold leading-snug">{headlineSentence(counts)}</p>
         <Button type="button" variant="secondary" className="gap-2" onClick={() => open(null)}>

@@ -1125,7 +1125,7 @@ export function ClientIntegrationsTab({
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
                                   qual.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
                                   qual.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                  'bg-muted text-foreground border border-border'
                                 }`}>
                                   {qual.status_label || qual.status || '-'}
                                 </span>
@@ -1181,7 +1181,7 @@ export function ClientIntegrationsTab({
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
                                   skill.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
                                   skill.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                  'bg-muted text-foreground border border-border'
                                 }`}>
                                   {skill.status_label || skill.status || '-'}
                                 </span>
@@ -1236,7 +1236,7 @@ export function ClientIntegrationsTab({
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
                                   unit.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
                                   unit.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                  'bg-muted text-foreground border border-border'
                                 }`}>
                                   {unit.status_label || unit.status || '-'}
                                 </span>
@@ -1290,7 +1290,7 @@ export function ClientIntegrationsTab({
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
                                   course.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
                                   course.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                  'bg-muted text-foreground border border-border'
                                 }`}>
                                   {course.status_label || course.status || '-'}
                                 </span>
@@ -1343,7 +1343,7 @@ export function ClientIntegrationsTab({
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
                                   tp.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
                                   tp.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                  'bg-muted text-foreground border border-border'
                                 }`}>
                                   {tp.status_label || tp.status || '-'}
                                 </span>
