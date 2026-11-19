@@ -85,11 +85,14 @@ vi.mock("@/components/ask-viv", () => ({
   AskVivFloatingLauncher: () => null,
 }));
 
-vi.mock("@/components/help-center", () => ({
-  HelpCenterProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  HelpCenterDrawer: () => null,
-  useHelpCenter: () => ({ openHelpCenter: vi.fn(), closeHelpCenter: vi.fn(), isOpen: false }),
-}));
+// The real provider also supplies the messenger bubble's open state, which the staff bubble in the layout needs.
+vi.mock("@/components/help-center", async () => {
+  const { MessengerDockProvider } = await import("@/components/messenger/dock/MessengerDockProvider");
+  return {
+    HelpCenterProvider: ({ children }: { children: React.ReactNode }) => <MessengerDockProvider>{children}</MessengerDockProvider>,
+    useHelpCenter: () => ({ openHelpCenter: vi.fn(), closeHelpCenter: vi.fn(), isOpen: false }),
+  };
+});
 
 vi.mock("@/components/dashboard/TimeInboxWidget", () => ({
   TimeInboxBanner: () => null,

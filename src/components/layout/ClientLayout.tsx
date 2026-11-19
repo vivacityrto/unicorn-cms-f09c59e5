@@ -8,7 +8,7 @@ import { uniqueChannelName } from "@/lib/realtimeChannel";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
-import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
+import { HelpCenterProvider } from "@/components/help-center";
 import { ClientSidebar } from "@/components/client/ClientSidebar";
 import { ClientTopbar } from "@/components/client/ClientTopbar";
 import { ClientFooter } from "@/components/client/ClientFooter";
@@ -18,7 +18,6 @@ import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
 import { CompliancePulseBanner } from "@/components/client/CompliancePulseBanner";
 import { ClientMessengerDock } from "@/components/client/ClientMessengerDock";
-import { MessengerDockProvider } from "@/components/messenger";
 import { ClientNotificationReview } from "@/components/client/ClientNotificationReview";
 import { LiveNotificationBanner } from "@/components/client/LiveNotificationBanner";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
@@ -139,9 +138,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </ClientRequestContext.Provider>
       </div>
 
-      {/* Help Center Drawer */}
-      <HelpCenterDrawer />
-
       {/* Document Request Modal (shared) */}
       <DocumentRequestModal
         open={requestModalOpen}
@@ -168,9 +164,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     <ClientTenantProvider>
       <HelpCenterProvider>
         <ClientRouteGuard>
-          <MessengerDockProvider>
-            <ClientLayoutInner>{children}</ClientLayoutInner>
-          </MessengerDockProvider>
+          <ClientLayoutInner>{children}</ClientLayoutInner>
         </ClientRouteGuard>
       </HelpCenterProvider>
     </ClientTenantProvider>
