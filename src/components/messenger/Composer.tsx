@@ -10,6 +10,8 @@ interface ComposerProps {
   draftKey?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Keeps the box usable but holds the send button back (something else on the screen is not filled in yet). */
+  sendDisabled?: boolean;
   /** Shown instead of the box for threads people cannot reply to. */
   disabledReason?: string;
   attachments?: boolean;
@@ -26,7 +28,7 @@ interface ComposerProps {
 const ACCEPT = 'image/*,.pdf,.doc,.docx,.xls,.xlsx';
 
 /** Message box: Enter sends, Shift+Enter adds a line, paste a screenshot to attach it, drafts survive switching threads. */
-export function Composer({ onSend, draftKey: key, placeholder = 'Type a message', disabled, disabledReason, attachments = true, validateFile, maxFiles = 5, accept = ACCEPT, onTyping, autoFocus, className }: ComposerProps) {
+export function Composer({ onSend, draftKey: key, placeholder = 'Type a message', disabled, sendDisabled, disabledReason, attachments = true, validateFile, maxFiles = 5, accept = ACCEPT, onTyping, autoFocus, className }: ComposerProps) {
   const [text, setText] = useState(() => (key ? readDraft(key) : ''));
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function Composer({ onSend, draftKey: key, placeholder = 'Type a message'
     setError(problem);
   }, [validateFile, maxFiles]);
 
-  const canSend = !disabled && !sending && (text.trim().length > 0 || files.length > 0);
+  const canSend = !disabled && !sendDisabled && !sending && (text.trim().length > 0 || files.length > 0);
 
   const send = async () => {
     if (!canSend) return;

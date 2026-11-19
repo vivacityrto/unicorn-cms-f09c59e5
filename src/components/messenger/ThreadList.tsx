@@ -89,7 +89,9 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 }
 
 /** Search, the All / Unread chips with a type menu, and the thread rows. The type menu lists only the kinds that exist. */
-export function ThreadList({ threads, selectedId, onSelect, isLoading, empty, action, className }: ThreadListProps) {
+export function ThreadList({ threads: allThreads, selectedId, onSelect, isLoading, empty, action, className }: ThreadListProps) {
+  // A hidden thread (the compose thread) can be opened but is never a row.
+  const threads = useMemo(() => allThreads.filter((t) => !t.hidden), [allThreads]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ThreadFilter>('all');
   const sorted = useMemo(() => sortThreads(threads), [threads]);

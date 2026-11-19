@@ -75,7 +75,12 @@ export interface MessengerThread {
   tenantId?: number | null;
   /** True for threads people cannot reply to (for example a broadcast). */
   readOnly?: boolean;
+  /** Can be opened by id but is never listed (the "New message" compose thread). */
+  hidden?: boolean;
 }
+
+/** The compose thread's id, the same in every portal: the bubble's "+" selects it. */
+export const NEW_MESSAGE_THREAD_ID = 'compose:new';
 
 export interface ThreadCapabilities {
   canSend: boolean;

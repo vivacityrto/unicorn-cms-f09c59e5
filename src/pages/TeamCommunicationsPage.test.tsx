@@ -49,20 +49,29 @@ vi.mock('@/hooks/useStaffConversationPane', () => ({
 vi.mock('@/hooks/useBulkMessageSummary', () => ({ useBulkMessageSummary: () => ({ data: state.bulk }) }));
 vi.mock('@/components/communications/BulkMessageDialog', () => ({ BulkMessageDialog: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="Bulk dialog" /> : null) }));
 vi.mock('@/components/communications/BulkMessageHistory', () => ({ BulkMessageHistory: () => <p>history rows</p> }));
-vi.mock('@/components/communications/NewTeamMessageDialog', () => ({ NewTeamMessageDialog: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="New message dialog" /> : null) }));
 
 Element.prototype.scrollTo = vi.fn();
 (window as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 Element.prototype.scrollIntoView = vi.fn();
 
 import TeamCommunicationsPage from './TeamCommunicationsPage';
+import { MessengerDockProvider, useMessengerDock } from '@/components/messenger';
+
+function DockProbe() {
+  const { open, selectedId } = useMessengerDock();
+  return <output data-testid="dock">{open ? `open:${selectedId ?? ''}` : 'closed'}</output>;
+}
+
 
 const show = (url = '/communications') =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={[url]}>
-        <TeamCommunicationsPage />
-      </MemoryRouter>
+      <MessengerDockProvider>
+        <MemoryRouter initialEntries={[url]}>
+          <TeamCommunicationsPage />
+          <DockProbe />
+        </MemoryRouter>
+      </MessengerDockProvider>
     </QueryClientProvider>,
   );
 
@@ -126,7 +135,7 @@ describe('Team Communications', () => {
     const user = userEvent.setup();
     show();
     await user.click(screen.getByRole('button', { name: 'New message' }));
-    expect(screen.getByRole('dialog', { name: 'New message dialog' })).toBeInTheDocument();
+    expect(screen.getByTestId('dock')).toHaveTextContent('open:compose:new');
   });
 
   it('starts on my clients and switches to all clients', async () => {

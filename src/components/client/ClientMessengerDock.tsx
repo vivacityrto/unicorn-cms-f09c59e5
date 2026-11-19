@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClientAskVivChat } from '@/components/ask-viv/ClientAskVivChat';
 import { useClientTickets } from '@/components/client-portal/support-tickets/useClientTickets';
-import { NewConversationDialog } from '@/components/client/NewConversationDialog';
+import { NewMessagePane } from '@/components/client/NewMessagePane';
 import {
   ConversationPane,
   MessengerDock,
   useMessengerDock,
   type DockThreadApi,
+  NEW_MESSAGE_THREAD_ID,
   type MessengerThread,
 } from '@/components/messenger';
 import { NEW_TICKET_THREAD_ID, ticketIdFromThreadId, ticketThreadId } from '@/components/messenger/adapters/supportTickets';
@@ -95,19 +96,20 @@ function TicketThreadPane({ thread, api }: { thread: MessengerThread; api: DockT
  * Help Center drawer. The old Help Center buttons still call openHelpCenter; they now open this bubble on the right thread.
  */
 export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: number }) {
-  const { conversations, totalUnread, isLoading, createConversation } = useClientCommunications();
-  const { activeTenantId, isReadOnly, isAcademyOnly } = useClientTenant();
+  const { conversations, totalUnread, isLoading } = useClientCommunications();
+  const { isReadOnly, isAcademyOnly } = useClientTenant();
   const { data: hero } = useClientHomeHero();
   // The layout keeps this mounted for the whole visit, so poll: a status change by the team shows without a reload.
   const { data: tickets = [] } = useClientTickets({ pollMs: 30_000 });
   const { selectedId, select } = useMessengerDock();
-  const [newOpen, setNewOpen] = useState(false);
 
   const cscName = hero?.csc_display_name ?? null;
-  const threads = useMemo(
-    () => buildClientThreads({ conversations, tickets, cscName, cscAvatarUrl: hero?.csc_avatar_url ?? null, hasCsc: !!hero?.csc_user_id, academyOnly: isAcademyOnly }),
-    [conversations, tickets, cscName, hero?.csc_avatar_url, hero?.csc_user_id, isAcademyOnly],
-  );
+  const canCompose = !isReadOnly && !isAcademyOnly;
+  const threads = useMemo(() => {
+    const list = buildClientThreads({ conversations, tickets, cscName, cscAvatarUrl: hero?.csc_avatar_url ?? null, hasCsc: !!hero?.csc_user_id, academyOnly: isAcademyOnly });
+    // The compose thread is opened by the + button and never listed.
+    return canCompose ? [...list, { id: NEW_MESSAGE_THREAD_ID, kind: 'general' as const, title: 'New message', unread: false, hidden: true }] : list;
+  }, [conversations, tickets, cscName, hero?.csc_avatar_url, hero?.csc_user_id, isAcademyOnly, canCompose]);
 
   // A Help Center button asked for "csc" or "support" before the thread list was known: swap in the real thread.
   useEffect(() => {
@@ -116,7 +118,7 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
   }, [selectedId, threads, isLoading, select]);
 
   // Nothing to offer (an academy-only person with no tickets): no bubble, rather than an empty one.
-  if (isAcademyOnly && threads.length === 0) return null;
+  if (isAcademyOnly && threads.filter((t) => !t.hidden).length === 0) return null;
 
   return (
     <>
@@ -126,7 +128,7 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
         unreadTotal={totalUnread}
         keepMounted={[ASK_VIV_THREAD_ID]}
         fullPageHref={(t) => {
-          if (!t) return '/client/inbox?tab=messages';
+          if (!t || t.id === NEW_MESSAGE_THREAD_ID) return '/client/inbox?tab=messages';
           if (t.id === ASK_VIV_THREAD_ID || t.id === NEW_CSC_THREAD_ID) return '/client/inbox?tab=messages';
           if (t.id === NEW_TICKET_THREAD_ID) return '/client/support-tickets';
           const ticketId = ticketIdFromThreadId(t.id);
@@ -136,7 +138,7 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
           !isReadOnly && !isAcademyOnly ? (
             <button
               type="button"
-              onClick={() => setNewOpen(true)}
+              onClick={() => select(NEW_MESSAGE_THREAD_ID)}
               aria-label="New message"
               title="New message"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -146,6 +148,7 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
           ) : undefined
         }
         renderThread={(thread, api) => {
+          if (thread.id === NEW_MESSAGE_THREAD_ID) return <NewMessagePane api={api} />;
           if (thread.id === ASK_VIV_THREAD_ID) {
             return <ClientAskVivChat previewTenantId={previewTenantId} active={api.active} onBack={api.onBack} headerActions={api.headerActions} />;
           }
@@ -154,17 +157,6 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
         }}
       />
 
-      <NewConversationDialog
-        open={newOpen}
-        onOpenChange={setNewOpen}
-        onSubmit={async (data) => {
-          const id = await createConversation.mutateAsync({ subject: data.subject, type: data.type, firstMessage: data.firstMessage });
-          select(id);
-          return id;
-        }}
-        isSubmitting={createConversation.isPending}
-        tenantId={activeTenantId ?? null}
-      />
     </>
   );
 }

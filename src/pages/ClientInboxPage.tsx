@@ -5,7 +5,7 @@ import { Bell, CheckCheck, Info, Inbox, MessageSquare, Plus } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Messenger } from "@/components/messenger";
+import { Messenger, NEW_MESSAGE_THREAD_ID, useMessengerDock } from "@/components/messenger";
 import { toMessengerThread } from "@/components/messenger/adapters/tenantConversations";
 import { useClientConversationPane } from "@/hooks/useClientConversationPane";
 
@@ -18,7 +18,6 @@ import {
 } from "@/hooks/useClientNotifications";
 import { useNotificationPrefs, type CategoryPrefs } from "@/hooks/useNotificationPrefs";
 
-import { NewConversationDialog } from "@/components/client/NewConversationDialog";
 import { InboxErrorBoundary } from "@/components/client/inbox/InboxErrorBoundary";
 import {
   AllFeed,
@@ -58,7 +57,7 @@ export default function ClientInboxPage() {
   const { unreadCount, notifications } = useClientNotifications();
   const { isReadOnly } = useClientTenant();
   const stats = useMemo(() => inboxStats(conversations, notifications), [conversations, notifications]);
-  const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const { openDock } = useMessengerDock();
 
   const setTab = (next: TabValue) => {
     const params = new URLSearchParams(searchParams);
@@ -68,8 +67,8 @@ export default function ClientInboxPage() {
   };
 
   const startMessage = () => {
-    if (activeTab !== "messages") setTab("messages");
-    setNewDialogOpen(true);
+    // Writing a new message happens in the bubble, the same place as everywhere else.
+    openDock(NEW_MESSAGE_THREAD_ID);
   };
 
   return (
@@ -95,7 +94,7 @@ export default function ClientInboxPage() {
             <AllTab />
           </TabsContent>
           <TabsContent value="messages" className="mt-4">
-            <MessagesTab newDialogOpen={newDialogOpen} onNewDialogOpenChange={setNewDialogOpen} />
+            <MessagesTab />
           </TabsContent>
           <TabsContent value="notifications" className="mt-4">
             <NotificationsTab />
@@ -172,9 +171,8 @@ function AllTab() {
 /*  MESSAGES tab: the shared messenger, fed by this organisation's conversations */
 /* -------------------------------------------------------------------------- */
 
-function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: boolean; onNewDialogOpenChange: (open: boolean) => void }) {
-  const { conversations, isLoading, createConversation } = useClientCommunications();
-  const { activeTenantId } = useClientTenant();
+function MessagesTab() {
+  const { conversations, isLoading } = useClientCommunications();
   const [searchParams, setSearchParams] = useSearchParams();
   const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
   const [selectedId, setSelectedId] = useState<string | null>(threadParam);
@@ -207,20 +205,6 @@ function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: 
     [searchParams, setSearchParams],
   );
 
-  const handleNewConversation = async (data: {
-    subject?: string;
-    type: string;
-    firstMessage: string;
-  }): Promise<string> => {
-    const newId = await createConversation.mutateAsync({
-      subject: data.subject,
-      type: data.type,
-      firstMessage: data.firstMessage,
-    });
-    setSelectedId(newId);
-    return newId;
-  };
-
   return (
     <div className="space-y-3">
       {isLoading ? (
@@ -247,14 +231,6 @@ function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: 
           />
         </div>
       )}
-
-      <NewConversationDialog
-        open={newDialogOpen}
-        onOpenChange={onNewDialogOpenChange}
-        onSubmit={handleNewConversation}
-        isSubmitting={createConversation.isPending}
-        tenantId={activeTenantId ?? null}
-      />
     </div>
   );
 }
