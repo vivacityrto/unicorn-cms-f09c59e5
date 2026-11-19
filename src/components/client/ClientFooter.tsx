@@ -9,7 +9,7 @@ export function ClientFooter() {
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
 
   return (
-    <footer className="w-full border-t bg-muted/30 px-6 py-2 text-xs text-muted-foreground">
+    <footer className="w-full border-t bg-card px-6 py-1 text-[11px] text-muted-foreground">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <span>

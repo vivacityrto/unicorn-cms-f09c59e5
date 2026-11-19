@@ -22,7 +22,7 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
   const showBuild = !!BUILD_ID && BUILD_ID !== "__BUILD_ID__";
 
   return (
-    <footer className="w-full bg-muted/30 border-t py-2 px-6">
+    <footer className="w-full border-t bg-card px-6 py-1 text-[11px]">
       <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
         <div className="flex min-w-0 items-center gap-3">
           {activeTenantName && (
@@ -32,7 +32,7 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
             </>
           )}
           {/* leading-none keeps the text inside the fixed-height pill. */}
-          <Badge variant="outline" className="h-5 text-xs leading-none">{userRole}</Badge>
+          <Badge variant="outline" className="h-4 px-1.5 text-[10px] leading-none">{userRole}</Badge>
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
