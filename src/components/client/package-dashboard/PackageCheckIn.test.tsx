@@ -118,6 +118,14 @@ describe('package check-in migration safety', () => {
     expect(sql).toContain('char_length(comment) <= 280');
     expect(sql).toContain('from anon');
   });
+  it('refuses staff even if they also hold a membership, and serialises overlapping answers', () => {
+    expect(sql).toContain('not app.is_vivacity_team()');
+    expect(sql).toContain('not app.is_super_admin()');
+    expect(sql).toContain('u.is_vivacity_internal = true');
+    expect(sql).toContain('pg_advisory_xact_lock(hashtextextended(v_uid::text');
+    // The lock is taken before any rate-limit check.
+    expect(sql.indexOf('pg_advisory_xact_lock')).toBeLessThan(sql.indexOf("interval '13 days'"));
+  });
   it('is not read by any AI code', () => {
     for (const f of ['supabase/functions/_shared/client-insights.ts', 'supabase/functions/client-insights/index.ts']) {
       expect(readFileSync(f, 'utf8')).not.toContain('package_checkins');

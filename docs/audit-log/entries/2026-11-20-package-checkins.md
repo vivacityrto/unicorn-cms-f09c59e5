@@ -26,6 +26,11 @@ Run in a block that creates the table and functions, acts as real users, then ra
 - No sign-in: refused.
 - No names, emails or answer text were printed.
 
+## Review fixes (before applying)
+
+- **Staff with a membership:** a staff account that also holds a full-access membership of an organisation used to pass the gate. The helper now also refuses Vivacity team, super admins and internal or admin accounts. Verified in a rolled-back production test by giving a real staff user a temporary membership: submit refused, state not eligible.
+- **Overlapping submissions:** two requests from the same person at the same moment could both pass the rate-limit checks. The function now takes a per-person, per-package advisory lock before the checks, so they run one after another.
+
 ## Not built (follow-up)
 
 - **Staff side:** nothing in the staff portal shows these answers yet. Staff can read the table (policy exists) but a consultant view, an alert after two low pulses or a blocker, and trend on the client dashboard still need building. Without that the data is collected but not yet surfaced.

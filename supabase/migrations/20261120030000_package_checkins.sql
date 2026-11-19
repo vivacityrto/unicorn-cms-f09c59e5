@@ -44,7 +44,7 @@ revoke all on public.package_checkins from anon;
 revoke all on public.package_checkins from authenticated;
 grant select on public.package_checkins to authenticated;
 
--- Shared check: a client user (not staff) with full access to this organisation, and a live package that belongs to it.
+-- Shared check: a client user (never staff) with full access to this organisation, and a live package that belongs to it.
 create or replace function public.package_checkin_caller_ok(p_tenant_id bigint, p_package_instance_id bigint)
 returns boolean
 language sql
@@ -58,6 +58,15 @@ as $function$
       where tu.user_id = auth.uid() and tu.tenant_id = p_tenant_id and tu.access_scope = 'full'
     )
     and app.user_can_access_tenant(p_tenant_id)
+    -- Client users only: a staff account that also holds a membership of the organisation is still staff, so it
+    -- cannot answer on a client's behalf, including while previewing.
+    and not app.is_vivacity_team()
+    and not app.is_super_admin()
+    and not exists (
+      select 1 from public.users u
+      where u.user_uuid = auth.uid()
+        and (u.is_vivacity_internal = true or lower(coalesce(u.global_role, '')) in ('superadmin', 'admin'))
+    )
     and exists (
       select 1 from public.package_instances pi
       where pi.id = p_package_instance_id and pi.tenant_id = p_tenant_id and coalesce(pi.is_complete, false) = false
@@ -110,6 +119,9 @@ begin
   if p_kind = 'blocker' and v_comment is null then
     raise exception 'Tell us a little about what is blocking you';
   end if;
+
+  -- Serialise this person's answers for this package, so two requests sent at once cannot both pass the limits below.
+  perform pg_advisory_xact_lock(hashtextextended(v_uid::text || ':' || p_package_instance_id::text, 0));
 
   -- How often one person can answer, per package.
   if p_kind = 'pulse' and exists (
