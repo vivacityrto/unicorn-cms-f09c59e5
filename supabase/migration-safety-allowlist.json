@@ -651,7 +651,7 @@
       ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Proposed for review in PR 1595; not yet approved. The only insert is inside the body of submit_package_checkin, which runs when a signed-in client submits a check-in (validated, rate-limited, written as that person). The migration itself creates a new empty table and two functions and inserts no rows when applied, so there is nothing to replay. The scanner flags the statement because it cannot tell a function body from migration-time DML.",
+      "reason": "Carl-approved (2026-11-20, \"Merge PR 1595\", after being told this entry needed his review in the PR). The only insert is inside the body of submit_package_checkin, which runs when a signed-in client submits a check-in (validated, rate-limited, written as that person). The migration itself creates a new empty table and two functions and inserts no rows when applied, so there is nothing to replay. The scanner flags the statement because it cannot tell a function body from migration-time DML.",
       "expires": "2026-12-18"
     }
   ]
