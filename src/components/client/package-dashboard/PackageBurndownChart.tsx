@@ -193,15 +193,20 @@ export function PackageBurndownChart({
         upsert(p.activity_date, { actual: Number(p.cumulative_hours_used) });
       });
 
-      // Projection: from the latest recorded point to the day the hours would run out (or the end date, whichever is first).
+      // Projection, drawn at the same pace the forecast sentence uses: flat from the latest recorded point to today
+      // (nothing recorded since), then rising by the recent weekly pace until the hours run out or the end date, whichever is first.
       const latest = points.length > 0 ? points[points.length - 1] : null;
-      if (latest && forecast?.runOutDate && hoursTotal > 0) {
+      if (latest && forecast?.runOutDate && forecast.perWeek > 0 && hoursTotal > 0) {
+        const used = Number(latest.cumulative_hours_used);
+        const todayIso = format(new Date(), 'yyyy-MM-dd');
+        const start = todayIso > latest.activity_date ? todayIso : latest.activity_date;
         const target = endDate && forecast.runOutDate > endDate ? endDate : forecast.runOutDate;
-        const spanDays = Math.max(1, (parseISO(forecast.runOutDate).getTime() - parseISO(latest.activity_date).getTime()) / 86_400_000);
-        const reachDays = Math.max(0, (parseISO(target).getTime() - parseISO(latest.activity_date).getTime()) / 86_400_000);
-        const remaining = Math.max(0, hoursTotal - Number(latest.cumulative_hours_used));
-        upsert(latest.activity_date, { projected: Number(latest.cumulative_hours_used) });
-        upsert(target, { projected: Number(latest.cumulative_hours_used) + remaining * Math.min(1, reachDays / spanDays) });
+        if (target > start) {
+          const days = (parseISO(target).getTime() - parseISO(start).getTime()) / 86_400_000;
+          upsert(latest.activity_date, { projected: used });
+          upsert(start, { projected: used });
+          upsert(target, { projected: Math.min(hoursTotal, used + (forecast.perWeek / 7) * days) });
+        }
       }
 
       const sorted = Array.from(byDate.values()).sort((a, b) => a.ts - b.ts);

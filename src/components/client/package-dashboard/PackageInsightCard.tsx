@@ -17,10 +17,10 @@ const tone: Record<HoursForecast['verdict'], string> = {
  * Says in plain words how this package is tracking: what its status means, why it has that status,
  * and where its hours are heading. Everything is worked out from numbers already on the page.
  */
-export function PackageInsightCard({ dashboard, forecast }: { dashboard: ClientPackageDashboardRow; forecast: HoursForecast }) {
+export function PackageInsightCard({ dashboard, forecast }: { dashboard: ClientPackageDashboardRow; forecast: HoursForecast | null }) {
   const reason = statusReason(dashboard);
   const meaning = STATUS_MEANING[dashboard.status_pill];
-  const showForecast = forecast.verdict !== 'no_hours';
+  const showForecast = !!forecast && forecast.verdict !== 'no_hours';
   if (!reason && !showForecast && !meaning) return null;
 
   return (
@@ -36,13 +36,13 @@ export function PackageInsightCard({ dashboard, forecast }: { dashboard: ClientP
             </span>
           </li>
         )}
-        {showForecast && (
+        {showForecast && forecast && (
           <li className="flex gap-2">
             <Gauge className={cn('mt-0.5 h-4 w-4 shrink-0', tone[forecast.verdict])} aria-hidden />
             <span>{forecast.sentence}</span>
           </li>
         )}
-        {dashboard.end_date && (
+        {showForecast && dashboard.end_date && (
           <li className="flex gap-2 text-muted-foreground">
             <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>This is a projection from recent work, not a promise. Your consultant can adjust the plan with you.</span>

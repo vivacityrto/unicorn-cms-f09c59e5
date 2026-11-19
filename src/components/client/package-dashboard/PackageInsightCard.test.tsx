@@ -27,6 +27,14 @@ describe('PackageInsightCard', () => {
     expect(card).toHaveTextContent('projection from recent work, not a promise');
   });
 
+  it('says nothing about hours while the forecast is not ready, instead of claiming no hours were recorded', () => {
+    render(<PackageInsightCard dashboard={dashboard()} forecast={null} />);
+    const card = screen.getByRole('region', { name: 'How this package is tracking' });
+    expect(card).toHaveTextContent('Stuck:');
+    expect(card).not.toHaveTextContent('last four weeks');
+    expect(card).not.toHaveTextContent('projection from recent work');
+  });
+
   it('gives no reason for a package that is on track', () => {
     render(<PackageInsightCard dashboard={dashboard({ status_pill: 'on_track' })} forecast={{ ...forecast, verdict: 'on_pace' }} />);
     expect(screen.getByRole('region', { name: 'How this package is tracking' })).not.toHaveTextContent('Right now:');
