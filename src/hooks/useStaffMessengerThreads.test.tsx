@@ -108,6 +108,49 @@ describe('the staff messenger list', () => {
   });
 });
 
+describe('conversations I take part in, with a client that is not mine', () => {
+  const withParticipants = (c: Row, ...ids: string[]): Row => ({ ...c, conversation_participants: ids.map((user_id) => ({ user_id })) });
+
+  beforeEach(() => {
+    db.tables.tenant_conversations = [
+      conv('mine-client', 1, '2026-11-18T01:00:00Z'),
+      withParticipants(conv('i-started', 2, '2026-11-19T01:00:00Z'), 'me'),
+      withParticipants(conv('not-mine', 2, '2026-11-17T01:00:00Z'), 'someone-else'),
+    ];
+  });
+
+  it('stay on My clients, so a message I send to another client does not vanish from my own list', async () => {
+    const { result } = renderHook(() => useStaffMessenger(false, true), { wrapper });
+    await waitFor(() => expect(result.current.threads.length).toBeGreaterThan(0));
+    expect(result.current.threads.map((t) => t.id)).toEqual(['i-started', 'mine-client']);
+    expect([...result.current.participating]).toEqual(['i-started']);
+  });
+
+  it('leaves out other conversations with that client that I am not in', async () => {
+    const { result } = renderHook(() => useStaffMessenger(false, true), { wrapper });
+    await waitFor(() => expect(result.current.threads.length).toBeGreaterThan(0));
+    expect(result.current.threads.map((t) => t.id)).not.toContain('not-mine');
+  });
+
+  it('are listed even when none of the clients are mine', async () => {
+    db.tables.tenant_csc_assignments = [];
+    const { result } = renderHook(() => useStaffMessenger(false, true), { wrapper });
+    await waitFor(() => expect(result.current.threads.map((t) => t.id)).toContain('i-started'));
+  });
+
+  it('are not added a second time on All clients', async () => {
+    const { result } = renderHook(() => useStaffMessenger(true, true), { wrapper });
+    await waitFor(() => expect(result.current.threads).toHaveLength(3));
+    expect([...result.current.participating]).toEqual([]);
+  });
+
+  it('respect a chosen client', async () => {
+    const { result } = renderHook(() => useStaffMessenger(false, true, { tenantId: 1 }), { wrapper });
+    await waitFor(() => expect(result.current.threads.length).toBeGreaterThan(0));
+    expect(result.current.threads.map((t) => t.id)).toEqual(['mine-client']);
+  });
+});
+
 describe("a team member's conversations", () => {
   const withParticipants = (c: Row, ...ids: string[]): Row => ({ ...c, conversation_participants: ids.map((user_id) => ({ user_id })) });
 

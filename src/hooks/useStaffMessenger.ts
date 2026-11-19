@@ -48,9 +48,11 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
     queryKey: ['staff-messenger', 'threads', me, allClients, scopeKey, onlyTenant, memberId],
     enabled: enabled && !!me && scopeQuery.isSuccess,
     refetchInterval: REFRESH_MS,
-    queryFn: async (): Promise<{ threads: MessengerThread[]; totalUnread: number; limited: boolean }> => {
+    queryFn: async (): Promise<{ threads: MessengerThread[]; totalUnread: number; limited: boolean; participating: string[] }> => {
       const tenantIds = (scopeRows ?? []).map((r) => r.tenant_id);
       let rows: StaffConversationRow[];
+      // Conversations I am a participant in (I started or replied in them), whichever client they are with. Filled in below.
+      let participating: string[] = [];
 
       if (memberId) {
         // A team member's conversations: their clients (they are the primary consultant) plus any conversation they have taken
@@ -97,15 +99,41 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
           .select(CONVERSATION_COLUMNS)
           .order('last_message_at', { ascending: false, nullsFirst: false })
           .limit(CONVERSATION_LIMIT);
-        if (!allClients) {
-          if (tenantIds.length === 0) return { threads: [], totalUnread: 0, limited: false };
-          q = q.in('tenant_id', tenantIds);
-        }
+        if (!allClients && tenantIds.length > 0) q = q.in('tenant_id', tenantIds);
         // One client's conversations are listed in full (up to the limit for that client), so older ones are reachable.
         if (onlyTenant != null) q = q.eq('tenant_id', onlyTenant);
-        const { data: convos, error } = await q;
-        if (error) throw error;
-        rows = (convos ?? []) as StaffConversationRow[];
+
+        // My clients also includes any conversation I am in, whoever the client is: a message I send to a client who is not
+        // one of mine would otherwise vanish from my own list the moment it was sent.
+        const partQuery = !allClients
+          ? supabase
+              .from('tenant_conversations')
+              .select(`${CONVERSATION_COLUMNS}, conversation_participants!inner(user_id)`)
+              .eq('conversation_participants.user_id', me!)
+              .match(onlyTenant != null ? { tenant_id: onlyTenant } : {})
+              .order('last_message_at', { ascending: false, nullsFirst: false })
+              .limit(CONVERSATION_LIMIT)
+          : null;
+        const [main, part] = await Promise.all([
+          !allClients && tenantIds.length === 0 ? Promise.resolve({ data: [] as unknown[], error: null }) : q,
+          partQuery ?? Promise.resolve({ data: [] as unknown[], error: null }),
+        ]);
+        if (main.error) throw main.error;
+        if (part.error) throw part.error;
+        const mainRows = (main.data ?? []) as StaffConversationRow[];
+        const partRows = (part.data ?? []) as unknown as StaffConversationRow[];
+        participating = partRows.map((c) => c.id);
+        const merged = new Map<string, StaffConversationRow>();
+        for (const c of [...mainRows, ...partRows]) {
+          merged.set(c.id, {
+            id: c.id, tenant_id: c.tenant_id, subject: c.subject, topic: c.topic, type: c.type,
+            last_message_at: c.last_message_at, last_message_preview: c.last_message_preview, created_at: c.created_at,
+          });
+        }
+        rows = Array.from(merged.values())
+          .sort((a, b) => new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime())
+          .slice(0, CONVERSATION_LIMIT);
+        if (rows.length === 0) return { threads: [], totalUnread: 0, limited: false, participating };
       }
 
       const orgIds = Array.from(new Set(rows.map((c) => c.tenant_id)));
@@ -126,7 +154,7 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
       }
       const myReadAt = new Map((partRes.data ?? []).map((p) => [p.conversation_id, p.last_read_at]));
       const threads = buildStaffThreads({ conversations: rows, scope, tenantNames, unreadConversationIds: unreadIds, myReadAt, unreadSince });
-      return { threads, totalUnread: threads.filter((t) => t.unread).length, limited: rows.length >= CONVERSATION_LIMIT };
+      return { threads, totalUnread: threads.filter((t) => t.unread).length, limited: rows.length >= CONVERSATION_LIMIT, participating };
     },
   });
 
@@ -195,6 +223,8 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
     /** The conversation asked for by id when it is not in `threads` (older, another client's, or outside a filter), to keep open. */
     opened: extra && !mainThreads.some((t) => t.id === extra.id) ? extra : null,
     totalUnread: query.data?.totalUnread ?? 0,
+    /** Ids of the conversations I am a participant in. They are mine to read and answer even when the client is not one of mine. */
+    participating: new Set(query.data?.participating ?? []),
     /** True when the list stopped at the newest conversations; pick a client to see all of theirs. */
     limited: query.data?.limited ?? false,
     /** Every client in this view, by name, for a client picker. */

@@ -50,6 +50,10 @@ The staff, academy and client bells now open one shared drawer on the right (`No
 
 Writing a new message no longer opens a pop-up form. The + button in the bubble (client and staff), and the New message buttons on the client Inbox and on Team Communications, open a compose thread inside the bubble (`ComposePane`, id `compose:new`, hidden from the list). Clients choose an optional subject and category, then write; sending creates the conversation and the bubble moves onto it. Staff choose a client, then everyone at that client or one person (only that person and the sender are participants), then write (`StaffNewMessagePane`, `createStaffConversation`, which keeps the sender-first and row-by-row participant rules). Files are attached after the message is sent and a failure is named without hiding the send. `NewConversationDialog` and `NewTeamMessageDialog` are removed. A message to one person relies on the client Inbox listing conversations the person is a participant in; confirm that live. Not yet checked in a signed-in browser.
 
+## My clients includes conversations I take part in (20 November 2026)
+
+Found when a message sent from the staff portal to Demo RTO (not one of the sender's clients) disappeared from the bubble: "My clients" was only the conversations of clients in `get_my_message_scope()`, so a conversation the sender had started or replied in vanished from their own list. `useStaffMessenger` now adds every conversation the person is a participant in (the same rule the team-member filter uses), returns their ids as `participating`, and treats them as mine for read tracking. Conversations with that client that the person is not in stay out of My clients. Not yet checked in a signed-in browser.
+
 ## Open items
 
 - Resolved by PR 1604 (migration applied 20 November 2026): broadcast recipients are active `tenant_members` (ADR-019); 4 active members with no `tenant_users` row are now reached, and an immediate send adds only recipients as participants.

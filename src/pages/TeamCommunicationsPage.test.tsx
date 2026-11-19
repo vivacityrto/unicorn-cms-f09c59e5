@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MessengerThread } from '@/components/messenger';
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
@@ -39,6 +39,7 @@ vi.mock('@/hooks/useStaffMessenger', () => ({
       isLoading: !!opts?.memberId && state.loadingMember,
       limited: state.limited,
       scope: state.scope,
+      participating: new Set<string>(),
       hasScope: state.scope.size > 0,
     };
   },
@@ -78,6 +79,9 @@ const show = (url = '/communications') =>
 const thread = (id: string, over: Partial<MessengerThread> = {}): MessengerThread => ({ id, kind: 'general', title: `Acme Training · ${id}`, unread: false, tenantId: 1, lastActivityAt: hoursAgo(50), preview: `preview ${id}`, ...over });
 
 beforeEach(() => {
+  // "Active today" is by calendar day, so pin the clock to midday: a run just after midnight must not see 1 hour ago as yesterday.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 10, 19, 12, 0, 0));
   state.allClientsCalls = [];
   state.opts = [];
   state.loadingMember = false;
@@ -91,6 +95,10 @@ beforeEach(() => {
     thread('cover', { tenantId: 2, title: 'Other RTO · cover', badge: { label: 'Covering Nova', tone: 'info' }, unread: true, lastActivityAt: hoursAgo(2) }),
     thread('quiet'),
   ];
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 const list = () => screen.getByRole('list', { name: 'Conversations' });
