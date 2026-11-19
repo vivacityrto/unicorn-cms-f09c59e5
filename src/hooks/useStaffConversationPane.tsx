@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -89,8 +89,15 @@ export function useStaffConversationPane(openId: string | null, { tenantId, mine
     [openId, me, tenantId, qc, refresh],
   );
 
-  const onMarkRead = useCallback(() => {
+  // Records my read position (and clears the bell notification) for a conversation that is mine. It runs once per newest
+  // message, so it is safe to call from more than one place.
+  const recordedFor = useRef<string | null>(null);
+  const lastMessageId = rawMessages[rawMessages.length - 1]?.id ?? null;
+  const recordRead = useCallback(() => {
     if (!openId || !me || !mine) return;
+    const key = `${openId}:${lastMessageId ?? ''}`;
+    if (recordedFor.current === key) return;
+    recordedFor.current = key;
     void (async () => {
       const nowIso = new Date().toISOString();
       const { data: updated } = await supabase.from('conversation_participants').update({ last_read_at: nowIso }).eq('conversation_id', openId).eq('user_id', me).select('user_id');
@@ -104,7 +111,13 @@ export function useStaffConversationPane(openId: string | null, { tenantId, mine
       }
       refresh();
     })();
-  }, [openId, me, mine, refresh]);
+  }, [openId, me, mine, lastMessageId, refresh]);
+
+  // Open on a conversation that is mine (or a new message arrives while it is open): record the read position even when
+  // the bell notification was already cleared elsewhere, so the client still sees their message was read.
+  useEffect(() => {
+    if (lastMessageId) recordRead();
+  }, [lastMessageId, recordRead]);
 
   const renderAttachments = useCallback(
     (m: MessengerMessage) => {
@@ -121,7 +134,7 @@ export function useStaffConversationPane(openId: string | null, { tenantId, mine
     draftScope: 'staff-messenger',
     capabilities: { canSend: true },
     onSend,
-    onMarkRead,
+    onMarkRead: recordRead,
     validateFile: validateClientFile,
     accept: ATTACHMENT_ACCEPT,
     maxFiles: MAX_FILES_PER_MESSAGE,

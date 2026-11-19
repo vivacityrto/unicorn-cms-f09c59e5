@@ -9,11 +9,14 @@ type RpcCall = (name: string) => Promise<{ data: unknown; error: unknown }>;
 const REFRESH_MS = 20_000;
 const CONVERSATION_LIMIT = 300;
 
-/** Which client organisations are mine, by the same routing that decides who is notified of a client message. */
-export function useStaffMessageScope(enabled: boolean) {
+/**
+ * Which client organisations are mine, by the same routing that decides who is notified of a client message.
+ * The answer is for one person, so it is kept under that person's id: signing out and in as someone else never reuses it.
+ */
+export function useStaffMessageScope(me: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ['staff-messenger', 'scope'],
-    enabled,
+    queryKey: ['staff-messenger', 'scope', me],
+    enabled: enabled && !!me,
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
     queryFn: async (): Promise<StaffScopeRow[]> => {
@@ -34,7 +37,7 @@ export function useStaffMessageScope(enabled: boolean) {
 export function useStaffMessenger(allClients: boolean, enabled: boolean) {
   const { profile } = useAuth();
   const me = profile?.user_uuid ?? null;
-  const scopeQuery = useStaffMessageScope(enabled && !!me);
+  const scopeQuery = useStaffMessageScope(me, enabled);
   const scopeRows = scopeQuery.data;
   const scope = new Map((scopeRows ?? []).map((r) => [r.tenant_id, r]));
   const scopeKey = (scopeRows ?? []).map((r) => r.tenant_id).sort((a, b) => a - b).join(',');
