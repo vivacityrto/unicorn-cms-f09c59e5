@@ -91,6 +91,12 @@ begin
       u.email
     from public.users u
     where u.user_uuid = p_user_id
+      -- Only describe someone who belongs to this organisation (or has a counted course here), so the name and
+      -- email of a person from another organisation are never returned.
+      and (
+        exists (select 1 from public.tenant_users tm where tm.user_id = p_user_id and tm.tenant_id = p_tenant_id)
+        or exists (select 1 from chosen)
+      )
   ),
   totals as (
     select
