@@ -141,7 +141,7 @@ The client portal sidebar now opens as a narrow icon rail and remembers if someo
 
 ## Sidebar start setting and motion (19 November 2026)
 
-The client sidebar header has a pin: pinned means the menu starts open every time, unpinned means it starts as icons. Opening or closing the menu while working now lasts only for that visit; the pin is the one saved setting (same storage key as before, desktop only). Both the client and staff sidebars now ease open and shut (shared `.sidebar-motion` / `.sidebar-content-motion` in `index.css`), with the words fading in just behind the edge, and no motion for people who ask their device to reduce it. The staff sidebar has no pin yet. Not yet checked in a signed-in browser.
+The client sidebar header has a pin: pinned means the menu starts open every time, unpinned means it starts as icons. Opening or closing the menu while working now lasts only for that visit; the pin is the one saved setting (same storage key as before, desktop only). Both the client and staff sidebars now ease open and shut (shared `.sidebar-motion` / `.sidebar-content-motion` in `index.css`), with the words fading in just behind the edge, and no motion for people who ask their device to reduce it. The staff sidebar now has the same pin (`StartOpenPin` in `sidebarKit.tsx`, stored under `staff-sidebar-open`); unlike the client portal it starts open unless someone pins it closed. Not yet checked in a signed-in browser.
 
 ## Staff sidebar in the client style (19 November 2026)
 

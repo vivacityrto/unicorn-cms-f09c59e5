@@ -1051,11 +1051,6 @@
 .sidebar-motion p {
   animation: sidebar-label-in 220ms ease-out 90ms both;
 }
-.sidebar-motion nav,
-.sidebar-motion nav a,
-.sidebar-motion nav button {
-  white-space: nowrap;
-}
 .sidebar-content-motion {
   transition-property: padding, left;
   transition-duration: 300ms;
