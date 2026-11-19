@@ -25,6 +25,13 @@ describe('internal notes are for Vivacity staff only', () => {
     }
   });
 
+  it('first drops every existing policy on the three tables, whatever its name', () => {
+    const sweep = between('do $$', 'drop policy if exists notes_select on public.notes');
+    expect(sweep).toContain('pg_policies');
+    expect(sweep).toContain("tablename in ('notes', 'client_notes', 'tenant_notes')");
+    expect(sweep).toContain('drop policy if exists %I on %I.%I');
+  });
+
   it('grants nothing through organisation membership any more', () => {
     for (const word of ['has_tenant_access', 'user_has_tenant_access', 'get_current_user_tenant', 'tenant_users', 'tenant_members']) {
       expect(policies, word).not.toContain(word);

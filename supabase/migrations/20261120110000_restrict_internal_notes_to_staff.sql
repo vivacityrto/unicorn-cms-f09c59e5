@@ -21,6 +21,20 @@
 -- 1. notes, client_notes, tenant_notes: Vivacity staff and super admins only
 -- ---------------------------------------------------------------------------------------------------------------
 
+-- Drop EVERY existing policy on the three tables, whatever it was called, so a database that kept an older,
+-- differently named membership-based policy cannot still admit clients (permissive policies are OR-ed together).
+do $$
+declare r record;
+begin
+  for r in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public' and tablename in ('notes', 'client_notes', 'tenant_notes')
+  loop
+    execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
+  end loop;
+end $$;
+
 drop policy if exists notes_select on public.notes;
 drop policy if exists notes_insert on public.notes;
 drop policy if exists notes_update on public.notes;
