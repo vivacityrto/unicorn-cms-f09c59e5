@@ -56,6 +56,15 @@ describe('the staff read position', () => {
     expect(calls.writes).toContain('update:user_notifications');
   });
 
+  it('refreshes a conversation opened by link too, so its preview, time and unread state follow what just happened', async () => {
+    const qc = newClient();
+    const spy = vi.spyOn(qc, 'invalidateQueries');
+    renderHook(() => useStaffConversationPane('c1', { tenantId: 1, mine: true }), { wrapper: wrapper(qc) });
+    await waitFor(() => expect(calls.writes).toContain('update:user_notifications'));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['staff-messenger', 'thread'] }));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['staff-messenger', 'threads'] });
+  });
+
   it('is recorded once per newest message, however many places ask', async () => {
     const { result } = renderHook(() => useStaffConversationPane('c1', { tenantId: 1, mine: true }), { wrapper: wrapper(newClient()) });
     await waitFor(() => expect(calls.writes).toContain('update:conversation_participants'));

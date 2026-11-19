@@ -50,6 +50,8 @@ export function useStaffConversationPane(openId: string | null, { tenantId, mine
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ['staff-messenger', 'threads'] });
+    // A conversation opened by link is listed separately; it must show the new reply and the cleared unread state too.
+    void qc.invalidateQueries({ queryKey: ['staff-messenger', 'thread'] });
     void qc.invalidateQueries({ queryKey: ['conversation-participants', openId] });
   }, [qc, openId]);
 

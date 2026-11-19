@@ -19,6 +19,14 @@ describe('communications insights', () => {
     expect(i.needsYou).toEqual({ count: 2, oldestAt: '2026-11-16T09:00:00' });
   });
 
+  it('measures waiting from the oldest unread message, so a new follow-up does not make an overdue conversation look new', () => {
+    const overdue = t('x', { unread: true, lastActivityAt: '2026-11-19T09:55:00', unreadSince: '2026-11-16T09:00:00' });
+    const fresh = t('y', { unread: true, lastActivityAt: '2026-11-19T09:00:00', unreadSince: '2026-11-19T09:00:00' });
+    expect(communicationsInsights([overdue, fresh], NOW).needsYou.oldestAt).toBe('2026-11-16T09:00:00');
+    // Without that detail it falls back to the latest activity.
+    expect(communicationsInsights([t('z', { unread: true, lastActivityAt: '2026-11-18T09:00:00' })], NOW).needsYou.oldestAt).toBe('2026-11-18T09:00:00');
+  });
+
   it('counts the conversations I cover for a colleague, and how many of those are unread', () => {
     expect(communicationsInsights(threads, NOW).covering).toEqual({ count: 2, unread: 1 });
   });
