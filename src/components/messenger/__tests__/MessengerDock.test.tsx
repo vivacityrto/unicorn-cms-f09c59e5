@@ -122,6 +122,22 @@ describe('MessengerDock', () => {
     expect(screen.queryByText('messages of c1')).not.toBeInTheDocument();
   });
 
+  it('closes only the Type menu when Escape is pressed in it, not the whole bubble', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    show();
+    fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
+    await user.click(screen.getByRole('button', { name: 'Filter by type' }));
+    expect(await screen.findByRole('menuitemradio', { name: 'Package' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menuitemradio', { name: 'Package' })).not.toBeInTheDocument();
+    // The bubble, and what was in it, are still there.
+    expect(screen.getByRole('dialog', { name: 'Messages' })).toBeInTheDocument();
+    // A second Escape, with no menu open, closes the bubble as before.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('closes from the close button', () => {
     show();
     fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
