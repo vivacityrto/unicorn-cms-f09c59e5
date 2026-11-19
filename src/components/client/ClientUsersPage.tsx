@@ -72,6 +72,8 @@ import {
 } from "./users/UserStatusDisplay";
 import { supabase } from "@/integrations/supabase/client";
 import { TenantContactsSection } from "./TenantContactsSection";
+import { matchesUserFilter, summariseUsers, type UserFilter } from "./users/userInsights";
+import { UserFilterCards, UsersBanner, UsersInsightPanel } from "./users/UsersOverview";
 import { type PositionTypeOption } from "@/lib/roles/positionType";
 import { useClientUserPositionTypes } from "@/hooks/use-client-user-position-types";
 import { UserPositionTypeCell } from "@/components/client/users/UserPositionTypeCell";
@@ -187,6 +189,7 @@ export default function ClientUsersPage() {
   const atLimit = !!capacity.data?.atLimit;
   const queryClient = useQueryClient();
 
+  const [userFilter, setUserFilter] = useState<UserFilter>("all");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
@@ -303,8 +306,8 @@ export default function ClientUsersPage() {
       created_at: row.member_since || new Date(0).toISOString(),
       isLegacyGhost: true,
     }));
-  const activeCount = visibleRows.filter((r) => r.row_type === "active").length;
-  const invitedCount = rows.filter((r) => r.row_type === "invited").length;
+  const summary = useMemo(() => summariseUsers(visibleRows), [visibleRows]);
+  const shownRows = visibleRows.filter((row) => matchesUserFilter(row, userFilter));
 
   const inviteButton = (
     <div className="flex items-center gap-3">
@@ -322,21 +325,28 @@ export default function ClientUsersPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              People with access to your portal. Manage who can see your packages, documents, and Vivacity Academy.
-            </p>
-          </div>
-          {inviteButton}
-        </div>
+      <div className="space-y-4">
+        <UsersBanner
+          summary={summary}
+          capacity={capacity.data}
+          action={
+            <Button
+              variant="secondary"
+              disabled={!canManagePortalUsers || atLimit || isReadOnly}
+              onClick={() => setInviteOpen(true)}
+              title={atLimit ? "User limit reached — contact Vivacity to add more users." : undefined}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Invite user
+            </Button>
+          }
+        />
 
-        {!isLoading && !isError ? (
-          <div className="text-sm text-muted-foreground">
-            {activeCount} active · {invitedCount} pending invite{invitedCount === 1 ? "" : "s"}
-          </div>
+        {!isLoading && !isError && visibleRows.length > 0 ? (
+          <>
+            <UserFilterCards summary={summary} active={userFilter} onSelect={setUserFilter} />
+            <UsersInsightPanel summary={summary} />
+          </>
         ) : null}
 
         {isError ? (
@@ -373,8 +383,14 @@ export default function ClientUsersPage() {
               <TableBody>
                 {isLoading ? (
                   <LoadingSkeleton />
+                ) : shownRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                      No one matches this card.
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  visibleRows.map((row) => (
+                  shownRows.map((row) => (
                     <TableRow key={`${row.row_type}:${row.row_key}`}>
                       <TableCell>
                         <UserCell row={row} />
