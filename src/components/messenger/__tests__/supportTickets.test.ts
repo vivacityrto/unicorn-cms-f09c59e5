@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NEW_TICKET_THREAD_ID, ticketIdFromThreadId, ticketThreadId, toTicketMessages, toTicketThread } from '../adapters/supportTickets';
+import { NEW_TICKET_THREAD_ID, attachmentsByMessageId, ticketIdFromThreadId, ticketThreadId, toTicketMessages, toTicketThread } from '../adapters/supportTickets';
 import type { ClientTicketRow } from '@/components/client-portal/support-tickets/useClientTickets';
 import type { ThreadAttachment, ThreadMessage } from '@/components/support-tickets/useTicketThread';
 
@@ -40,9 +40,24 @@ describe('ticket messages', () => {
     expect(out.map((m) => m.id)).toEqual(['ok']);
   });
 
-  it('attaches files to the message they were sent with, and ignores ones not tied to a message', () => {
-    const att = (id: string, message_id: string | null): ThreadAttachment => ({ id, ticket_id: 't1', message_id, bucket: 'ticket-files', storage_path: 'p', file_name: `${id}.png`, mime_type: 'image/png', size_bytes: 5, created_at: 'x' });
-    const out = toTicketMessages([msg({ id: 'm1' })], [att('a1', 'm1'), att('a2', null)], 'me');
-    expect(out[0].attachments).toEqual([{ id: 'a1', name: 'a1.png', mimeType: 'image/png', size: 5 }]);
+  const att = (id: string, message_id: string | null): ThreadAttachment => ({ id, ticket_id: 't1', message_id, bucket: 'ticket-files', storage_path: 'p', file_name: `${id}.png`, mime_type: 'image/png', size_bytes: 5, created_at: 'x' });
+
+  it('attaches files to the reply they were sent with', () => {
+    const out = toTicketMessages([msg({ id: 'm1' }), msg({ id: 'm2', created_at: '2026-11-19T02:00:00Z' })], [att('a2', 'm2')], 'me');
+    expect(out.find((m) => m.id === 'm2')?.attachments).toEqual([{ id: 'a2', name: 'a2.png', mimeType: 'image/png', size: 5 }]);
+    expect(out.find((m) => m.id === 'm1')?.attachments).toEqual([]);
+  });
+
+  it('shows files sent when the ticket was created (no message id) on the first reply, so the original screenshot is never lost', () => {
+    const messages = [msg({ id: 'later', created_at: '2026-11-19T05:00:00Z' }), msg({ id: 'first', created_at: '2026-11-19T01:00:00Z' })];
+    const out = toTicketMessages(messages, [att('shot1', null), att('shot2', null), att('r', 'later')], 'me');
+    expect(out.find((m) => m.id === 'first')?.attachments?.map((a) => a.id)).toEqual(['shot1', 'shot2']);
+    expect(out.find((m) => m.id === 'later')?.attachments?.map((a) => a.id)).toEqual(['r']);
+    expect([...attachmentsByMessageId(messages, [att('shot1', null)]).keys()]).toEqual(['first']);
+  });
+
+  it('draws nothing for creation files when the ticket has no visible reply yet', () => {
+    expect(attachmentsByMessageId([], [att('shot', null)]).size).toBe(0);
+    expect(attachmentsByMessageId([msg({ id: 'n', staff_only: true })], [att('shot', null)]).size).toBe(0);
   });
 });

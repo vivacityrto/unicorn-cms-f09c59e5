@@ -31,7 +31,10 @@ interface BuildInput {
   cscName: string | null;
   cscAvatarUrl: string | null;
   hasCsc: boolean;
-  /** Academy-only people have no conversations and no Ask Viv; support tickets are what they can use. */
+  /**
+   * Academy-only people have no conversations and no Ask Viv, and the database refuses to let them raise a ticket, so they are
+   * offered no way to start one: only tickets they already have are listed.
+   */
   academyOnly?: boolean;
 }
 
@@ -64,16 +67,19 @@ export function buildClientThreads({ conversations, tickets = [], cscName, cscAv
     }
     out.push(NEW_TICKET_THREAD);
     for (const c of conversations) if (c.id !== cscConversation?.id) out.push(toMessengerThread(c));
-  } else {
-    out.push(NEW_TICKET_THREAD);
   }
   for (const t of tickets) out.push(toTicketThread(t));
   return out;
 }
 
-/** The real thread a Help Center alias stands for, or null when it is not an alias (or the list has no such thread). */
-export function resolveHelpAlias(id: string | null, threads: readonly MessengerThread[]): string | null {
-  if (id === HELP_ALIAS_SUPPORT) return NEW_TICKET_THREAD_ID;
+/**
+ * The real thread a Help Center alias stands for, or null when it is not an alias, the list has no such thread, or the list
+ * is not ready yet. Waiting matters for the consultant: before conversations have loaded the only consultant thread is "start
+ * one", and resolving then would hide the conversation that already exists.
+ */
+export function resolveHelpAlias(id: string | null, threads: readonly MessengerThread[], ready = true): string | null {
+  if (!ready) return null;
+  if (id === HELP_ALIAS_SUPPORT) return threads.some((t) => t.id === NEW_TICKET_THREAD_ID) ? NEW_TICKET_THREAD_ID : null;
   if (id === HELP_ALIAS_CSC) {
     return threads.find((t) => t.kind === 'csc' && t.pinned)?.id ?? null;
   }

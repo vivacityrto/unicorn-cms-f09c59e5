@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { AttachmentList } from '@/components/support-tickets/AttachmentParts';
 import type { MessengerMessage } from '@/components/messenger';
-import { toTicketMessages } from '@/components/messenger/adapters/supportTickets';
+import { attachmentsByMessageId, toTicketMessages } from '@/components/messenger/adapters/supportTickets';
 import { pendingMessage } from '@/components/messenger/adapters/tenantConversations';
 import type { ClientTicketRow } from '@/components/client-portal/support-tickets/useClientTickets';
 import { usePostReply, useTicketThread, validateAttachment as validateTicketFile } from '@/components/support-tickets/useTicketThread';
@@ -41,14 +41,8 @@ export function useClientTicketPane(ticket: ClientTicketRow | null, { sendOverri
     return [...saved, ...inFlight];
   }, [thread, pending, ticket, ticketId]);
 
-  const attachmentsByMessage = useMemo(() => {
-    const map = new Map<string, NonNullable<typeof thread>['attachments']>();
-    for (const a of thread?.attachments ?? []) {
-      if (!a.message_id) continue;
-      map.set(a.message_id, [...(map.get(a.message_id) ?? []), a]);
-    }
-    return map;
-  }, [thread]);
+  // Includes the files sent with the first message, which have no message id of their own.
+  const attachmentsByMessage = useMemo(() => attachmentsByMessageId(thread?.messages ?? [], thread?.attachments ?? []), [thread]);
 
   const onSend = useCallback(
     async ({ body, files }: { body: string; files: File[] }) => {
