@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Award, BookOpen, Clock3, GraduationCap, Sparkles, Users } from "lucide-react";
+import { AlertTriangle, Award, BookOpen, Clock3, GraduationCap, Sparkles, Users, ChevronRight } from "lucide-react";
 import { useTenantAcademyLearnerAnalytics, type TenantAcademyLearnerAnalytics } from "@/features/pdp/useTenantAcademyStaffStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bar, Ring } from "./home/Ring";
 import { WeeklyBars } from "./academy-analytics/WeeklyBars";
+import { LearnerDetailSheet } from "./academy-analytics/LearnerDetailSheet";
 import { STATUS_LABEL, academySummary, finishedPercent, hoursOf, learnerStatus, type LearnerStatus } from "./academy-analytics/academyInsights";
 
 const numberAU = new Intl.NumberFormat("en-AU", { maximumFractionDigits: 1 });
@@ -46,14 +47,22 @@ function Tile({ icon: Icon, label, value, note, ring }: { icon: typeof Users; la
   );
 }
 
-function Learners({ rows }: { rows: TenantAcademyLearnerAnalytics["learners"] }) {
+type LearnerRow = TenantAcademyLearnerAnalytics["learners"][number];
+
+function Learners({ rows, onOpen }: { rows: TenantAcademyLearnerAnalytics["learners"]; onOpen: (l: LearnerRow) => void }) {
   return (
     <div className="divide-y">
       {rows.map((l) => {
         const status = learnerStatus(l);
         const pct = finishedPercent(l.chosen, l.finished);
         return (
-          <div key={l.user_id} className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_0.6fr_0.6fr_0.9fr] md:items-center">
+          <button
+            key={l.user_id}
+            type="button"
+            onClick={() => onOpen(l)}
+            aria-label={`Open ${l.name}'s Academy activity`}
+            className="group grid w-full gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_0.6fr_0.6fr_0.9fr_1rem] md:items-center"
+          >
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{l.name}</p>
               <p className="truncate text-xs text-muted-foreground">{l.email || "No email"}</p>
@@ -68,7 +77,8 @@ function Learners({ rows }: { rows: TenantAcademyLearnerAnalytics["learners"] })
               <Badge variant="outline" className={STATUS_CLASS[status]}>{STATUS_LABEL[status]}</Badge>
               <span className="text-xs text-muted-foreground">{relativeDate(l.last_active)}</span>
             </div>
-          </div>
+            <ChevronRight className="hidden h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 md:block" aria-hidden />
+          </button>
         );
       })}
     </div>
@@ -76,6 +86,7 @@ function Learners({ rows }: { rows: TenantAcademyLearnerAnalytics["learners"] })
 }
 
 export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
+  const [openLearner, setOpenLearner] = useState<LearnerRow | null>(null);
   const { data, isLoading, error } = useTenantAcademyLearnerAnalytics(tenantId);
   const lines = useMemo(() => (data ? academySummary(data) : []), [data]);
 
@@ -142,8 +153,8 @@ export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Award className="h-4 w-4 text-primary" aria-hidden />Your team</CardTitle></CardHeader>
         <CardContent className="p-0">
-          <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_0.6fr_0.6fr_0.9fr] gap-3 border-b px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground md:grid"><span>Team member</span><span>Progress</span><span>Lessons</span><span>Hours</span><span>Status</span></div>
-          <Learners rows={data.learners} />
+          <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_0.6fr_0.6fr_0.9fr_1rem] gap-3 border-b px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground md:grid"><span>Team member</span><span>Progress</span><span>Lessons</span><span>Hours</span><span>Status</span><span /></div>
+          <Learners rows={data.learners} onOpen={setOpenLearner} />
         </CardContent>
       </Card>
 
@@ -165,6 +176,8 @@ export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
           </CardContent>
         </Card>
       )}
+
+      <LearnerDetailSheet tenantId={tenantId} learner={openLearner} onOpenChange={(open) => { if (!open) setOpenLearner(null); }} />
 
       <p className="text-xs text-muted-foreground">
         These figures count courses your team chose themselves.
