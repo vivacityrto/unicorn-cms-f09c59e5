@@ -1,6 +1,6 @@
 # Messenger redesign (client bubble, Inbox, staff messaging, Help Center retirement)
 
-Status as of 20 November 2026: **phase 1 (foundations) in review.** Approved by Carl on 20 November 2026 with these decisions: tighten conversation access first; tickets appear as threads through an adapter, not merged into the conversation tables; schema-backed features (replies, edit and delete, reactions, pin and mute, search) come last; Help Center is removed as code only and its tables are kept until a later approved cleanup.
+Status as of 20 November 2026: **phase 1 (foundations) in review; the conversation access migration is applied to production, as is the broadcast recipient migration (PR 1604, whose edge function change deploys on merge).** Approved by Carl on 20 November 2026 with these decisions: tighten conversation access first; tickets appear as threads through an adapter, not merged into the conversation tables; schema-backed features (replies, edit and delete, reactions, pin and mute, search) come last; Help Center is removed as code only and its tables are kept until a later approved cleanup.
 
 ## Why
 
@@ -19,7 +19,7 @@ One kit, `src/components/messenger/`, fed by thread sources:
 
 ## Phases
 
-1. **Foundations (this PR):** conversation access migration (written and dry-run, not applied) and the kit with tests.
+1. **Foundations (this PR):** conversation access migration (applied) and the kit with tests.
 2. Client Inbox rebuilt on the kit.
 3. The bubble as a dock: Ask Viv, Your CSC and other threads, one realtime listener instead of several.
 4. Support tickets as threads, then Help Center removal (11 call sites repointed; `help-center-chat` and `help_threads` / `help_messages` kept until a later approved cleanup).
@@ -36,7 +36,7 @@ Broadcasts are delivered by `send-broadcast-campaign` and the scheduled-delivery
 
 ## Open items
 
-- 7 active client users are in `tenant_members` but not `tenant_users`, so the broadcast function never added them as participants. Decide whether the function should mirror `tenant_members` (or both).
+- Resolved by PR 1604 (migration applied 20 November 2026): broadcast recipients are active `tenant_members` (ADR-019); 4 active members with no `tenant_users` row are now reached, and an immediate send adds only recipients as participants.
 - Whether a user added to an organisation after a broadcast should be added to earlier broadcasts as a participant (the access change hides broadcasts they were never in).
 - A later primary CSC reassignment does not update participants on existing threads.
 - `fn_tm_on_message_insert` writes `/client/inbox?...` as the link for everyone, including staff.
