@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Search } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ago, initialsOf } from '@/components/client/inbox/inboxFormat';
 import { cn } from '@/lib/utils';
@@ -71,7 +72,23 @@ interface ThreadListProps {
   className?: string;
 }
 
-/** Search, filter chips and the thread rows. Filter chips only appear for the kinds that exist. */
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        active ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Search, the All / Unread chips with a type menu, and the thread rows. The type menu lists only the kinds that exist. */
 export function ThreadList({ threads, selectedId, onSelect, isLoading, empty, action, className }: ThreadListProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ThreadFilter>('all');
@@ -79,11 +96,7 @@ export function ThreadList({ threads, selectedId, onSelect, isLoading, empty, ac
   const visible = useMemo(() => filterThreads(sorted, filter, query), [sorted, filter, query]);
   const unread = totalUnread(threads);
   const kinds = kindsPresent(threads);
-  const chips: Array<{ value: ThreadFilter; label: string; count?: number }> = [
-    { value: 'all', label: 'All' },
-    { value: 'unread', label: 'Unread', count: unread },
-    ...(kinds.length > 1 ? kinds.map((k) => ({ value: k as ThreadFilter, label: THREAD_KIND_LABEL[k] })) : []),
-  ];
+  const kindFilter = filter !== 'all' && filter !== 'unread' ? filter : null;
 
   return (
     <div className={cn('flex min-h-0 flex-col gap-2', className)}>
@@ -102,22 +115,39 @@ export function ThreadList({ threads, selectedId, onSelect, isLoading, empty, ac
         {action}
       </div>
       {threads.length > 0 && (
-        <div role="group" aria-label="Filter conversations" className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-          {chips.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              aria-pressed={filter === c.value}
-              onClick={() => setFilter(c.value)}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                filter === c.value ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',
-              )}
-            >
-              {c.label}
-              {c.count ? <span className={cn('rounded-full px-1 text-[10px] tabular-nums', filter === c.value ? 'bg-white/25' : 'bg-muted')}>{c.count}</span> : null}
-            </button>
-          ))}
+        // Never scrolls sideways: "All" and "Unread" are always visible, and every type lives in one menu, so the row is the
+        // same width whether there are two kinds of thread or nine.
+        <div role="group" aria-label="Filter conversations" className="flex items-center gap-1.5">
+          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')}>All</FilterChip>
+          <FilterChip active={filter === 'unread'} onClick={() => setFilter('unread')}>
+            Unread
+            {unread > 0 && <span className={cn('rounded-full px-1 text-[10px] tabular-nums', filter === 'unread' ? 'bg-white/25' : 'bg-muted')}>{unread}</span>}
+          </FilterChip>
+          {kinds.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={kindFilter ? `Type: ${THREAD_KIND_LABEL[kindFilter]}. Change type` : 'Filter by type'}
+                  className={cn(
+                    'ml-auto inline-flex min-w-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    kindFilter ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                  )}
+                >
+                  <span className="truncate">{kindFilter ? THREAD_KIND_LABEL[kindFilter] : 'Type'}</span>
+                  <ChevronDown aria-hidden className="h-3 w-3 shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[10rem] text-[13px]">
+                <DropdownMenuRadioGroup value={kindFilter ?? 'all-types'} onValueChange={(v) => setFilter(v === 'all-types' ? 'all' : (v as ThreadFilter))}>
+                  <DropdownMenuRadioItem value="all-types">All types</DropdownMenuRadioItem>
+                  {kinds.map((k) => (
+                    <DropdownMenuRadioItem key={k} value={k}>{THREAD_KIND_LABEL[k]}</DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       )}
       <div className="-mx-1 min-h-0 flex-1 space-y-0.5 overflow-y-auto px-1" role="list" aria-label="Conversations">

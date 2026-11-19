@@ -46,6 +46,25 @@ describe('Messenger shell', () => {
     expect(screen.getByText('Holiday hours')).toBeTruthy();
   });
 
+  it('keeps the filter row to All, Unread and one Type menu, so it never needs to scroll sideways', () => {
+    render(<Harness />);
+    const row = screen.getByRole('group', { name: 'Filter conversations' });
+    expect(within(row).getAllByRole('button').map((b) => b.textContent?.replace(/\d+$/, '').trim())).toEqual(['All', 'Unread', 'Type']);
+    expect(row.className).not.toMatch(/overflow/);
+  });
+
+  it('filters by type from the Type menu and shows the chosen type on the chip', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole('button', { name: 'Filter by type' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Support' }));
+    const list = screen.getByRole('list', { name: 'Conversations' });
+    expect(within(list).getByText('Ticket 12')).toBeTruthy();
+    expect(within(list).queryByText('Ask Viv')).toBeNull();
+    expect(screen.getByRole('button', { name: /Type: Support/ })).toBeTruthy();
+  });
+
   it('opens a thread, marks it read, renders text as text and links safely', async () => {
     const onMarkRead = vi.fn();
     render(<Harness onMarkRead={onMarkRead} />);
