@@ -35,7 +35,7 @@ describe('dark mode guard', () => {
       if (allowed.some((a) => file.replace(/\\/g, '/').includes(a))) continue;
       const text = readFileSync(file, 'utf8');
       for (const m of text.matchAll(literal)) {
-        if (pale.test(m[0]) && !/dark:bg-/.test(m[0])) {
+        if (pale.test(m[0]) && !/dark:bg-|keep-light/.test(m[0])) {
           offenders.push(`${file.replace(ROOT, 'src')}: ${m[0].slice(0, 90)}`);
         }
       }

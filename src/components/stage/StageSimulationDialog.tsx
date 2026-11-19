@@ -671,7 +671,7 @@ function EmailsTab({
                   </Button>
                 </div>
                 <div 
-                  className="text-sm prose prose-sm max-w-none bg-white p-3 rounded border max-h-[300px] overflow-auto dark:bg-card"
+                  className="text-sm keep-light prose prose-sm max-w-none bg-white p-3 rounded border max-h-[300px] overflow-auto dark:bg-card"
                   dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(email.rendered_body) }}
                 />
               </div>
