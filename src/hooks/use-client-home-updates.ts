@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { htmlToText } from '@/lib/sanitize';
 import { getRegulatorySummarySections } from '@/features/regulatory-updates/summaryFormatting';
+import { plainExcerpt } from '@/features/regulatory-updates/regulatoryView';
 
 export interface HomeBroadcast {
   id: string;
@@ -23,19 +24,8 @@ export interface HomeRegulatoryUpdate {
 
 const EXCERPT_LENGTH = 180;
 
-/** Markdown to a short plain sentence for a card. */
-export function plainExcerpt(markdown: string | null | undefined, max = EXCERPT_LENGTH): string | null {
-  if (!markdown) return null;
-  const text = markdown
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[#>*_`~-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!text) return null;
-  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
-}
+// Kept here so existing imports keep working; the implementation lives with the regulatory helpers.
+export { plainExcerpt };
 
 /**
  * The latest messages Vivacity broadcast to this organisation (conversations of type "broadcast"), newest first, with
