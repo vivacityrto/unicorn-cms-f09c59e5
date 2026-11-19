@@ -83,3 +83,47 @@ describe('the client sidebar as a collapsed icon rail', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 });
+
+describe('the pin that sets how the menu starts', () => {
+  const showPin = (open: boolean, defaultOpen: boolean, setDefaultOpen = vi.fn(), setSidebarOpen = vi.fn()) => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/client/home']}>
+          <ClientSidebar sidebarOpen={open} setSidebarOpen={setSidebarOpen} defaultOpen={defaultOpen} setDefaultOpen={setDefaultOpen} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    return { setDefaultOpen, setSidebarOpen };
+  };
+
+  it('shows whether the menu starts open, and flips that setting without opening or closing the menu', async () => {
+    const user = userEvent.setup();
+    const { setDefaultOpen, setSidebarOpen } = showPin(true, false);
+    const pin = screen.getByRole('button', { name: 'Start with the menu open' });
+    expect(pin).toHaveAttribute('aria-pressed', 'false');
+    await user.click(pin);
+    expect(setDefaultOpen).toHaveBeenCalledWith(true);
+    expect(setSidebarOpen).not.toHaveBeenCalled();
+  });
+
+  it('shows pinned when the menu starts open, and unpins on press', async () => {
+    const user = userEvent.setup();
+    const { setDefaultOpen } = showPin(true, true);
+    const pin = screen.getByRole('button', { name: 'Start with the menu open' });
+    expect(pin).toHaveAttribute('aria-pressed', 'true');
+    await user.click(pin);
+    expect(setDefaultOpen).toHaveBeenCalledWith(false);
+  });
+
+  it('has no pin on the collapsed rail, where the words are hidden', () => {
+    showPin(false, false);
+    expect(screen.queryByRole('button', { name: 'Start with the menu open' })).not.toBeInTheDocument();
+  });
+
+  it('the close button now says what it does', async () => {
+    const user = userEvent.setup();
+    const { setSidebarOpen } = showPin(true, true);
+    await user.click(screen.getByRole('button', { name: 'Close the menu' }));
+    expect(setSidebarOpen).toHaveBeenCalledWith(false);
+  });
+});

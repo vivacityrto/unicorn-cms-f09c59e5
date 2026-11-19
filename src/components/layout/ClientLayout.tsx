@@ -33,10 +33,12 @@ const ClientRequestContext = createContext<OpenDocRequestFn>(() => {});
 export const useOpenDocumentRequest = () => useContext(ClientRequestContext);
 
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
-  // Collapsed to icons by default, remembered once someone widens it (see sidebarPreference).
-  const [sidebarOpen, setSidebarOpenState] = useState<boolean>(() => readSidebarPreference());
-  const setSidebarOpen = useCallback((open: boolean) => {
-    setSidebarOpenState(open);
+  // How the menu starts is a setting (the pin in the sidebar header, see sidebarPreference). Opening or closing it while you
+  // work only changes this visit.
+  const [defaultOpen, setDefaultOpenState] = useState<boolean>(() => readSidebarPreference());
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(defaultOpen);
+  const setDefaultOpen = useCallback((open: boolean) => {
+    setDefaultOpenState(open);
     writeSidebarPreference(open);
   }, []);
   const { isPreview, activeTenantId } = useClientTenant();
@@ -107,12 +109,14 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       <ClientSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
+        defaultOpen={defaultOpen}
+        setDefaultOpen={setDefaultOpen}
       />
 
       {/* Main Content */}
       <div
         className={cn(
-          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-clip",
+          "sidebar-content-motion flex flex-col min-h-screen w-full min-w-0 overflow-x-clip",
           sidebarOpen ? "md:pl-60" : "md:pl-16",
           "pl-0"
         )}
@@ -135,7 +139,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Footer: pinned to the bottom of the window, beside the sidebar, like the staff portal. */}
           <div
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-20 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)] transition-all duration-300",
+              "sidebar-content-motion fixed bottom-0 left-0 right-0 z-20 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)]",
               sidebarOpen ? "md:left-60" : "md:left-16",
             )}
           >
