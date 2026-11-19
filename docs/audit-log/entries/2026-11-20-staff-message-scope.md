@@ -2,7 +2,7 @@
 
 **Trigger:** the messenger redesign, phase 3b (Carl: staff should see the threads they are responsible for, mainly the primary consultant's, with the assistants who cover most consultants, "similar to how notification and delegation work"; confirmed and approved "Go with your picks" on 20 November 2026).
 **Scope:** migration `20261120140000_staff_message_scope.sql` adds one read-only function, `public.get_my_message_scope()`. No table, policy, trigger or row is changed.
-**Status:** **Written and dry-run in production (rolled back). NOT applied.** The staff messenger bubble calls this function, so it needs to be applied (with explicit go-ahead) before the staff bubble PR is merged, or the bubble shows no "My clients" threads until it is.
+**Status:** **Applied to production on 20 November 2026** (Carl: "Apply it"), via the Supabase MCP `apply_migration` as `staff_message_scope`, after a rolled-back dry run. Postflight verified (below). It was applied before the staff bubble PR is merged; until that PR is merged nothing calls it.
 
 ## What it does
 
@@ -30,9 +30,14 @@ The function was created inside a block that ended in a deliberate exception, th
 
 No names, emails or message text were printed.
 
+## Postflight (production, after apply; the check itself was rolled back)
+
+- One `get_my_message_scope` function, `SECURITY DEFINER`, `STABLE`, `search_path` pinned; `authenticated` can run it, `anon` cannot (a call as `anon` is refused).
+- The same four callers as the dry run return the same counts: a primary consultant 17 (all `primary_csc`); an all-CSC delegate 55 (47 `delegate`, 7 `primary_csc`, 1 `unassigned`); a Super Admin who is not a delegate 1 (`unassigned`); a client user 0.
+- No names, emails or message text were printed.
+
 ## Not done
 
-- Applying the migration (waits for go-ahead). After applying: postflight (one function, `authenticated` can run it, `anon` cannot, the four callers above return the same counts).
 - Typing indicators and one shared realtime listener (the bubble refreshes every 20 seconds and the open conversation is live).
 - Staff Communications and the Manage Client Messages tab on the kit (phase 5); the separate rollout-flagged Ask Viv assistant widget at the bottom left is unchanged.
 
