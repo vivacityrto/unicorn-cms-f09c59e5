@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { OPEN_STAFF_GO_TO_EVENT } from "@/components/layout/StaffGoToSearch";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { SupportTicketsPanel } from "@/components/support-tickets/SupportTicketsPanel";
 import { DailyNotesPanel } from "@/components/task-notes/DailyNotesPanel";
@@ -237,6 +238,22 @@ function ThemeToggleButton() {
   );
 }
 
+/** Staff only: opens the go-to search (Ctrl + K), which lists the pages in the staff menu. */
+function GoToButton() {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" className={UTILITY_BUTTON_CLASS} aria-label="Go to a page" onClick={() => window.dispatchEvent(new Event(OPEN_STAFF_GO_TO_EVENT))}>
+          <Search className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Go to a page (Ctrl K)</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Staff only: straight to the client list. */
 function ManageClientsButton() {
   return (
@@ -408,6 +425,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
           {/* Dark mode toggle */}
           <ThemeToggleButton />
           {/* Manage Clients: staff only */}
+          {!isClientRole && <GoToButton />}
           {!isClientRole && <ManageClientsButton />}
           {/* Daily Notes button */}
           <DailyNotesButton />
