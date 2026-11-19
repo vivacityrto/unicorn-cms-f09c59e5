@@ -1,63 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { CheckCircle2, ChevronDown, Inbox, MessageSquare, Plus, UserMinus, UserPlus, UserRound } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, MessageSquare, Plus, Send, Loader2, ChevronDown, UserPlus, UserCircle2, Paperclip } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useStaffMessenger } from '@/hooks/useStaffMessenger';
+import { useStaffConversationPane } from '@/hooks/useStaffConversationPane';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
-import {
-  uploadMessageAttachment,
-  validateAttachment,
-  MAX_FILES_PER_MESSAGE,
-  type MessageAttachmentRow,
-} from '@/lib/messageAttachments';
-import { MessageAttachments } from '@/components/messaging/MessageAttachments';
-import { AttachmentChips } from '@/components/messaging/AttachmentChips';
+import { Messenger, type MessengerThread } from '@/components/messenger';
+import { StaffNewMessagePane } from '@/components/staff/StaffNewMessagePane';
+import { InsightCard } from '@/components/staff/InsightCard';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface ClientMessagesTabProps {
   tenantId: number;
   clientName: string;
+  /** Called after a conversation is read, so the page can refresh its unread badge. */
   onReadStateChange?: () => void;
 }
 
-interface Conversation {
-  id: string;
-  tenant_id: number;
-  topic: string | null;
-  type: string | null;
-  status: string | null;
-  subject: string | null;
-  assigned_to_user_uuid: string | null;
-  last_message_at: string | null;
-  last_message_preview: string | null;
-  created_at: string;
-  last_sender_type?: 'client' | 'staff' | null;
-  unread?: boolean;
-}
+type Status = 'open' | 'resolved' | 'closed';
+type View = 'all' | 'needs' | 'unassigned' | 'resolved';
 
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_type: 'client' | 'staff' | string;
-  sender_user_uuid: string | null;
-  body: string;
-  created_at: string;
-  sender_name?: string;
-  attachments?: MessageAttachmentRow[];
+interface ConversationMeta {
+  status: Status;
+  assignedTo: string | null;
 }
-
-type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved' | 'mine';
 
 interface StaffMember {
   user_uuid: string;
@@ -66,1015 +37,301 @@ interface StaffMember {
   email: string | null;
 }
 
-function staffName(s: StaffMember | undefined | null) {
+const staffName = (s: StaffMember | undefined | null) => {
   if (!s) return 'Unassigned';
-  const name = [s.first_name, s.last_name].filter(Boolean).join(' ').trim();
-  return name || s.email || 'Unknown';
-}
+  return [s.first_name, s.last_name].filter(Boolean).join(' ').trim() || s.email || 'Unknown';
+};
 
-function staffInitials(s: StaffMember | undefined | null) {
+const staffInitials = (s: StaffMember | undefined | null) => {
   if (!s) return '?';
-  const fi = s.first_name?.[0] ?? '';
-  const li = s.last_name?.[0] ?? '';
-  const combined = `${fi}${li}`.toUpperCase();
-  if (combined) return combined;
-  return (s.email?.[0] ?? '?').toUpperCase();
-}
-
-const TYPE_STYLES: Record<string, string> = {
-  csc: 'bg-[#7130A0]/10 text-[#7130A0] border-[#7130A0]/30',
-  task: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30',
-  package: 'bg-[#23C0DD]/10 text-[#0D7A8F] border-[#23C0DD]/40',
-  general: 'bg-muted text-muted-foreground border-border',
-  direct: 'bg-muted text-muted-foreground border-border',
-  broadcast: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30',
+  const initials = `${s.first_name?.[0] ?? ''}${s.last_name?.[0] ?? ''}`.toUpperCase();
+  return initials || (s.email?.[0] ?? '?').toUpperCase();
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  open: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30',
-  resolved: 'bg-muted text-muted-foreground border-border',
-  closed: 'bg-slate-700 text-white border-slate-700 dark:bg-slate-600',
+const STATUS_CHANGES: Record<Status, Array<{ label: string; value: Status }>> = {
+  open: [
+    { label: 'Mark as resolved', value: 'resolved' },
+    { label: 'Close conversation', value: 'closed' },
+  ],
+  resolved: [
+    { label: 'Reopen', value: 'open' },
+    { label: 'Close conversation', value: 'closed' },
+  ],
+  closed: [{ label: 'Reopen', value: 'open' }],
 };
 
-function typeLabel(t?: string | null) {
-  if (!t) return 'General';
-  if (t === 'csc') return 'CSC';
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
+const isDone = (s: Status) => s === 'resolved' || s === 'closed';
 
+/**
+ * A client's Messages tab on the staff client page: the same messenger as Team Communications, limited to this client. Staff
+ * read and reply as they do everywhere else; this tab adds the two things only it needs, who the conversation is assigned to
+ * and whether it is resolved. Writing a new message takes the conversation area rather than opening a pop-up.
+ */
 export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: ClientMessagesTabProps) {
-  const { toast } = useToast();
   const { profile } = useAuth();
-  const canChangeStatus = isVivacityStaffRole(profile?.unicorn_role);
-  const [loading, setLoading] = useState(true);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [filter, setFilter] = useState<FilterValue>('all');
-  const [selected, setSelected] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
-  const [reply, setReply] = useState('');
-  const [replyFiles, setReplyFiles] = useState<File[]>([]);
-  const replyFileInputRef = useRef<HTMLInputElement>(null);
-  const [sending, setSending] = useState(false);
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const staffById = useMemo(() => {
-    const m = new Map<string, StaffMember>();
-    staffList.forEach((s) => m.set(s.user_uuid, s));
-    return m;
-  }, [staffList]);
+  const me = profile?.user_uuid ?? null;
+  const canManage = isVivacityStaffRole(profile?.unicorn_role);
+  const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
-  }, []);
+  // A notification can link straight to one conversation (?tab=messages&conversation=<id>).
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('conversation'));
+  const [composing, setComposing] = useState(false);
+  const [view, setView] = useState<View>('all');
 
-  // Load active Vivacity staff for the assignment dropdown + avatars
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
+  const { threads: listed, opened, totalUnread, isLoading } = useStaffMessenger(true, true, { tenantId, extraThreadId: selectedId });
+
+  // Assignment and status are not part of the shared thread, so they are read here for this client's conversations.
+  const metaKey = useMemo(() => ['client-messages-meta', tenantId] as const, [tenantId]);
+  const { data: meta } = useQuery({
+    queryKey: metaKey,
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<Record<string, ConversationMeta>> => {
+      const { data, error } = await supabase.from('tenant_conversations').select('id, status, assigned_to_user_uuid').eq('tenant_id', tenantId);
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((c) => [c.id, { status: ((c.status as Status | null) ?? 'open'), assignedTo: c.assigned_to_user_uuid }]));
+    },
+  });
+
+  // Active Vivacity staff, for the assignment menu and the avatars.
+  const { data: staff = [] } = useQuery({
+    queryKey: ['client-messages-staff'],
+    staleTime: 10 * 60_000,
+    queryFn: async (): Promise<StaffMember[]> => {
+      const { data, error } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, email, is_vivacity_internal, unicorn_role, disabled, archived, is_qa_persona, is_system_account')
         .or('is_vivacity_internal.eq.true,unicorn_role.in.(Admin,CSC,Super Admin)');
-      const rows = (data ?? []).filter(
-        (u) => !u.disabled && !u.archived && !u.is_qa_persona && !u.is_system_account && u.user_uuid,
-      );
-      rows.sort((a, b) => staffName(a).localeCompare(staffName(b)));
-      setStaffList(rows);
-    })();
-  }, []);
+      if (error) throw error;
+      return (data ?? [])
+        .filter((u) => !u.disabled && !u.archived && !u.is_qa_persona && !u.is_system_account && u.user_uuid)
+        .sort((a, b) => staffName(a).localeCompare(staffName(b)));
+    },
+  });
+  const staffById = useMemo(() => new Map(staff.map((s) => [s.user_uuid, s])), [staff]);
 
-  const loadConversations = async () => {
-    setLoading(true);
-    const { data: convos, error } = await supabase
-      .from('tenant_conversations')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('last_message_at', { ascending: false, nullsFirst: false });
-    if (error) {
-      toast({ title: 'Failed to load conversations', description: error.message, variant: 'destructive' });
-      setConversations([]);
-      setLoading(false);
-      return;
-    }
-    const list = (convos ?? []) as Conversation[];
-    // Determine last sender per conversation to compute "unread" (last msg from client)
-    if (list.length > 0) {
-      const ids = list.map((c) => c.id);
-      const { data: lastMsgs } = await supabase
-        .from('tenant_messages')
-        .select('conversation_id, sender_type, created_at')
-        .in('conversation_id', ids)
-        .order('created_at', { ascending: false });
-      const seen = new Map<string, 'client' | 'staff'>();
-      (lastMsgs ?? []).forEach((m) => {
-        if (!seen.has(m.conversation_id)) seen.set(m.conversation_id, m.sender_type as 'client' | 'staff');
-      });
-      list.forEach((c) => {
-        c.last_sender_type = seen.get(c.id) ?? null;
-        c.unread = c.last_sender_type === 'client';
-      });
-    }
-    setConversations(list);
-    setLoading(false);
-  };
+  // The list shows each conversation's state: resolved and closed ones say so on the row.
+  const withState = useCallback(
+    (t: MessengerThread): MessengerThread => {
+      const status = meta?.[t.id]?.status ?? 'open';
+      if (status === 'open') return t;
+      return { ...t, badge: { label: status === 'closed' ? 'Closed' : 'Resolved', tone: 'neutral' } };
+    },
+    [meta],
+  );
+  const threads = useMemo(() => listed.map(withState), [listed, withState]);
+  const openThread = opened ? withState(opened) : null;
 
+  const counts = useMemo(() => {
+    let unassigned = 0;
+    let resolved = 0;
+    for (const t of listed) {
+      const m = meta?.[t.id];
+      if (m && isDone(m.status)) resolved += 1;
+      else if (m && !m.assignedTo) unassigned += 1;
+    }
+    return { needs: listed.filter((t) => t.unread).length, unassigned, resolved };
+  }, [listed, meta]);
+
+  const visible = useMemo(() => {
+    if (view === 'needs') return threads.filter((t) => t.unread);
+    if (view === 'unassigned') return threads.filter((t) => meta?.[t.id] && !meta[t.id].assignedTo && !isDone(meta[t.id].status));
+    if (view === 'resolved') return threads.filter((t) => meta?.[t.id] && isDone(meta[t.id].status));
+    return threads;
+  }, [threads, view, meta]);
+
+  const selected = threads.find((t) => t.id === selectedId) ?? (openThread && openThread.id === selectedId ? openThread : null);
+  // Reading a conversation here is the staff member's own read: the client sees "Seen" and the bell clears.
+  const pane = useStaffConversationPane(selected?.id ?? null, { tenantId, mine: true });
+
+  // Tell the page when the unread count moves (after the first load) so its Messages badge stays right.
+  const previousUnread = useRef<number | null>(null);
   useEffect(() => {
-    loadConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+    if (isLoading) return;
+    if (previousUnread.current !== null && previousUnread.current !== totalUnread) onReadStateChange?.();
+    previousUnread.current = totalUnread;
+  }, [totalUnread, isLoading, onReadStateChange]);
 
-  // Realtime: refresh list when new messages arrive for this tenant
-  useEffect(() => {
-    const channel = supabase
-      .channel(`tenant-messages:${tenantId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'tenant_messages', filter: `tenant_id=eq.${tenantId}` },
-        () => {
-          loadConversations();
-          if (selected) void loadMessages(selected.id);
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, selected?.id]);
-
-  const loadMessages = async (conversationId: string) => {
-    setMessagesLoading(true);
-    const { data, error } = await supabase
-      .from('tenant_messages')
-      .select('id, conversation_id, sender_type, sender_user_uuid, body, created_at')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-    if (error) {
-      toast({ title: 'Failed to load messages', description: error.message, variant: 'destructive' });
-      setMessages([]);
-      setMessagesLoading(false);
-      return;
-    }
-    const rows = (data ?? []) as Message[];
-    const senderIds = Array.from(new Set(rows.map((m) => m.sender_user_uuid).filter(Boolean))) as string[];
-    if (senderIds.length > 0) {
-      const { data: users } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name')
-        .in('user_uuid', senderIds);
-      const nameMap = new Map<string, string>();
-      (users ?? []).forEach((u) =>
-        nameMap.set(u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown'),
-      );
-      rows.forEach((m) => {
-        m.sender_name = m.sender_user_uuid
-          ? nameMap.get(m.sender_user_uuid) || (m.sender_type === 'staff' ? 'Vivacity Team' : clientName)
-          : m.sender_type === 'staff'
-            ? 'Vivacity Team'
-            : clientName;
-      });
-    }
-    // attachments
-    const msgIds = rows.map((m) => m.id);
-    if (msgIds.length > 0) {
-      const { data: atts } = await supabase
-        .from('tenant_message_attachments')
-        .select('id, message_id, filename, storage_path, mime_type, file_size, created_at')
-        .in('message_id', msgIds);
-      const grouped = new Map<string, Message['attachments']>();
-      (atts ?? []).forEach((a) => {
-        const arr = grouped.get(a.message_id) ?? [];
-        arr!.push(a);
-        grouped.set(a.message_id, arr);
-      });
-      rows.forEach((m) => (m.attachments = grouped.get(m.id) ?? []));
-    }
-    setMessages(rows);
-    setMessagesLoading(false);
+  const select = (id: string | null) => {
+    setComposing(false);
+    setSelectedId(id);
   };
 
-  const openConversation = async (c: Conversation) => {
-    setSelected(c);
-    setReply('');
-    setReplyFiles([]);
-    await loadMessages(c.id);
-    // Mark conversation as read for this staff user
-    if (currentUserId) {
-      await supabase
-        .from('conversation_participants')
-        .upsert(
-          {
-            conversation_id: c.id,
-            user_id: currentUserId,
-            role: 'staff',
-            last_read_at: new Date().toISOString(),
-          },
-          { onConflict: 'conversation_id,user_id' },
-        );
-      // Reflect locally and refresh parent badge
-      setConversations((prev) =>
-        prev.map((x) => (x.id === c.id ? { ...x, unread: false } : x)),
-      );
-      onReadStateChange?.();
-    }
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: metaKey });
+    void qc.invalidateQueries({ queryKey: ['staff-messenger'] });
   };
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return conversations;
-    if (filter === 'unread') return conversations.filter((c) => c.unread);
-    if (filter === 'from-client')
-      return conversations.filter((c) => c.last_sender_type === 'client');
-    if (filter === 'resolved')
-      return conversations.filter((c) => c.status === 'resolved' || c.status === 'closed');
-    if (filter === 'mine')
-      return conversations.filter((c) => c.assigned_to_user_uuid === currentUserId);
-    return conversations;
-  }, [conversations, filter, currentUserId]);
-
-  const assignConversation = async (assigneeUuid: string | null) => {
-    if (!selected || !canChangeStatus) return;
+  const assign = async (assigneeUuid: string | null) => {
+    if (!selected || !canManage) return;
     const { error } = await supabase
       .from('tenant_conversations')
       .update({ assigned_to_user_uuid: assigneeUuid, updated_at: new Date().toISOString() })
       .eq('id', selected.id);
     if (error) {
-      toast({ title: 'Failed to assign', description: error.message, variant: 'destructive' });
+      toast.error(`Failed to assign: ${error.message}`);
       return;
     }
-    setSelected({ ...selected, assigned_to_user_uuid: assigneeUuid });
-    setConversations((prev) =>
-      prev.map((c) => (c.id === selected.id ? { ...c, assigned_to_user_uuid: assigneeUuid } : c)),
-    );
-
-    // Insert notification for assignee (skip self-assign)
-    if (assigneeUuid && assigneeUuid !== currentUserId) {
-      const assignee = staffById.get(assigneeUuid);
-      const subject = selected.subject || '(No subject)';
-      await supabase
-        .from('user_notifications')
-        .upsert(
-          {
-            user_id: assigneeUuid,
-            tenant_id: tenantId,
-            type: 'message',
-            title: `Conversation assigned to you: ${subject}`,
-            message: `You have been assigned a client conversation from ${clientName}`,
-            link: `/tenant/${tenantId}?tab=messages&conversation=${selected.id}`,
-            source_id: selected.id,
-            is_read: false,
-            created_by: currentUserId,
-            dedupe_key: `assign:${selected.id}:${assigneeUuid}`,
-          },
-          { onConflict: 'dedupe_key', ignoreDuplicates: true },
-        );
-      toast({ title: `Assigned to ${staffName(assignee)}` });
-    } else if (!assigneeUuid) {
-      toast({ title: 'Conversation unassigned' });
-    } else {
-      toast({ title: 'Assigned to you' });
-    }
-  };
-
-  const sendReply = async () => {
-    if (!selected || (!reply.trim() && replyFiles.length === 0) || !currentUserId) return;
-    setSending(true);
-    const body = reply.trim();
-    const { data, error } = await supabase
-      .from('tenant_messages')
-      .insert({
-        conversation_id: selected.id,
-        tenant_id: tenantId,
-        sender_type: 'staff',
-        sender_user_uuid: currentUserId,
-        body: body || 'Attachment',
-      })
-      .select('id')
-      .single();
-    if (error) {
-      toast({ title: 'Failed to send', description: error.message, variant: 'destructive' });
-      setSending(false);
-      return;
-    }
-    for (const file of replyFiles) {
-      try {
-        await uploadMessageAttachment(supabase, file, tenantId, selected.id, data.id);
-      } catch (uploadError) {
-        toast({
-          title: `Attachment failed: ${file.name}`,
-          description: uploadError instanceof Error ? uploadError.message : 'The message was sent without this attachment.',
-          variant: 'destructive',
-        });
-      }
-    }
-    await supabase
-      .from('tenant_conversations')
-      .update({
-        last_message_at: new Date().toISOString(),
-        last_message_preview: (body || 'Attachment').slice(0, 100),
-      })
-      .eq('id', selected.id);
-    setReply('');
-    setReplyFiles([]);
-    if (replyFileInputRef.current) replyFileInputRef.current.value = '';
-    setSending(false);
-    await loadMessages(selected.id);
-    await loadConversations();
-  };
-
-  const addReplyFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(event.target.files ?? []);
-    const accepted: File[] = [];
-    for (const file of picked) {
-      if (replyFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
-        toast({ title: `You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`, variant: 'destructive' });
-        break;
-      }
-      try {
-        validateAttachment(file);
-        accepted.push(file);
-      } catch (error) {
-        toast({ title: error instanceof Error ? error.message : `Could not attach ${file.name}`, variant: 'destructive' });
-      }
-    }
-    if (accepted.length) setReplyFiles((prev) => [...prev, ...accepted]);
-    event.currentTarget.value = '';
-  };
-
-  const changeStatus = async (newStatus: 'open' | 'resolved' | 'closed') => {
-    if (!selected || !canChangeStatus) return;
-    const { error } = await supabase
-      .from('tenant_conversations')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', selected.id);
-    if (error) {
-      toast({ title: 'Failed to update status', description: error.message, variant: 'destructive' });
-      return;
-    }
-    setSelected({ ...selected, status: newStatus });
-    setConversations((prev) => prev.map((c) => (c.id === selected.id ? { ...c, status: newStatus } : c)));
-    toast({ title: `Conversation marked as ${newStatus}` });
-  };
-
-  if (selected) {
-    return (
-      <ConversationThread
-        conversation={selected}
-        messages={messages}
-        loading={messagesLoading}
-        onBack={() => {
-          setSelected(null);
-          setMessages([]);
-        }}
-        reply={reply}
-        onReplyChange={setReply}
-        onSend={sendReply}
-        sending={sending}
-        queuedFiles={replyFiles}
-        onFilesPicked={addReplyFiles}
-        onRemoveFile={(index) => setReplyFiles((prev) => prev.filter((_, i) => i !== index))}
-        fileInputRef={replyFileInputRef}
-        clientName={clientName}
-        canChangeStatus={canChangeStatus}
-        onChangeStatus={changeStatus}
-        staffList={staffList}
-        assignee={selected.assigned_to_user_uuid ? staffById.get(selected.assigned_to_user_uuid) ?? null : null}
-        onAssign={assignConversation}
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {(['all', 'unread', 'from-client', 'mine', 'resolved'] as FilterValue[]).map((f) => (
-            <Button
-              key={f}
-              variant={filter === f ? 'default' : 'outline'}
-              size="sm"
-              className={filter === f ? 'bg-[#7130A0] hover:bg-[#7130A0]/90' : ''}
-              onClick={() => setFilter(f)}
-            >
-              {f === 'all'
-                ? 'All'
-                : f === 'unread'
-                  ? 'Unread'
-                  : f === 'from-client'
-                    ? 'From client'
-                    : f === 'mine'
-                      ? 'Mine'
-                      : 'Resolved'}
-            </Button>
-          ))}
-        </div>
-        <Sheet open={composeOpen} onOpenChange={setComposeOpen}>
-          <SheetTrigger asChild>
-            <Button className="bg-[#ED1878] hover:bg-[#ED1878]/90 text-white">
-              <Plus className="h-4 w-4 mr-1.5" />
-              New Message
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-full sm:max-w-md">
-            <ComposePanel
-              tenantId={tenantId}
-              currentUserId={currentUserId}
-              onClose={() => setComposeOpen(false)}
-              onCreated={async (newId) => {
-                setComposeOpen(false);
-                await loadConversations();
-                const created = (conversations.find((c) => c.id === newId) ?? null) as Conversation | null;
-                if (created) await openConversation(created);
-                else {
-                  const { data } = await supabase
-                    .from('tenant_conversations')
-                    .select('*')
-                    .eq('id', newId)
-                    .single();
-                  if (data) await openConversation(data);
-                }
-              }}
-            />
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-4 space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-              <p className="font-semibold">
-                {filter === 'resolved' ? 'No resolved conversations' : 'No messages yet'}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                {filter === 'resolved'
-                  ? 'Resolved conversations will appear here.'
-                  : 'When this client sends a message through their portal, it will appear here.'}
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {filtered.map((c) => {
-                const isUnread = !!c.unread;
-                const dotColor =
-                  c.last_sender_type === 'client'
-                    ? 'bg-[#ED1878]'
-                    : c.last_sender_type === 'staff'
-                      ? 'bg-[#7130A0]'
-                      : 'bg-muted-foreground/30';
-                return (
-                  <li key={c.id}>
-                    <button
-                      className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors flex items-start gap-3"
-                      onClick={() => openConversation(c)}
-                    >
-                      <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={isUnread ? 'font-bold' : 'font-medium'}>
-                            {c.subject || '(No subject)'}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={TYPE_STYLES[c.type || 'general'] || TYPE_STYLES.general}
-                          >
-                            {typeLabel(c.type)}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={STATUS_STYLES[c.status || 'open'] || STATUS_STYLES.open}
-                          >
-                            {(c.status || 'open').charAt(0).toUpperCase() + (c.status || 'open').slice(1)}
-                          </Badge>
-                          {isUnread && (
-                            <span className="h-2 w-2 rounded-full bg-[#ED1878]" aria-label="unread" />
-                          )}
-                        </div>
-                        {c.last_message_preview && (
-                          <p className="text-sm text-muted-foreground mt-1 truncate">
-                            {c.last_message_preview.slice(0, 80)}
-                            {c.last_message_preview.length > 80 ? '…' : ''}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className="text-xs text-muted-foreground mt-1">
-                          {c.last_message_at
-                            ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true })
-                            : 'No messages'}
-                        </span>
-                        <AssigneePill assignee={c.assigned_to_user_uuid ? staffById.get(c.assigned_to_user_uuid) ?? null : null} />
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function ConversationThread({
-  conversation,
-  messages,
-  loading,
-  onBack,
-  reply,
-  onReplyChange,
-  onSend,
-  sending,
-  clientName,
-  canChangeStatus,
-  onChangeStatus,
-  staffList,
-  assignee,
-  onAssign,
-  queuedFiles,
-  onFilesPicked,
-  onRemoveFile,
-  fileInputRef,
-}: {
-  conversation: Conversation;
-  messages: Message[];
-  loading: boolean;
-  onBack: () => void;
-  reply: string;
-  onReplyChange: (v: string) => void;
-  onSend: () => void;
-  sending: boolean;
-  clientName: string;
-  canChangeStatus: boolean;
-  onChangeStatus: (status: 'open' | 'resolved' | 'closed') => void | Promise<void>;
-  staffList: StaffMember[];
-  assignee: StaffMember | null;
-  onAssign: (assigneeUuid: string | null) => void | Promise<void>;
-  queuedFiles: File[];
-  onFilesPicked: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onRemoveFile: (index: number) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
-}) {
-  const status = (conversation.status || 'open') as 'open' | 'resolved' | 'closed';
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-  const transitions: Array<{ label: string; value: 'open' | 'resolved' | 'closed' }> =
-    status === 'open'
-      ? [
-          { label: 'Mark as Resolved', value: 'resolved' },
-          { label: 'Close conversation', value: 'closed' },
-        ]
-      : status === 'resolved'
-        ? [
-            { label: 'Reopen', value: 'open' },
-            { label: 'Close conversation', value: 'closed' },
-          ]
-        : [{ label: 'Reopen', value: 'open' }];
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-1.5" />
-          Back to messages
-        </Button>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Badge variant="outline" className={TYPE_STYLES[conversation.type || 'general']}>
-            {typeLabel(conversation.type)}
-          </Badge>
-          {canChangeStatus ? (
-            <AssignControl
-              assignee={assignee}
-              staffList={staffList}
-              onAssign={onAssign}
-            />
-          ) : (
-            <AssigneePill assignee={assignee} />
-          )}
-          {canChangeStatus ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
-                  type="button"
-                >
-                  {statusLabel}
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {transitions.map((t) => (
-                  <DropdownMenuItem key={t.value} onClick={() => onChangeStatus(t.value)}>
-                    {t.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Badge variant="outline" className={STATUS_STYLES[status]}>
-              {statusLabel}
-            </Badge>
-          )}
-        </div>
-      </div>
-
-
-      <Card>
-        <CardContent className="p-4">
-          <h3 className="text-lg font-semibold mb-3">
-            {conversation.subject || '(No subject)'}
-          </h3>
-          <ScrollArea className="h-[480px] pr-3">
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
-                ))}
-              </div>
-            ) : messages.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No messages in this conversation.</p>
-            ) : (
-              <div className="space-y-3">
-                {messages.map((m) => {
-                  const isStaff = m.sender_type === 'staff';
-                  return (
-                    <div
-                      key={m.id}
-                      className={`flex ${isStaff ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={
-                          isStaff
-                            ? 'max-w-[78%] rounded-lg p-3 bg-[#7130A0] text-white'
-                            : 'max-w-[78%] rounded-lg p-3 bg-muted/40 border-l-4 border-[#ED1878]'
-                        }
-                      >
-                        <div
-                          className={`flex items-center justify-between gap-3 text-xs mb-1 ${
-                            isStaff ? 'text-white/80' : 'text-muted-foreground'
-                          }`}
-                        >
-                          <span className="font-medium">
-                            {m.sender_name || (isStaff ? 'Vivacity Team' : clientName)}
-                            <span className="ml-1 opacity-75">· {isStaff ? 'Staff' : 'Client'}</span>
-                          </span>
-                          <span>
-                            {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">{m.body}</p>
-                        {m.attachments && m.attachments.length > 0 && <MessageAttachments attachments={m.attachments} />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-
-          <div className="mt-4 border-t pt-3 space-y-2">
-            <AttachmentChips files={queuedFiles} onRemove={onRemoveFile} />
-            <Textarea
-              value={reply}
-              onChange={(e) => onReplyChange(e.target.value)}
-              placeholder="Write a reply…"
-              rows={3}
-            />
-            <div className="flex items-center justify-between">
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  hidden
-                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
-                  onChange={onFilesPicked}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE || sending}
-                >
-                  <Paperclip className="h-4 w-4 mr-1.5" />
-                  Attach file
-                </Button>
-              </>
-              <Button
-                onClick={onSend}
-                disabled={(!reply.trim() && queuedFiles.length === 0) || sending}
-                className="bg-[#7130A0] hover:bg-[#7130A0]/90"
-              >
-                {sending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
-                Send reply
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function AssigneePill({ assignee }: { assignee: StaffMember | null }) {
-  if (!assignee) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[11px]">
-        <UserPlus className="h-3 w-3" />
-        Unassigned
-      </span>
-    );
-  }
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
-      title={`Assigned to ${staffName(assignee)}`}
-    >
-      <Avatar className="h-5 w-5">
-        <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
-          {staffInitials(assignee)}
-        </AvatarFallback>
-      </Avatar>
-      <span className="hidden sm:inline truncate max-w-[100px]">{staffName(assignee)}</span>
-    </span>
-  );
-}
-
-function AssignControl({
-  assignee,
-  staffList,
-  onAssign,
-}: {
-  assignee: StaffMember | null;
-  staffList: StaffMember[];
-  onAssign: (assigneeUuid: string | null) => void | Promise<void>;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 hover:bg-muted px-2 py-0.5 text-xs"
-        >
-          {assignee ? (
-            <>
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
-                  {staffInitials(assignee)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden sm:inline max-w-[120px] truncate">{staffName(assignee)}</span>
-            </>
-          ) : (
-            <>
-              <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Unassigned</span>
-            </>
-          )}
-          <ChevronDown className="h-3 w-3" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto w-60">
-        <DropdownMenuLabel className="text-xs">Assign to</DropdownMenuLabel>
-        {staffList.length === 0 ? (
-          <DropdownMenuItem disabled>No staff available</DropdownMenuItem>
-        ) : (
-          staffList.map((s) => (
-            <DropdownMenuItem
-              key={s.user_uuid}
-              onClick={() => onAssign(s.user_uuid)}
-              className="flex items-center gap-2"
-            >
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
-                  {staffInitials(s)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="truncate">{staffName(s)}</span>
-            </DropdownMenuItem>
-          ))
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onAssign(null)} className="text-muted-foreground">
-          <UserCircle2 className="h-4 w-4 mr-2" />
-          Unassign
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function AttachmentLink({ filename, path, isStaff }: { filename: string; path: string; isStaff: boolean }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.storage
-        .from('tenant-message-attachments')
-        .createSignedUrl(path, 3600);
-      if (data?.signedUrl) setUrl(data.signedUrl);
-    })();
-  }, [path]);
-  return url ? (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className={`text-xs underline ${isStaff ? 'text-white/90' : 'text-[#7130A0]'}`}
-    >
-      📎 {filename}
-    </a>
-  ) : (
-    <span className="text-xs opacity-70">📎 {filename}</span>
-  );
-}
-
-function ComposePanel({
-  tenantId,
-  currentUserId,
-  onClose,
-  onCreated,
-}: {
-  tenantId: number;
-  currentUserId: string | null;
-  onClose: () => void;
-  onCreated: (conversationId: string) => void | Promise<void>;
-}) {
-  const { toast } = useToast();
-  const [subject, setSubject] = useState('');
-  const [type, setType] = useState<'csc' | 'general' | 'task' | 'package'>('general');
-  const [body, setBody] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const onFilesPicked = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(event.target.files ?? []);
-    const accepted: File[] = [];
-    for (const file of picked) {
-      if (queuedFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
-        toast({ title: `You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`, variant: 'destructive' });
-        break;
-      }
-      try {
-        validateAttachment(file);
-        accepted.push(file);
-      } catch (error) {
-        toast({ title: error instanceof Error ? error.message : `Could not attach ${file.name}`, variant: 'destructive' });
-      }
-    }
-    if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
-    event.currentTarget.value = '';
-  };
-
-  const submit = async () => {
-    if (!currentUserId) {
-      toast({ title: 'Not authenticated', variant: 'destructive' });
-      return;
-    }
-    if (!subject.trim() || (!body.trim() && queuedFiles.length === 0)) {
-      toast({ title: 'Subject and message are required', variant: 'destructive' });
-      return;
-    }
-    setSubmitting(true);
-    const now = new Date().toISOString();
-    const { data: conv, error: convErr } = await supabase
-      .from('tenant_conversations')
-      .insert({
-        tenant_id: tenantId,
-        topic: type === 'csc' ? 'csc' : 'general',
-        type,
-        subject: subject.trim(),
-        status: 'open',
-        created_by_user_uuid: currentUserId,
-        last_message_at: now,
-        last_message_preview: (body.trim() || 'Attachment').slice(0, 100),
-      })
-      .select('id')
-      .single();
-    if (convErr || !conv) {
-      toast({ title: 'Failed to create conversation', description: convErr?.message, variant: 'destructive' });
-      setSubmitting(false);
-      return;
-    }
-    const conversationId = conv.id;
-
-    // Add sender as participant (RLS requirement for inserting messages)
-    await supabase
-      .from('conversation_participants')
-      .upsert(
+    // The person it is assigned to is told (not when assigning to yourself).
+    if (assigneeUuid && assigneeUuid !== me) {
+      await supabase.from('user_notifications').upsert(
         {
-          conversation_id: conversationId,
-          user_id: currentUserId,
-          role: 'staff',
-          last_read_at: now,
+          user_id: assigneeUuid,
+          tenant_id: tenantId,
+          type: 'message',
+          title: `Conversation assigned to you: ${selected.title || '(No subject)'}`,
+          message: `You have been assigned a client conversation from ${clientName}`,
+          link: `/tenant/${tenantId}?tab=messages&conversation=${selected.id}`,
+          source_id: selected.id,
+          is_read: false,
+          created_by: me,
+          dedupe_key: `assign:${selected.id}:${assigneeUuid}`,
         },
-        { onConflict: 'conversation_id,user_id' },
+        { onConflict: 'dedupe_key', ignoreDuplicates: true },
       );
-
-    const { data: newMessage, error: msgErr } = await supabase.from('tenant_messages').insert({
-      conversation_id: conversationId,
-      tenant_id: tenantId,
-      sender_type: 'staff',
-      sender_user_uuid: currentUserId,
-      body: body.trim() || 'Attachment',
-    }).select('id').single();
-    if (msgErr) {
-      toast({ title: 'Conversation created but message failed', description: msgErr.message, variant: 'destructive' });
-      setSubmitting(false);
-      return;
     }
-    for (const file of queuedFiles) {
-      try {
-        await uploadMessageAttachment(supabase, file, tenantId, conversationId, newMessage.id);
-      } catch (uploadError) {
-        toast({
-          title: `Attachment failed: ${file.name}`,
-          description: uploadError instanceof Error ? uploadError.message : 'The message was sent without this attachment.',
-          variant: 'destructive',
-        });
-      }
-    }
-    toast({ title: 'Message sent' });
-    setSubmitting(false);
-    setQueuedFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    await onCreated(conversationId);
+    toast.success(assigneeUuid ? (assigneeUuid === me ? 'Assigned to you' : `Assigned to ${staffName(staffById.get(assigneeUuid))}`) : 'Conversation unassigned');
+    refresh();
   };
 
+  const changeStatus = async (status: Status) => {
+    if (!selected || !canManage) return;
+    const { error } = await supabase.from('tenant_conversations').update({ status, updated_at: new Date().toISOString() }).eq('id', selected.id);
+    if (error) {
+      toast.error(`Failed to update status: ${error.message}`);
+      return;
+    }
+    toast.success(`Conversation marked as ${status}`);
+    refresh();
+  };
+
+  const toggleView = (next: View) => setView((v) => (v === next ? 'all' : next));
+
+  const selectedMeta = selected ? meta?.[selected.id] : undefined;
+  const assignee = selectedMeta?.assignedTo ? staffById.get(selectedMeta.assignedTo) ?? null : null;
+  const status = selectedMeta?.status ?? 'open';
+
+  const headerActions = selected ? (
+    canManage ? (
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={assignee ? `Assigned to ${staffName(assignee)}. Change` : 'Unassigned. Assign'}
+              title={assignee ? `Assigned to ${staffName(assignee)}` : 'Assign'}
+              className="flex h-8 items-center gap-1 rounded-full px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {assignee ? (
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="bg-primary text-[10px] text-primary-foreground">{staffInitials(assignee)}</AvatarFallback>
+                </Avatar>
+              ) : (
+                <UserPlus className="h-4 w-4" aria-hidden />
+              )}
+              <ChevronDown className="h-3 w-3" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-80 w-60 overflow-y-auto">
+            <DropdownMenuLabel className="text-xs">Assign to</DropdownMenuLabel>
+            {staff.length === 0 ? (
+              <DropdownMenuItem disabled>No staff available</DropdownMenuItem>
+            ) : (
+              staff.map((s) => (
+                <DropdownMenuItem key={s.user_uuid} onClick={() => void assign(s.user_uuid)} className="gap-2">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="bg-primary text-[9px] text-primary-foreground">{staffInitials(s)}</AvatarFallback>
+                  </Avatar>
+                  <span className="truncate">{staffName(s)}</span>
+                </DropdownMenuItem>
+              ))
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => void assign(null)} className="text-muted-foreground">
+              <UserMinus className="mr-2 h-4 w-4" aria-hidden />
+              Unassign
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Status: ${status}. Change`}
+              title={`Status: ${status}`}
+              className="flex h-8 items-center gap-1 rounded-full px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CheckCircle2 className={isDone(status) ? 'h-4 w-4 text-emerald-600 dark:text-emerald-400' : 'h-4 w-4'} aria-hidden />
+              <ChevronDown className="h-3 w-3" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {STATUS_CHANGES[status].map((c) => (
+              <DropdownMenuItem key={c.value} onClick={() => void changeStatus(c.value)}>
+                {c.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </>
+    ) : assignee ? (
+      <span className="px-1.5 text-[11px] text-muted-foreground">{staffName(assignee)}</span>
+    ) : undefined
+  ) : undefined;
+
   return (
-    <>
-      <SheetHeader>
-        <SheetTitle>New Message</SheetTitle>
-      </SheetHeader>
-      <div className="mt-4 space-y-3">
-        <div>
-          <label className="text-sm font-medium">Subject</label>
-          <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Type</label>
-          <Select value={type} onValueChange={(v) => setType(v as 'csc' | 'general' | 'task' | 'package')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="csc">CSC</SelectItem>
-              <SelectItem value="general">General</SelectItem>
-              <SelectItem value="task">Task</SelectItem>
-              <SelectItem value="package">Package</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Message</label>
-          <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} placeholder="Write your message…" />
-          </div>
-        <AttachmentChips
-          files={queuedFiles}
-          onRemove={(index) => setQueuedFiles((prev) => prev.filter((_, i) => i !== index))}
-        />
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            hidden
-            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
-            onChange={onFilesPicked}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE || submitting}
-          >
-            <Paperclip className="h-4 w-4 mr-1.5" />
-            Attach files
-          </Button>
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            onClick={submit}
-            disabled={submitting}
-            className="bg-[#ED1878] hover:bg-[#ED1878]/90 text-white"
-          >
-            {submitting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
-            Send
-          </Button>
-        </div>
+    <div className="flex flex-col gap-3">
+      <section aria-label="Summary" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <InsightCard icon={Inbox} label="Needs reply" value={counts.needs} hint={counts.needs === 0 ? 'All caught up' : 'Unread from this client'} active={view === 'needs'} alert={counts.needs > 0} onClick={() => toggleView('needs')} />
+        <InsightCard icon={UserRound} label="Unassigned" value={counts.unassigned} hint={counts.unassigned === 0 ? 'Everything has an owner' : 'Open, with no one assigned'} active={view === 'unassigned'} onClick={() => toggleView('unassigned')} />
+        <InsightCard icon={CheckCircle2} label="Resolved" value={counts.resolved} hint="Resolved or closed" active={view === 'resolved'} onClick={() => toggleView('resolved')} />
+      </section>
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {visible.length} {visible.length === 1 ? 'conversation' : 'conversations'} with {clientName}
+        </p>
+        <Button
+          onClick={() => {
+            select(null);
+            setComposing(true);
+          }}
+          className="gap-1.5"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          New message
+        </Button>
       </div>
-    </>
+
+      <Messenger
+        className="h-[min(40rem,calc(100dvh-16rem))] min-h-[26rem]"
+        threads={visible}
+        threadsLoading={isLoading}
+        selectedId={selected?.id ?? null}
+        openThread={selected}
+        onSelect={select}
+        compose={
+          composing ? (
+            <StaffNewMessagePane
+              api={{ onBack: () => setComposing(false), select, headerActions: null }}
+              initialTenantId={tenantId}
+            />
+          ) : undefined
+        }
+        emptyThreads={
+          <p className="px-3 py-8 text-center text-xs text-muted-foreground">
+            {view !== 'all' ? 'Nothing matches this view.' : 'No messages yet. When this client writes through their portal, it appears here.'}
+          </p>
+        }
+        emptySelection={
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
+            <MessageSquare aria-hidden className="h-8 w-8" />
+            <p className="text-sm">Pick a conversation to read and reply.</p>
+          </div>
+        }
+        conversation={{ ...pane, headerActions }}
+      />
+    </div>
   );
 }

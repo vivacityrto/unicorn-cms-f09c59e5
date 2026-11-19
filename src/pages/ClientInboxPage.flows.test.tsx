@@ -67,7 +67,6 @@ vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'me'
 vi.mock('@/contexts/ClientTenantContext', () => ({ useClientTenant: () => ({ activeTenantId: 1, isAcademyOnly: false, isReadOnly: false }) }));
 vi.mock('@/hooks/useNotificationPrefs', () => ({ useNotificationPrefs: () => ({ categories: { tasks: true, meetings: true, obligations: true, events: true } }) }));
 vi.mock('@/components/messaging/MessageAttachments', () => ({ MessageAttachments: () => null }));
-vi.mock('@/components/messaging/AttachmentChips', () => ({ AttachmentChips: () => null }));
 
 vi.mock('@/components/client/NewMessagePane', () => ({ NewMessagePane: () => <p>compose pane</p> }));
 import ClientInboxPage from './ClientInboxPage';
