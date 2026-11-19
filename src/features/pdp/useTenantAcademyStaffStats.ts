@@ -88,3 +88,37 @@ export function useTenantAcademyAnalytics(tenantId: number | null | undefined) {
     },
   });
 }
+
+/** What the learner-chosen analytics function returns. Counts only enrolments the learner chose (source self_enrol). */
+export interface TenantAcademyLearnerAnalytics {
+  last_updated_at: string;
+  counted_source: 'self_enrol';
+  totals: {
+    learners: number;
+    chosen: number;
+    finished: number;
+    certificates: number;
+    lessons_completed: number;
+    minutes: number;
+    active_30d: number;
+    /** Enrolments added another way (not chosen by the learner); shown only so the screen can say they are left out. */
+    not_counted: { enrolments: number; finished: number };
+  };
+  trend: Array<{ week_start: string; active_learners: number; chosen: number; finished: number; lessons: number }>;
+  courses: Array<{ course_id: number; course_title: string; chosen: number; started: number; finished: number; certified: number; stalled: number; median_days: number | null }>;
+  learners: Array<{ user_id: string; name: string; email: string | null; chosen: number; finished: number; lessons_completed: number; minutes: number; last_active: string | null; any_started: boolean }>;
+  stalled: Array<{ name: string; course_title: string; days_quiet: number }>;
+}
+
+export function useTenantAcademyLearnerAnalytics(tenantId: number | null | undefined) {
+  return useQuery({
+    queryKey: ["academy", "tenant-learner-analytics", tenantId ?? "none"],
+    enabled: !!tenantId,
+    staleTime: 60_000,
+    queryFn: async (): Promise<TenantAcademyLearnerAnalytics> => {
+      const { data, error } = await rpc("get_tenant_academy_learner_analytics", { p_tenant_id: tenantId as number });
+      if (error) throw error;
+      return data as TenantAcademyLearnerAnalytics;
+    },
+  });
+}
