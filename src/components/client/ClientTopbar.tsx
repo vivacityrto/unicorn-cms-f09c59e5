@@ -129,7 +129,9 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
     <header
       data-condensed={condensed}
       className={cn(
-        "group/topbar sticky top-0 z-20 flex items-center justify-between border-b border-border px-4 md:px-6",
+        // In staff preview the fixed impersonation banner (3rem, same as the layout spacer) sits above, so pin below it.
+        isPreview ? "top-12" : "top-0",
+        "group/topbar sticky z-20 flex items-center justify-between border-b border-border px-4 md:px-6",
         // Pinned, and quieter once you scroll: shorter and slightly see-through so it stays out of the way.
         "transition-[height,background-color,box-shadow] duration-200 motion-reduce:transition-none",
         condensed ? "h-11 bg-card/90 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80" : "h-[4.5rem] bg-card",
