@@ -122,3 +122,47 @@ export function useTenantAcademyLearnerAnalytics(tenantId: number | null | undef
     },
   });
 }
+
+/** What get_tenant_academy_learner_detail returns for one team member (courses they chose themselves). */
+export interface TenantAcademyLearnerDetail {
+  last_updated_at: string;
+  learner: { user_id: string; name: string; email: string | null } | null;
+  totals: {
+    chosen: number;
+    finished: number;
+    certificates: number;
+    lessons_completed: number;
+    lessons_total: number;
+    minutes: number;
+    last_active: string | null;
+  };
+  courses: Array<{
+    course_id: number;
+    course_title: string;
+    enrolled_at: string | null;
+    completed_at: string | null;
+    started: boolean;
+    certified: boolean;
+    lessons_total: number;
+    lessons_completed: number;
+    minutes: number;
+    last_touch: string | null;
+  }>;
+  trend: Array<{ week_start: string; lessons: number; minutes: number }>;
+}
+
+export function useTenantAcademyLearnerDetail(tenantId: number | null | undefined, userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["academy", "tenant-learner-detail", tenantId ?? "none", userId ?? "none"],
+    enabled: !!tenantId && !!userId,
+    staleTime: 60_000,
+    queryFn: async (): Promise<TenantAcademyLearnerDetail> => {
+      const { data, error } = await (supabase.rpc.bind(supabase) as unknown as (
+        fn: string,
+        params: Record<string, number | string>,
+      ) => Promise<{ data: unknown; error: Error | null }>)("get_tenant_academy_learner_detail", { p_tenant_id: tenantId as number, p_user_id: userId as string });
+      if (error) throw error;
+      return data as TenantAcademyLearnerDetail;
+    },
+  });
+}
