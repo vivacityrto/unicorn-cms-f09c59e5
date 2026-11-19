@@ -44,6 +44,8 @@ import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
 import { usePageTitleValue } from "@/contexts/PageTitleContext";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
+import unicornMark from "@/assets/unicorn-mark.png";
+import vivacityMark from "@/assets/vivacity-mark.png";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import { HelpCircle } from "lucide-react";
 
@@ -328,17 +330,15 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       <div className="flex items-center gap-4 flex-1 min-w-0">
         {/* Condensed: just the marks (the full logos cropped to their emblem), so the bar can be slim. */}
         <img
-          src={unicornLogo}
+          src={condensed ? unicornMark : unicornLogo}
           alt="Unicorn 2.0"
-          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-7 w-[1.125rem] object-cover object-left" : "h-16")}
-          width="117"
-          height="64"
+          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-8 w-8 object-contain" : "h-16")}
           loading="eager"
         />
         <img
-          src={vivacityLogo}
+          src={condensed ? vivacityMark : vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className={cn("flex-shrink-0 hidden sm:block transition-all duration-200 motion-reduce:transition-none", condensed ? "h-7 w-[1.875rem] object-cover object-left" : "h-10")}
+          className={cn("flex-shrink-0 hidden sm:block transition-all duration-200 motion-reduce:transition-none", condensed ? "h-8 w-8 object-contain" : "h-10")}
           loading="eager"
         />
 

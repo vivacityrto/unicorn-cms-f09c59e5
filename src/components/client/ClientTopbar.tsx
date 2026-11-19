@@ -40,6 +40,8 @@ import { useHelpCenter } from "@/components/help-center";
 import { InstallAppDialog } from "@/components/layout/InstallAppDialog";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
+import unicornMark from "@/assets/unicorn-mark.png";
+import vivacityMark from "@/assets/vivacity-mark.png";
 
 interface ClientTopbarProps {
   isPreview: boolean;
@@ -136,15 +138,15 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
       {/* Left: Unicorn + Vivacity logos */}
       <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
         <img
-          src={unicornLogo}
+          src={condensed ? unicornMark : unicornLogo}
           alt="Unicorn 2.0"
-          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-7 w-[1.125rem] object-cover object-left" : "h-14 w-auto")}
+          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-8 w-8 object-contain" : "h-14 w-auto")}
           loading="eager"
         />
         <img
-          src={vivacityLogo}
+          src={condensed ? vivacityMark : vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-7 w-[1.875rem] object-cover object-left" : "h-10 w-auto")}
+          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-8 w-8 object-contain" : "h-10 w-auto")}
           loading="eager"
         />
       </div>
