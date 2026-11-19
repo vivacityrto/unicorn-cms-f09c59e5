@@ -88,7 +88,7 @@ The Client activity report page now has four cards that can be chosen: client us
 - **Portal use:** the active and quiet split, how clients are spread by the share of their own users who were active, use by CSC, the most active clients, and a Clients table. Choosing a client opens its people in place (the same per-person page used in the scorecard report, from `get_cst_client_detail`).
 - **Certificates:** when they were issued (per day, or per month for a year), by course, by client and by CSC, and who earned each one.
 - **Never signed in:** by CSC and by client, and the people waiting, longest first (as of today).
-- **Academy:** enrolments, how people got on a course, finished courses, busiest courses, courses nobody finished, the clients using it most, and the Live Clients with no activity. Enrolments count on the day made and completions on the day finished, for Live Clients only; revoked enrolments are left out.
+- **Academy:** courses learners chose, of those how many were finished, busiest courses, courses chosen but nobody finished, the clients using it most, and the Live Clients with no activity. Only `academy_enrollments.source = 'self_enrol'` counts (an allowlist: package, required-training, staff and any future source are left out, and the screen says how many). Chosen courses count on the day chosen and finished on the day finished, for Live Clients only; revoked enrolments are left out. Decided 19 November 2026.
 
 No new database object. The per-person page needs `get_cst_client_detail`, applied on 18 November 2026 (see its audit entry). Its "active" is the 28 days ending the period's last day (or today for the current period), which can differ from the period's own activity number.
 
@@ -101,6 +101,10 @@ Three places now compare a number with more than the period before it. Nothing n
 - **L10 deck.** Each measure card has one line: the change on last week, the average of the previous weeks and where it ranks ("3rd best of 8"). Each area heading says how many of its measures got better or worse since last week.
 
 "Better" and "worse" follow the measure's direction, so fewer people who never signed in reads as better. A period with no number is a gap, never a zero. A week-on-week change is shown only between periods that both have a number.
+
+## Academy counts only what learners chose (19 November 2026)
+
+The only Academy data that counts is courses a learner chose themselves. The earlier "Added automatically" figure (825) was 792 old package enrolments plus 33 "mandatory for all clients" enrolments; both are now left out of the Academy numbers and reported only as a count of what was left out. Package auto-enrol had already been replaced on 24 September 2026 by tenant-level entitlements, so the 792 are leftovers. The "mandatory" feature is a compliance duty, not a choice, and stays; its 21 finished courses are real but are not counted here. The portal-use and scorecard measures already counted only self-chosen enrolments. Lesson completions on automatic enrolments were 4 of 647 in the last 90 days, so the "lessons" figure on the client page was left alone. See the audit entry `2026-11-19-academy-learner-chosen-only` for the council review and the internal-tenant clean-up.
 
 ## Ask Viv: an AI read of one measure (built and deployed 18 November 2026)
 

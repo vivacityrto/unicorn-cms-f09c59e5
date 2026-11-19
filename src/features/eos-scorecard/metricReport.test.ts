@@ -31,19 +31,36 @@ describe('buildAcademyActivity', () => {
     { course_id: 'c', source: 'manual' },
   ];
 
-  it('splits how people were enrolled', () => {
-    const r = buildAcademyActivity(enrolled, [{ course_id: 'a', source: null }], titles);
-    expect(r).toMatchObject({ enrolled: 6, selfEnrolled: 1, automatic: 4, other: 1, completed: 1 });
+  const chosenMore = [...enrolled, { course_id: 'a', source: 'self_enrol', tenant_id: 1 }, { course_id: 'a', source: 'self_enrol', tenant_id: 2 }, { course_id: 'a', source: 'self_enrol', tenant_id: 2 }];
+
+  it('counts only courses the learner chose, and says how many were left out', () => {
+    const r = buildAcademyActivity(enrolled, [{ course_id: 'a', source: 'self_enrol' }, { course_id: 'b', source: 'auto_all_clients' }], titles);
+    expect(r).toMatchObject({ enrolled: 1, completed: 1, notCounted: { enrolled: 5, completed: 1 } });
   });
 
-  it('ranks courses by activity and flags courses with enrolments but no completions', () => {
-    const r = buildAcademyActivity(enrolled, [{ course_id: 'a', source: null }], titles);
-    expect(r.topCourses[0].title).toBe('Credential policy');
-    expect(r.stalled).toEqual([{ title: 'Credential policy', enrolled: 3, completed: 0 }]);
+  it('leaves out every other source, including ones that do not exist yet', () => {
+    const odd = [{ course_id: 'a', source: 'package_auto' }, { course_id: 'a', source: 'staff_impersonation' }, { course_id: 'a', source: 'manual' }, { course_id: 'a', source: null }, { course_id: 'a', source: 'brand_new_source' }];
+    const r = buildAcademyActivity(odd, odd, titles);
+    expect(r).toMatchObject({ enrolled: 0, completed: 0, notCounted: { enrolled: 5, completed: 5 }, topCourses: [], stalled: [], byTenant: {} });
+  });
+
+  it('ranks only chosen courses and flags those chosen three times with no completion', () => {
+    const r = buildAcademyActivity(chosenMore, [], titles);
+    expect(r.topCourses).toEqual([{ title: 'Governance basics', enrolled: 4, completed: 0 }]);
+    expect(r.stalled).toEqual([{ title: 'Governance basics', enrolled: 4, completed: 0 }]);
+  });
+
+  it('counts a client as using the Academy only through courses its learners chose', () => {
+    const r = buildAcademyActivity(
+      [{ course_id: 'a', source: 'auto_package', tenant_id: 5 }, { course_id: 'a', source: 'self_enrol', tenant_id: 6 }],
+      [{ course_id: 'a', source: 'auto_all_clients', tenant_id: 5 }],
+      titles,
+    );
+    expect(r.byTenant).toEqual({ 6: { enrolled: 1, completed: 0 } });
   });
 
   it('copes with a quiet window', () => {
     const r = buildAcademyActivity([], [], titles);
-    expect(r).toMatchObject({ enrolled: 0, completed: 0, topCourses: [], stalled: [] });
+    expect(r).toMatchObject({ enrolled: 0, completed: 0, notCounted: { enrolled: 0, completed: 0 }, topCourses: [], stalled: [] });
   });
 });

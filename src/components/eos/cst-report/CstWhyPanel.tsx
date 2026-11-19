@@ -250,31 +250,19 @@ function AcademyWhy({ report, label, academy }: { report: CstReport; label: stri
   return (
     <div className="space-y-3">
       <p className="text-base font-semibold leading-snug">
-        In {label}, {plural(a.enrolled, 'enrolment')} {a.enrolled === 1 ? 'was' : 'were'} made and {plural(a.completed, 'course')} {a.completed === 1 ? 'was' : 'were'} finished, across {using.length} of {rows.length} Live Clients.
+        In {label}, learners chose {plural(a.enrolled, 'course')} and finished {a.completed}, across {using.length} of {rows.length} Live Clients.
       </p>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-        <StatTile label="Enrolments" value={a.enrolled} />
-        <StatTile label="Chosen by the learner" value={a.selfEnrolled} />
-        <StatTile label="Added automatically" value={a.automatic} />
-        <StatTile label="Courses finished" value={a.completed} tone="text-green-700 dark:text-green-400" />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <StatTile label="Courses chosen by learners" value={a.enrolled} />
+        <StatTile label="Of those, finished" value={a.completed} tone="text-green-700 dark:text-green-400" />
         <StatTile label="Clients using the Academy" value={`${using.length} of ${rows.length}`} />
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        <Panel title="How people got on a course" hint="Chosen by the learner is the real appetite; automatic ones are put there for them.">
-          <HBars
-            items={[
-              { label: 'Chosen by the learner', value: a.selfEnrolled, display: String(a.selfEnrolled) },
-              { label: 'Added automatically', value: a.automatic, display: String(a.automatic) },
-              { label: 'Added another way', value: a.other, display: String(a.other) },
-            ]}
-            empty="No enrolments."
-          />
-        </Panel>
-        <Panel title="Busiest courses" hint="Darker part is finished.">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Panel title="Busiest courses" hint="Courses learners chose. Darker part is finished.">
           <HBars items={a.topCourses.map((c) => ({ label: c.title, value: c.enrolled, part: Math.min(c.completed, c.enrolled), display: `${c.enrolled} enrolled · ${c.completed} finished` }))} empty="No Academy activity in this period." />
         </Panel>
-        <Panel title="Enrolled, but nobody finished" hint="Courses with three or more enrolments and no completion.">
-          <HBars tone="bad" items={a.stalled.map((c) => ({ label: c.title, value: c.enrolled, display: `${c.enrolled} enrolled` }))} empty="Every course with three or more enrolments has had a completion." />
+        <Panel title="Chosen, but nobody finished" hint="Courses chosen three or more times with no completion.">
+          <HBars tone="bad" items={a.stalled.map((c) => ({ label: c.title, value: c.enrolled, display: `${c.enrolled} chosen` }))} empty="Every course chosen three or more times has had a completion." />
         </Panel>
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
@@ -297,7 +285,10 @@ function AcademyWhy({ report, label, academy }: { report: CstReport; label: stri
           )}
         </Panel>
       </div>
-      <p className="text-xs text-muted-foreground">Enrolments are counted on the day they were made and completions on the day the course was finished, for Live Clients only.</p>
+      <p className="text-xs text-muted-foreground">
+        Only courses a learner chose themselves are counted, on the day they chose them, and finished on the day they were completed, for Live Clients only.
+        {a.notCounted.enrolled + a.notCounted.completed > 0 && ` Left out: ${plural(a.notCounted.enrolled, 'enrolment')} added for learners (package, required training or by staff), ${a.notCounted.completed} of them finished.`}
+      </p>
     </div>
   );
 }

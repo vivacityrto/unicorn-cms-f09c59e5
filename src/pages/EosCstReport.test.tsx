@@ -41,7 +41,7 @@ vi.mock('@/features/eos-cst/useCstReport', () => ({
 }));
 vi.mock('@/features/eos-scorecard/useMetricReport', () => ({
   useAcademyBetween: () => ({
-    data: { enrolled: 9, selfEnrolled: 4, automatic: 5, other: 0, completed: 3, topCourses: [{ title: 'Intro to Compliance', enrolled: 6, completed: 2 }], stalled: [], byTenant: { 1: { enrolled: 9, completed: 3 } } },
+    data: { enrolled: 4, completed: 3, notCounted: { enrolled: 5, completed: 1 }, topCourses: [{ title: 'Intro to Compliance', enrolled: 6, completed: 2 }], stalled: [], byTenant: { 1: { enrolled: 4, completed: 3 } } },
     isLoading: false,
     error: null,
   }),

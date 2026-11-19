@@ -181,27 +181,30 @@ function CertificateSections({ weekKey, tenantIds }: { weekKey: string; tenantId
           </Section>
         </div>
       )}
-      <Section title="Academy activity, last 28 days" hint="Live Clients only. Enrolments are counted on the day they were made; completions on the day the course was finished.">
+      <Section title="Academy activity, last 28 days" hint="Live Clients only. Only courses a learner chose themselves are counted, on the day they chose them, and finished on the day they were completed.">
         {academy.isLoading ? (
           <div className="h-16 animate-pulse rounded-lg bg-muted/50" aria-busy="true" />
         ) : academy.error || !a ? (
           <p className="text-sm text-destructive" role="alert">Academy activity could not be loaded.</p>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Stat label="Enrolments" value={a.enrolled} />
-              <Stat label="Chosen by the learner" value={a.selfEnrolled} />
-              <Stat label="Added automatically" value={a.automatic} />
-              <Stat label="Courses completed" value={a.completed} />
+            <div className="grid grid-cols-2 gap-2">
+              <Stat label="Courses chosen by learners" value={a.enrolled} />
+              <Stat label="Of those, finished" value={a.completed} />
             </div>
+            {a.notCounted.enrolled + a.notCounted.completed > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Left out: {a.notCounted.enrolled} {a.notCounted.enrolled === 1 ? 'enrolment' : 'enrolments'} added for learners (package, required training or by staff), {a.notCounted.completed} of them finished.
+              </p>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
                 <h4 className="text-sm font-semibold">Busiest courses</h4>
-                <Table head={['Course', 'Enrolled', 'Finished']} empty="No Academy activity in this period." rows={a.topCourses.map((c) => [c.title, c.enrolled, c.completed])} />
+                <Table head={['Course', 'Chosen', 'Finished']} empty="No Academy activity in this period." rows={a.topCourses.map((c) => [c.title, c.enrolled, c.completed])} />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-semibold">Enrolled, but nobody finished</h4>
-                <Table head={['Course', 'Enrolled']} empty="Every course with three or more enrolments has had a completion." rows={a.stalled.map((c) => [c.title, c.enrolled])} />
+                <h4 className="text-sm font-semibold">Chosen, but nobody finished</h4>
+                <Table head={['Course', 'Chosen']} empty="Every course chosen three or more times has had a completion." rows={a.stalled.map((c) => [c.title, c.enrolled])} />
               </div>
             </div>
           </div>
