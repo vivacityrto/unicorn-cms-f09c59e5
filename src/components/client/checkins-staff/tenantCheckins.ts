@@ -11,8 +11,24 @@ export interface TenantCheckinsOverview {
       pulses: Array<{ score: number; created_at: string }> | null;
       confidence: { score: number; created_at: string } | null;
     }>;
-    blockers: Array<{ category: string; comment: string | null; created_at: string; name: string }>;
+    blockers: StaffBlocker[];
   }>;
+}
+
+export type StaffBlockerStatus = 'flagged' | 'seen' | 'resolved';
+
+export interface StaffBlocker {
+  id: string;
+  category: string;
+  comment: string | null;
+  created_at: string;
+  name: string;
+  status: StaffBlockerStatus;
+  seen_by: string | null;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  /** The note staff left for the client; the client can read it. */
+  staff_note: string | null;
 }
 
 type Pkg = TenantCheckinsOverview['packages'][number];
@@ -38,7 +54,9 @@ export interface PackageFlags {
 export function packageFlags(pkg: Pkg): PackageFlags {
   const lowStreakNames = pkg.people.filter(hasLowStreak).map((p) => p.name);
   const noAnswers = pkg.people.length === 0 && pkg.blockers.length === 0;
-  return { lowStreakNames, blockerCount: pkg.blockers.length, noAnswers, needsAttention: lowStreakNames.length > 0 || pkg.blockers.length > 0 };
+  // Only blockers that are not resolved need attention; resolved ones stay listed for context.
+  const blockerCount = pkg.blockers.filter((b) => b.status !== 'resolved').length;
+  return { lowStreakNames, blockerCount, noAnswers, needsAttention: lowStreakNames.length > 0 || blockerCount > 0 };
 }
 
 export interface OverviewSummary {

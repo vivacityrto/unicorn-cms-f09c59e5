@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { usePackageCheckinState, useSubmitCheckin } from "@/hooks/use-package-checkin";
 import {
   BLOCKER_CATEGORIES,
+  BLOCKER_STATUS_LABEL,
   COMMENT_LIMIT,
   CONFIDENCE_LABELS,
   PULSE_LABELS,
@@ -162,7 +163,21 @@ export function PackageCheckIn({ packageInstanceId }: { packageInstanceId: numbe
               </div>
             </div>
           )}
-          {(state.blockers_last_30_days ?? 0) > 0 && !flagging && <p className="mt-2 text-xs text-muted-foreground">You have flagged {state.blockers_last_30_days} {state.blockers_last_30_days === 1 ? "thing" : "things"} in the last 30 days.</p>}
+          {!flagging && (state.my_blockers ?? []).length > 0 && (
+            <ul className="mt-3 space-y-2" aria-label="What you have flagged in the last 30 days">
+              {(state.my_blockers ?? []).map((b, i) => (
+                <li key={`${b.created_at}-${i}`} className="rounded-md border bg-background p-2.5 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{BLOCKER_CATEGORIES.find((c) => c.value === b.category)?.label ?? "Something else"}</span>
+                    <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", b.status === "resolved" ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : b.status === "seen" ? "border-sky-500/30 bg-sky-500/15 text-sky-700 dark:text-sky-300" : "text-muted-foreground")}>{BLOCKER_STATUS_LABEL[b.status]}</span>
+                    <span className="text-xs text-muted-foreground">{format(parseISO(b.created_at), "d MMM")}</span>
+                  </div>
+                  {/* Written by Vivacity staff for this client. */}
+                  {b.staff_note && <p className="mt-1 break-words text-xs text-muted-foreground"><span className="font-medium text-foreground">From your consultant: </span>{b.staff_note}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
