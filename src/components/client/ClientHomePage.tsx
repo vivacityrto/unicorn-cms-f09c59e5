@@ -96,13 +96,13 @@ function riskBadge(risk: ClientProgress["risk_state"]) {
       );
     case "needs_attention":
       return (
-        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
+        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200 dark:bg-amber-500/15 dark:hover:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30">
           Needs Attention
         </Badge>
       );
     case "action_required":
       return (
-        <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200 dark:bg-red-500/15 dark:hover:bg-red-500/20 dark:text-red-300 dark:border-red-500/30">
           Action Required
         </Badge>
       );

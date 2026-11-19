@@ -97,7 +97,7 @@ export function ReleasedAuditCard({ audit }: Props) {
         {/* Footer actions */}
         <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
           {acknowledged ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold">
+            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Acknowledged {formatAuDate(audit.report_acknowledged_at)}
             </span>

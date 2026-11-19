@@ -281,7 +281,7 @@ function TicketDetail({
             const windowAt = def.window ? def.window(ticket) : null;
             if (logged) {
               return (
-                <div key={def.key} className="flex items-center gap-2 px-3 py-2 rounded-md border border-emerald-200 bg-emerald-50 text-sm">
+                <div key={def.key} className="flex items-center gap-2 px-3 py-2 rounded-md border border-emerald-200 bg-emerald-50 text-sm dark:bg-emerald-500/15 dark:border-emerald-500/30">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <span className="font-medium">{def.label}</span>
                   <span className="text-xs text-emerald-700 ml-auto">
@@ -300,7 +300,7 @@ function TicketDetail({
               );
             }
             return (
-              <div key={def.key} className="flex items-center gap-2 px-3 py-2 rounded-md border border-amber-200 bg-amber-50 text-sm">
+              <div key={def.key} className="flex items-center gap-2 px-3 py-2 rounded-md border border-amber-200 bg-amber-50 text-sm dark:bg-amber-500/15 dark:border-amber-500/30">
                 <Clock className="h-4 w-4 text-amber-600" />
                 <span className="font-medium">{def.label}</span>
                 {windowAt && (

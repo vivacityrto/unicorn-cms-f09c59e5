@@ -55,7 +55,7 @@ export function HomeVivacityServicesSection() {
               >
                 <CardContent className="p-4 flex gap-3">
                   <div className="shrink-0">
-                    <div className="h-9 w-9 rounded-md bg-purple-100 flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-md bg-purple-100 flex items-center justify-center dark:bg-purple-500/15">
                       <Icon className="h-5 w-5 text-purple-600" />
                     </div>
                   </div>

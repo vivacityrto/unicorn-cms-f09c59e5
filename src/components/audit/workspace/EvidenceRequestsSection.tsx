@@ -16,10 +16,10 @@ interface EvidenceRequestsSectionProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-600',
-  received: 'bg-blue-100 text-blue-700',
-  accepted: 'bg-green-100 text-green-700',
-  resubmit_requested: 'bg-amber-100 text-amber-700',
+  pending: 'bg-gray-100 text-gray-600 dark:bg-muted dark:text-muted-foreground',
+  received: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  accepted: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+  resubmit_requested: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
 };
 
 export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps) {
@@ -37,9 +37,9 @@ export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps)
 
   const getRequestStatus = (req: EvidenceRequest) => {
     const { received, total } = getRequestProgress(req);
-    if (received === 0) return { label: 'Pending', color: 'bg-gray-100 text-gray-600' };
-    if (received < total) return { label: 'Partially received', color: 'bg-amber-100 text-amber-700' };
-    return { label: 'Complete', color: 'bg-green-100 text-green-700' };
+    if (received === 0) return { label: 'Pending', color: 'bg-gray-100 text-gray-600 dark:bg-muted dark:text-muted-foreground' };
+    if (received < total) return { label: 'Partially received', color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' };
+    return { label: 'Complete', color: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' };
   };
 
   return (

@@ -104,11 +104,11 @@ export default function AdminCompliancePacks() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Ready</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"><CheckCircle className="h-3 w-3 mr-1" />Ready</Badge>;
       case 'failed':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
       case 'running':
-        return <Badge className="bg-blue-100 text-blue-800"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Running</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Running</Badge>;
       default:
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Queued</Badge>;
     }

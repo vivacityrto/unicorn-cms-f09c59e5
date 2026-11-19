@@ -73,11 +73,11 @@ export function ClientUploadsTab({ tenantId, isClientView = false }: ClientUploa
   const getStatusBadge = (doc: PortalDocument) => {
     switch (doc.status) {
       case 'received':
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500">Received</Badge>;
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500">Received</Badge>;
       case 'archived':
         return <Badge variant="outline" className="bg-muted text-muted-foreground">Archived</Badge>;
       default:
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500">Uploaded</Badge>;
+        return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500">Uploaded</Badge>;
     }
   };
 

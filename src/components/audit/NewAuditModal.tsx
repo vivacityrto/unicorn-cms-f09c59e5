@@ -85,7 +85,7 @@ const CRICOS_ONLY_CARDS: AuditTypeCard[] = [
   {
     value: 'cricos_chc', label: 'National Code 2018 — Annual CHC', icon: Globe,
     description: 'Annual compliance review against the National Code of Practice for Providers of Education and Training to Overseas Students 2018.',
-    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30',
     is_rto: false, is_cricos: true, template_id: TEMPLATE_IDS.cricos_chc,
   },
   {
@@ -99,7 +99,7 @@ const BOTH_CARDS: AuditTypeCard[] = [
   {
     value: 'rto_cricos_chc', label: 'SRTO 2025 + National Code 2018 — Combined CHC', icon: Award,
     description: 'Annual compliance review covering both SRTO 2025 and all National Code 2018 standards in one audit. Covers 30 sections.',
-    badge: 'Recommended', badgeColor: 'bg-blue-100 text-blue-700 border-blue-200', recommended: true,
+    badge: 'Recommended', badgeColor: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30', recommended: true,
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.rto_cricos_chc,
   },
   {
@@ -110,7 +110,7 @@ const BOTH_CARDS: AuditTypeCard[] = [
   {
     value: 'cricos_chc', label: 'National Code 2018 only — CHC', icon: Globe,
     description: 'CRICOS compliance review only. Select this if the RTO component will be audited separately.',
-    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30',
     is_rto: false, is_cricos: true, template_id: TEMPLATE_IDS.cricos_chc,
   },
   {
@@ -121,7 +121,7 @@ const BOTH_CARDS: AuditTypeCard[] = [
   {
     value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
     description: 'Compliance and risk assessment for the Purchaser of a dual-registered RTO with CRICOS registration.',
-    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
   },
 ];
@@ -132,7 +132,7 @@ const ALL_CARDS: AuditTypeCard[] = [
   {
     value: 'cricos_chc', label: 'CRICOS CHC', icon: Globe,
     description: 'Annual compliance review against the National Code 2018.',
-    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30',
     is_rto: false, is_cricos: true, template_id: TEMPLATE_IDS.cricos_chc,
   },
   {
@@ -143,7 +143,7 @@ const ALL_CARDS: AuditTypeCard[] = [
   {
     value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
     description: 'Compliance and risk assessment for the Purchaser of a dual-registered RTO with CRICOS registration.',
-    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
   },
 ];
@@ -447,8 +447,8 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                   <AlertDescription className="text-sm">
                     This client is registered as both an RTO and a CRICOS provider.
                     <span className="flex gap-2 mt-1">
-                      {selectedTenant.rto_id && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200">RTO: {selectedTenant.rto_id}</Badge>}
-                      <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200">CRICOS: {selectedTenant.profile_cricos_number || selectedTenant.cricos_id || '—'}</Badge>
+                      {selectedTenant.rto_id && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200 dark:bg-blue-500/15 dark:border-blue-500/30">RTO: {selectedTenant.rto_id}</Badge>}
+                      <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200 dark:bg-teal-500/15 dark:border-teal-500/30">CRICOS: {selectedTenant.profile_cricos_number || selectedTenant.cricos_id || '—'}</Badge>
                     </span>
                   </AlertDescription>
                 </Alert>

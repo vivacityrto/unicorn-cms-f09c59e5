@@ -65,7 +65,7 @@ export function EosConfigurationsList() {
                     {config.participant_model === 'whole_roster' ? 'Whole roster' : 'Required seats'}
                   </Badge>
                   {!config.facilitator_seat_id && (
-                    <Badge variant="outline" className="text-xs border-amber-500/30 bg-amber-500/10 text-amber-600">
+                    <Badge variant="outline" className="text-xs border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
                       <Clock className="h-3 w-3 mr-1" />
                       No facilitator seat set
                     </Badge>

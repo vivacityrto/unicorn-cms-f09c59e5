@@ -295,12 +295,12 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Status</span>
                 {isProvisioned ? (
-                  <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800">
+                  <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
                     <CheckCircle2 className="h-3 w-3" />
                     Provisioned
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800">
+                  <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300">
                     <AlertCircle className="h-3 w-3" />
                     Not provisioned
                   </Badge>
@@ -328,12 +328,12 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
                   Governance folder
                 </span>
                 {settings?.governance_folder_item_id ? (
-                  <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800">
+                  <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
                     <CheckCircle2 className="h-3 w-3" />
                     Configured
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800">
+                  <Badge variant="outline" className="gap-1 border-orange-500/40 bg-orange-50 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300">
                     <AlertCircle className="h-3 w-3" />
                     Not provisioned
                   </Badge>
@@ -388,12 +388,12 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
                 </span>
                 <div className="flex items-center gap-2">
                   {siteConfigured ? (
-                    <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 text-xs">
+                    <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 text-xs dark:bg-emerald-500/15 dark:text-emerald-300">
                       <CheckCircle2 className="h-3 w-3" />
                       Configured
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="gap-1 border-red-500/40 bg-red-50 text-red-800 text-xs">
+                    <Badge variant="outline" className="gap-1 border-red-500/40 bg-red-50 text-red-800 text-xs dark:bg-red-500/15 dark:text-red-300">
                       <AlertCircle className="h-3 w-3" />
                       Not configured
                     </Badge>

@@ -151,10 +151,10 @@ export function DocumentReviewPhase({
 
 function RiskBadge({ risk }: { risk: string }) {
   const colors: Record<string, string> = {
-    low: 'bg-green-100 text-green-800',
-    medium: 'bg-amber-100 text-amber-800',
-    high: 'bg-red-100 text-red-800',
-    critical: 'bg-red-200 text-red-900',
+    low: 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300',
+    medium: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+    high: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300',
+    critical: 'bg-red-200 text-red-900 dark:bg-red-500/15 dark:text-red-300',
   };
   return <Badge variant="outline" className={cn('text-[10px]', colors[risk])}>{risk}</Badge>;
 }
@@ -210,7 +210,7 @@ function DocumentReviewSection({
             <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5">
               <span>{complete} of {total} complete</span>
               {findingsRequired > 0 && (
-                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-[10px] gap-1">
+                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-[10px] gap-1 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
                   <AlertTriangle className="h-3 w-3" />
                   {findingsRequired} finding{findingsRequired === 1 ? '' : 's'} required
                 </Badge>
@@ -273,10 +273,10 @@ function DocumentReviewSection({
                   className={cn(
                     'px-3 py-1 text-xs rounded-full border transition-all capitalize',
                     section.risk_level === level
-                      ? level === 'low' ? 'bg-green-100 text-green-800 border-green-300 font-medium ring-2 ring-offset-1 ring-green-300/30'
-                        : level === 'medium' ? 'bg-amber-100 text-amber-800 border-amber-300 font-medium ring-2 ring-offset-1 ring-amber-300/30'
-                        : level === 'high' ? 'bg-red-100 text-red-800 border-red-300 font-medium ring-2 ring-offset-1 ring-red-300/30'
-                        : 'bg-red-200 text-red-900 border-red-400 font-medium ring-2 ring-offset-1 ring-red-400/30'
+                      ? level === 'low' ? 'bg-green-100 text-green-800 border-green-300 font-medium ring-2 ring-offset-1 ring-green-300/30 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30'
+                        : level === 'medium' ? 'bg-amber-100 text-amber-800 border-amber-300 font-medium ring-2 ring-offset-1 ring-amber-300/30 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
+                        : level === 'high' ? 'bg-red-100 text-red-800 border-red-300 font-medium ring-2 ring-offset-1 ring-red-300/30 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30'
+                        : 'bg-red-200 text-red-900 border-red-400 font-medium ring-2 ring-offset-1 ring-red-400/30 dark:bg-red-500/15 dark:text-red-300'
                       : 'bg-background text-muted-foreground border-border hover:bg-muted'
                   )}
                 >

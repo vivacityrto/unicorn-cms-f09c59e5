@@ -432,7 +432,7 @@ function LoadingBubble() {
 }
 
 function ErrorNotice({ error, onRetry }: { error: PanelError; onRetry?: () => void }) {
-  const tone = error.kind === "rate_limit" ? "border-amber-500/40 bg-amber-50 text-amber-700" : "border-destructive/40 bg-destructive/10 text-destructive";
+  const tone = error.kind === "rate_limit" ? "border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" : "border-destructive/40 bg-destructive/10 text-destructive";
 
   return (
     <div className={cn("mb-2 flex items-start gap-2 text-xs rounded-lg border px-2.5 py-2", tone)}>

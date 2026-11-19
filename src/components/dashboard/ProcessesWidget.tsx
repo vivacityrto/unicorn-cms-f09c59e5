@@ -10,8 +10,8 @@
  
  const statusStyles: Record<string, string> = {
    draft: 'bg-muted text-muted-foreground border-border',
-   under_review: 'bg-yellow-500/10 text-yellow-600 border-yellow-500',
-   approved: 'bg-green-500/10 text-green-600 border-green-500',
+   under_review: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500',
+   approved: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500',
  };
  
  const categoryLabels: Record<string, string> = {

@@ -42,9 +42,9 @@ export function EvidenceRequestsTab({ tenantId, isClientView = false }: Evidence
 
     switch (request.status) {
       case 'received':
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500 gap-1"><CheckCircle2 className="h-3 w-3" />Complete</Badge>;
+        return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500 gap-1"><CheckCircle2 className="h-3 w-3" />Complete</Badge>;
       case 'partially_received':
-        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500 gap-1"><Clock className="h-3 w-3" />In Progress</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500 gap-1"><Clock className="h-3 w-3" />In Progress</Badge>;
       case 'closed':
         return <Badge variant="secondary" className="gap-1">Closed</Badge>;
       default:

@@ -10,7 +10,6 @@ import { describe, expect, it } from 'vitest';
  *     which put dark titles on the purple gradient in dark mode.
  */
 const ROOT = join(process.cwd(), 'src');
-const CLIENT_DIRS = ['components/client', 'pages/client'];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -24,20 +23,37 @@ function walk(dir: string, out: string[] = []): string[] {
 const lines = (file: string) => readFileSync(file, 'utf8').split('\n');
 
 describe('dark mode guard', () => {
-  it('client surfaces do not use pale fixed colours as backgrounds without a dark variant', () => {
-    // Overlays on a coloured header (bg-white/20) are fine; a solid pale surface is not.
-    const pale = /(?<![\w:-])bg-(white|slate-(50|100|200)|gray-(50|100|200))(?![\w/-])/;
+  it('no screen uses a pale fixed colour as a surface without a dark variant', () => {
+    // A pale fixed background (white, yellow-50, blue-100...) with theme text inside turns into
+    // light-on-light in dark mode (the L10 Issues and Headlines rows). Add a dark:bg- variant in the same class string.
+    // Overlays such as bg-white/20 are fine; so is white used on a coloured button, which is listed below.
+    const pale = /(?<![\w:-])bg-(white|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200))(?![\w/-])/;
+    const literal = /"[^"\n]*"|'[^'\n]*'|`[^`]*`/g;
+    const allowed = ['settings/ProfileBanner.tsx', 'SupportTicketsPortalPage', 'AcademyAssessmentResultPage'];
     const offenders: string[] = [];
-    for (const dir of CLIENT_DIRS) {
-      for (const file of walk(join(ROOT, dir))) {
-        lines(file).forEach((line, i) => {
-          if (pale.test(line) && !/dark:bg-/.test(line)) offenders.push(`${file.replace(ROOT, 'src')}:${i + 1}: ${line.trim().slice(0, 110)}`);
-        });
+    for (const file of walk(ROOT)) {
+      if (allowed.some((a) => file.replace(/\\/g, '/').includes(a))) continue;
+      const text = readFileSync(file, 'utf8');
+      for (const m of text.matchAll(literal)) {
+        if (pale.test(m[0]) && !/dark:bg-/.test(m[0])) {
+          offenders.push(`${file.replace(ROOT, 'src')}: ${m[0].slice(0, 90)}`);
+        }
       }
     }
-    // Sign-in style buttons that sit on a purple header keep white on purpose.
-    const allowed = offenders.filter((o) => !/SupportTicketsPortalPage|AcademyAssessmentResultPage/.test(o));
-    expect(allowed).toEqual([]);
+    expect(offenders).toEqual([]);
+  });
+
+  it('pills with a solid colour set their own text colour instead of inheriting the badge variant', () => {
+    // <Badge className="bg-green-600"> keeps the variant's cyan text, which is unreadable on green.
+    const bad = /<Badge[^>]*className="[^"]*(?<![\w:-])bg-(?:red|orange|amber|yellow|green|emerald|teal|blue|indigo|violet|purple|pink|rose)-[4-8]00(?![\w/-])[^"]*"/;
+    const offenders: string[] = [];
+    for (const file of walk(ROOT)) {
+      const text = readFileSync(file, 'utf8');
+      for (const m of text.matchAll(new RegExp(bad.source, 'g'))) {
+        if (!/(?<![\w:-])text-(?!xs|sm|\[|base|lg)/.test(m[0])) offenders.push(`${file.replace(ROOT, 'src')}: ${m[0].slice(0, 90)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('headings on a brand gradient banner are protected by brand-surface or an explicit colour', () => {

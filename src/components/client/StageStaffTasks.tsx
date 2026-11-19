@@ -154,8 +154,8 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                     className={cn(
                       "text-[10px] px-1.5 py-0 h-4 font-normal",
                       task.is_recurring 
-                        ? "border-violet-200 bg-violet-50 text-violet-700" 
-                        : "border-sky-200 bg-sky-50 text-sky-700"
+                        ? "border-violet-200 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30" 
+                        : "border-sky-200 bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30"
                     )}
                   >
                     {task.is_recurring ? (

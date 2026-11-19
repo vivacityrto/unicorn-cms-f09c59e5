@@ -474,18 +474,18 @@ export default function AdminManageStages() {
   const getStageTypeColor = (stageType: string) => {
     switch (stageType) {
       case 'onboarding':
-        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+        return 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20';
       case 'delivery':
       case 'documentation':
-        return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20';
       case 'support':
-        return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+        return 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20';
       case 'monitor':
-        return 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20';
+        return 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20';
       case 'offboarding':
-        return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+        return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20';
       case 'finalise':
-        return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
+        return 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20';
       default:
         return 'bg-muted text-muted-foreground border-border';
     }
@@ -806,7 +806,7 @@ export default function AdminManageStages() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                            <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20">
                               <ShieldCheck className="h-3 w-3 mr-1" />
                               Yes
                             </Badge>

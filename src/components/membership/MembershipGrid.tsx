@@ -83,15 +83,15 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
   const getStateStyles = (state: string) => {
     switch (state) {
       case 'active':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30';
       case 'at_risk':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30';
       case 'warning':
         return 'bg-red-600 text-white border-red-700 font-bold animate-pulse';
       case 'paused':
-        return 'bg-amber-100 text-amber-700 border-amber-200';
+        return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30';
       case 'exiting':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-muted dark:text-foreground dark:border-border';
       default:
         return 'bg-muted text-muted-foreground';
     }
@@ -116,11 +116,11 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
   const getObligationBadge = (status: string) => {
     switch (status) {
       case 'delivered':
-        return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1"><Check className="h-3 w-3" /> Delivered</Badge>;
+        return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30"><Check className="h-3 w-3" /> Delivered</Badge>;
       case 'scheduled':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1"><Calendar className="h-3 w-3" /> Scheduled</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30"><Calendar className="h-3 w-3" /> Scheduled</Badge>;
       default:
-        return <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">Not Scheduled</Badge>;
+        return <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 dark:bg-muted dark:text-muted-foreground dark:border-border">Not Scheduled</Badge>;
     }
   };
 
@@ -301,7 +301,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                                         <StageStatusDot state={(membership.current_stage_status as StageStatus) || 'not_started'} />
                                         <span className="text-sm truncate">{membership.current_stage_name}</span>
                                         {membership.current_stage_status === 'blocked' && (
-                                          <Badge variant="outline" className="h-4 px-1 text-[10px] bg-red-50 text-red-600 border-red-200 ml-1">
+                                          <Badge variant="outline" className="h-4 px-1 text-[10px] bg-red-50 text-red-600 border-red-200 ml-1 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30">
                                             Blocked
                                           </Badge>
                                         )}

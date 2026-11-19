@@ -81,13 +81,13 @@ interface ClientPackagesTabProps {
 }
 
 const STATE_COLORS: Record<string, string> = {
-  active: 'bg-green-500/10 text-green-600 border-green-500',
-  at_risk: 'bg-amber-500/10 text-amber-600 border-amber-500',
+  active: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500',
+  at_risk: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500',
   warning: 'bg-red-600/20 text-red-700 border-red-600 font-semibold',
   paused: 'bg-gray-500/10 text-gray-600 border-gray-500',
-  exiting: 'bg-red-500/10 text-red-600 border-red-500',
+  exiting: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500',
   complete: 'bg-muted text-muted-foreground border-border',
-  cancelled: 'bg-red-500/10 text-red-600 border-red-500'
+  cancelled: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500'
 };
 
 const STATE_ICONS: Record<string, React.ReactNode> = {

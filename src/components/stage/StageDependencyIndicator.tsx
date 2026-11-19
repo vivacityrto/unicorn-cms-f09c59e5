@@ -31,7 +31,7 @@ export function StageDependencyIndicator({ stageId }: StageDependencyIndicatorPr
         <TooltipTrigger asChild>
           <Badge 
             variant="outline" 
-            className="text-xs gap-1 cursor-help bg-blue-500/10 text-blue-600 border-blue-500/20"
+            className="text-xs gap-1 cursor-help bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
           >
             <Link2 className="h-3 w-3" />
             {dependencyCount}

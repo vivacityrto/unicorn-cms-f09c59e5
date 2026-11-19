@@ -140,10 +140,10 @@ export function StageDocumentsPanel({
   // Get file type badge color
   const getFileTypeBadge = (format: string | null) => {
     const formatLower = (format || '').toLowerCase();
-    if (formatLower.includes('pdf')) return { label: 'PDF', className: 'bg-red-100 text-red-700 border-red-200' };
-    if (formatLower.includes('doc') || formatLower.includes('word')) return { label: 'Word', className: 'bg-blue-100 text-blue-700 border-blue-200' };
-    if (formatLower.includes('xls') || formatLower.includes('excel')) return { label: 'Excel', className: 'bg-green-100 text-green-700 border-green-200' };
-    if (formatLower.includes('ppt') || formatLower.includes('powerpoint')) return { label: 'PPT', className: 'bg-orange-100 text-orange-700 border-orange-200' };
+    if (formatLower.includes('pdf')) return { label: 'PDF', className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' };
+    if (formatLower.includes('doc') || formatLower.includes('word')) return { label: 'Word', className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30' };
+    if (formatLower.includes('xls') || formatLower.includes('excel')) return { label: 'Excel', className: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' };
+    if (formatLower.includes('ppt') || formatLower.includes('powerpoint')) return { label: 'PPT', className: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30' };
     return { label: format || 'File', className: 'bg-muted text-muted-foreground' };
   };
 
@@ -594,7 +594,7 @@ export function StageDocumentsPanel({
                           {isMultiStage && (
                             <Badge 
                               variant="outline" 
-                              className="text-xs border-amber-200 bg-amber-50 text-amber-700 flex items-center gap-1"
+                              className="text-xs border-amber-200 bg-amber-50 text-amber-700 flex items-center gap-1 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
                             >
                               <Layers className="h-3 w-3" />
                               {stageCount}

@@ -303,7 +303,7 @@ export default function ManageInvites() {
         variant: 'destructive' as const,
         icon: AlertCircle,
         label: 'Expired',
-        color: 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
+        color: 'bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
       };
     }
 
@@ -314,35 +314,35 @@ export default function ManageInvites() {
           variant: 'default' as const,
           icon: CheckCircle,
           label: 'Complete',
-          color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
+          color: 'bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
         };
       case 'sent':
         return {
           variant: 'default' as const,
           icon: CheckCircle,
           label: 'Sent',
-          color: 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600'
+          color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 border border-blue-600'
         };
       case 'pending':
         return {
           variant: 'default' as const,
           icon: Clock,
           label: 'Pending',
-          color: 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
+          color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
         };
       case 'expired':
         return {
           variant: 'destructive' as const,
           icon: AlertCircle,
           label: 'Expired',
-          color: 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
+          color: 'bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]'
         };
       case 'failed':
         return {
           variant: 'destructive' as const,
           icon: XCircle,
           label: 'Failed',
-          color: 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600'
+          color: 'bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border border-red-600'
         };
       case 'revoked':
         return {
@@ -859,7 +859,7 @@ export default function ManageInvites() {
                   // If user exists in users table, they've successfully signed up - show Verified
                   const isVerified = isInviteConsumed(invite.status as string);
                   const statusBadge = isVerified 
-                    ? { variant: 'default' as const, icon: CheckCircle, label: 'Verified', color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]' }
+                    ? { variant: 'default' as const, icon: CheckCircle, label: 'Verified', color: 'bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]' }
                     : getStatusBadge(invite.status, invite.expires_at);
                   const StatusBadgeIcon = statusBadge.icon;
                   const createdDate = new Date(invite.created_at);

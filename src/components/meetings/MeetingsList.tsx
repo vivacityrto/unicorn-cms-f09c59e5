@@ -199,7 +199,7 @@ function MeetingCard({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    className="h-7 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/20"
                     onClick={(e) => {
                       e.stopPropagation();
                       onLinkToClient?.(meeting.id);

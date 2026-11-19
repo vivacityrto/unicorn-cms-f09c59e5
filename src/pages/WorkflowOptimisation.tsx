@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 const severityConfig: Record<string, { color: string }> = {
-  low: { color: 'bg-blue-100 text-blue-800' },
-  moderate: { color: 'bg-yellow-100 text-yellow-800' },
-  high: { color: 'bg-red-100 text-red-800' },
+  low: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300' },
+  moderate: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-300' },
+  high: { color: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300' },
 };
 
 const typeConfig: Record<string, { label: string; icon: LucideIcon }> = {

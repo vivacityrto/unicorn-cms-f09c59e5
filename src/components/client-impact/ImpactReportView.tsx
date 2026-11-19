@@ -80,7 +80,7 @@ export function ImpactReportView({
                 {statusConfig.label}
               </Badge>
               {report.is_published && (
-                <Badge variant="outline" className="text-green-600 bg-green-50 gap-1">
+                <Badge variant="outline" className="text-green-600 bg-green-50 gap-1 dark:bg-green-500/15 dark:text-green-300">
                   <CheckCircle2 className="h-3 w-3" />
                   Published
                 </Badge>

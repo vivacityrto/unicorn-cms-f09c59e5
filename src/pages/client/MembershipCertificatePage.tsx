@@ -120,7 +120,7 @@ export function MembershipCertificatePage() {
       </button>
 
       {unavailable && (
-        <div className="mt-6 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-sm">
+        <div className="mt-6 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-sm dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
           Your membership certificate is not yet available. Please contact your Client Success
           Consultant.
         </div>

@@ -338,7 +338,7 @@ export default function ManageStages() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground max-w-[200px] truncate whitespace-nowrap block">{stage.title}</span>
                       {stage.is_certified && (
-                        <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0">
+                        <Badge className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 shrink-0">
                           <ShieldCheck className="h-3 w-3 mr-1" />
                           Certified
                         </Badge>
@@ -356,7 +356,7 @@ export default function ManageStages() {
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Badge variant="default" className="gap-1 cursor-pointer bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                        <Badge variant="default" className="gap-1 cursor-pointer bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
                           <Video className="h-3 w-3" />
                           Video Link
                         </Badge>

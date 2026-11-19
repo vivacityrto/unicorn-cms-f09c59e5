@@ -522,7 +522,7 @@ function SortableQuestionCard({
                   <X className="h-3.5 w-3.5" />
                 </Button>}
             </div>)}
-            <Button variant="outline" size="sm" className="w-full mt-2 border-dashed border-violet-400/50 text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-500 transition-all" onClick={addCheckboxOption}>
+            <Button variant="outline" size="sm" className="w-full mt-2 border-dashed border-violet-400/50 text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-500 transition-all dark:hover:bg-violet-500/20" onClick={addCheckboxOption}>
               <Plus className="h-4 w-4 mr-2" />
               Add option
             </Button>
@@ -626,12 +626,12 @@ function SortableQuestionCard({
           </div>;
       case 'multiple_choice': {
         const colorMapPreview: Record<string, string> = {
-          'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
-          'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
-          'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
-          'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
-          'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
-          'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+          'bg-green-500': 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30',
+          'bg-red-500': 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
+          'bg-blue-500': 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+          'bg-yellow-500': 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
+          'bg-purple-500': 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+          'bg-orange-500': 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
           'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
         };
         return <div className="flex flex-wrap gap-2">
@@ -1067,7 +1067,7 @@ function SortableQuestionCard({
               <div className="py-3">
                 <span className="text-sm text-muted-foreground mb-2 block">Labels</span>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {actionLabels.map((label, idx) => <Badge key={idx} variant="secondary" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1 pr-1">
+                  {actionLabels.map((label, idx) => <Badge key={idx} variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1 pr-1">
                       <Tag className="h-3 w-3" />
                       {label}
                       <button onClick={() => setActionLabels(prev => prev.filter((_, i) => i !== idx))} className="ml-1 hover:text-destructive">
@@ -1542,7 +1542,7 @@ export default function AuditTemplateBuilder() {
                 {inspectionIdParam ? (
                   <Button 
                     size="sm" 
-                    className="gap-2 bg-green-500/15 hover:bg-green-500/25 text-green-600 border border-green-600"
+                    className="gap-2 bg-green-500/15 hover:bg-green-500/25 text-green-700 dark:text-green-300 border border-green-600"
                     onClick={async () => {
                       if (!validateCurrentPage()) return;
                       
@@ -1626,9 +1626,9 @@ export default function AuditTemplateBuilder() {
                   <span className="text-sm text-muted-foreground">Compliance Score:</span>
                   <Badge className={cn(
                     "text-sm font-semibold",
-                    liveComplianceScore >= 80 ? "bg-green-500/15 text-green-600 border-green-500/30" :
-                    liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" :
-                    "bg-red-500/15 text-red-600 border-red-500/30"
+                    liveComplianceScore >= 80 ? "bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30" :
+                    liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border-yellow-500/30" :
+                    "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30"
                   )}>
                     {liveComplianceScore}%
                   </Badge>
@@ -1827,12 +1827,12 @@ export default function AuditTemplateBuilder() {
                         <div className="flex flex-wrap items-center gap-2 w-full">
                           {template.options.map((option, idx) => {
                       const colorMap: Record<string, string> = {
-                        'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
-                        'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
-                        'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
-                        'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
-                        'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
-                        'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+                        'bg-green-500': 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30',
+                        'bg-red-500': 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
+                        'bg-yellow-500': 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
+                        'bg-blue-500': 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+                        'bg-purple-500': 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+                        'bg-orange-500': 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
                         'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
                       };
                       const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];

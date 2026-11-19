@@ -156,7 +156,7 @@ export default function AcademyCertificatesPage() {
     const s = getCertStatus(c);
     if (s === "revoked") return <Badge variant="destructive">Revoked</Badge>;
     if (s === "expired") return <Badge variant="secondary" className="text-muted-foreground">Expired</Badge>;
-    return <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>;
+    return <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">Active</Badge>;
   };
 
   const statusCounts = useMemo(() => {

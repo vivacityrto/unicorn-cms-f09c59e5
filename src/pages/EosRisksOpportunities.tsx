@@ -146,14 +146,14 @@ export default function EosRisksOpportunities() {
         border: impact === 'Critical' ? 'border-l-4 border-l-destructive' : 'border-l-4 border-l-amber-500',
         icon: AlertTriangle,
         iconColor: impact === 'Critical' ? 'text-destructive' : 'text-amber-500',
-        bg: impact === 'Critical' ? 'bg-destructive/5' : 'bg-amber-50',
+        bg: impact === 'Critical' ? 'bg-destructive/5' : 'bg-amber-50 dark:bg-amber-500/15',
       };
     }
     return {
       border: 'border-l-4 border-l-emerald-500',
       icon: Lightbulb,
       iconColor: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      bg: 'bg-emerald-50 dark:bg-emerald-500/15',
     };
   };
 
@@ -169,13 +169,13 @@ export default function EosRisksOpportunities() {
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
-      Open: 'bg-blue-100 text-blue-800',
-      'In Review': 'bg-purple-100 text-purple-800',
-      Actioning: 'bg-yellow-100 text-yellow-800',
-      Escalated: 'bg-red-100 text-red-800',
-      Closed: 'bg-gray-100 text-gray-800',
+      Open: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300',
+      'In Review': 'bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300',
+      Actioning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-300',
+      Escalated: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300',
+      Closed: 'bg-gray-100 text-gray-800 dark:bg-muted dark:text-foreground',
     };
-    return <Badge className={colors[status] || 'bg-gray-100'}>{status}</Badge>;
+    return <Badge className={colors[status] || 'bg-gray-100 dark:bg-muted'}>{status}</Badge>;
   };
 
   if (isLoading) {
@@ -412,7 +412,7 @@ export default function EosRisksOpportunities() {
                           <p className="text-sm text-muted-foreground mt-2">{item.description}</p>
                         )}
                         {item.why_it_matters && (
-                          <div className="mt-2 p-2 bg-amber-50 border-l-2 border-amber-400 rounded-r">
+                          <div className="mt-2 p-2 bg-amber-50 border-l-2 border-amber-400 rounded-r dark:bg-amber-500/15">
                             <p className="text-xs font-medium text-amber-800">Why It Matters</p>
                             <p className="text-sm text-amber-700">{item.why_it_matters}</p>
                           </div>

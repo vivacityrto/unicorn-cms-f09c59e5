@@ -121,7 +121,7 @@ function AuditReportCard({ report }: { report: ReturnType<typeof useClientAuditR
 
         {/* Acknowledgement */}
         {!isAcknowledged ? (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2 dark:bg-amber-500/15 dark:border-amber-500/30">
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" className="mt-0.5 rounded" id={`ack-${report.id}`} />
               <span>I have read and understood this report</span>

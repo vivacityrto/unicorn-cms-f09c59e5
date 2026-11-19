@@ -131,8 +131,8 @@ export default function EmailTemplateEditorDialog({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "bg-green-500/10 text-green-600 border-green-600";
-      case "draft": return "bg-yellow-500/10 text-yellow-600 border-yellow-600";
+      case "active": return "bg-green-500/10 text-green-700 dark:text-green-300 border-green-600";
+      case "draft": return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-600";
       case "archived": return "bg-gray-500/10 text-gray-600 border-gray-600";
       default: return "";
     }

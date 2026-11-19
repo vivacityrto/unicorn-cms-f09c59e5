@@ -306,7 +306,7 @@ function ChecklistItem({
         <div className="flex items-center gap-2 flex-wrap">
           <div className="font-medium">{title}</div>
           {completed ? (
-            <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
+            <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-500/15 dark:hover:bg-green-500/20 dark:text-green-300">
               Completed{completedAt ? ` · ${new Date(completedAt).toLocaleDateString("en-AU")}` : ""}
             </Badge>
           ) : (

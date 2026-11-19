@@ -1138,7 +1138,7 @@ export function AskVivPanel() {
                   {message.role === "assistant" && isComplianceMode && message.governance?.caution_banners &&
                     message.governance.caution_banners.length > 0 &&
                     message.governance.caution_banners.map((banner, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
                         <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
                         <span>{banner}</span>
                       </div>

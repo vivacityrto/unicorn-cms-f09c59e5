@@ -154,7 +154,7 @@ export function PackageTimeSection({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center dark:bg-blue-500/15">
                 <Calendar className="h-5 w-5 text-blue-600" />
               </div>
               <div>
@@ -167,7 +167,7 @@ export function PackageTimeSection({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center dark:bg-green-500/15">
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
               <div>
@@ -180,7 +180,7 @@ export function PackageTimeSection({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center dark:bg-amber-500/15">
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
@@ -236,7 +236,7 @@ export function PackageTimeSection({
 
       {/* Active timer alert */}
       {activeTimer && !isTimerForThisPackage && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
           <Timer className="h-4 w-4 inline mr-2" />
           Timer running on another package. Stop it first to start a new timer here.
         </div>

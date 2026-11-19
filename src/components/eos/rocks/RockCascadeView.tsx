@@ -70,7 +70,7 @@ export function RockCascadeView({
       case 'company': return 'text-purple-600 bg-purple-100 dark:bg-purple-900/30';
       case 'team': return 'text-blue-600 bg-blue-100 dark:bg-blue-900/30';
       case 'individual': return 'text-green-600 bg-green-100 dark:bg-green-900/30';
-      default: return 'text-purple-600 bg-purple-100';
+      default: return 'text-purple-600 bg-purple-100 dark:bg-purple-500/15 dark:text-purple-300';
     }
   };
 

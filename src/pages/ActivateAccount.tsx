@@ -28,7 +28,7 @@ const ActivateAccount = () => {
           <img src={unicornLogo} alt="Unicorn Compliance Management System" className="w-full h-auto max-w-[18rem]" />
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-2xl">
+        <div className="bg-white rounded-xl p-6 shadow-2xl dark:bg-card">
           {!token ? (
             <div className="text-center">
               <h2 className="text-2xl font-bold text-foreground mb-3">Invalid Link</h2>

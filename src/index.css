@@ -378,6 +378,7 @@
     --badge-draft-fg: hsl(var(--brand-acai-600));
     --badge-draft-border: hsl(var(--brand-light-purple-400) / 0.4);
     --badge-secondary-bg: hsl(var(--secondary) / 0.1);
+    --badge-default-fg: hsl(var(--brand-aqua-800));
     --badge-secondary-fg: hsl(var(--secondary));
     --badge-secondary-border: hsl(var(--secondary) / 0.3);
 
@@ -472,6 +473,7 @@
     --badge-draft-fg: hsl(var(--brand-light-purple-200));
     --badge-draft-border: hsl(var(--brand-light-purple-700) / 0.4);
     --badge-secondary-bg: hsl(var(--secondary) / 0.2);
+    --badge-default-fg: hsl(var(--brand-aqua-300));
     --badge-secondary-fg: hsl(var(--brand-light-purple-200));
     --badge-secondary-border: hsl(var(--secondary) / 0.5);
 
@@ -540,6 +542,7 @@
     --badge-draft-fg: hsl(var(--brand-acai-600));
     --badge-draft-border: hsl(var(--brand-light-purple-400) / 0.4);
     --badge-secondary-bg: hsl(var(--secondary) / 0.1);
+    --badge-default-fg: hsl(var(--brand-aqua-800));
     --badge-secondary-fg: hsl(var(--secondary));
     --badge-secondary-border: hsl(var(--secondary) / 0.3);
 

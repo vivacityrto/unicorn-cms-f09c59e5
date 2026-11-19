@@ -800,7 +800,7 @@ export const LiveMeetingView = () => {
                           onChange={(due_date) => handleChangeTodoDueDate(todo, due_date)}
                         />
                         {todo.meeting_id !== meetingId && (
-                          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                             From an earlier meeting
                           </span>
                         )}

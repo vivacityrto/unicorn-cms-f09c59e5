@@ -499,7 +499,7 @@ export function ClickUpTimeTransfer() {
                       </TableCell>
                       <TableCell className="text-center">
                         {task.transferred_count > 0 ? (
-                          <Badge className="bg-green-100 text-green-800 border-green-300">
+                          <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">
                             {task.transferred_count}/{task.entry_count}
                           </Badge>
                         ) : (
@@ -652,7 +652,7 @@ export function ClickUpTimeTransfer() {
                         </TableCell>
                         <TableCell className="text-center">
                           {isTransferred ? (
-                            <Badge className="bg-green-100 text-green-800 border-green-300 text-[10px]">
+                            <Badge className="bg-green-100 text-green-800 border-green-300 text-[10px] dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">
                               <CheckCircle2 className="h-3 w-3 mr-1" /> Done
                             </Badge>
                           ) : (

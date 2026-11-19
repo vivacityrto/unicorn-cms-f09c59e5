@@ -21,7 +21,7 @@ export function AuditScheduleAlert({ tenantId, onStartCHC }: AuditScheduleAlertP
 
   if (schedule.schedule_status === 'overdue') {
     return (
-      <Alert className="bg-amber-50 border-amber-300">
+      <Alert className="bg-amber-50 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/30">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <AlertDescription className="flex items-center justify-between">
           <span className="text-amber-800">
@@ -37,7 +37,7 @@ export function AuditScheduleAlert({ tenantId, onStartCHC }: AuditScheduleAlertP
 
   if (schedule.schedule_status === 'due_soon') {
     return (
-      <Alert className="bg-yellow-50 border-yellow-300">
+      <Alert className="bg-yellow-50 border-yellow-300 dark:bg-yellow-500/15 dark:border-yellow-500/30">
         <AlertTriangle className="h-4 w-4 text-yellow-600" />
         <AlertDescription className="flex items-center justify-between">
           <span className="text-yellow-800">

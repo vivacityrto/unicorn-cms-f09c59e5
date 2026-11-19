@@ -447,7 +447,7 @@ unicorn_role: invitationData!.unicornRole,
   if (validating) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center" style={{ backgroundImage: 'linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)' }}>
-        <div className="bg-white rounded-xl p-8 shadow-2xl">
+        <div className="bg-white rounded-xl p-8 shadow-2xl dark:bg-card">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-center mt-4">Validating invitation...</p>
         </div>
@@ -485,7 +485,7 @@ unicorn_role: invitationData!.unicornRole,
         </div>
 
         {/* Signup Form */}
-        <div className="bg-white rounded-xl p-6 shadow-2xl">
+        <div className="bg-white rounded-xl p-6 shadow-2xl dark:bg-card">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-foreground mb-1">
               {invitationData.isAcademySolo ? 'Join Vivacity Academy' : 'Complete Your Signup'}

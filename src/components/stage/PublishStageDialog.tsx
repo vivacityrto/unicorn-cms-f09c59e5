@@ -67,7 +67,7 @@ export function PublishStageDialog({
           <div className="flex items-center gap-2">
             <Badge variant="outline">v{nextVersion}</Badge>
             {isCertified && (
-              <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+              <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20">
                 Certified Release
               </Badge>
             )}

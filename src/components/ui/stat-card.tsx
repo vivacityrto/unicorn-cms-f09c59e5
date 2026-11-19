@@ -26,10 +26,10 @@ const intentColors = {
 
 const intentBgColors = {
   default: 'bg-muted/50',
-  success: 'bg-green-50',
-  warning: 'bg-yellow-50',
-  danger: 'bg-red-50',
-  info: 'bg-blue-50',
+  success: 'bg-green-50 dark:bg-green-500/15',
+  warning: 'bg-yellow-50 dark:bg-yellow-500/15',
+  danger: 'bg-red-50 dark:bg-red-500/15',
+  info: 'bg-blue-50 dark:bg-blue-500/15',
 };
 
 const intentHoverColors = {

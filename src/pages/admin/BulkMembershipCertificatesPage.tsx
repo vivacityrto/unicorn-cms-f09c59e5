@@ -57,14 +57,14 @@ interface TenantWithMembership {
 function getStatusBadge(status: string, labelMap: Map<string, string>) {
   const label = labelMap.get(status) ?? status ?? "—";
   const configs: Record<string, { icon: LucideIcon; className: string }> = {
-    active: { icon: CheckCircle2, className: "border-green-200 text-green-700 bg-green-50" },
-    disabled: { icon: XCircle, className: "border-red-200 text-red-700 bg-red-50" },
-    on_hold: { icon: Pause, className: "border-amber-200 text-amber-700 bg-amber-50" },
-    overrun: { icon: AlertCircle, className: "border-orange-200 text-orange-700 bg-orange-50" },
-    terminated: { icon: XCircle, className: "border-red-200 text-red-700 bg-red-50" },
-    cancelled: { icon: Archive, className: "border-gray-200 text-gray-500 bg-gray-50" },
+    active: { icon: CheckCircle2, className: "border-green-200 text-green-700 bg-green-50 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30" },
+    disabled: { icon: XCircle, className: "border-red-200 text-red-700 bg-red-50 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30" },
+    on_hold: { icon: Pause, className: "border-amber-200 text-amber-700 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30" },
+    overrun: { icon: AlertCircle, className: "border-orange-200 text-orange-700 bg-orange-50 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30" },
+    terminated: { icon: XCircle, className: "border-red-200 text-red-700 bg-red-50 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30" },
+    cancelled: { icon: Archive, className: "border-gray-200 text-gray-500 bg-gray-50 dark:bg-muted dark:text-muted-foreground dark:border-border" },
   };
-  const cfg = configs[status] ?? { icon: AlertCircle, className: "border-gray-200 text-gray-500 bg-gray-50" };
+  const cfg = configs[status] ?? { icon: AlertCircle, className: "border-gray-200 text-gray-500 bg-gray-50 dark:bg-muted dark:text-muted-foreground dark:border-border" };
   const Icon = cfg.icon;
   return (
     <Badge variant="outline" className={`flex items-center gap-1 text-xs font-medium ${cfg.className}`}>
@@ -371,14 +371,14 @@ export default function BulkMembershipCertificatesPage() {
   };
 
   const CSC_COLORS = [
-    "bg-purple-100 text-purple-800",
-    "bg-blue-100 text-blue-800",
-    "bg-green-100 text-green-800",
-    "bg-amber-100 text-amber-800",
-    "bg-rose-100 text-rose-800",
-    "bg-cyan-100 text-cyan-800",
-    "bg-orange-100 text-orange-800",
-    "bg-teal-100 text-teal-800",
+    "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
+    "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
+    "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
+    "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+    "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
+    "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300",
+    "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
+    "bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300",
   ];
 
   function getCscColor(name: string): string {

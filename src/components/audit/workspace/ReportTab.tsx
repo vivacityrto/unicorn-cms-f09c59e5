@@ -516,7 +516,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               </div>
 
               {draft.draft.uncertainty_notes && (
-                <Alert className="bg-amber-50 border-amber-200">
+                <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-500/15 dark:border-amber-500/30">
                   <Info className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-xs text-amber-800">
                     <span className="font-medium">Uncertainty notes: </span>{draft.draft.uncertainty_notes}
@@ -846,12 +846,12 @@ function DraftField({
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
         {decision === 'accepted' && (
-          <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+          <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">
             <CheckCircle2 className="h-3 w-3 mr-1" /> Accepted
           </Badge>
         )}
         {decision === 'edited' && (
-          <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
+          <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30">
             <CheckCircle2 className="h-3 w-3 mr-1" /> Saved with edits
           </Badge>
         )}

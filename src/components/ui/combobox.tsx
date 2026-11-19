@@ -182,8 +182,8 @@ export function Combobox({
                       variant="outline"
                       className={cn(
                         "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] ml-auto",
-                        option.status === 'active' && "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600",
-                        option.status === 'inactive' && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600"
+                        option.status === 'active' && "bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/20 border border-green-600",
+                        option.status === 'inactive' && "bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/20 border border-red-600"
                       )}
                     >
                       {option.status}

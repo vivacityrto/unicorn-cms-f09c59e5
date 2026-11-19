@@ -21,7 +21,7 @@ function describeAudience(mode: string, pkg: string | null): string {
 }
 function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function personName(user: UserMini | undefined) { return user ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email || "Unknown recipient" : "Unknown recipient"; }
-const STATUS_STYLES: Record<string, string> = { draft: "bg-muted text-muted-foreground border-border", queued: "bg-blue-100 text-blue-700 border-blue-200", sent: "bg-emerald-100 text-emerald-700 border-emerald-200", failed: "bg-rose-100 text-rose-700 border-rose-200" };
+const STATUS_STYLES: Record<string, string> = { draft: "bg-muted text-muted-foreground border-border", queued: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30", sent: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30", failed: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30" };
 
 function CampaignMetric({ value, label }: { value: number | string; label: string }) {
   return <div className="px-3 py-1.5 text-center text-xs text-muted-foreground"><strong className="block text-sm text-foreground tabular-nums">{value}</strong>{label}</div>;
@@ -96,7 +96,7 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
           <CollapsibleContent><div className="divide-y border-t border-border">
             {tenantRecipients.map((recipient) => <div key={recipient.id} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{personName(userMap.get(recipient.user_id))}</p>{userMap.get(recipient.user_id)?.email && <p className="truncate text-xs text-muted-foreground">{userMap.get(recipient.user_id)?.email}</p>}{recipient.failure_reason && <p className="mt-1 text-xs text-rose-700">{recipient.failure_reason}</p>}</div>
-              <div className="shrink-0 text-right">{recipient.read_at ? <><Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Read</Badge><p className="mt-1 text-[11px] text-muted-foreground">{format(new Date(recipient.read_at), "d MMM, h:mm a")}</p></> : <><Badge variant="outline" className="text-muted-foreground">{recipient.delivery_status}</Badge><p className="mt-1 text-[11px] text-muted-foreground">Not read</p></>}</div>
+              <div className="shrink-0 text-right">{recipient.read_at ? <><Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/20 dark:text-emerald-300">Read</Badge><p className="mt-1 text-[11px] text-muted-foreground">{format(new Date(recipient.read_at), "d MMM, h:mm a")}</p></> : <><Badge variant="outline" className="text-muted-foreground">{recipient.delivery_status}</Badge><p className="mt-1 text-[11px] text-muted-foreground">Not read</p></>}</div>
             </div>)}
           </div></CollapsibleContent>
         </Collapsible>;

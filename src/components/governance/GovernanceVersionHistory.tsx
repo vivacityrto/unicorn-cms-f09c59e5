@@ -30,7 +30,7 @@ interface GovernanceVersionHistoryProps {
 function getStatusBadge(status: string) {
   switch (status) {
     case 'published':
-      return <Badge variant="default" className="bg-emerald-600">Published</Badge>;
+      return <Badge variant="default" className="border-transparent text-white bg-emerald-700 hover:bg-emerald-700">Published</Badge>;
     case 'draft':
       return <Badge variant="secondary">Draft</Badge>;
     case 'archived':
