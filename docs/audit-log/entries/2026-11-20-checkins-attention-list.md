@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked to build the consultant attention list: a cross-client view of which clients' check-ins need a consultant now.
 **Scope:** one new read-only function, `public.get_checkins_attention()` (migration `20261120070000_get_checkins_attention.sql`), and a "Client check-ins needing attention" card on the staff dashboard (`MainDashboard`). No table, column, policy or data change.
-**Status:** Written and dry-run in production (everything rolled back). **Not yet applied**: needs Carl's explicit go-ahead. Until it is applied the card hides itself on the dashboard (a failed load shows nothing) and the rest of the dashboard is unchanged.
+**Status:** Applied to production on 20 November 2026 on Carl's explicit go-ahead ("Apply it"), after a dry run. Postflight below. The dashboard card goes live when this pull request is merged.
 
 ## What it lists
 
@@ -24,6 +24,10 @@ Inside a rolled-back block: a recent package got two low pulses and a blocker wi
 - The row held only client, package and manager names, the manager id, counts and the latest blocker's category, comment, name and date: no email, no person id.
 - A client contact calling it: refused ("Not authorized"). No sign-in: refused.
 - No names, emails or answer text were printed.
+
+## Production
+
+Preflight: function absent, migration not recorded, the `package_checkins` table present. Applied with the exact migration SQL. Postflight: exactly one overload `()`, `SECURITY DEFINER`, execute granted to `authenticated`, not to `anon`; the check-in table is unchanged (empty). No table or data changed.
 
 ## Not built (follow-up)
 
