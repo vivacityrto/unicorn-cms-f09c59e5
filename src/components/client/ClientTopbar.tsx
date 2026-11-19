@@ -129,13 +129,13 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <img
           src={unicornLogo}
           alt="Unicorn 2.0"
-          className="h-14 w-auto flex-shrink-0 dark:rounded-lg dark:bg-white dark:px-2"
+          className="h-14 w-auto flex-shrink-0"
           loading="eager"
         />
         <img
           src={vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className="h-10 w-auto flex-shrink-0 dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"
+          className="h-10 w-auto flex-shrink-0"
           loading="eager"
         />
       </div>

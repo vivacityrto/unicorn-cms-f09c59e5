@@ -114,11 +114,15 @@ serve(async (req) => {
       return errorResponse(req, 403, 'NO_TENANT', 'User is not associated with any tenant');
     }
 
-    // Check if email already exists with a different owner
-    const { data: existingEmail, error: checkError } = await supabaseAdmin
+    // Check whether another user has already captured this email. Only other owners
+    // matter here: this user may already hold links to other clients, so don't use
+    // maybeSingle() on the user's own rows (several rows would make it error).
+    const { data: otherOwner, error: checkError } = await supabaseAdmin
       .from('email_messages')
-      .select('id, user_uuid')
+      .select('id')
       .eq('external_message_id', body.external_message_id)
+      .neq('user_uuid', tokenPayload.user_uuid)
+      .limit(1)
       .maybeSingle();
 
     if (checkError) {
@@ -126,7 +130,7 @@ serve(async (req) => {
       return errorResponse(req, 500, 'DATABASE_ERROR', 'Failed to check existing email', { detail: checkError.message });
     }
 
-    if (existingEmail && existingEmail.user_uuid !== tokenPayload.user_uuid) {
+    if (otherOwner) {
       return errorResponse(req, 409, 'EMAIL_ALREADY_LINKED_BY_ANOTHER_USER', 'This email has already been captured by another user.', {});
     }
 
@@ -142,7 +146,15 @@ serve(async (req) => {
     }
 
     // Determine if this is an insert or update
-    const isUpdate = !!existingEmail;
+    // Did this user already capture this email (for this client)? Only used to report 'updated'.
+    const { data: ownRows } = await supabaseAdmin
+      .from('email_messages')
+      .select('id')
+      .eq('external_message_id', body.external_message_id)
+      .eq('user_uuid', tokenPayload.user_uuid)
+      .eq('client_id', parseInt(body.link.client_id, 10))
+      .limit(1);
+    const isUpdate = (ownRows?.length ?? 0) > 0;
 
     // ========== GRAPH ENRICHMENT (Phase 8.1) ==========
     let graphEnrichment: GraphEmailDetails | null = null;
@@ -199,7 +211,8 @@ serve(async (req) => {
     const { data: emailRecord, error: insertError } = await supabaseAdmin
       .from('email_messages')
       .upsert(emailData, {
-        onConflict: 'user_uuid,external_message_id',
+        // Keyed on the current constraint. Per-client keys wait for the decision in PR #1572.
+        onConflict: 'user_uuid,external_message_id,client_id',
         ignoreDuplicates: false,
       })
       .select('id, external_message_id, subject, sender_email, sender_name, received_at, has_attachments, client_id, package_id, task_id, body_preview, web_link, graph_enriched')

@@ -71,7 +71,7 @@ export function HomePackageCards({ rows, isLoading }: { rows: readonly HomePacka
   const active = activePackages(rows);
   return (
     <section aria-label="Your packages" className="space-y-3">
-      <h2 className="text-base font-semibold text-foreground">Your packages</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Your packages</h2>
       {isLoading ? (
         <div className="h-40 animate-pulse rounded-xl bg-muted/50" aria-busy="true" />
       ) : active.length === 0 ? (

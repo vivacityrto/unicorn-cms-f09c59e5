@@ -186,6 +186,8 @@ Deno.serve(async (req) => {
     }
 
     const tenantIdNum = parseInt(String(tenant_id), 10);
+    // The client this link belongs to: the chosen client, else the tenant it was linked under.
+    const linkClientId = client_id ? parseInt(String(client_id), 10) : tenantIdNum;
     if (!Number.isFinite(tenantIdNum)) {
       return new Response(
         JSON.stringify({ error: "tenant_id is required" }),
@@ -306,11 +308,13 @@ Deno.serve(async (req) => {
       .select("id, unlinked_at")
       .eq("user_uuid", userId)
       .eq("external_message_id", message_id)
+      .eq("client_id", linkClientId)
       .maybeSingle();
 
+    // One email can be linked to several clients, but only once per client.
     if (existingEmail && !existingEmail.unlinked_at) {
       return new Response(
-        JSON.stringify({ error: "Email already linked", email_id: existingEmail.id }),
+        JSON.stringify({ error: "This email is already linked to this client", email_id: existingEmail.id }),
         { status: 409, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
       );
     }
@@ -350,7 +354,8 @@ Deno.serve(async (req) => {
       ai_summary: aiSummary,
       conversation_id: emailData.conversationId ?? null,
       categories: emailData.categories ?? null,
-      client_id: client_id ? parseInt(client_id) : null,
+      // The client the email is linked to. Package- and task-only links still store the client.
+      client_id: linkClientId,
       package_id: package_id ? parseInt(package_id) : null,
       task_id: task_id || null,
       unlinked_at: null,

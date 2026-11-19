@@ -30,7 +30,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, Paperclip, Send, Users, X } from "lucide-react";
+import { format } from "date-fns";
+import { formatBroadcastSchedule } from "./broadcastSchedule";
+import { CalendarClock, Loader2, Paperclip, Send, Users, X } from "lucide-react";
 import {
   BUCKET,
   MAX_FILES_PER_MESSAGE,
@@ -39,7 +41,7 @@ import {
   validateAttachment,
 } from "@/lib/messageAttachments";
 
-type TargetMode = "everyone" | "members" | "tier" | "package_type";
+type TargetMode = "everyone" | "members" | "tier" | "package_type" | "superhero";
 type Tier = "diamond" | "gold" | "ruby" | "sapphire" | "amethyst";
 type PackageType = "membership" | "project" | "audit" | "regulatory_submission";
 
@@ -103,6 +105,15 @@ export function BulkMessageDialog({
   const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [timing, setTiming] = useState<"now" | "later">("now");
+  const [sendTime, setSendTime] = useState("");
+  const scheduledSubmission = useRef<{ id: string; paths: Map<File, string> } | null>(null);
+  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const selectedTime = new Date(sendTime);
+  const validSendTime = Number.isFinite(selectedTime.getTime()) &&
+    format(selectedTime, "yyyy-MM-dd'T'HH:mm") === sendTime &&
+    selectedTime.getTime() > Date.now();
+
   // Confirm dialog
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -132,6 +143,9 @@ export function BulkMessageDialog({
       setCategoryId("");
       setBody("");
       setQueuedFiles([]);
+      setTiming("now");
+      setSendTime("");
+      scheduledSubmission.current = null;
       setConfirmOpen(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -145,8 +159,6 @@ export function BulkMessageDialog({
     }
   }, [categories, categoryId]);
 
-  // Debounced preview key
-  const [debouncedKey, setDebouncedKey] = useState<string>("");
   const targetingPackageType: string | null =
     targetMode === "tier"
       ? (tier || null)
@@ -157,23 +169,13 @@ export function BulkMessageDialog({
   const previewReady =
     (targetMode === "everyone") ||
     (targetMode === "members") ||
+    (targetMode === "superhero") ||
     (targetMode === "tier" && !!tier) ||
     (targetMode === "package_type" && !!packageType);
 
-  useEffect(() => {
-    if (!previewReady) {
-      setDebouncedKey("");
-      return;
-    }
-    const t = setTimeout(() => {
-      setDebouncedKey(`${targetMode}|${targetingPackageType ?? ""}`);
-    }, 400);
-    return () => clearTimeout(t);
-  }, [targetMode, targetingPackageType, previewReady]);
-
-  const { data: preview, isFetching: previewLoading } = useQuery({
-    queryKey: ["broadcast-preview", debouncedKey],
-    enabled: !!debouncedKey,
+  const { data: preview, isFetching: previewLoading, isError: previewFailed } = useQuery({
+    queryKey: ["broadcast-preview", targetMode, targetingPackageType],
+    enabled: open && previewReady,
     queryFn: async (): Promise<PreviewRow[]> => {
       const { data, error } = await supabase.rpc(
         "fn_preview_broadcast_recipients",
@@ -198,6 +200,7 @@ export function BulkMessageDialog({
   const audienceLabel = useMemo(() => {
     if (targetMode === "everyone") return "Everyone (all active tenants)";
     if (targetMode === "members") return "All active members and users";
+    if (targetMode === "superhero") return "Superhero clients";
     if (targetMode === "tier" && tier) {
       const t = TIER_OPTIONS.find((o) => o.value === tier);
       return `${t?.label ?? tier} members`;
@@ -240,6 +243,36 @@ export function BulkMessageDialog({
         subject.trim() ||
         body.trim().split(/\s+/).slice(0, 8).join(" ").slice(0, 80) ||
         "Bulk Message";
+
+      if (timing === "later") {
+        if (!validSendTime) throw new Error("Choose a valid future send date and time");
+        scheduledSubmission.current ??= { id: crypto.randomUUID(), paths: new Map() };
+        const submission = scheduledSubmission.current;
+        const attachments = [];
+        for (const file of queuedFiles) {
+          let storagePath = submission.paths.get(file);
+          if (!storagePath) {
+            storagePath = `broadcast/${submission.id}/${crypto.randomUUID()}_${sanitiseFilename(file.name)}`;
+            const { error } = await supabase.storage.from(BUCKET)
+              .upload(storagePath, file, { contentType: file.type, upsert: false });
+            if (error) throw new Error(`Attachment "${file.name}" failed to upload: ${error.message}`);
+            submission.paths.set(file, storagePath);
+          }
+          attachments.push({ storage_path: storagePath, filename: file.name });
+        }
+        const { data, error } = await supabase.rpc("fn_schedule_bulk_message", {
+          p_campaign_id: submission.id,
+          p_title: title,
+          p_body: body.trim(),
+          p_target_mode: targetMode,
+          p_package_type: targetingPackageType,
+          p_scheduled_for: selectedTime.toISOString(),
+          p_category_id: categoryId || null,
+          p_attachments: attachments,
+        });
+        if (error) throw new Error(error.message);
+        return { kind: "scheduled" as const, scheduledFor: data };
+      }
 
       // 1. Insert draft campaign
       const { data: campaign, error: insertErr } = await supabase
@@ -300,21 +333,24 @@ export function BulkMessageDialog({
           },
         });
       if (sendErr) throw new Error(sendErr.message);
-      return sendData as {
+      const result = sendData as {
         total_sent: number;
         total_failed: number;
         conversations_created: number;
       };
+      return { kind: "sent" as const, ...result };
     },
     onSuccess: (data) => {
-      const msg =
-        `Message sent to ${data.total_sent} recipients across ${data.conversations_created} clients` +
+      const msg = data.kind === "scheduled"
+        ? `Bulk message scheduled for ${formatBroadcastSchedule(data.scheduledFor)}`
+        : `Message sent to ${data.total_sent} recipients across ${data.conversations_created} clients` +
         (data.total_failed > 0
           ? ` — ${data.total_failed} failed, see Bulk Message History`
           : "");
       toast.success(msg);
       qc.invalidateQueries({ queryKey: ["broadcast-campaigns"] });
       qc.invalidateQueries({ queryKey: ["team-conversations"] });
+      scheduledSubmission.current = null;
       setConfirmOpen(false);
       onOpenChange(false);
       onSent?.();
@@ -325,7 +361,7 @@ export function BulkMessageDialog({
   });
 
   const canGoToStep2 =
-    previewReady && !previewLoading && recipientCount > 0;
+    previewReady && !previewLoading && !previewFailed && recipientCount > 0;
   const canGoToStep3 = body.trim().length > 0;
 
   return (
@@ -361,6 +397,7 @@ export function BulkMessageDialog({
                     <SelectContent>
                       <SelectItem value="everyone">Everyone</SelectItem>
                       <SelectItem value="members">All Members</SelectItem>
+                      <SelectItem value="superhero">Superhero clients</SelectItem>
                       <SelectItem value="tier">By membership tier</SelectItem>
                       <SelectItem value="package_type">By package type</SelectItem>
                     </SelectContent>
@@ -424,7 +461,10 @@ export function BulkMessageDialog({
                         Calculating…
                       </span>
                     )}
-                    {previewReady && !previewLoading && (
+                    {previewReady && !previewLoading && previewFailed && (
+                      <p className="text-destructive">Could not load the audience preview.</p>
+                    )}
+                    {previewReady && !previewLoading && !previewFailed && (
                       <>
                         {recipientCount === 0 ? (
                           <span className="text-destructive">
@@ -556,6 +596,33 @@ export function BulkMessageDialog({
                     )}
                   </div>
                 </div>
+                <div className="rounded-lg border border-border p-4 space-y-3">
+                  <label htmlFor="bulk-message-timing" className="block text-sm font-medium">Delivery</label>
+                  <Select value={timing} onValueChange={(value: "now" | "later") => setTiming(value)}>
+                    <SelectTrigger id="bulk-message-timing"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="now">Send now</SelectItem>
+                      <SelectItem value="later">Schedule for later</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {timing === "later" && (
+                    <>
+                      <label htmlFor="bulk-message-send-time" className="block text-sm font-medium">
+                        Send date and time ({localTimeZone})
+                      </label>
+                      <Input id="bulk-message-send-time" type="datetime-local" value={sendTime}
+                        onChange={(event) => setSendTime(event.target.value)}
+                        aria-invalid={!!sendTime && !validSendTime} />
+                      {sendTime && !validSendTime && (
+                        <p className="text-sm text-destructive">Choose a valid future date and time.</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Unicorn checks who matches the audience when the message is due.
+                        You can cancel it from Bulk Message History before delivery starts.
+                      </p>
+                    </>
+                  )}
+                </div>
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">
                     Message
@@ -617,10 +684,10 @@ export function BulkMessageDialog({
               <Button
                 className="gap-1.5"
                 onClick={() => setConfirmOpen(true)}
-                disabled={sendMutation.isPending}
+                disabled={sendMutation.isPending || (timing === "later" && !validSendTime)}
               >
-                <Send className="h-3.5 w-3.5" />
-                Send Bulk Message
+                {timing === "later" ? <CalendarClock className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
+                {timing === "later" ? "Schedule Bulk Message" : "Send Bulk Message"}
               </Button>
             )}
           </AppModalFooter>
@@ -630,12 +697,15 @@ export function BulkMessageDialog({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Send to {tenantCount} clients?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {timing === "later" ? "Schedule this bulk message?" : `Send to ${tenantCount} clients?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              You're about to message <strong>{tenantCount}</strong>{" "}
-              {tenantCount === 1 ? "client" : "clients"} ({recipientCount}{" "}
-              {recipientCount === 1 ? "recipient" : "recipients"}). This cannot
-              be undone.
+              {timing === "later" && validSendTime
+                ? `Unicorn will send this message to ${audienceLabel} at ${formatBroadcastSchedule(selectedTime.toISOString())}.`
+                : timing === "now"
+                  ? `You're about to message ${tenantCount} clients (${recipientCount} recipients). This cannot be undone.`
+                  : "Choose a future date and time."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -647,15 +717,15 @@ export function BulkMessageDialog({
                 e.preventDefault();
                 sendMutation.mutate();
               }}
-              disabled={sendMutation.isPending}
+              disabled={sendMutation.isPending || (timing === "later" && !validSendTime)}
             >
               {sendMutation.isPending ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                  Sending…
+                  {timing === "later" ? "Scheduling…" : "Sending…"}
                 </>
               ) : (
-                "Send"
+                timing === "later" ? "Schedule" : "Send"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

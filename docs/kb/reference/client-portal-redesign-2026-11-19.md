@@ -11,6 +11,18 @@ The page is now a welcome banner (greeting, tenure, who your consultant is, Mess
 - The old audit readiness card was removed from Home. `v_client_dashboard_progress` returns the constants `documentation_coverage = 0` and `risk_state = 'on_track'`, so the card always read 0%. Fixing the view needs a migration and its own audit entry; until then do not show those two fields to clients.
 - Dark mode: the page uses theme tokens only. See `docs/DESIGN_SYSTEM.md`.
 
+## Home layout and updates (follow-up)
+
+After the first Home release a layout audit at 1650 px found: the page stopped at a fixed width while the status banner above spanned the full width; the "From Vivacity" tiles were squeezed into a narrow column and clipped; needs-attention titles were cut to a few letters; and the left column ended well above the right. Fixes: the page fills the available width, the two columns are balanced (packages, Academy, regulatory updates and recent activity on the left; summary, needs attention, coming up, messages and reminders on the right), the service tiles are a full-width row, titles wrap to two lines, and a no-end-date renewal tile shows an empty ring. Home now also carries an Academy card, the latest broadcast messages from Vivacity (conversations of type broadcast, with an unread marker) and the latest regulatory updates (the same events as the Regulatory Updates page).
+
+## Inbox (shipped)
+
+The client Inbox keeps its data, deep links and behaviour (messages, notifications, attachments, new message, read-only mode) and changes how it looks and works: a purple banner with what is waiting; the three views (Everything, Messages, Notifications) as cards that each show the unread count, the total and an insight (for example "1 from Vivacity waiting" or "1 task, 1 obligation to look at") instead of bare tab labels; day headings (Today, Yesterday, This week, Earlier) in the All and Notifications feeds; coloured icons for what each item is about; search and filter pills (Unread and by kind) on messages and notifications; chat bubbles with avatars and day dividers in a conversation; and, below 1280px, one pane at a time (list or conversation, with a Back button) instead of both stacked. The old notification filter compared the raw type to words like "tasks" and so matched nothing; it now maps types to kinds (`inboxFormat.ts`). A race that could re-open a conversation just closed is fixed by syncing the selection only when the URL parameter changes.
+
+## Regulatory updates (shipped)
+
+The list is a purple banner with the counts that matter (updates, new in the last 30 days, high or critical), five cards that double as the impact filter (All, Critical, High, Moderate, Low, each with what that level means for the client), search and regulator pills, and the updates as cards under month headings in a two-column grid. Each card shows a coloured edge for the impact, who published it, a plain excerpt of what changed (the machine-readable analysis block is left out), how many areas are affected and a New marker for the last 30 days. The detail page puts "why it matters", the change summary and the affected areas (as a grid) on the left and an "At a glance" card, a link to the regulator page and a "Message your CSC" button on the right; citations stay below. Data access is unchanged. Helpers are in `src/features/regulatory-updates/regulatoryView.ts`.
+
 ## Packages (shipped)
 
 - A "How this package is tracking" card on each package says what the status pill means, why this package has it (same reason text as Home), and where its hours are heading.

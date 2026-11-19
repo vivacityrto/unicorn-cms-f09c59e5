@@ -39,6 +39,21 @@ interface LinkEmailParams {
   task_id?: string;
 }
 
+/**
+ * supabase-js hides the function's response body behind a generic "non-2xx" message.
+ * Read the body so the person sees the real reason (for example, already linked).
+ */
+async function readFunctionErrorMessage(error: unknown): Promise<string | null> {
+  const response = (error as { context?: Response })?.context;
+  if (!response || typeof response.json !== "function") return null;
+  try {
+    const body = await response.clone().json();
+    return typeof body?.error === "string" ? body.error : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useLinkedEmails(options?: {
   clientId?: number;
   packageId?: number;
@@ -99,7 +114,7 @@ export function useLinkedEmails(options?: {
         body: params,
       });
 
-      if (error) throw error;
+      if (error) throw new Error((await readFunctionErrorMessage(error)) ?? error.message);
       if (data?.error) throw new Error(data.error);
 
       return data;
