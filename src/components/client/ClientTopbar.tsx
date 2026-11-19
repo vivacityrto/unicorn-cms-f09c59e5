@@ -4,6 +4,7 @@ import {
   HelpCircle,
   Settings,
   LogOut,
+  Download,
   Bell,
   Eye,
   ChevronDown,
@@ -31,6 +32,7 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useHelpCenter } from "@/components/help-center";
+import { InstallAppDialog } from "@/components/layout/InstallAppDialog";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
 
@@ -49,6 +51,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const { actingUserId, actingUserOptions, setActingUserId } = useClientPreview();
 
   const [elapsedMin, setElapsedMin] = useState(0);
+  const [installOpen, setInstallOpen] = useState(false);
 
   useEffect(() => {
     if (!isPreview) return;
@@ -325,6 +328,10 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                 Profile Settings
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onSelect={() => setInstallOpen(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Install Unicorn app
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -336,6 +343,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </header>
   );
 }
