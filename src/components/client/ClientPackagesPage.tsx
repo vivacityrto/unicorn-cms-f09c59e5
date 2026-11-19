@@ -7,6 +7,7 @@ import { useClientPackageHoursRecent } from "@/hooks/use-client-package-hours-re
 import { useClientPackageHoursTimeline } from "@/hooks/use-client-package-hours-timeline";
 import { useClientPackageActivity } from "@/hooks/use-client-package-activity";
 import { PackageAnalytics } from "@/components/client/package-dashboard/PackageAnalytics";
+import { ClientInsightCard } from "@/components/client/insight/ClientInsightCard";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
 import { PackageHoursBreakdown } from "@/components/client/package-dashboard/PackageHoursBreakdown";
 import { PackageBurndownChart } from "@/components/client/package-dashboard/PackageBurndownChart";
@@ -127,6 +128,7 @@ export default function ClientPackagesPage() {
       </div>
 
       {activePackages.length > 0 && <PackageOverview overview={overview} packages={activePackages} />}
+      {activePackages.length > 0 && <ClientInsightCard surface="packages" />}
 
       {!hasAny && (
         <Card>

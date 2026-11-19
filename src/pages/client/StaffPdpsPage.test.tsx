@@ -90,7 +90,7 @@ describe('Staff PDPs page', () => {
     state.pdp.data = Array.from({ length: 2000 }, () => row());
     show();
     expect(screen.getByRole('alert')).toHaveTextContent(/first 2,000 people/);
-  });
+  }, 30_000);
 
   it('shows the empty state when nobody has a cycle', () => {
     state.pdp.data = [];

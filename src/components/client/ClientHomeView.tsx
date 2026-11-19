@@ -45,6 +45,8 @@ export interface ClientHomeViewProps {
   regulatory?: ReactNode;
   messages?: ReactNode;
   reminders?: ReactNode;
+  /** Viv's button-triggered AI insight, shown under At a glance. */
+  insight?: ReactNode;
   audits?: ReactNode;
 }
 
@@ -93,6 +95,7 @@ export function ClientHomeView(p: ClientHomeViewProps) {
 
           <aside className="min-w-0 space-y-6" aria-label="What needs you">
             <HomeSummaryCard lines={lines} />
+            {p.insight}
             <HomeNeedsAttentionSection events={p.feed.needsAttention} />
             <HomeComingUpSection events={p.feed.comingUp} isLoading={p.feed.isLoading} />
             {p.showAuditsNote && <AuditsNote />}

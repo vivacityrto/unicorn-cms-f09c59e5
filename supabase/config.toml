@@ -476,3 +476,8 @@ verify_jwt = false
 # Auth is enforced in-function via requireCaller (staff.ai.use).
 [functions.scorecard-insight]
 verify_jwt = false
+
+# Client portal "Viv summary" (Anthropic), run only when the person presses the button. Read-only.
+# Auth is enforced in-function: verifyAuth, then validateClientAskVivAccess, the client AI rollout flag and the daily token budget.
+[functions.client-insights]
+verify_jwt = false

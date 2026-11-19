@@ -85,7 +85,7 @@ function Learners({ rows, onOpen }: { rows: TenantAcademyLearnerAnalytics["learn
   );
 }
 
-export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
+export function AcademyActivityDashboard({ tenantId, insight }: { tenantId: number; /** Viv's button-triggered insight; only the client page passes it. */ insight?: React.ReactNode }) {
   const [openLearner, setOpenLearner] = useState<LearnerRow | null>(null);
   const { data, isLoading, error } = useTenantAcademyLearnerAnalytics(tenantId);
   const lines = useMemo(() => (data ? academySummary(data) : []), [data]);
@@ -116,6 +116,8 @@ export function AcademyActivityDashboard({ tenantId }: { tenantId: number }) {
         <Tile icon={BookOpen} label="Lessons completed" value={String(t.lessons_completed)} note="across chosen courses" />
         <Tile icon={Clock3} label="Learning time" value={`${numberAU.format(hoursOf(t.minutes))} h`} note={`${t.certificates} ${t.certificates === 1 ? "certificate" : "certificates"} earned`} />
       </section>
+
+      {insight}
 
       <section aria-label="At a glance" className="rounded-xl border border-primary/30 bg-primary/5 p-4">
         <h2 className="flex items-center gap-2 text-base font-semibold"><Sparkles className="h-4 w-4 text-primary" aria-hidden /> At a glance</h2>

@@ -1,6 +1,6 @@
 # Client portal redesign: Home, Packages, Academy analytics (19 November 2026)
 
-**Status:** Home and Packages shipped. Academy analytics built; its database function is applied. The AI summary is planned, not built.
+**Status:** Home and Packages shipped. Academy analytics built; its database function is applied. The AI summary is built as a button (see the last section).
 **Scope:** what a client sees, using only data the portal already reads unless stated.
 
 ## Home (shipped)
@@ -82,3 +82,13 @@ The package page now has an analytics section under the tracking card, built fro
 Every figure reconciles with the existing hours functions (same window, billable only, carry-over excluded). One look per kind of work (`workTypeStyle`) is shared by every chart.
 
 **Not built yet (designed in the council review):** collecting input from clients in the package (a fortnightly one-tap pulse, confidence rating per stage, goals per stage, a blocker flag, post-consult feedback, at most one prompt per person per week, stored in a new table with tenant-scoped row security and kept out of any health score until the thresholds are signed off); and an AI-drafted weekly snapshot (draft only, built from the same deterministic facts, with the guardrails in `ai-use-principles.md`). Three existing exposures of internal data to clients are recorded in the audit entry for a decision.
+
+## Viv's insight (button-triggered AI summary, in review)
+
+Home, Packages and Academy Activity each have a "Viv's insight" card with an "Ask Viv for an insight" button (`ClientInsightCard`, `use-client-insight.ts`, Edge Function `client-insights`, audit entry `2026-11-20-client-insights-edge-function`). The rule: everything on the pages is calculated by code (the "At a glance" cards, the weekly snapshot, the forecasts) and costs nothing; AI runs only when a person presses the button.
+
+- Nothing runs on page load. A result is reused for 30 minutes, so pressing again inside that time does not call the model.
+- The server builds the facts from the caller's own data, sends no names, and drops any answer with a number that is not in the facts. The result is labelled as written by AI.
+- Same access gate, rollout flag and daily token budget as the client Ask Viv chat; staff previewing a client pass the previewed organisation, which the server still verifies.
+- Errors read in plain words (not switched on, today's limit reached, busy, could not write a summary).
+- Not built: an AI-drafted weekly snapshot for packages, and AI summaries of client check-in comments (the check-ins themselves are not built).

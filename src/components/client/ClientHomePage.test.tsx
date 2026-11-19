@@ -23,6 +23,7 @@ vi.mock('@/hooks/use-client-package-dashboard', () => ({
 }));
 vi.mock('./home/HomeVivacityServicesSection', () => ({ HomeVivacityServicesSection: () => null }));
 vi.mock('./home/HomeAcademyCard', () => ({ HomeAcademyCard: () => null }));
+vi.mock('./insight/ClientInsightCard', () => ({ ClientInsightCard: () => null }));
 vi.mock('./home/HomeUpdatesCards', () => ({ HomeMessagesCard: () => null, HomeRegulatoryCard: () => null }));
 vi.mock('./home/HomeReportingRemindersCard', () => ({ HomeReportingRemindersCard: () => null }));
 vi.mock('@/hooks/use-client-reporting-reminders', () => ({ useClientReportingReminders: () => ({ data: [], isLoading: false }) }));

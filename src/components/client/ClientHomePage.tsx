@@ -14,6 +14,7 @@ import { ClientAuditReportsSection } from "./ClientAuditReportsSection";
 import { HomeAcademyCard } from "./home/HomeAcademyCard";
 import { HomeReportingRemindersCard } from "./home/HomeReportingRemindersCard";
 import { HomeMessagesCard, HomeRegulatoryCard } from "./home/HomeUpdatesCards";
+import { ClientInsightCard } from "./insight/ClientInsightCard";
 import { ClientHomeView } from "./ClientHomeView";
 
 // ───────── helpers ─────────
@@ -85,6 +86,7 @@ export function ClientHomePage() {
       onAsk={canAccessHelpCenter ? () => openHelpCenter("chatbot") : undefined}
       academy={<HomeAcademyCard tenantId={activeTenantId} />}
       regulatory={<HomeRegulatoryCard />}
+      insight={<ClientInsightCard surface="home" />}
       messages={<HomeMessagesCard compact />}
       reminders={remindersLoading || (reminders && reminders.length > 0) ? <HomeReportingRemindersCard compact /> : null}
       audits={
