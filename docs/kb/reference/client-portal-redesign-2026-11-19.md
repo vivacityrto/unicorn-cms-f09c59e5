@@ -124,3 +124,11 @@ When a client flags a blocker, the package manager now gets an in-app notificati
 - **The note is for the client.** It appears on the client's own package page next to that blocker ("From your consultant"), together with its status (sent, seen, resolved), so staff must keep it to what the client should read. The staff screen says so.
 - Only unresolved blockers count as needing attention, on the client card and on the dashboard attention list, which also shows a "New" badge for blockers nobody has seen. Resolved blockers stay on the client card, dimmed, for context.
 - In-app only: no email or other push message. Notifying the client when their blocker is seen or resolved is not built (they see the status when they next open the package).
+
+## Client data exposures (in review)
+
+Three exposures of internal data to clients were found in the package analytics review and are fixed in migration `20261120110000_restrict_internal_notes_to_staff.sql` (audit entry `2026-11-20-restrict-internal-notes-to-staff`, written and dry-run, **not yet applied**). Testing showed the first was worse than recorded: any client member could read, edit and delete every note for their organisation (a rolled-back test did all three on 139 of 139 notes). Notes, client notes and tenant notes are now staff-only.
+
+- **Removed for clients, by Carl's decision ("Remove both for now"):** the pinned-note banner on the package page, the "urgent note" item on Home (it showed the title of an internal pinned note), and the staff notes line under each entry in "recent work". The package status pill, including "on hold", is unchanged.
+- No client has ever written a note, and no client-portal page read these tables directly, so nothing a client used is lost except the two note-based items above.
+- If staff should share a note with a client on purpose, that needs an explicit "share with client" option; it is not built.
