@@ -41,3 +41,9 @@ const totalFailedIncrementIndex = source.indexOf('totalFailed += skippedRows.len
 assert.ok(totalFailedIncrementIndex > -1, 'totalFailed must count skipped recipients within an otherwise-successful tenant');
 
 console.log('send-broadcast-campaign participant-skip-visibility checks passed');
+
+// Participants are the tenant's recipients (already resolved by fn_resolve_broadcast_recipients), not every
+// tenant_users row, so inactive or untargeted people are never added to a broadcast conversation.
+assert.doesNotMatch(source, /from\("tenant_users"\)/, 'must not mirror every tenant_users row as a participant');
+assert.match(source, /const recipientUsers = Array\.from\(new Set\(rows\.map\(\(r\) => r\.user_id\)\)\);/, 'participants must come from this tenant\'s recipient rows');
+console.log('send-broadcast-campaign recipient-participants check passed');
