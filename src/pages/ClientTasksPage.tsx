@@ -18,11 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Clock, CheckCircle2, ListFilter, Paperclip, User } from "lucide-react";
+import { AlertTriangle, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { summariseTasks } from "@/components/client/tasks/taskInsights";
+import { TaskFilterCards, TasksBanner, TasksInsightPanel, type TaskFilter } from "@/components/client/tasks/TasksOverview";
 
-type FilterType = "all" | "overdue" | "due_soon" | "completed";
+type FilterType = TaskFilter;
 type ViewType = "all" | "mine";
 
 const ACTION_ITEM_STATUSES: { value: string; label: string }[] = [
@@ -163,12 +165,13 @@ export default function ClientTasksPage() {
     (t) => t.source === "action_item" && t.assigneeUserId === currentUserId,
   ).length;
 
-  const filters: { key: FilterType; label: string; count: number }[] = [
-    { key: "all", label: "All", count: viewScoped.length },
-    { key: "overdue", label: "Overdue", count: overdueCount },
-    { key: "due_soon", label: "Due Soon", count: dueSoonCount },
-    { key: "completed", label: "Completed", count: completedCount },
-  ];
+  const counts: Record<FilterType, number> = {
+    all: viewScoped.length,
+    overdue: overdueCount,
+    due_soon: dueSoonCount,
+    completed: completedCount,
+  };
+  const summary = useMemo(() => summariseTasks(viewScoped), [viewScoped]);
 
   const toggleSelect = (uid: string) => {
     setSelected((prev) => {
@@ -274,78 +277,29 @@ export default function ClientTasksPage() {
     });
   };
 
-  const views: { key: ViewType; label: string; count: number }[] = [
-    { key: "all", label: "All Tasks", count: effectiveTasks.length },
-    { key: "mine", label: "My Tasks", count: myCount },
-  ];
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-secondary">Tasks</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          All your tasks across every package and stage.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <TasksBanner
+        summary={summary}
+        mineCount={myCount}
+        mineOnly={view === "mine"}
+        onToggleMine={() => {
+          setView(view === "mine" ? "all" : "mine");
+          setSelected(new Set());
+        }}
+        archivedControl={
+          <div className="flex items-center gap-2">
+            <Label htmlFor="show-archived-toggle" className="cursor-pointer text-xs text-white/90">
+              Show archived
+            </Label>
+            <Switch id="show-archived-toggle" checked={showArchived} onCheckedChange={setShowArchived} />
+          </div>
+        }
+      />
 
-      {/* View tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
-        {views.map((v) => (
-          <Button
-            key={v.key}
-            variant={view === v.key ? "default" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setView(v.key);
-              setSelected(new Set());
-            }}
-            className="gap-1.5"
-          >
-            {v.key === "mine" && <User className="h-3.5 w-3.5" />}
-            {v.label}
-            <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
-              {v.count}
-            </Badge>
-          </Button>
-        ))}
-      </div>
+      <TaskFilterCards summary={summary} counts={counts} active={filter} onSelect={setFilter} />
 
-      {/* Show archived toggle */}
-      <div className="flex items-center justify-end gap-2">
-        <Label htmlFor="show-archived-toggle" className="text-sm text-muted-foreground cursor-pointer">
-          Show archived
-        </Label>
-        <Switch
-          id="show-archived-toggle"
-          checked={showArchived}
-          onCheckedChange={setShowArchived}
-        />
-        {!showArchived && (
-          <span className="text-xs text-muted-foreground">(hidden by default)</span>
-        )}
-      </div>
-
-      {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {filters.map((f) => (
-          <Button
-            key={f.key}
-            variant={filter === f.key ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter(f.key)}
-            className="gap-1.5"
-          >
-            {f.key === "overdue" && <AlertTriangle className="h-3.5 w-3.5" />}
-            {f.key === "due_soon" && <Clock className="h-3.5 w-3.5" />}
-            {f.key === "completed" && <CheckCircle2 className="h-3.5 w-3.5" />}
-            {f.key === "all" && <ListFilter className="h-3.5 w-3.5" />}
-            {f.label}
-            <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
-              {f.count}
-            </Badge>
-          </Button>
-        ))}
-      </div>
+      <TasksInsightPanel summary={summary} />
 
       {/* Bulk action bar — Admin only */}
       {canManagePortalUsers && selected.size > 0 && (
