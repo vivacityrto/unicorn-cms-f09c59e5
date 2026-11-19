@@ -114,7 +114,7 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
             <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", online ? "bg-emerald-500" : "bg-destructive")} />
             {online ? "Online" : "Offline: changes may not save"}
           </span>
-          <span aria-hidden className="hidden text-muted-foreground/60 2xl:inline">We make Compliance Simple!</span>
+          <span aria-hidden className="hidden text-muted-foreground/60 2xl:inline">We Make Compliance Simple!</span>
         </div>
 
         {/* Right: help, support, build */}

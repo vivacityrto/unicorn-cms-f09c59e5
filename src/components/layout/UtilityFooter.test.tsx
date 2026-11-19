@@ -49,4 +49,9 @@ describe('UtilityFooter', () => {
     expect(screen.getByTitle('Sydney time').textContent).toMatch(/^\d{1,2}:\d{2} (am|pm) (AEDT|AEST)$/);
     expect(screen.getByTitle('Philippines time').textContent).toMatch(/^\d{1,2}:\d{2} (am|pm) PHT$/);
   });
+
+  it('writes the tagline with a capital M', () => {
+    show();
+    expect(screen.getByText('We Make Compliance Simple!')).toBeInTheDocument();
+  });
 });
