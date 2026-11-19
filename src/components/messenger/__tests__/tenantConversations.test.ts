@@ -13,6 +13,9 @@ describe('tenant conversations to messenger threads', () => {
     for (const k of ['csc', 'broadcast', 'package', 'task', 'rock', 'direct', 'general']) expect(conversationKind(k)).toBe(k);
     expect(conversationKind('something_new')).toBe('general');
     expect(conversationKind(null)).toBe('general');
+    // A conversation with the consultant is a csc thread however it was created.
+    expect(conversationKind('direct', 'csc')).toBe('csc');
+    expect(conversationKind('general', 'general')).toBe('general');
   });
 
   it('titles a conversation by subject, then topic, then General', () => {

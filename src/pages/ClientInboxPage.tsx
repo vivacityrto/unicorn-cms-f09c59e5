@@ -1,22 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Bell, CheckCheck, Info, Inbox, MessageSquare, Plus } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  uploadMessageAttachment,
-  validateAttachment,
-  MAX_FILES_PER_MESSAGE,
-} from "@/lib/messageAttachments";
-import { MessageAttachments } from "@/components/messaging/MessageAttachments";
-import { Messenger, type MessengerMessage } from "@/components/messenger";
-import { pendingMessage, toMessengerMessage, toMessengerThread } from "@/components/messenger/adapters/tenantConversations";
-import { useConversationParticipants } from "@/hooks/useConversationParticipants";
+import { Messenger } from "@/components/messenger";
+import { toMessengerThread } from "@/components/messenger/adapters/tenantConversations";
+import { useClientConversationPane } from "@/hooks/useClientConversationPane";
 
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientInbox, type UnifiedInboxItem } from "@/hooks/useClientInbox";
@@ -48,10 +39,6 @@ type FeedFilter = "all" | "unread" | "messages" | "notifications";
 type NotifFilter = "all" | "unread" | NotificationKind;
 
 const VALID_TABS: TabValue[] = ["all", "messages", "notifications"];
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Invalid file";
-}
 
 /** Map any incoming legacy ?type= or ?tab= search param into a valid tab. */
 function resolveTabFromParams(search: URLSearchParams): TabValue {
@@ -185,36 +172,12 @@ function AllTab() {
 /*  MESSAGES tab: the shared messenger, fed by this organisation's conversations */
 /* -------------------------------------------------------------------------- */
 
-const ATTACHMENT_ACCEPT = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx";
-
-function validateFile(file: File): string | null {
-  try {
-    validateAttachment(file);
-    return null;
-  } catch (err: unknown) {
-    return errorMessage(err);
-  }
-}
-
 function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: boolean; onNewDialogOpenChange: (open: boolean) => void }) {
-  const {
-    conversations,
-    isLoading,
-    useConversationMessages,
-    sendMessage,
-    createConversation,
-    markRead,
-    currentUserId,
-  } = useClientCommunications();
-
-  const { isReadOnly, activeTenantId } = useClientTenant();
-  const qc = useQueryClient();
+  const { conversations, isLoading, createConversation } = useClientCommunications();
+  const { activeTenantId } = useClientTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
   const [selectedId, setSelectedId] = useState<string | null>(threadParam);
-  // Messages being sent, drawn straight away as "Sending…" until the saved copy arrives.
-  const [pending, setPending] = useState<MessengerMessage[]>([]);
-  const counter = useRef(0);
 
   // Sync ?thread= URL param into selection. Only when the param itself changes: closing a conversation clears the
   // selection first and the URL a moment later, and that gap must not re-open it.
@@ -225,17 +188,8 @@ function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: 
   const threads = useMemo(() => conversations.map(toMessengerThread), [conversations]);
   const selectedThread = threads.find((t) => t.id === selectedId) ?? null;
   const openId = selectedThread ? selectedThread.id : null;
-
-  const { data: rawMessages = [], isLoading: messagesLoading } = useConversationMessages(openId);
-  const { data: people } = useConversationParticipants(openId);
-
-  const messages = useMemo(() => {
-    const saved = rawMessages.map((m) => toMessengerMessage(m, currentUserId));
-    const mine = pending.filter((p) => p.id.startsWith(`pending-${openId}-`));
-    return [...saved, ...mine];
-  }, [rawMessages, pending, currentUserId, openId]);
-
-  const attachmentsById = useMemo(() => new Map(rawMessages.map((m) => [m.id, m.attachments ?? []])), [rawMessages]);
+  // Messages, who has read them, sending, attachments and marking read are shared with the messenger bubble.
+  const pane = useClientConversationPane(openId);
 
   const handleSelect = useCallback(
     (id: string | null) => {
@@ -251,31 +205,6 @@ function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: 
       setSearchParams(params, { replace: true });
     },
     [searchParams, setSearchParams],
-  );
-
-  const handleSend = useCallback(
-    async ({ body, files }: { body: string; files: File[] }) => {
-      if (!openId || !currentUserId) return;
-      const pendingId = `pending-${openId}-${(counter.current += 1)}`;
-      setPending((prev) => [...prev, pendingMessage(pendingId, body, currentUserId, files)]);
-      try {
-        const result = await sendMessage.mutateAsync({ conversationId: openId, body });
-        if (result?.messageId && activeTenantId != null && files.length > 0) {
-          for (const f of files) {
-            try {
-              await uploadMessageAttachment(supabase, f, activeTenantId, openId, result.messageId);
-            } catch (err: unknown) {
-              toast.warning(`Attachment "${f.name}" failed to upload: ${errorMessage(err)}`);
-            }
-          }
-        }
-        // Show the saved message (and its attachments) before the "Sending…" copy goes, so nothing flickers.
-        await qc.refetchQueries({ queryKey: ["conversation-messages", openId] });
-      } finally {
-        setPending((prev) => prev.filter((p) => p.id !== pendingId));
-      }
-    },
-    [openId, currentUserId, sendMessage, activeTenantId, qc],
   );
 
   const handleNewConversation = async (data: {
@@ -314,25 +243,7 @@ function MessagesTab({ newDialogOpen, onNewDialogOpenChange }: { newDialogOpen: 
                 hint="Start one with New message and your consultant will reply here."
               />
             }
-            conversation={{
-              messages,
-              people,
-              isLoading: messagesLoading,
-              draftScope: "client-inbox",
-              capabilities: { canSend: !isReadOnly },
-              onSend: handleSend,
-              onMarkRead: () => {
-                if (openId) markRead.mutate(openId);
-              },
-              validateFile,
-              accept: ATTACHMENT_ACCEPT,
-              maxFiles: MAX_FILES_PER_MESSAGE,
-              renderAttachments: (m) => {
-                const list = attachmentsById.get(m.id);
-                return list && list.length > 0 ? <MessageAttachments attachments={list} /> : null;
-              },
-              empty: <p className="py-10 text-center text-sm text-muted-foreground">No messages in this conversation yet.</p>,
-            }}
+            conversation={pane}
           />
         </div>
       )}
