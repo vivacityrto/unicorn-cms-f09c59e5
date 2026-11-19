@@ -29,6 +29,8 @@ interface BuildInput {
   unreadConversationIds: ReadonlySet<string>;
   /** When this person last read each conversation they are in. */
   myReadAt: ReadonlyMap<string, string | null>;
+  /** For each conversation, when the oldest unread message notification arrived. */
+  unreadSince?: ReadonlyMap<string, string>;
 }
 
 const firstName = (name: string | null) => (name ?? '').split(/\s+/)[0] || null;
@@ -53,11 +55,12 @@ export function scopeBadge(row: StaffScopeRow | undefined): { label: string; ton
  * a colleague, watching, unassigned), and only conversations that are mine can be unread, because unread comes from the
  * message notifications the routing sent me. A thread outside my scope (seen through "All clients") is never unread.
  */
-export function buildStaffThreads({ conversations, scope, tenantNames, unreadConversationIds, myReadAt }: BuildInput): MessengerThread[] {
+export function buildStaffThreads({ conversations, scope, tenantNames, unreadConversationIds, myReadAt, unreadSince }: BuildInput): MessengerThread[] {
   return conversations.map((c) => {
     const row = scope.get(c.tenant_id);
     const org = tenantNames.get(c.tenant_id) ?? `Client ${c.tenant_id}`;
     const subject = c.subject || c.topic || 'General';
+    const unread = !!row && unreadConversationIds.has(c.id);
     return {
       id: c.id,
       kind: conversationKind(c.type, c.topic),
@@ -65,7 +68,8 @@ export function buildStaffThreads({ conversations, scope, tenantNames, unreadCon
       tenantId: c.tenant_id,
       preview: c.last_message_preview,
       lastActivityAt: c.last_message_at,
-      unread: !!row && unreadConversationIds.has(c.id),
+      unread,
+      unreadSince: unread ? unreadSince?.get(c.id) ?? null : null,
       badge: scopeBadge(row),
       myLastReadAt: myReadAt.get(c.id) ?? null,
     };

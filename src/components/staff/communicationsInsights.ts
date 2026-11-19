@@ -26,8 +26,10 @@ const activeToday = (t: MessengerThread, now: Date) => !!t.lastActivityAt && sam
 
 export function communicationsInsights(threads: readonly MessengerThread[], now: Date = new Date()): CommunicationsInsights {
   const unread = threads.filter((t) => t.unread);
+  // How long someone has waited is measured from the oldest unread message, not the latest one: a new follow-up on an
+  // overdue conversation must not make it look newly waiting. (Falls back to the latest activity when that is not known.)
   const oldest = unread
-    .map((t) => t.lastActivityAt)
+    .map((t) => t.unreadSince ?? t.lastActivityAt)
     .filter((d): d is string => !!d)
     .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
   const covering = threads.filter(isCovering);

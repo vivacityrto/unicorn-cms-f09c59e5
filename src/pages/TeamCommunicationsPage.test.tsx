@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   threads: [] as MessengerThread[],
   scope: new Map<number, unknown>(),
   allClientsCalls: [] as boolean[],
+  opts: [] as unknown[],
+  limited: false,
   isSuperAdmin: false,
   bulk: { scheduled: 2, lastSentAt: null as string | null },
 }));
@@ -19,13 +21,15 @@ vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'me'
 vi.mock('@/hooks/useRBAC', () => ({ useRBAC: () => ({ isSuperAdmin: state.isSuperAdmin }) }));
 vi.mock('@/hooks/useVivacityTeamUsers', () => ({ useVivacityTeamUsers: () => ({ data: [{ user_uuid: 'u2', first_name: 'Nova', last_name: 'Canto', email: 'n@x' }] }) }));
 vi.mock('@/hooks/useStaffMessenger', () => ({
-  useStaffMessenger: (allClients: boolean) => {
+  useStaffMessenger: (allClients: boolean, _enabled: boolean, opts: unknown) => {
     state.allClientsCalls.push(allClients);
+    state.opts.push(opts);
     return {
       threads: state.threads,
       totalUnread: state.threads.filter((t) => t.unread).length,
       tenants: [{ id: 1, name: 'Acme Training' }, { id: 2, name: 'Other RTO' }],
       isLoading: false,
+      limited: state.limited,
       scope: state.scope,
       hasScope: state.scope.size > 0,
     };
@@ -57,6 +61,8 @@ const thread = (id: string, over: Partial<MessengerThread> = {}): MessengerThrea
 
 beforeEach(() => {
   state.allClientsCalls = [];
+  state.opts = [];
+  state.limited = false;
   state.isSuperAdmin = false;
   state.scope = new Map([[1, { reason: 'primary_csc' }]]);
   state.threads = [
@@ -128,6 +134,33 @@ describe('Team Communications', () => {
     expect(screen.getByRole('link', { name: 'Open the client' })).toHaveAttribute('href', '/tenant/1');
     await user.click(card(/Needs you/));
     expect(within(list()).getByText('Acme Training · quiet')).toBeInTheDocument();
+  });
+
+  it('does not fight the My clients switch when a conversation outside my clients is open', async () => {
+    const user = userEvent.setup();
+    // A conversation for a client that is not mine, opened by link, is still listed because the hook fetches it on its own.
+    state.threads = [...state.threads, thread('elsewhere', { tenantId: 9, title: 'Elsewhere RTO · elsewhere' })];
+    show('/communications?thread=elsewhere');
+    expect(state.allClientsCalls.every((v) => v === false)).toBe(true);
+    expect(screen.getByRole('link', { name: 'Open the client' })).toHaveAttribute('href', '/tenant/9');
+    await user.click(screen.getByRole('button', { name: 'My clients' }));
+    expect(state.allClientsCalls.at(-1)).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'All clients' }));
+    // Back on My clients and it stays there; nothing flips it to All clients again.
+    expect(state.allClientsCalls.at(-1)).toBe(false);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByRole('button', { name: 'My clients' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('asks for the opened conversation and the chosen client, so older conversations are reachable', async () => {
+    show('/communications?thread=old-one');
+    expect(state.opts.at(-1)).toEqual({ tenantId: null, extraThreadId: 'old-one' });
+  });
+
+  it('says when the list stopped at the newest conversations, and points at the client picker', () => {
+    state.limited = true;
+    show();
+    expect(screen.getByText(/the newest; pick a client to see all of theirs/)).toBeInTheDocument();
   });
 
   it('shows the team member filter to Super Admins only', () => {

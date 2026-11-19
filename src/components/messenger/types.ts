@@ -60,6 +60,8 @@ export interface MessengerThread {
   preview?: string | null;
   lastActivityAt?: string | null;
   unread: boolean;
+  /** When the oldest message I have not read arrived (the earliest unread notification), for "how long has this waited". */
+  unreadSince?: string | null;
   /** Shown instead of a dot when known. */
   unreadCount?: number;
   pinned?: boolean;

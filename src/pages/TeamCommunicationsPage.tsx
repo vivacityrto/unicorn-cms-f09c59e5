@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, CalendarClock, Clock, Megaphone, Plus, UserRound, Users, Inbox, HandHelping } from 'lucide-react';
@@ -46,17 +46,17 @@ export default function TeamCommunicationsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const { threads, isLoading, scope, tenants, hasScope } = useStaffMessenger(allClients, true);
+  const selectedId = searchParams.get('thread');
+  // A conversation opened by link, or just created, is fetched on its own, so it opens even when it is older than the list
+  // or belongs to a client that is not mine. Choosing a client lists all of that client's conversations.
+  const { threads, isLoading, scope, tenants, hasScope, limited } = useStaffMessenger(allClients, true, {
+    tenantId: filterTenant === 'all' ? null : Number(filterTenant),
+    extraThreadId: selectedId,
+  });
   const { data: bulk } = useBulkMessageSummary(canSendBulk);
   const { data: staffUsers = [] } = useVivacityTeamUsers();
 
-  const selectedId = searchParams.get('thread');
   const selectedThread = threads.find((t) => t.id === selectedId) ?? null;
-
-  // A deep link or a new conversation for a client that is not mine only shows under "All clients".
-  useEffect(() => {
-    if (selectedId && !selectedThread && !allClients && !isLoading) setAllClients(true);
-  }, [selectedId, selectedThread, allClients, isLoading]);
 
   // Super Admins can look at one colleague's conversations (the ones that person is in).
   const { data: staffConvIds } = useQuery({
@@ -189,6 +189,7 @@ export default function TeamCommunicationsPage() {
         </button>
         <p className="ml-auto text-xs text-muted-foreground" aria-live="polite">
           {visible.length} {visible.length === 1 ? 'conversation' : 'conversations'}
+          {limited && filterTenant === 'all' ? ' (the newest; pick a client to see all of theirs)' : ''}
         </p>
       </div>
 

@@ -36,6 +36,12 @@ describe('staff threads', () => {
     expect(threads.map((t) => [t.id, t.unread])).toEqual([['c1', true], ['c2', false], ['c3', false]]);
   });
 
+  it('records when the oldest unread message arrived, only for a conversation that is unread for me', () => {
+    const since = new Map([['c1', '2026-11-16T09:00:00Z'], ['c2', '2026-11-16T10:00:00Z']]);
+    const threads = buildStaffThreads({ conversations: [conv({ id: 'c1' }), conv({ id: 'c2', tenant_id: 2 })], scope, tenantNames: names, unreadConversationIds: new Set(['c1', 'c2']), myReadAt: new Map(), unreadSince: since });
+    expect(threads.map((t) => [t.id, t.unread, t.unreadSince])).toEqual([['c1', true, '2026-11-16T09:00:00Z'], ['c2', false, null]]);
+  });
+
   it('shows a conversation outside my scope without a chip, and never as unread', () => {
     const [t] = buildStaffThreads({ conversations: [conv({ tenant_id: 2 })], scope, tenantNames: names, unreadConversationIds: new Set(['c1']), myReadAt: new Map() });
     expect(t.badge).toBeUndefined();
