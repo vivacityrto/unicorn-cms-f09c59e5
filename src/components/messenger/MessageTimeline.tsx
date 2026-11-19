@@ -90,17 +90,25 @@ export function MessageTimeline({ messages, isLoading, people, unreadAfter, typi
 
   // Open at the first unread message, otherwise at the latest.
   const opened = useRef(false);
+  // The newest message the open or the follow logic has already dealt with, so opening a thread is not also treated as
+  // "a new message arrived" (which would scroll past the unread divider straight to the bottom).
+  const handledLastId = useRef<string | undefined>(undefined);
   useLayoutEffect(() => {
     if (opened.current || messages.length === 0) return;
     opened.current = true;
+    handledLastId.current = lastId;
     const marker = scroller.current?.querySelector('[data-unread-divider]');
-    if (marker) marker.scrollIntoView({ block: 'start' });
-    else toBottom();
+    if (marker) {
+      atBottom.current = false;
+      marker.scrollIntoView({ block: 'start' });
+    } else toBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   // A new message follows you down if you were already at the bottom; otherwise the pill offers it.
   useEffect(() => {
-    if (!opened.current) return;
+    if (!opened.current || handledLastId.current === lastId) return;
+    handledLastId.current = lastId;
     const mine = messages[messages.length - 1]?.fromMe;
     if (atBottom.current || mine) toBottom(true);
     else setAway(true);
