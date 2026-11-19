@@ -1,4 +1,5 @@
 import { useHelpCenter } from "@/components/help-center";
+import { RefreshButton } from "@/components/layout/RefreshButton";
 
 /**
  * Client footer, pinned to the bottom of the window. Kept to one slim row so it
@@ -21,6 +22,7 @@ export function ClientFooter() {
           <a href="tel:1300729455" className="text-foreground/80 hover:text-foreground transition-colors">
             1300 729 455
           </a>
+          <RefreshButton />
           {canAccessHelpCenter && (
             <button
               type="button"

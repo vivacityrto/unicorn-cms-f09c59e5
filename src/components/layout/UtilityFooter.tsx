@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useHelpCenter } from "@/components/help-center";
 import { cn } from "@/lib/utils";
+import { RefreshButton } from "@/components/layout/RefreshButton";
 
 interface UtilityFooterProps {
   /** Shown only when a client or tenant is selected. Omitted otherwise, so the footer never claims a context it doesn't have. */
@@ -117,8 +118,9 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
           <span aria-hidden className="hidden text-muted-foreground/60 2xl:inline">We Make Compliance Simple!</span>
         </div>
 
-        {/* Right: help, support, build */}
+        {/* Right: refresh, help, support, build */}
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <RefreshButton className="text-muted-foreground" />
           {/* Only offered where the Help Centre can open; otherwise the click would do nothing. */}
           {canAccessHelpCenter && (
             <button type="button" onClick={() => openHelpCenter()} aria-label="Help Centre" className={link}>

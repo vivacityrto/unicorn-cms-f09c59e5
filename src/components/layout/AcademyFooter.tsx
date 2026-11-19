@@ -1,4 +1,5 @@
 import { ExternalLink, HelpCircle, FileText, MessageSquare, GraduationCap } from "lucide-react";
+import { RefreshButton } from "@/components/layout/RefreshButton";
 
 export function AcademyFooter() {
   const footerLinks = [
@@ -48,6 +49,7 @@ export function AcademyFooter() {
 
         {/* Right: Quick Links */}
         <div className="flex items-center gap-4">
+          <RefreshButton className="text-muted-foreground" />
           {footerLinks.map((link) => (
             <a
               key={link.label}
