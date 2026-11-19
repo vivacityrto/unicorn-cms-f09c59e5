@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 /**
  * Count of OPEN conversations (`tenant_conversations.status = 'open'`)
@@ -25,7 +26,7 @@ export function useMyAssignedConversationsCount() {
       qc.invalidateQueries({ queryKey: ["my-assigned-conversations-count", currentUserId] });
 
     const channel = supabase
-      .channel(`my-assigned-conversations:${currentUserId}`)
+      .channel(uniqueChannelName(`my-assigned-conversations:${currentUserId}`))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tenant_conversations" },

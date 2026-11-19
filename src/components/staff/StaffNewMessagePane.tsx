@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ComposePane, type DockThreadApi } from '@/components/messenger';
+import { ChoiceMenu, ComposePane, type DockThreadApi } from '@/components/messenger';
 import { SearchableFilter, type FilterOption } from '@/components/staff/SearchableFilter';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadMessageAttachment } from '@/lib/messageAttachments';
@@ -150,12 +149,7 @@ export function StaffNewMessagePane({ api, initialTenantId = null }: Props) {
         </div>
         <div className="space-y-1.5">
           <label htmlFor="staff-new-category" className="text-xs font-medium text-foreground">Category</label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger id="staff-new-category" className="h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <ChoiceMenu id="staff-new-category" value={category} options={CATEGORIES} onChange={setCategory} />
         </div>
       </div>
     </ComposePane>

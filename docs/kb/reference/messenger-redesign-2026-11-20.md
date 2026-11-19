@@ -66,4 +66,5 @@ The old `components/messaging` list, thread, rail and topic-badge components and
 - Whether a user added to an organisation after a broadcast should be added to earlier broadcasts as a participant (the access change hides broadcasts they were never in).
 - A later primary CSC reassignment does not update participants on existing threads.
 - `fn_tm_on_message_insert` still writes `/client/inbox?...` as the link for everyone. Staff are routed correctly in the app instead (`staffNotificationTarget`: bell, live banner and review dialog open `/communications?thread=<id>`); fixing the stored link needs a migration and is not done.
-- Staff realtime channels with fixed names (`useTeamUnreadCount`, `TeamCommunicationsPage`) could still collide (`ClientMessagesTab`'s was removed in 5b).
+- Realtime channels in the messaging hooks use `uniqueChannelName` (`useTeamUnreadCount` and `useMyAssignedConversationsCount` were the last fixed names). Other fixed-name channels outside messaging (academy, risk, tasks, invites, tenants pages) have the same collision risk and are not changed.
+- The New message panes' Category uses `ChoiceMenu` (a non-modal menu) instead of a Radix Select, because a Select locks page scroll and shifts the page behind it.

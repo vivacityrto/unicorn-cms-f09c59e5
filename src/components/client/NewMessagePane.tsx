@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ComposePane, type DockThreadApi } from '@/components/messenger';
+import { ChoiceMenu, ComposePane, type DockThreadApi } from '@/components/messenger';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { useClientCommunications } from '@/hooks/useClientCommunications';
 import { attachmentProblem, attachToFirstMessage } from '@/lib/messageAttachmentsFirst';
@@ -48,12 +47,7 @@ export function NewMessagePane({ api }: { api: Pick<DockThreadApi, 'onBack' | 's
       </div>
       <div className="space-y-1.5">
         <label htmlFor="new-message-category" className="text-xs font-medium text-foreground">Category</label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger id="new-message-category" className="h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <ChoiceMenu id="new-message-category" value={category} options={CATEGORIES} onChange={setCategory} />
       </div>
       <p className="text-xs text-muted-foreground">Your consultant and the team will reply here.</p>
     </ComposePane>
