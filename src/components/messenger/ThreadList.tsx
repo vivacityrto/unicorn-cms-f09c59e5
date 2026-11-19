@@ -126,7 +126,7 @@ export function ThreadList({ threads, selectedId, onSelect, isLoading, empty, ac
         ) : threads.length === 0 ? (
           (empty ?? <p className="px-2 py-6 text-center text-xs text-muted-foreground">No conversations yet.</p>)
         ) : visible.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-muted-foreground">Nothing matches.</p>
+          <p className="px-2 py-6 text-center text-xs text-muted-foreground">No conversations match</p>
         ) : (
           visible.map((t) => (
             <div role="listitem" key={t.id}>

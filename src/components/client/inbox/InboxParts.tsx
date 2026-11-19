@@ -1,25 +1,17 @@
 import type { ReactNode } from 'react';
 import { format } from 'date-fns';
-import { Bell, Briefcase, CalendarDays, CheckSquare, ChevronLeft, ExternalLink, Inbox, Megaphone, MessageSquare, Search, ShieldAlert, Target, UserRound, Video } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bell, Briefcase, CalendarDays, CheckSquare, ExternalLink, Inbox, Megaphone, MessageSquare, Search, ShieldAlert, Target, UserRound, Video } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageAttachments } from '@/components/messaging/MessageAttachments';
 import { cn } from '@/lib/utils';
-import type { ConversationMessage, ConversationThread } from '@/hooks/useClientCommunications';
 import type { ClientNotification } from '@/hooks/useClientNotifications';
 import type { UnifiedInboxItem } from '@/hooks/useClientInbox';
 import {
   NOTIFICATION_LABEL,
-  THREAD_LABEL,
   ago,
-  dayDivider,
   groupByDay,
-  initialsOf,
   notificationKind,
-  threadKind,
   type InboxStats,
   type NotificationKind,
   type ThreadKind,
@@ -97,91 +89,6 @@ export function SearchBox({ value, onChange, placeholder }: { value: string; onC
 
 function Tile({ icon: Icon, className }: { icon: typeof Bell; className: string }) {
   return <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', className)}><Icon className="h-4 w-4" aria-hidden /></span>;
-}
-
-export function ConversationRow({ conv, selected, onSelect }: { conv: ConversationThread; selected: boolean; onSelect: (c: ConversationThread) => void }) {
-  const kind = threadKind(conv.type);
-  const style = THREAD_STYLE[kind];
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(conv)}
-      aria-current={selected ? 'true' : undefined}
-      className={cn(
-        'flex w-full items-start gap-3 border-l-2 px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-        selected ? 'border-l-primary bg-muted/70' : conv.isUnread ? 'border-l-primary/60 bg-primary/5' : 'border-l-transparent',
-      )}
-    >
-      <Tile icon={style.icon} className={style.tile} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className={cn('line-clamp-2 text-sm', conv.isUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground/80')}>{conv.subject || conv.topic || 'General'}</p>
-          <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{ago(conv.last_message_at)}</span>
-        </div>
-        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{conv.last_message_preview || 'No messages yet'}</p>
-        <div className="mt-1.5 flex items-center gap-2">
-          <Badge variant="outline" className={cn('px-1.5 py-0 text-[10px]', style.chip)}>{THREAD_LABEL[kind]}</Badge>
-          {conv.isUnread && <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />Unread</span>}
-        </div>
-      </div>
-    </button>
-  );
-}
-
-export function ThreadHeader({ conv, onBack }: { conv: ConversationThread; onBack: () => void }) {
-  const kind = threadKind(conv.type);
-  const style = THREAD_STYLE[kind];
-  return (
-    <div className="flex items-center gap-3 border-b px-4 py-3">
-      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 xl:hidden" onClick={onBack} aria-label="Back to conversations"><ChevronLeft className="h-5 w-5" /></Button>
-      <Tile icon={style.icon} className={style.tile} />
-      <div className="min-w-0 flex-1">
-        <h2 className="line-clamp-2 font-semibold text-foreground">{conv.subject || conv.topic || 'General'}</h2>
-        <p className="text-xs text-muted-foreground">{THREAD_LABEL[kind]}{conv.created_at ? ` · started ${format(new Date(conv.created_at), 'd MMM yyyy')}` : ''}</p>
-      </div>
-    </div>
-  );
-}
-
-/** Messages as chat bubbles with the sender's avatar, grouped under a divider for each day. */
-export function MessageBubbles({ messages, currentUserId }: { messages: ConversationMessage[]; currentUserId: string | null }) {
-  let lastDay = '';
-  return (
-    <div className="space-y-3 p-4">
-      {messages.map((msg) => {
-        const own = msg.sender_id === currentUserId;
-        const day = dayDivider(new Date(msg.created_at));
-        const showDay = day !== lastDay;
-        lastDay = day;
-        return (
-          <div key={msg.id}>
-            {showDay && (
-              <div className="my-2 flex items-center gap-3 text-[11px] font-medium text-muted-foreground" role="separator" aria-label={day}>
-                <span className="h-px flex-1 bg-border" /><span>{day}</span><span className="h-px flex-1 bg-border" />
-              </div>
-            )}
-            <div className={cn('flex items-end gap-2', own ? 'flex-row-reverse' : 'flex-row')}>
-              <Avatar className="h-7 w-7 shrink-0">
-                {msg.sender_avatar_url ? <AvatarImage src={msg.sender_avatar_url} alt="" /> : null}
-                <AvatarFallback className="bg-primary/15 text-[10px] text-primary">{initialsOf(own ? 'You' : msg.sender_name)}</AvatarFallback>
-              </Avatar>
-              <div className={cn('max-w-[80%] rounded-2xl px-3.5 py-2', own ? 'rounded-br-sm bg-primary/15 text-foreground' : 'rounded-bl-sm bg-muted text-foreground')}>
-                {!own && (
-                  <p className="mb-0.5 flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-muted-foreground">
-                    {msg.sender_name}
-                    {msg.sender_is_staff && <span className="rounded-full bg-primary/15 px-1.5 py-0 text-[10px] font-semibold text-[var(--badge-default-fg)]">Vivacity</span>}
-                  </p>
-                )}
-                <p className="whitespace-pre-wrap break-words text-sm">{msg.body}</p>
-                {msg.attachments && msg.attachments.length > 0 && <MessageAttachments attachments={msg.attachments} />}
-                <p className="mt-1 text-right text-[11px] text-muted-foreground">{format(new Date(msg.created_at), 'h:mm a')}</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 export function EmptyState({ icon: Icon, title, hint }: { icon: typeof Bell; title: string; hint?: string }) {

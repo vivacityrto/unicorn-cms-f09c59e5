@@ -84,7 +84,11 @@ export function MessageTimeline({ messages, isLoading, people, unreadAfter, typi
 
   const toBottom = (smooth = false) => {
     const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    if (el) {
+      // Older browsers and test environments have no scrollTo on elements.
+      if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+      else el.scrollTop = el.scrollHeight;
+    }
     atBottom.current = true;
   };
 
