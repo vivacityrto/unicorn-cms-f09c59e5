@@ -13,7 +13,15 @@ vi.mock('@/integrations/supabase/client', () => {
     b.select = () => b;
     b.order = () => b;
     b.neq = (col: string, v: unknown) => ((rows = rows.filter((r) => r[col] !== v)), b);
-    b.eq = (col: string, v: unknown) => ((rows = rows.filter((r) => r[col] === v)), b);
+    b.eq = (col: string, v: unknown) => {
+      if (col.includes('.')) {
+        // A filter on an embedded relation: keep rows with a related row that matches.
+        const [rel, field] = col.split('.');
+        rows = rows.filter((r) => ((r[rel] as Row[] | undefined) ?? []).some((x) => x[field] === v));
+      } else rows = rows.filter((r) => r[col] === v);
+      return b;
+    };
+    b.is = (col: string, v: unknown) => ((rows = rows.filter((r) => (r[col] ?? null) === v)), b);
     b.in = (col: string, vs: unknown[]) => ((rows = rows.filter((r) => vs.includes(r[col]))), b);
     b.limit = (n: number) => {
       db.limits.push(n);
@@ -51,21 +59,23 @@ beforeEach(() => {
       { source_id: 'new1', created_at: '2026-11-16T00:00:00Z', user_id: 'me', type: 'message', is_read: false },
     ],
     conversation_participants: [],
+    tenant_csc_assignments: [],
   };
 });
 
 describe('the staff messenger list', () => {
-  it('opens a conversation that is not in the list (older, or another client\'s) when it is asked for by id', async () => {
+  it("opens a conversation that is not in the list (older, or another client's) when it is asked for by id, without putting it in the list", async () => {
     const { result } = renderHook(() => useStaffMessenger(false, true, { extraThreadId: 'old1' }), { wrapper });
-    await waitFor(() => expect(result.current.threads.map((t) => t.id)).toContain('old1'));
-    // It is added to the list, not shown as unread, and the ordinary list is unchanged.
-    expect(result.current.threads.find((t) => t.id === 'old1')?.unread).toBe(false);
-    expect(result.current.threads.map((t) => t.id)).toContain('new1');
+    await waitFor(() => expect(result.current.opened?.id).toBe('old1'));
+    expect(result.current.opened?.unread).toBe(false);
+    // The list is unchanged: only what the filters ask for.
+    expect(result.current.threads.map((t) => t.id)).toEqual(['new1']);
   });
 
-  it('does not fetch it twice when it is already in the list', async () => {
+  it('does not fetch it separately when it is already in the list', async () => {
     const { result } = renderHook(() => useStaffMessenger(false, true, { extraThreadId: 'new1' }), { wrapper });
     await waitFor(() => expect(result.current.threads.map((t) => t.id)).toEqual(['new1']));
+    expect(result.current.opened).toBeNull();
   });
 
   it('measures waiting from the oldest unread message notification of each conversation', async () => {
@@ -94,5 +104,58 @@ describe('the staff messenger list', () => {
     const { result } = renderHook(() => useStaffMessenger(false, true), { wrapper });
     await waitFor(() => expect(result.current.threads).toHaveLength(300));
     expect(result.current.limited).toBe(true);
+  });
+});
+
+describe("a team member's conversations", () => {
+  const withParticipants = (c: Row, ...ids: string[]): Row => ({ ...c, conversation_participants: ids.map((user_id) => ({ user_id })) });
+
+  beforeEach(() => {
+    db.tables.tenants = [{ id: 1, name: 'Acme', status: 'active' }, { id: 2, name: 'Zed', status: 'active' }, { id: 3, name: 'Beverly RTO', status: 'active' }];
+    db.tables.tenant_conversations = [
+      withParticipants(conv('mine', 1, '2026-11-19T01:00:00Z'), 'me'),
+      withParticipants(conv('bev-in', 2, '2026-11-18T01:00:00Z'), 'bev', 'me'),
+      withParticipants(conv('bev-client', 3, '2026-11-17T01:00:00Z'), 'someone-else'),
+      withParticipants(conv('neither', 2, '2026-11-16T01:00:00Z'), 'someone-else'),
+    ];
+    db.tables.tenant_csc_assignments = [
+      { tenant_id: 3, csc_user_id: 'bev', ended_at: null, superseded_at: null },
+      { tenant_id: 1, csc_user_id: 'me', ended_at: null, superseded_at: null },
+      { tenant_id: 2, csc_user_id: 'bev', ended_at: '2026-01-01T00:00:00Z', superseded_at: null },
+    ];
+  });
+
+  it("is exactly their clients plus the conversations they are in, and nothing of anyone else's", async () => {
+    const { result } = renderHook(() => useStaffMessenger(false, true, { memberId: 'bev' }), { wrapper });
+    await waitFor(() => expect(result.current.threads.length).toBeGreaterThan(0));
+    expect(result.current.threads.map((t) => t.id).sort()).toEqual(['bev-client', 'bev-in']);
+  });
+
+  it('is not limited to my clients: it is about that person, whatever My clients says', async () => {
+    const mine = renderHook(() => useStaffMessenger(false, true, { memberId: 'bev' }), { wrapper });
+    const all = renderHook(() => useStaffMessenger(true, true, { memberId: 'bev' }), { wrapper });
+    await waitFor(() => expect(mine.result.current.threads.length).toBe(2));
+    await waitFor(() => expect(all.result.current.threads.length).toBe(2));
+  });
+
+  it("does not count a client they used to look after (their assignment ended)", async () => {
+    const { result } = renderHook(() => useStaffMessenger(true, true, { memberId: 'bev' }), { wrapper });
+    await waitFor(() => expect(result.current.threads.length).toBe(2));
+    expect(result.current.threads.map((t) => t.id)).not.toContain('neither');
+  });
+
+  it('shows nothing, rather than everything, while their conversations load', () => {
+    const { result } = renderHook(() => useStaffMessenger(true, true, { memberId: 'bev' }), { wrapper });
+    expect(result.current.threads).toEqual([]);
+  });
+
+  it('can also be narrowed to one client', async () => {
+    const { result } = renderHook(() => useStaffMessenger(true, true, { memberId: 'bev', tenantId: 3 }), { wrapper });
+    await waitFor(() => expect(result.current.threads.map((t) => t.id)).toEqual(['bev-client']));
+  });
+
+  it('leaves the ordinary list alone when no one is chosen', async () => {
+    const { result } = renderHook(() => useStaffMessenger(true, true), { wrapper });
+    await waitFor(() => expect(result.current.threads.map((t) => t.id).sort()).toEqual(['bev-client', 'bev-in', 'mine', 'neither']));
   });
 });

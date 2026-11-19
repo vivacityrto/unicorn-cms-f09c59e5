@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Building2, CalendarClock, Clock, Megaphone, Plus, UserRound, Users, Inbox, HandHelping } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
@@ -16,7 +15,7 @@ import { BulkMessageDialog } from '@/components/communications/BulkMessageDialog
 import { BulkMessageHistory } from '@/components/communications/BulkMessageHistory';
 import { NewTeamMessageDialog } from '@/components/communications/NewTeamMessageDialog';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableFilter } from '@/components/staff/SearchableFilter';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ago } from '@/components/client/inbox/inboxFormat';
 import { cn } from '@/lib/utils';
@@ -49,36 +48,25 @@ export default function TeamCommunicationsPage() {
   const selectedId = searchParams.get('thread');
   // A conversation opened by link, or just created, is fetched on its own, so it opens even when it is older than the list
   // or belongs to a client that is not mine. Choosing a client lists all of that client's conversations.
-  const { threads, isLoading, scope, tenants, hasScope, limited } = useStaffMessenger(allClients, true, {
+  const { threads, opened, isLoading, scope, tenants, hasScope, limited } = useStaffMessenger(allClients, true, {
     tenantId: filterTenant === 'all' ? null : Number(filterTenant),
     extraThreadId: selectedId,
+    memberId: isSuperAdmin && filterStaff !== 'all' ? filterStaff : null,
   });
   const { data: bulk } = useBulkMessageSummary(canSendBulk);
   const { data: staffUsers = [] } = useVivacityTeamUsers();
 
-  const selectedThread = threads.find((t) => t.id === selectedId) ?? null;
-
-  // Super Admins can look at one colleague's conversations (the ones that person is in).
-  const { data: staffConvIds } = useQuery({
-    queryKey: ['team-comms-staff-conv-ids', filterStaff],
-    enabled: isSuperAdmin && filterStaff !== 'all',
-    queryFn: async (): Promise<Set<string>> => {
-      const { data, error } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', filterStaff);
-      if (error) throw error;
-      return new Set<string>((data ?? []).map((p) => p.conversation_id));
-    },
-  });
+  const selectedThread = threads.find((t) => t.id === selectedId) ?? (opened && opened.id === selectedId ? opened : null);
 
   const insights = useMemo(() => communicationsInsights(threads), [threads]);
 
   const visible = useMemo(() => {
     let list = applyInsightView(threads, view);
     if (filterTenant !== 'all') list = list.filter((t) => String(t.tenantId) === filterTenant);
-    if (isSuperAdmin && filterStaff !== 'all' && staffConvIds) list = list.filter((t) => staffConvIds.has(t.id));
-    // The conversation you are reading stays in the list even if a filter would hide it.
-    if (selectedThread && !list.some((t) => t.id === selectedThread.id)) list = [selectedThread, ...list];
+    // The team member filter is applied by the hook (on the server), so the list is exactly the filter's answer. The
+    // conversation you are reading stays open in the right pane (see openThread below) but is not forced into this list.
     return list;
-  }, [threads, view, filterTenant, filterStaff, staffConvIds, isSuperAdmin, selectedThread]);
+  }, [threads, view, filterTenant]);
 
   const tenantId = selectedThread?.tenantId ?? null;
   const pane = useStaffConversationPane(selectedThread?.id ?? null, { tenantId, mine: tenantId != null && scope.has(tenantId) });
@@ -90,7 +78,18 @@ export default function TeamCommunicationsPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const memberChosen = isSuperAdmin && filterStaff !== 'all';
+  const memberName = memberChosen ? (() => { const u = staffUsers.find((x) => x.user_uuid === filterStaff); return u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email : 'this person'; })() : null;
+
   const toggleView = (next: InsightView) => setView((v) => (v === next ? 'all' : next));
+
+  // Going back to My clients closes a conversation that is not one of mine, rather than leaving it in a list it does not belong
+  // to (which also hid the "no clients assigned" message for someone who has none).
+  const toggleScope = () => {
+    const next = !allClients;
+    setAllClients(next);
+    if (!next && selectedThread && !(selectedThread.tenantId != null && scope.has(selectedThread.tenantId))) select(null);
+  };
 
   const waited = waitingFor(insights.needsYou.oldestAt);
   const waitedHours = insights.needsYou.oldestAt ? (Date.now() - new Date(insights.needsYou.oldestAt).getTime()) / 3_600_000 : 0;
@@ -151,37 +150,32 @@ export default function TeamCommunicationsPage() {
       </section>
 
       <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-        <Select value={filterTenant} onValueChange={setFilterTenant}>
-          <SelectTrigger className="h-8 w-[15rem] text-[13px]" aria-label="Client">
-            <SelectValue placeholder="All clients" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Every client</SelectItem>
-            {tenants.map((t) => (
-              <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableFilter
+          label="Client"
+          allLabel="Every client"
+          value={filterTenant}
+          onChange={setFilterTenant}
+          options={tenants.map((t) => ({ value: String(t.id), label: t.name }))}
+        />
         {isSuperAdmin && (
-          <Select value={filterStaff} onValueChange={setFilterStaff}>
-            <SelectTrigger className="h-8 w-[13rem] text-[13px]" aria-label="Team member">
-              <SelectValue placeholder="Any team member" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any team member</SelectItem>
-              {staffUsers.map((u) => (
-                <SelectItem key={u.user_uuid} value={u.user_uuid}>{`${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableFilter
+            label="Team member"
+            allLabel="Any team member"
+            value={filterStaff}
+            onChange={setFilterStaff}
+            options={staffUsers.map((u) => ({ value: u.user_uuid, label: `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email }))}
+          />
         )}
         <button
           type="button"
-          onClick={() => setAllClients((v) => !v)}
+          onClick={toggleScope}
+          disabled={memberChosen}
+          title={memberChosen ? 'Clear the team member filter to switch between My clients and All clients' : undefined}
           aria-pressed={allClients}
           className={cn(
             'inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             allClients ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground',
+            memberChosen && 'cursor-not-allowed opacity-50',
           )}
         >
           {allClients ? <Users className="h-4 w-4" aria-hidden /> : <UserRound className="h-4 w-4" aria-hidden />}
@@ -189,6 +183,7 @@ export default function TeamCommunicationsPage() {
         </button>
         <p className="ml-auto text-xs text-muted-foreground" aria-live="polite">
           {visible.length} {visible.length === 1 ? 'conversation' : 'conversations'}
+          {memberName ? ` of ${memberName}'s clients and ones they are in` : ''}
           {limited && filterTenant === 'all' ? ' (the newest; pick a client to see all of theirs)' : ''}
         </p>
       </div>
@@ -198,6 +193,7 @@ export default function TeamCommunicationsPage() {
         threads={visible}
         threadsLoading={isLoading}
         selectedId={selectedThread?.id ?? null}
+        openThread={selectedThread}
         onSelect={select}
         emptyThreads={
           <p className="px-3 py-8 text-center text-xs text-muted-foreground">
