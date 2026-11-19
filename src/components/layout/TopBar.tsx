@@ -275,6 +275,15 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   const helpCenter = useHelpCenter();
   const condensed = useCondensedHeader();
 
+  // Tell sticky bars further down the page how tall this header is right now, so they pin just under it instead of behind it.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--topbar-h", condensed ? "2.75rem" : "4rem");
+    return () => {
+      root.style.removeProperty("--topbar-h");
+    };
+  }, [condensed]);
+
   const userRole = profile?.unicorn_role || "User";
   const isClientRole = userRole === "Admin" || userRole === "User";
 
