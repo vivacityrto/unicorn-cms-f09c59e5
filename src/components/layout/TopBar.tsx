@@ -12,6 +12,7 @@ import {
   NotebookPen,
   Moon,
   Sun,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { SupportTicketsPanel } from "@/components/support-tickets/SupportTicketsPanel";
 import { DailyNotesPanel } from "@/components/task-notes/DailyNotesPanel";
+import { InstallAppDialog } from "@/components/layout/InstallAppDialog";
 
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
@@ -265,6 +267,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [installOpen, setInstallOpen] = useState(false);
   const helpCenter = useHelpCenter();
 
   const userRole = profile?.unicorn_role || "User";
@@ -466,6 +469,13 @@ export function TopBar({ showSearch = false }: TopBarProps) {
               
               <DropdownMenuSeparator />
               
+              <DropdownMenuItem className="cursor-pointer" onSelect={() => setInstallOpen(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                <span>Install Unicorn app</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                 onClick={signOut}
@@ -477,6 +487,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
           </DropdownMenu>
         </TooltipProvider>
       </div>
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} />
     </header>
   );
 }

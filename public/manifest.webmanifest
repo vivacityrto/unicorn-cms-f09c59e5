@@ -1,0 +1,13 @@
+{
+  "name": "Unicorn",
+  "short_name": "Unicorn",
+  "description": "Vivacity's compliance management system for Australian RTOs.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7130A0",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "500x500", "type": "image/png", "purpose": "any" }
+  ]
+}
