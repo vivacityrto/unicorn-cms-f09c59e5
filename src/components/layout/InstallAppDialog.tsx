@@ -16,30 +16,41 @@ function detectPlatform(): Platform {
   return 'other';
 }
 
-/** Steps to start Unicorn when the person signs in. Menu names can differ slightly between versions. */
+/**
+ * Steps to start Unicorn when the person signs in. The browser's own setting comes first:
+ * Edge and Chrome control auto-start, and a website cannot switch it on for them.
+ */
 function StartupSteps({ platform }: { platform: Platform }) {
+  const strong = 'font-medium text-foreground';
   if (platform === 'windows') {
     return (
-      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-        <li>Open the Start menu, find <span className="font-medium text-foreground">Unicorn</span>, right-click it, then choose <span className="font-medium text-foreground">More → Open file location</span>.</li>
-        <li>Copy the Unicorn shortcut in that folder.</li>
-        <li>Press <kbd className="rounded border px-1">Win</kbd> + <kbd className="rounded border px-1">R</kbd>, type <span className="font-mono text-foreground">shell:startup</span>, and press Enter.</li>
-        <li>Paste the shortcut into that folder. Unicorn will open each time you sign in to Windows.</li>
-      </ol>
+      <ul className="space-y-3 text-sm text-muted-foreground">
+        <li>
+          <span className={strong}>In Edge:</span> when you install Unicorn, tick <span className={strong}>Auto-start on device login</span>.
+          To change it later, open <span className="font-mono text-foreground">edge://apps</span>, select the more options button beside Unicorn, and choose Auto-start on device login.
+        </li>
+        <li>
+          <span className={strong}>In Chrome:</span> open <span className="font-mono text-foreground">chrome://apps</span>, right-click Unicorn, and choose <span className={strong}>Launch at startup</span>.
+          Deselect it to turn it off.
+        </li>
+      </ul>
     );
   }
   if (platform === 'mac') {
     return (
-      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-        <li>Open the Unicorn app from your Applications folder or Launchpad.</li>
-        <li>Open <span className="font-medium text-foreground">System Settings → General → Login Items</span>.</li>
-        <li>Under "Open at Login", click <span className="font-medium text-foreground">+</span>, choose Unicorn, then click Add.</li>
-      </ol>
+      <ul className="space-y-3 text-sm text-muted-foreground">
+        <li>
+          <span className={strong}>In Chrome:</span> open <span className="font-mono text-foreground">chrome://apps</span>, right-click Unicorn, and choose <span className={strong}>Launch at startup</span>.
+        </li>
+        <li>
+          <span className={strong}>Or in macOS:</span> open <span className={strong}>System Settings → General → Login Items</span>, then under "Open at Login" click <span className={strong}>+</span>, choose Unicorn, and click Add.
+        </li>
+      </ul>
     );
   }
   return (
     <p className="text-sm text-muted-foreground">
-      Set Unicorn to open when you sign in using your computer's startup or login settings.
+      In Chrome or Edge, open the app list (chrome://apps or edge://apps), right-click Unicorn, and turn on the startup option.
     </p>
   );
 }
@@ -76,10 +87,15 @@ export function InstallAppDialog({ open, onOpenChange }: { open: boolean; onOpen
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">1. Install the app</p>
               {canInstall ? (
-                <Button onClick={install} disabled={installing} className="min-h-11 gap-2 sm:min-h-9">
-                  <Download aria-hidden className="h-4 w-4" />
-                  Install Unicorn
-                </Button>
+                <>
+                  <Button onClick={install} disabled={installing} className="min-h-11 gap-2 sm:min-h-9">
+                    <Download aria-hidden className="h-4 w-4" />
+                    Install Unicorn
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    In Edge, the install dialog includes an Auto-start on device login option. Tick it to open Unicorn when you sign in.
+                  </p>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Use your browser's menu (the three dots, or the install icon in the address bar) and choose
