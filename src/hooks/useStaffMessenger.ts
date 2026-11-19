@@ -61,13 +61,16 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
             .from('tenant_conversations')
             .select(`${CONVERSATION_COLUMNS}, conversation_participants!inner(user_id)`)
             .eq('conversation_participants.user_id', memberId)
+            .match(onlyTenant != null ? { tenant_id: onlyTenant } : {})
             .order('last_message_at', { ascending: false, nullsFirst: false })
             .limit(CONVERSATION_LIMIT),
           supabase.from('tenant_csc_assignments').select('tenant_id').eq('csc_user_id', memberId).is('ended_at', null).is('superseded_at', null),
         ]);
         if (partRes.error) throw partRes.error;
         if (cscRes.error) throw cscRes.error;
-        const theirTenants = Array.from(new Set((cscRes.data ?? []).map((a) => a.tenant_id)));
+        // When one client is chosen as well, only that client counts: asked of the database before the cap, so a client's older
+        // conversations are not cut off by the newest 300 of everything else.
+        const theirTenants = Array.from(new Set((cscRes.data ?? []).map((a) => a.tenant_id))).filter((id) => onlyTenant == null || id === onlyTenant);
         const ofTheirClients = theirTenants.length
           ? await supabase
               .from('tenant_conversations')
@@ -129,12 +132,13 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
 
   // The client picker lists every client in this view, not only the ones in the newest conversations.
   const tenantsQuery = useQuery({
-    queryKey: ['staff-messenger', 'tenants', me, allClients, scopeKey],
+    queryKey: ['staff-messenger', 'tenants', me, allClients, scopeKey, memberId],
     enabled: enabled && !!me && scopeQuery.isSuccess,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<Array<{ id: number; name: string }>> => {
       let q = supabase.from('tenants').select('id, name').eq('status', 'active').neq('id', 6372).order('name');
-      if (!allClients) {
+      // Looking at a team member's work is not limited to my clients, so neither is the picker.
+      if (!allClients && !memberId) {
         const ids = (scopeRows ?? []).map((r) => r.tenant_id);
         if (ids.length === 0) return [];
         q = q.in('id', ids);
@@ -150,7 +154,9 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
   const extraQuery = useQuery({
     queryKey: ['staff-messenger', 'thread', me, extraThreadId],
     enabled: enabled && !!me && !!extraThreadId && query.isSuccess && !inList && scopeQuery.isSuccess,
-    staleTime: 30_000,
+    staleTime: 10_000,
+    // Kept current while it is open: new messages and replies change its preview, its time and whether it is unread.
+    refetchInterval: REFRESH_MS,
     queryFn: async (): Promise<MessengerThread | null> => {
       const { data: c, error } = await supabase
         .from('tenant_conversations')
@@ -160,13 +166,23 @@ export function useStaffMessenger(allClients: boolean, enabled: boolean, opts: {
       if (error) throw error;
       if (!c) return null;
       const row = c as StaffConversationRow;
-      const [tenantRes, partRes] = await Promise.all([
+      const [tenantRes, partRes, notesRes] = await Promise.all([
         supabase.from('tenants').select('id, name').eq('id', row.tenant_id).maybeSingle(),
         supabase.from('conversation_participants').select('conversation_id, last_read_at').eq('user_id', me!).eq('conversation_id', row.id),
+        // The message notifications still unread for this conversation, so a conversation of mine outside the newest list
+        // keeps its unread boundary and its "oldest waiting" time when it is opened by link.
+        supabase.from('user_notifications').select('source_id, created_at').eq('user_id', me!).eq('type', 'message').eq('is_read', false).eq('source_id', row.id),
       ]);
+      const unreadIds = new Set((notesRes.data ?? []).map((n) => n.source_id).filter((id): id is string => !!id));
+      const unreadSince = new Map<string, string>();
+      for (const n of notesRes.data ?? []) {
+        if (!n.source_id || !n.created_at) continue;
+        const seen = unreadSince.get(n.source_id);
+        if (!seen || new Date(n.created_at) < new Date(seen)) unreadSince.set(n.source_id, n.created_at);
+      }
       const names = new Map<number, string>([[row.tenant_id, tenantRes.data?.name ?? `Client ${row.tenant_id}`]]);
       const read = new Map((partRes.data ?? []).map((p) => [p.conversation_id, p.last_read_at]));
-      return buildStaffThreads({ conversations: [row], scope, tenantNames: names, unreadConversationIds: new Set(), myReadAt: read })[0] ?? null;
+      return buildStaffThreads({ conversations: [row], scope, tenantNames: names, unreadConversationIds: unreadIds, myReadAt: read, unreadSince })[0] ?? null;
     },
   });
 

@@ -21,6 +21,7 @@ vi.mock('@/integrations/supabase/client', () => {
       } else rows = rows.filter((r) => r[col] === v);
       return b;
     };
+    b.match = (o: Record<string, unknown>) => ((rows = rows.filter((r) => Object.entries(o).every(([k, v]) => r[k] === v))), b);
     b.is = (col: string, v: unknown) => ((rows = rows.filter((r) => (r[col] ?? null) === v)), b);
     b.in = (col: string, vs: unknown[]) => ((rows = rows.filter((r) => vs.includes(r[col]))), b);
     b.limit = (n: number) => {
@@ -157,5 +158,33 @@ describe("a team member's conversations", () => {
   it('leaves the ordinary list alone when no one is chosen', async () => {
     const { result } = renderHook(() => useStaffMessenger(true, true), { wrapper });
     await waitFor(() => expect(result.current.threads.map((t) => t.id).sort()).toEqual(['bev-client', 'bev-in', 'mine', 'neither']));
+  });
+});
+
+describe('review fixes', () => {
+  it('keeps the unread boundary and the oldest-waiting time of one of my conversations opened by link outside the list', async () => {
+    // new1 is mine and unread; the list is narrowed to another client, so new1 is only reachable by its id.
+    const { result } = renderHook(() => useStaffMessenger(false, true, { tenantId: 2, extraThreadId: 'new1' }), { wrapper });
+    await waitFor(() => expect(result.current.opened?.id).toBe('new1'));
+    expect(result.current.opened).toMatchObject({ unread: true, unreadSince: '2026-11-16T00:00:00Z' });
+  });
+
+  it('lists every client in the picker once a team member is chosen, not only mine', async () => {
+    db.tables.tenants = [{ id: 1, name: 'Acme', status: 'active' }, { id: 2, name: 'Zed', status: 'active' }, { id: 3, name: 'Beverly RTO', status: 'active' }];
+    const { result } = renderHook(() => useStaffMessenger(false, true, { memberId: 'bev' }), { wrapper });
+    await waitFor(() => expect(result.current.tenants.map((t) => t.name)).toEqual(['Acme', 'Zed', 'Beverly RTO']));
+  });
+
+  it("applies the chosen client before the cap, so a team member's older conversations for that client are not cut off", async () => {
+    const withParticipants = (c: Row, ...ids: string[]): Row => ({ ...c, conversation_participants: ids.map((user_id) => ({ user_id })) });
+    db.tables.tenants = [{ id: 2, name: 'Zed', status: 'active' }, { id: 3, name: 'Beverly RTO', status: 'active' }];
+    db.tables.tenant_csc_assignments = [];
+    // 300 newer conversations of another client come first; the one we want is older.
+    db.tables.tenant_conversations = [
+      ...Array.from({ length: 300 }, (_, i) => withParticipants(conv(`n${i}`, 2, '2026-11-19T01:00:00Z'), 'bev')),
+      withParticipants(conv('old-of-client-3', 3, '2026-01-01T01:00:00Z'), 'bev'),
+    ];
+    const { result } = renderHook(() => useStaffMessenger(true, true, { memberId: 'bev', tenantId: 3 }), { wrapper });
+    await waitFor(() => expect(result.current.threads.map((t) => t.id)).toEqual(['old-of-client-3']));
   });
 });
