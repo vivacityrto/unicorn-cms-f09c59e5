@@ -2,7 +2,7 @@
 
 **Trigger:** two review findings on PR 1566 (the learner analytics function). Learning time included the recording offset before each lesson cut from a longer recording, and a learner who completed lessons without video time could be labelled "Not started".
 **Scope:** `create or replace` of `public.get_tenant_academy_learner_analytics(bigint)` (migration `20261119170000_fix_learner_analytics_watch_time_and_started.sql`). Same signature, so the function is replaced in place and no overload is created. Read-only; no table, policy, trigger or data change.
-**Status:** NOT yet applied to production. Dry-run done (below). Applying needs Carl's explicit go-ahead.
+**Status:** Applied to production on 19 November 2026 on Carl's explicit go-ahead ("approve on both"). Postflight below.
 
 ## What was found (production, read-only)
 
@@ -17,6 +17,10 @@
 ## Dry run (production, read-only, rolled back, no names printed)
 
 Reduced copy of the function (only the changed lesson logic and the totals) in the session's temp schema for tenant 7512: learning time 11,851 minutes before, 10,314 after; chosen 103, learners 14, lessons completed 478, active in 30 days 4 unchanged; 4 learners with no lesson activity at all remain "not started"; the largest single learner total is 4,995 minutes.
+
+## Production
+
+Preflight: exactly one overload, still the first version (no segment logic), migration not recorded. Applied with the exact migration SQL. Postflight: still exactly one overload `(p_tenant_id bigint)`, `SECURITY DEFINER`; the definition now contains the segment offset logic, the completed-lesson rule and the `self_enrol` allowlist; execute granted to `authenticated` (plus the default `postgres` and `service_role`), none to `anon` or `public`; a call with no signed-in access to tenant 7512 is refused with "Not authorized for this tenant". No table or data changed.
 
 ## Known limits
 
