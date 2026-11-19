@@ -64,3 +64,7 @@ Four panels: where everyone stands (status split with the plain-words rules, tak
 Pace is derived, not stored: time elapsed assumes a 12-month cycle because the row has no start date, so it is approximate and is hidden in the first month and when there is no target. Behind pace means 15 or more points behind the calendar. Team progress is hidden for fewer than three people. A visible notice appears if the 2,000-row limit is hit.
 
 Findings from the council, not changed here: the view definition is not in the repo as a migration (read from the live database), the route has no guard beyond the in-page `canManagePortalUsers` check, the drawer opens the newest cycle rather than the row's cycle, and export covers the whole organisation whatever is filtered. Not checked on live data.
+
+## Academy: one person's activity (in review)
+
+Each row in "Your team" on the client Academy page is now a button that opens a mini page (a side panel) for that person: key numbers (courses finished, lessons done of available, learning time, certificates), a plain "at a glance" summary, their own weekly chart, and every course they chose with lesson progress, state (finished, in progress, untouched 30+ days, not started), dates and certificate. It reads from the new `get_tenant_academy_learner_detail` function (audit entry `2026-11-19-academy-learner-detail-function`), which is written but **not yet applied to production**, so until it is the panel shows a clear error message. Courses added another way are left out, as everywhere on this page.
