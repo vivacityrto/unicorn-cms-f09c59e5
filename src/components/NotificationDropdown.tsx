@@ -80,13 +80,14 @@ export const NotificationDropdown = () => {
       <Popover onOpenChange={(open) => { if (!open) setShowPrefs(false); }}>
         <PopoverTrigger asChild>
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="relative h-10 w-10 rounded-full shrink-0 transition-transform duration-200 hover:scale-105"
+            className="relative h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
           >
-            <Bell className="w-4 h-4 text-foreground" />
+            <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground text-xs font-bold">
+              <span className="absolute -top-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground text-[10px] font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
