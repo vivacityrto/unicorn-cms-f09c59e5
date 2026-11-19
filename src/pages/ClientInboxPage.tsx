@@ -28,6 +28,7 @@ import {
 import { useNotificationPrefs, type CategoryPrefs } from "@/hooks/useNotificationPrefs";
 
 import { NewConversationDialog } from "@/components/client/NewConversationDialog";
+import { InboxErrorBoundary } from "@/components/client/inbox/InboxErrorBoundary";
 import {
   AllFeed,
   ConversationRow,
@@ -111,15 +112,17 @@ export default function ClientInboxPage() {
       <Tabs value={activeTab} onValueChange={(v) => setTab(v as TabValue)}>
         <InboxTabCards stats={stats} />
 
-        <TabsContent value="all" className="mt-4">
-          <AllTab />
-        </TabsContent>
-        <TabsContent value="messages" className="mt-4">
-          <MessagesTab newDialogOpen={newDialogOpen} onNewDialogOpenChange={setNewDialogOpen} />
-        </TabsContent>
-        <TabsContent value="notifications" className="mt-4">
-          <NotificationsTab />
-        </TabsContent>
+        <InboxErrorBoundary resetKey={`${activeTab}:${searchParams.get("thread") ?? ""}`}>
+          <TabsContent value="all" className="mt-4">
+            <AllTab />
+          </TabsContent>
+          <TabsContent value="messages" className="mt-4">
+            <MessagesTab newDialogOpen={newDialogOpen} onNewDialogOpenChange={setNewDialogOpen} />
+          </TabsContent>
+          <TabsContent value="notifications" className="mt-4">
+            <NotificationsTab />
+          </TabsContent>
+        </InboxErrorBoundary>
       </Tabs>
     </div>
   );

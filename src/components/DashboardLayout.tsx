@@ -426,7 +426,7 @@ export const DashboardLayout = ({
 
   return (
     <HelpCenterProvider>
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-clip">
       {/* Mobile sidebar toggle - visible only on mobile when sidebar is closed */}
       <button
         onClick={() => setSidebarOpen(true)}
@@ -696,7 +696,7 @@ export const DashboardLayout = ({
       <div
         className={cn(
           // Critical layout contract: flex-1 w-full min-w-0 for proper content sizing
-          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-hidden",
+          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-clip",
           // Use padding-left (not margin-left) because sidebar is fixed; prevents content shifting off-canvas
           sidebarOpen ? "md:pl-64" : "md:pl-20",
           // Mobile: no padding, full width

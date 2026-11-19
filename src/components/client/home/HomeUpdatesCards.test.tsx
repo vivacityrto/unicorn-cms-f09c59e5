@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { plainExcerpt } from '@/hooks/use-client-home-updates';
@@ -45,5 +46,25 @@ describe('broadcast cache key', () => {
   it('lives under the inbox invalidation prefix so new broadcasts refresh the Home card', async () => {
     const source = (await import('node:fs')).readFileSync('src/hooks/use-client-home-updates.ts', 'utf8');
     expect(source).toMatch(/queryKey: \['client-conversations', 'home-broadcasts'/);
+  });
+
+  describe('compact messages card', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ id: `m${i}`, subject: `Message ${i}`, excerpt: 'Body', sentAt: '2026-11-15T00:00:00Z', isUnread: i === 0 }));
+
+    it('shows the first three with a Show all button, then expands and collapses', async () => {
+      wrap(<HomeMessagesView items={many} compact />);
+      const region = screen.getByRole('region', { name: 'Messages from Vivacity' });
+      expect(region).toHaveTextContent('Broadcasts from your Vivacity team.');
+      expect(screen.getAllByRole('link', { name: /Message \d/ })).toHaveLength(3);
+      await userEvent.click(screen.getByRole('button', { name: 'Show all 6 messages' }));
+      expect(screen.getAllByRole('link', { name: /Message \d/ })).toHaveLength(6);
+      await userEvent.click(screen.getByRole('button', { name: 'Show fewer' }));
+      expect(screen.getAllByRole('link', { name: /Message \d/ })).toHaveLength(3);
+    });
+
+    it('has no Show all button when everything already fits', () => {
+      wrap(<HomeMessagesView items={many.slice(0, 3)} compact />);
+      expect(screen.queryByRole('button', { name: /Show all/ })).not.toBeInTheDocument();
+    });
   });
 });

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
@@ -55,7 +56,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     if (!activeTenantId) return;
 
     const channel = supabase
-      .channel(`client-inbox-notifier-${activeTenantId}`)
+      .channel(uniqueChannelName(`client-inbox-notifier-${activeTenantId}`))
       .on(
         "postgres_changes",
         {
@@ -95,7 +96,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     // The client portal follows the theme the user chose (light by default, dark from the
     // toggle in the top bar). It used to be pinned to light; portalled content (dialogs,
     // drawers, menus) now matches because the theme class sits on <html>, not on this div.
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-clip">
       {/* Impersonation Banner (in flow, not fixed) */}
       {isPreview && (
         <>
@@ -113,7 +114,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div
         className={cn(
-          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-hidden",
+          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-clip",
           sidebarOpen ? "md:pl-60" : "md:pl-16",
           "pl-0"
         )}
@@ -129,12 +130,19 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Page Content */}
-          <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
+          <main className="flex-1 w-full min-w-0 p-4 pb-16 md:p-6 md:pb-16 overflow-y-auto">
             {children}
           </main>
 
-          {/* Footer */}
-          <ClientFooter />
+          {/* Footer: pinned to the bottom of the window, beside the sidebar, like the staff portal. */}
+          <div
+            className={cn(
+              "fixed bottom-0 left-0 right-0 z-20 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)] transition-all duration-300",
+              sidebarOpen ? "md:left-60" : "md:left-16",
+            )}
+          >
+            <ClientFooter />
+          </div>
         </ClientRequestContext.Provider>
       </div>
 

@@ -152,6 +152,15 @@
   }
 }
 
+@layer components {
+  /* The pinned header shrinks once the page is scrolled (data-condensed). Its round icon buttons follow, so the bar
+     stays quiet while someone is working. Rem units, so they scale with the interface. */
+  header[data-condensed='true'] .topbar-actions button:not([role='menuitem']):not([role='tab']) {
+    height: 2rem;
+    width: 2rem;
+  }
+}
+
 @layer base {
   /* ============================================================
      SCROLLBARS
@@ -565,8 +574,15 @@
      TYPOGRAPHY SYSTEM – 1.25 Ratio Scale
      12px / 15px / 18px / 24px / 30px / 37px / 46px
      ============================================================ */
+  /* Everything is sized in rem, so the root size is the interface scale. At the browser's 100% zoom the app now looks
+     the way it used to at 80%. Change --ui-scale to resize the whole interface (1 = the old size). Items sized in px
+     (the 25px footers, 11px labels) keep their size on purpose. */
+  :root {
+    --ui-scale: 0.8;
+  }
+
   html {
-    font-size: 100%; /* 16px base */
+    font-size: calc(var(--ui-scale) * 100%); /* 12.8px base at the default scale */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }

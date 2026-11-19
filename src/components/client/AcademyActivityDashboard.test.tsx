@@ -1,10 +1,17 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { TenantAcademyLearnerAnalytics } from '@/features/pdp/useTenantAcademyStaffStats';
 
-const state = vi.hoisted(() => ({ result: { data: undefined, isLoading: false, error: null } as unknown }));
-vi.mock('@/features/pdp/useTenantAcademyStaffStats', () => ({ useTenantAcademyLearnerAnalytics: () => state.result }));
+const state = vi.hoisted(() => ({ result: { data: undefined, isLoading: false, error: null } as unknown, detail: { data: undefined, isLoading: false, error: null } as unknown, detailArgs: [] as unknown[] }));
+vi.mock('@/features/pdp/useTenantAcademyStaffStats', () => ({
+  useTenantAcademyLearnerAnalytics: () => state.result,
+  useTenantAcademyLearnerDetail: (...args: unknown[]) => {
+    state.detailArgs = args;
+    return state.detail;
+  },
+}));
 
 import { AcademyActivityDashboard } from './AcademyActivityDashboard';
 
@@ -57,5 +64,48 @@ describe('AcademyActivityDashboard', () => {
     state.result = { data: undefined, isLoading: false, error: new Error('x') };
     show();
     expect(screen.getByText('Failed to load Academy activity.')).toBeInTheDocument();
+  });
+
+  describe('one person detail', () => {
+    const detail = {
+      last_updated_at: daysAgo(0),
+      learner: { user_id: 'b', name: 'Quinn Quiet', email: null },
+      totals: { chosen: 2, finished: 0, certificates: 0, lessons_completed: 10, lessons_total: 24, minutes: 100, last_active: daysAgo(60) },
+      courses: [
+        { course_id: 1, course_title: 'Governance basics', enrolled_at: daysAgo(90), completed_at: null, started: true, certified: false, lessons_total: 12, lessons_completed: 6, minutes: 60, last_touch: daysAgo(60) },
+        { course_id: 2, course_title: 'Risk essentials', enrolled_at: daysAgo(30), completed_at: null, started: false, certified: false, lessons_total: 12, lessons_completed: 0, minutes: 0, last_touch: null },
+      ],
+      trend: Array.from({ length: 12 }, (_, i) => ({ week_start: `2026-09-${String(i + 1).padStart(2, '0')}`, lessons: i === 3 ? 4 : 0, minutes: 10 })),
+    };
+
+    it('opens a mini page for the person clicked, asking for that person only', async () => {
+      state.result = { data: data(), isLoading: false, error: null };
+      state.detail = { data: detail, isLoading: false, error: null };
+      show();
+      await userEvent.click(screen.getByRole('button', { name: "Open Quinn Quiet's Academy activity" }));
+      expect(state.detailArgs).toEqual([1, 'b']);
+      const sheet = await screen.findByRole('dialog');
+      expect(within(sheet).getByText('Quinn Quiet')).toBeInTheDocument();
+      expect(within(sheet).getByText('Governance basics')).toBeInTheDocument();
+      expect(within(sheet).getByText('Untouched 30+ days')).toBeInTheDocument();
+      expect(within(sheet).getByText('Not started')).toBeInTheDocument();
+      expect(within(sheet).getByRole('region', { name: 'At a glance' })).toHaveTextContent('Chose 2 courses and finished 0.');
+    });
+
+    it('shows a loading state and then a clear error if the details cannot load', async () => {
+      state.result = { data: data(), isLoading: false, error: null };
+      state.detail = { data: undefined, isLoading: true, error: null };
+      show();
+      await userEvent.click(screen.getByRole('button', { name: "Open Ana Active's Academy activity" }));
+      expect((await screen.findByRole('dialog')).querySelector('[aria-busy="true"]')).not.toBeNull();
+    });
+
+    it('says so when the details fail to load', async () => {
+      state.result = { data: data(), isLoading: false, error: null };
+      state.detail = { data: undefined, isLoading: false, error: new Error('x') };
+      show();
+      await userEvent.click(screen.getByRole('button', { name: "Open Ana Active's Academy activity" }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Could not load/);
+    });
   });
 });

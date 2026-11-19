@@ -1,14 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -38,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ChevronDown, Download, Loader2, MoreHorizontal, Sparkles, AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
+import { Download, Loader2, MoreHorizontal, Sparkles, AlertTriangle } from "lucide-react";
 import { CurrencyStatusPill } from "@/components/academy/pdp/CurrencyStatusPill";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useWorkforcePdp } from "@/features/pdp/useWorkforcePdp";
@@ -47,22 +45,34 @@ import { getCurrentCycle } from "@/features/pdp/api";
 import { exportPdpAuditPack, resolveTenantName } from "@/features/pdp/exportAuditPack";
 import type { WorkforcePdpRow } from "@/features/pdp/workforce";
 import type { CurrencyStatus } from "@/features/pdp/types";
-
-const ALL_STATUSES: CurrencyStatus[] = ["overdue", "at_risk", "on_track", "current"];
-const STATUS_LABEL: Record<CurrencyStatus, string> = {
-  overdue: "Overdue",
-  at_risk: "At risk",
-  on_track: "On track",
-  current: "Current",
-};
-const STATUS_RANK: Record<CurrencyStatus, number> = {
-  overdue: 0,
-  at_risk: 1,
-  on_track: 2,
-  current: 3,
-};
+import {
+  compareRows,
+  daysLeft,
+  parseStatusParam,
+  pctClamped,
+  STATUS_LABEL,
+  summariseStaffPdps,
+} from "@/components/client/staff-pdp/staffPdpInsights";
+import {
+  PaceBar,
+  StaffPdpFilterCards,
+  StaffPdpInsightPanel,
+  StaffPdpsBanner,
+  gapLabel,
+  hoursLabel,
+  type PdpCard,
+} from "@/components/client/staff-pdp/StaffPdpsOverview";
 
 const NONE = "__none__";
+/** fetchWorkforcePdp stops at this many rows. */
+const ROW_LIMIT = 2000;
+
+const CARD_STATUSES: Record<PdpCard, CurrencyStatus[]> = {
+  all: [],
+  attention: ["overdue", "at_risk"],
+  on_track: ["on_track"],
+  current: ["current"],
+};
 
 const numberAU = new Intl.NumberFormat("en-AU", {
   minimumFractionDigits: 1,
@@ -78,42 +88,18 @@ function fmtDate(iso: string | null): string {
   }
 }
 
-function fmtRelative(iso: string | null, whenNull: string): string {
-  if (!iso) return whenNull;
-  try {
-    return formatDistanceToNow(parseISO(iso), { addSuffix: true });
-  } catch {
-    return whenNull;
-  }
+function endsIn(row: WorkforcePdpRow): string {
+  const d = daysLeft(row);
+  if (d === null) return "No end date";
+  if (d === 0) return "Today";
+  if (d > 0) return `in ${d} ${d === 1 ? "day" : "days"}`;
+  return `${-d} ${d === -1 ? "day" : "days"} ago`;
 }
+
+const sameSet = (a: CurrencyStatus[], b: CurrencyStatus[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 interface DrawerState {
   row: WorkforcePdpRow | null;
-}
-
-function StaffPdpOverview({ rows }: { rows: WorkforcePdpRow[] }) {
-  const current = rows.filter((row) => row.currency_status === "current" || row.currency_status === "on_track").length;
-  const atRisk = rows.filter((row) => row.currency_status === "at_risk").length;
-  const overdue = rows.filter((row) => row.currency_status === "overdue").length;
-  const needsAction = rows
-    .filter((row) => row.currency_status === "overdue" || row.currency_status === "at_risk")
-    .sort((a, b) => (a.cycle_end_date ?? "9999-12-31").localeCompare(b.cycle_end_date ?? "9999-12-31"));
-  const percentage = rows.length ? Math.round((current / rows.length) * 100) : 0;
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Staff with a PDP</p><p className="mt-2 text-2xl font-semibold">{rows.length}</p><p className="mt-1 text-xs text-muted-foreground">Across the current cycle</p></CardContent></Card>
-        <Card><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current / on track</p><p className="mt-2 text-2xl font-semibold text-emerald-700">{percentage}%</p><p className="mt-1 text-xs text-muted-foreground">{current} staff in good standing</p></CardContent></Card>
-        <Card className={atRisk ? "border-amber-300" : undefined}><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Needs attention</p><p className="mt-2 text-2xl font-semibold text-amber-700">{atRisk}</p><p className="mt-1 text-xs text-muted-foreground">At-risk cycles</p></CardContent></Card>
-        <Card className={overdue ? "border-destructive/30" : undefined}><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Overdue</p><p className="mt-2 text-2xl font-semibold text-destructive">{overdue}</p><p className="mt-1 text-xs text-muted-foreground">Cycles needing follow-up</p></CardContent></Card>
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card><CardContent className="p-5"><div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-semibold">PDP health</h2><p className="text-sm text-muted-foreground">A quick view of development progress across your team.</p></div><CheckCircle2 className="h-5 w-5 text-primary" /></div><div className="mt-5"><div className="mb-2 flex justify-between text-sm"><span className="text-muted-foreground">Current or on track</span><span className="font-medium">{current} of {rows.length}</span></div><Progress value={percentage} className="h-2" /></div></CardContent></Card>
-        <Card className={needsAction.length ? "border-amber-300" : undefined}><CardContent className="p-5"><div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" /><h2 className="text-base font-semibold">Action queue</h2></div>{needsAction.length ? <div className="mt-4 space-y-3">{needsAction.slice(0, 3).map((row) => <Link key={`${row.user_id}-${row.tenant_id}`} to="/client/staff-pdps" className="block rounded-lg border bg-amber-50/50 p-3 transition-colors hover:bg-amber-50 dark:hover:bg-amber-500/20"><div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{row.staff_name}</span><span className="text-xs font-medium text-amber-700">{row.currency_status === "overdue" ? "Overdue" : "At risk"}</span></div><p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3 w-3" />{Math.round(Number(row.percent_complete ?? 0))}% complete · cycle ends {fmtDate(row.cycle_end_date)}</p></Link>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No PDP actions need attention right now.</p>}</CardContent></Card>
-      </div>
-    </div>
-  );
 }
 
 function StaffDrawer({
@@ -132,6 +118,7 @@ function StaffDrawer({
   });
   const cycleId = cycleQuery.data?.id ?? null;
   const summary = useCycleSummary(cycleId);
+  const pct = summary.data ? pctClamped({ percent_complete: Number(summary.data.percent_complete ?? 0) }) : 0;
 
   return (
     <Sheet open={!!row} onOpenChange={onOpenChange}>
@@ -149,7 +136,7 @@ function StaffDrawer({
               <div className="flex items-center gap-3">
                 <CurrencyStatusPill status={row.currency_status} />
                 <span className="text-sm text-muted-foreground">
-                  Cycle ends {fmtDate(row.cycle_end_date)}
+                  Cycle ends {fmtDate(row.cycle_end_date)} ({endsIn(row)})
                 </span>
               </div>
 
@@ -172,16 +159,9 @@ function StaffDrawer({
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">% complete</span>
-                      <span className="font-medium">
-                        {Math.round(Number(summary.data.percent_complete ?? 0))}%
-                      </span>
+                      <span className="font-medium">{pct}%</span>
                     </div>
-                    <Progress
-                      value={Math.min(
-                        100,
-                        Math.round(Number(summary.data.percent_complete ?? 0)),
-                      )}
-                    />
+                    <Progress value={pct} />
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">Cycle summary unavailable.</p>
@@ -210,14 +190,9 @@ export default function StaffPdpsPage() {
   const { data, isLoading, error } = useWorkforcePdp(activeTenantId);
   const [params, setParams] = useSearchParams();
   const [drawer, setDrawer] = useState<DrawerState>({ row: null });
-  const [exportingKey, setExportingKey] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<{ kind: "tenant" } | { kind: "user"; userId: string } | null>(null);
 
-  const audienceFilter = params.get("audience") ?? "";
-  const yearFilter = params.get("year") ?? "";
-  const statusFilter = useMemo(
-    () => (params.get("status") ?? "").split(",").filter(Boolean) as CurrencyStatus[],
-    [params],
-  );
+  const statusFilter = useMemo(() => parseStatusParam(params.get("status")), [params]);
 
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(params);
@@ -248,45 +223,30 @@ export default function StaffPdpsPage() {
     [tenantRows],
   );
 
-  const filtered = useMemo(() => {
-    const set = new Set(statusFilter);
-    return tenantRows
-      .filter((r) => {
+  // A bookmarked audience or year that no longer exists is ignored rather than hiding every row.
+  const rawAudience = params.get("audience") ?? "";
+  const rawYear = params.get("year") ?? "";
+  const audienceFilter = audienceOptions.includes(rawAudience) ? rawAudience : "";
+  const yearFilter = yearOptions.some((y) => String(y) === rawYear) ? rawYear : "";
+
+  // Everything on the page (cards, charts, table) is worked out from the same audience and year selection.
+  const scoped = useMemo(
+    () =>
+      tenantRows.filter((r) => {
         if (audienceFilter && r.audience_code !== audienceFilter) return false;
         if (yearFilter && String(r.cycle_year ?? "") !== yearFilter) return false;
-        if (set.size > 0 && !set.has(r.currency_status)) return false;
         return true;
-      })
-      .sort((a, b) => {
-        const r = STATUS_RANK[a.currency_status] - STATUS_RANK[b.currency_status];
-        if (r !== 0) return r;
-        const ad = a.cycle_end_date ?? "9999-12-31";
-        const bd = b.cycle_end_date ?? "9999-12-31";
-        return ad.localeCompare(bd);
-      });
-  }, [tenantRows, audienceFilter, yearFilter, statusFilter]);
+      }),
+    [tenantRows, audienceFilter, yearFilter],
+  );
+  const summary = useMemo(() => summariseStaffPdps(scoped), [scoped]);
 
-  const total = filtered.length;
-  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
-  const counts = useMemo(() => {
-    let current = 0;
-    let atRisk = 0;
-    let overdue = 0;
-    for (const r of filtered) {
-      // Current tile = good standing (literal current OR mid-cycle on_track).
-      if (r.currency_status === "current" || r.currency_status === "on_track") current++;
-      else if (r.currency_status === "at_risk") atRisk++;
-      else if (r.currency_status === "overdue") overdue++;
-    }
-    return { current, atRisk, overdue };
-  }, [filtered]);
+  const shown = useMemo(() => {
+    const set = new Set(statusFilter);
+    return scoped.filter((r) => set.size === 0 || set.has(r.currency_status)).sort(compareRows);
+  }, [scoped, statusFilter]);
 
-  function toggleStatus(s: CurrencyStatus) {
-    const next = new Set(statusFilter);
-    if (next.has(s)) next.delete(s);
-    else next.add(s);
-    setParam("status", next.size ? Array.from(next).join(",") : null);
-  }
+  const activeCard = (Object.keys(CARD_STATUSES) as PdpCard[]).find((k) => sameSet(CARD_STATUSES[k], statusFilter)) ?? ("" as PdpCard);
 
   function clearFilters() {
     setParams(new URLSearchParams(), { replace: true });
@@ -297,8 +257,7 @@ export default function StaffPdpsPage() {
 
   async function handleExport(opts?: { userId: string; staffName: string }) {
     if (activeTenantId == null) return;
-    const key = opts?.userId ?? "tenant";
-    setExportingKey(key);
+    setExporting(opts ? { kind: "user", userId: opts.userId } : { kind: "tenant" });
     try {
       const tenantName = await resolveTenantName(
         activeTenantId,
@@ -319,14 +278,14 @@ export default function StaffPdpsPage() {
       const msg = err instanceof Error ? err.message : "Export failed";
       toast.error(msg);
     } finally {
-      setExportingKey(null);
+      setExporting(null);
     }
   }
 
   // Resolution / access gates
   if (tenantUserLoading || activeTenantId == null) {
     return (
-      <div className="container mx-auto p-6 space-y-4">
+      <div className="w-full min-w-0 space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -336,7 +295,7 @@ export default function StaffPdpsPage() {
 
   if (!canManagePortalUsers) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full min-w-0">
         <Card>
           <CardContent className="p-6">
             <h1 className="text-lg font-semibold">You don't have access to this page</h1>
@@ -350,120 +309,72 @@ export default function StaffPdpsPage() {
     );
   }
 
+  const pillTrigger =
+    "h-9 w-auto min-w-[140px] gap-2 rounded-full border-white/40 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20 focus:ring-white disabled:opacity-60 [&>svg]:text-white";
+
+  const controls = (
+    <>
+      <Select value={audienceFilter || NONE} onValueChange={(v) => setParam("audience", v === NONE ? null : v)} disabled={noPdpCycleYet}>
+        <SelectTrigger className={pillTrigger} aria-label="Audience">
+          <SelectValue placeholder="Audience" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>All audiences</SelectItem>
+          {audienceOptions.map((a) => (
+            <SelectItem key={a} value={a}>
+              {a}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={yearFilter || NONE} onValueChange={(v) => setParam("year", v === NONE ? null : v)} disabled={noPdpCycleYet}>
+        <SelectTrigger className={pillTrigger} aria-label="Cycle year">
+          <SelectValue placeholder="Cycle year" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>All years</SelectItem>
+          {yearOptions.map((y) => (
+            <SelectItem key={y} value={String(y)}>
+              {y}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="h-9 rounded-full"
+        disabled={noPdpCycleYet || isLoading || !!error || exporting !== null}
+        onClick={() => void handleExport()}
+        title="Exports every person in your organisation, whatever is filtered here."
+      >
+        {exporting?.kind === "tenant" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+        Export audit pack
+      </Button>
+    </>
+  );
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Staff PDPs</h1>
-          <p className="text-sm text-muted-foreground">A decision-ready view of your team&apos;s development progress.</p>
-        </div>
+      <div className="w-full min-w-0 space-y-4">
+        {isLoading ? (
+          <>
+            <Skeleton className="h-28 w-full rounded-2xl" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-xl" />
+              ))}
+            </div>
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </>
+        ) : (
+          <>
+            <StaffPdpsBanner summary={summary} controls={controls} />
 
-        {!isLoading && !error && tenantRows.length > 0 && <StaffPdpOverview rows={tenantRows} />}
-
-        <div className="space-y-6">
-            {/* Filter bar */}
-            <Card>
-              <CardContent className="p-4 flex flex-wrap items-center gap-3">
-                <div className="min-w-[180px]">
-                  <Select
-                    value={audienceFilter || NONE}
-                    onValueChange={(v) => setParam("audience", v === NONE ? null : v)}
-                    disabled={noPdpCycleYet}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Audience" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>All audiences</SelectItem>
-                      {audienceOptions.map((a) => (
-                        <SelectItem key={a} value={a}>
-                          {a}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[180px] justify-between"
-                      disabled={noPdpCycleYet}
-                    >
-                      {statusFilter.length === 0
-                        ? "Currency status"
-                        : `${statusFilter.length} selected`}
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56" align="start">
-                    <div className="space-y-2">
-                      {ALL_STATUSES.map((s) => (
-                        <label key={s} className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={statusFilter.includes(s)}
-                            onCheckedChange={() => toggleStatus(s)}
-                          />
-                          <span className="text-sm">{STATUS_LABEL[s]}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                <div className="min-w-[140px]">
-                  <Select
-                    value={yearFilter || NONE}
-                    onValueChange={(v) => setParam("year", v === NONE ? null : v)}
-                    disabled={noPdpCycleYet}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Cycle year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>All years</SelectItem>
-                      {yearOptions.map((y) => (
-                        <SelectItem key={y} value={String(y)}>
-                          {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {hasFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    Clear filters
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            {isLoading ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Card key={i}>
-                      <CardContent className="p-4">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-8 w-16 mt-2" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                <Card>
-                  <CardContent className="p-6 space-y-2">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <Skeleton key={i} className="h-10 w-full" />
-                    ))}
-                  </CardContent>
-                </Card>
-              </>
-            ) : error ? (
+            {error ? (
               <Card>
                 <CardContent className="p-6 text-sm text-destructive">
-                  Failed to load staff PDP data.
+                  Failed to load staff PDP data. Refresh the page to try again.
                 </CardContent>
               </Card>
             ) : noPdpCycleYet ? (
@@ -472,94 +383,91 @@ export default function StaffPdpsPage() {
                   <Sparkles className="h-8 w-8 mx-auto text-[var(--viv-purple)]" />
                   <h3 className="text-lg font-semibold text-foreground">No PDP cycle yet</h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Staff in this organisation haven&apos;t started a PDP cycle yet. Currency
-                    tiles and the staff table will appear once the first cycle is created.
+                    Staff in this organisation haven&apos;t started a PDP cycle yet. The cards, charts and staff table will appear once the first cycle is created.
                   </p>
                 </CardContent>
               </Card>
             ) : (
               <>
-                {/* KPI tiles */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">Total staff</div>
-                      <div className="text-2xl font-bold mt-1">{total}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">% Current</div>
-                      <div className="text-2xl font-bold mt-1">{pct(counts.current)}%</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">% At risk</div>
-                      <div className="text-2xl font-bold mt-1">{pct(counts.atRisk)}%</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">% Overdue</div>
-                      <div className="text-2xl font-bold mt-1">{pct(counts.overdue)}%</div>
-                    </CardContent>
-                  </Card>
+                {(data?.length ?? 0) >= ROW_LIMIT && (
+                  <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    Showing the first {ROW_LIMIT.toLocaleString("en-AU")} people. Some may be missing from these figures.
+                  </div>
+                )}
+
+                <StaffPdpFilterCards summary={summary} active={activeCard} onSelect={(c) => setParam("status", CARD_STATUSES[c].length ? CARD_STATUSES[c].join(",") : null)} />
+
+                <StaffPdpInsightPanel summary={summary} onOpen={(row) => setDrawer({ row })} />
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                  <span>
+                    {statusFilter.length > 0 ? `Showing ${statusFilter.map((s) => STATUS_LABEL[s].toLowerCase()).join(" and ")}: ` : "Showing everyone: "}
+                    {shown.length} of {scoped.length}
+                  </span>
+                  {hasFilters && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  )}
                 </div>
 
-                {/* Table */}
                 <Card>
                   <CardContent className="p-0">
-                    {filtered.length === 0 ? (
-                      <div className="p-6 text-sm text-muted-foreground">No matching staff.</div>
+                    {shown.length === 0 ? (
+                      <div className="flex flex-col items-start gap-2 p-6 text-sm text-muted-foreground">
+                        No matching staff.
+                        {hasFilters && (
+                          <Button variant="outline" size="sm" onClick={clearFilters}>
+                            Clear filters
+                          </Button>
+                        )}
+                      </div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Staff name</TableHead>
-                            <TableHead>Audience</TableHead>
-                            <TableHead className="text-right">Cycle year</TableHead>
-                            <TableHead className="text-right">Target hrs</TableHead>
-                            <TableHead className="text-right">Actual hrs</TableHead>
-                            <TableHead className="w-[140px]">% complete</TableHead>
+                            <TableHead>Staff</TableHead>
+                            <TableHead className="w-[26%] min-w-[180px]">
+                              Progress <span className="font-normal text-muted-foreground">(tick = time passed)</span>
+                            </TableHead>
+                            <TableHead className="hidden md:table-cell">Hours</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Cycle end</TableHead>
+                            <TableHead className="hidden sm:table-cell">Cycle ends</TableHead>
                             <TableHead className="w-[56px]">
                               <span className="sr-only">Actions</span>
                             </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filtered.map((r) => {
-                            const pctC = Math.min(100, Math.round(r.percent_complete));
-                            const rowExporting = exportingKey === r.user_id;
+                          {shown.map((r) => {
+                            const rowExporting = exporting?.kind === "user" && exporting.userId === r.user_id;
                             return (
                               <TableRow
-                                key={`${r.user_id}-${r.tenant_id ?? "null"}`}
+                                key={`${r.user_id}-${r.tenant_id ?? "null"}-${r.cycle_year ?? "x"}`}
                                 className="cursor-pointer"
                                 onClick={() => setDrawer({ row: r })}
                               >
-                                <TableCell className="font-medium">{r.staff_name}</TableCell>
-                                <TableCell>{r.audience_code ?? "—"}</TableCell>
-                                <TableCell className="text-right">
-                                  {r.cycle_year ?? "—"}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {numberAU.format(r.target_pd_hours)}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {numberAU.format(r.actual_pd_hours)}
+                                <TableCell>
+                                  <div className="font-medium">{r.staff_name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {r.audience_code ?? "No audience"} · Cycle {r.cycle_year ?? "—"}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Progress value={pctC} className="h-2" />
-                                    <span className="text-xs w-10 text-right">{pctC}%</span>
-                                  </div>
+                                  <PaceBar row={r} />
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                  <div className="tabular-nums">{hoursLabel(r)}</div>
+                                  <div className="text-xs text-muted-foreground">{gapLabel(r)}</div>
                                 </TableCell>
                                 <TableCell>
                                   <CurrencyStatusPill status={r.currency_status} />
                                 </TableCell>
-                                <TableCell>{fmtDate(r.cycle_end_date)}</TableCell>
+                                <TableCell className="hidden sm:table-cell">
+                                  <div>{endsIn(r)}</div>
+                                  <div className="text-xs text-muted-foreground">{fmtDate(r.cycle_end_date)}</div>
+                                </TableCell>
                                 <TableCell>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -567,7 +475,7 @@ export default function StaffPdpsPage() {
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8"
-                                        disabled={exportingKey !== null}
+                                        disabled={exporting !== null}
                                         onClick={(e) => e.stopPropagation()}
                                         aria-label={`Actions for ${r.staff_name}`}
                                       >
@@ -606,23 +514,8 @@ export default function StaffPdpsPage() {
                 </Card>
               </>
             )}
-
-            {/* Footer action */}
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                disabled={noPdpCycleYet || isLoading || !!error || exportingKey !== null}
-                onClick={() => void handleExport()}
-              >
-                {exportingKey === "tenant" ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Export audit pack
-              </Button>
-            </div>
-        </div>
+          </>
+        )}
       </div>
 
       <StaffDrawer

@@ -15,9 +15,17 @@ The page is now a welcome banner (greeting, tenure, who your consultant is, Mess
 
 After the first Home release a layout audit at 1650 px found: the page stopped at a fixed width while the status banner above spanned the full width; the "From Vivacity" tiles were squeezed into a narrow column and clipped; needs-attention titles were cut to a few letters; and the left column ended well above the right. Fixes: the page fills the available width, the two columns are balanced (packages, Academy, regulatory updates and recent activity on the left; summary, needs attention, coming up, messages and reminders on the right), the service tiles are a full-width row, titles wrap to two lines, and a no-end-date renewal tile shows an empty ring. Home now also carries an Academy card, the latest broadcast messages from Vivacity (conversations of type broadcast, with an unread marker) and the latest regulatory updates (the same events as the Regulatory Updates page).
 
+## Whitespace, footer and Home panel (follow-up)
+
+Pages fill the width the portal gives them: Academy Activity and Staff PDPs no longer sit in a centred container, and Packages no longer caps at a fixed width (guarded by `client-page-width.test.ts`). The client footer is pinned to the bottom of the window beside the sidebar, at the same 25px height as the staff footer, with the legal line hidden on narrow screens. On Home, "Messages from Vivacity" and "Reporting reminders" are a compact two-column row under the key numbers (three rows each, the rest one click away); if only one has content it takes the full row.
+
 ## Inbox (shipped)
 
 The client Inbox keeps its data, deep links and behaviour (messages, notifications, attachments, new message, read-only mode) and changes how it looks and works: a purple banner with what is waiting; the three views (Everything, Messages, Notifications) as cards that each show the unread count, the total and an insight (for example "1 from Vivacity waiting" or "1 task, 1 obligation to look at") instead of bare tab labels; day headings (Today, Yesterday, This week, Earlier) in the All and Notifications feeds; coloured icons for what each item is about; search and filter pills (Unread and by kind) on messages and notifications; chat bubbles with avatars and day dividers in a conversation; and, below 1280px, one pane at a time (list or conversation, with a Back button) instead of both stacked. The old notification filter compared the raw type to words like "tasks" and so matched nothing; it now maps types to kinds (`inboxFormat.ts`). A race that could re-open a conversation just closed is fixed by syncing the selection only when the URL parameter changes.
+
+## Inbox crash audit (follow-up)
+
+Reopening a conversation (open, go back, open again, or React remounting) crashed the page with "cannot add postgres_changes callbacks after subscribe()". supabase-js returns the same channel instance for a name already in use and removes channels asynchronously, so the fixed channel name `conv-live:<id>` handed back a channel that was still subscribed. Every client-portal realtime channel (conversation, layout notifier, unread badge, help-centre thread) now gets a unique name from `src/lib/realtimeChannel.ts`. `ClientInboxPage.flows.test.tsx` drives the real hooks over a fake database with a channel that behaves like supabase-js (including slow removal) and clicks every card, filter and row; it fails without the fix. The Inbox is also wrapped in an error boundary so a future render error shows a message with Try again instead of a blank page. Rule for new code: never subscribe with a fixed channel name that can be reopened.
 
 ## Regulatory updates (shipped)
 
@@ -38,3 +46,25 @@ The Academy page counts only courses the team chose themselves. It shows active 
 ## Findings for the next pieces (not yet changed)
 
 - **AI summary:** needs a new client-safe function: caller's tenant taken from the sign-in, never the request body; facts built on the server; numbers in the answer checked against the facts; its own usage cap so it does not use up the chat quota. Merging a function deploys it to production.
+
+## Tasks and Users (shipped)
+
+Both pages open with a brand banner and use insight cards instead of tabs and filter buttons. Each card shows a count plus one line about what it means, and clicking it filters the table below (they are toggle buttons, so keyboard and screen readers work like the tabs they replace). The shared pieces live in `src/components/client/insight/InsightCards.tsx` (cards, stacked status bar, ranked bars).
+
+- **Tasks:** cards for All, Overdue (oldest is N days late), Due soon (next task and when) and Completed (percent done). "My tasks" is now a pill in the banner, and "Show archived" sits beside it. A panel shows where the work stands (status bar) and open tasks per person, with unassigned as its own row. The editable table, bulk selection and optimistic edits are unchanged. Figures come from `taskInsights.ts`.
+- **Users:** cards for Everyone, Active (seen in the last 7 days), Pending invites (soonest expiry) and Quiet (not seen in 30 days, or never signed in). Panels show access mix and when people were last seen. Seats used appear in the banner. Invite, role switch, position, swap and ghost-contact behaviour are unchanged. Figures come from `userInsights.ts`.
+- Not checked on live client data yet; layout was verified by tests and typecheck only.
+
+## Staff PDPs (shipped)
+
+The page now opens with a brand banner (audience and year filters and the audit-pack export sit in it) and four filter cards: Everyone, Needs attention (overdue plus at risk), On track and Target met. A card writes the same `status` URL parameter as before, so existing bookmarks keep working; unknown status, audience or year values in the address are ignored instead of hiding everyone. Cards, charts and the table all use the same audience and year selection (the old page showed two sets of numbers on different bases).
+
+Four panels: where everyone stands (status split with the plain-words rules, taken from the `v_pdp_user_currency` view: overdue = cycle ended unfinished; at risk = 30 days or fewer left and under 80% done; current = target met; on track = not late yet, which is not ahead); who to nudge first (overdue, at risk, then anyone behind pace, with a reason such as "9 days left, 20 h short"); hours by audience (done against target, with the shortfall); and when cycles end (next six months, risky ones in pink). The table shows progress with a tick for how much of the cycle has passed, hours with the gap, and "in N days".
+
+Pace is derived, not stored: time elapsed assumes a 12-month cycle because the row has no start date, so it is approximate and is hidden in the first month and when there is no target. Behind pace means 15 or more points behind the calendar. Team progress is hidden for fewer than three people. A visible notice appears if the 2,000-row limit is hit.
+
+Findings from the council, not changed here: the view definition is not in the repo as a migration (read from the live database), the route has no guard beyond the in-page `canManagePortalUsers` check, the drawer opens the newest cycle rather than the row's cycle, and export covers the whole organisation whatever is filtered. Not checked on live data.
+
+## Academy: one person's activity (shipped)
+
+Each row in "Your team" on the client Academy page is now a button that opens a mini page (a side panel) for that person: key numbers (courses finished, lessons done of available, learning time, certificates), a plain "at a glance" summary, their own weekly chart, and every course they chose with lesson progress, state (finished, in progress, untouched 30+ days, not started), dates and certificate. It reads from the new `get_tenant_academy_learner_detail` function (audit entry `2026-11-19-academy-learner-detail-function`), which is applied to production. Courses added another way are left out, as everywhere on this page.

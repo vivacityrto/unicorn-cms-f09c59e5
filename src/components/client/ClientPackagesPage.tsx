@@ -109,7 +109,7 @@ export default function ClientPackagesPage() {
   const overview = buildOverview(activePackages);
 
   return (
-    <div className="w-full max-w-7xl space-y-8">
+    <div className="w-full min-w-0 space-y-6">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-secondary">Packages</h1>

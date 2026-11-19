@@ -1,13 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { formatBroadcastSchedule } from "./broadcastSchedule";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { CheckCircle2, ChevronRight, Megaphone, Users } from "lucide-react";
 
-interface CampaignRow { id: string; title: string; target_mode: string; package_type: string | null; status: string; total_recipients: number | null; total_sent: number | null; total_failed: number | null; created_at: string; sent_at: string | null; created_by: string | null; }
+interface CampaignRow { id: string; title: string; target_mode: string; package_type: string | null; status: string; total_recipients: number | null; total_sent: number | null; total_failed: number | null; created_at: string; sent_at: string | null; created_by: string | null; scheduled_for: string | null; schedule_failure_reason: string | null; }
 interface UserMini { user_uuid: string; first_name: string | null; last_name: string | null; email: string | null; }
 interface RecipientRow { id: string; tenant_id: number; user_id: string; delivery_status: string; sent_at: string | null; read_at: string | null; failure_reason: string | null; }
 interface TenantMini { id: number; name: string | null; }
@@ -15,13 +19,14 @@ interface TenantMini { id: number; name: string | null; }
 function describeAudience(mode: string, pkg: string | null): string {
   if (mode === "everyone") return "Everyone";
   if (mode === "members") return "All Members";
+  if (mode === "superhero") return "Superhero clients";
   if (mode === "tier" && pkg) return `Tier — ${cap(pkg)}`;
   if (mode === "package_type" && pkg) return `Package — ${cap(pkg.replace(/_/g, " "))}`;
   return mode;
 }
 function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function personName(user: UserMini | undefined) { return user ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email || "Unknown recipient" : "Unknown recipient"; }
-const STATUS_STYLES: Record<string, string> = { draft: "bg-muted text-muted-foreground border-border", queued: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30", sent: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30", failed: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30" };
+const STATUS_STYLES: Record<string, string> = { draft: "bg-muted text-muted-foreground border-border", scheduled: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30", cancelled: "bg-muted text-muted-foreground border-border", queued: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30", sent: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30", failed: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30" };
 
 function CampaignMetric({ value, label }: { value: number | string; label: string }) {
   return <div className="px-3 py-1.5 text-center text-xs text-muted-foreground"><strong className="block text-sm text-foreground tabular-nums">{value}</strong>{label}</div>;
@@ -111,14 +116,29 @@ function CampaignRecipients({ campaignId }: { campaignId: string }) {
 }
 
 export function BulkMessageHistory() {
+  const queryClient = useQueryClient();
+  const [cancelling, setCancelling] = useState<CampaignRow | null>(null);
   const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["broadcast-campaigns"],
+    refetchInterval: (query) => query.state.data?.some((campaign) => campaign.status === "scheduled") ? 30_000 : false,
     queryFn: async (): Promise<CampaignRow[]> => {
-      const { data, error } = await supabase.from("broadcast_campaigns").select("id, title, target_mode, package_type, status, total_recipients, total_sent, total_failed, created_at, sent_at, created_by").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("broadcast_campaigns").select("id, title, target_mode, package_type, status, total_recipients, total_sent, total_failed, created_at, sent_at, created_by, scheduled_for, schedule_failure_reason").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CampaignRow[];
     },
+  });
+  const cancelSchedule = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { error } = await supabase.rpc("fn_cancel_scheduled_bulk_message", { p_campaign_id: campaignId });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      setCancelling(null);
+      toast.success("Scheduled bulk message cancelled");
+    },
+    onError: (error: Error) => toast.error(error.message),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["broadcast-campaigns"] }),
   });
   const creatorIds = Array.from(new Set(campaigns.map((campaign) => campaign.created_by).filter(Boolean) as string[]));
   const { data: users = [] } = useQuery({
@@ -139,7 +159,7 @@ export function BulkMessageHistory() {
       return <Collapsible key={campaign.id} open={isExpanded} onOpenChange={(open) => setExpandedCampaignId(open ? campaign.id : null)} className="overflow-hidden rounded-lg border border-border bg-card">
         <CollapsibleTrigger className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid-cols-[auto_minmax(0,1fr)_15rem_4rem]">
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-90" />
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{campaign.title}</p><p className="mt-0.5 text-xs text-muted-foreground">{describeAudience(campaign.target_mode, campaign.package_type)} · {campaign.sent_at ? format(new Date(campaign.sent_at), "d MMM yyyy, h:mm a") : "Not sent"}</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{campaign.title}</p><p className="mt-0.5 text-xs text-muted-foreground">{describeAudience(campaign.target_mode, campaign.package_type)} · {campaign.sent_at ? format(new Date(campaign.sent_at), "d MMM yyyy, h:mm a") : campaign.scheduled_for ? formatBroadcastSchedule(campaign.scheduled_for) : "Not sent"}</p></div>
           <div className="hidden grid-cols-3 divide-x divide-border overflow-hidden rounded-md border border-border bg-muted/20 sm:grid">
             <CampaignMetric value={campaign.total_sent ?? 0} label="sent" />
             <CampaignMetric value={campaign.total_recipients ?? 0} label="recipients" />
@@ -147,8 +167,39 @@ export function BulkMessageHistory() {
           </div>
           <Badge variant="outline" className={`justify-self-end sm:justify-self-center ${STATUS_STYLES[campaign.status] || ""}`}>{campaign.status}</Badge>
         </CollapsibleTrigger>
-        <CollapsibleContent><div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">Sent by {personName(campaign.created_by ? userMap.get(campaign.created_by) : undefined)}{campaign.total_failed ? ` · ${campaign.total_failed} failed` : ""}</div><CampaignRecipients campaignId={campaign.id} /></CollapsibleContent>
+        <CollapsibleContent>
+          <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+            {campaign.scheduled_for ? "Scheduled by" : "Sent by"} {personName(campaign.created_by ? userMap.get(campaign.created_by) : undefined)}
+            {campaign.total_failed ? ` · ${campaign.total_failed} failed` : ""}
+            {campaign.schedule_failure_reason && <p className="mt-1 text-destructive">{campaign.schedule_failure_reason}</p>}
+          </div>
+          {campaign.status === "scheduled" && (
+            <Button variant="outline" size="sm" className="mx-4 mb-3" onClick={() => setCancelling(campaign)}>
+              Cancel scheduled message
+            </Button>
+          )}
+          {(campaign.status !== "scheduled" && campaign.status !== "cancelled") && (
+            <CampaignRecipients campaignId={campaign.id} />
+          )}
+        </CollapsibleContent>
       </Collapsible>;
     })}
+    <AlertDialog open={!!cancelling} onOpenChange={(open) => { if (!open && !cancelSchedule.isPending) setCancelling(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel scheduled message?</AlertDialogTitle>
+          <AlertDialogDescription>{cancelling?.title}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={cancelSchedule.isPending}>Keep scheduled</AlertDialogCancel>
+          <AlertDialogAction disabled={cancelSchedule.isPending} onClick={(event) => {
+            event.preventDefault();
+            if (cancelling) cancelSchedule.mutate(cancelling.id);
+          }}>
+            {cancelSchedule.isPending ? "Cancelling…" : "Cancel message"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>;
 }
