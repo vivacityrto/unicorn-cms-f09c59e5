@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { ArrowRight, Globe, Megaphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useClientHomeBroadcasts, useClientHomeRegulatoryUpdates, type HomeBroadcast, type HomeRegulatoryUpdate } from '@/hooks/use-client-home-updates';
@@ -35,39 +38,79 @@ function Header({ title, to, linkLabel }: { title: string; to: string; linkLabel
   );
 }
 
-export function HomeMessagesView({ items, compact = false }: { items: HomeBroadcast[]; compact?: boolean }) {
+/** How many messages show before "Show all", so the card lines up with Reporting reminders beside it. */
+export const MESSAGES_PREVIEW = 3;
+
+function MessageRow({ m, compact }: { m: HomeBroadcast; compact: boolean }) {
   return (
-    <section aria-label="Messages from Vivacity">
-      <Header title="Messages from Vivacity" to="/client/inbox?tab=messages" linkLabel="Open inbox" />
-      <ul className={compact ? 'space-y-1.5' : 'space-y-2'}>
-        {items.map((m) => (
-          <li key={m.id}>
-            <Link
-              to={`/client/inbox?tab=messages&thread=${m.id}`}
-              className={cn(
-                'flex items-start gap-3 rounded-lg border bg-card transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                compact ? 'p-2.5' : 'p-3',
-              )}
-            >
-              <span className={cn('mt-0.5 rounded-md p-1.5', m.isUnread ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground')}>
-                <Megaphone className="h-4 w-4" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <p className={cn('text-sm font-semibold text-foreground', compact ? 'line-clamp-1' : 'line-clamp-2')}>{m.subject}</p>
-                    {m.isUnread && <Badge variant="default" className="px-1.5 py-0 text-[10px]">New</Badge>}
-                  </div>
-                  {compact && <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{ago(m.sentAt)}</span>}
-                </div>
-                {m.excerpt && <p className={cn('mt-0.5 text-xs text-muted-foreground', compact ? 'line-clamp-1' : 'line-clamp-2')}>{m.excerpt}</p>}
-                {!compact && <p className="mt-1 text-[11px] text-muted-foreground">{ago(m.sentAt)}</p>}
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <li>
+      <Link
+        to={`/client/inbox?tab=messages&thread=${m.id}`}
+        className={cn(
+          'flex items-start gap-3 rounded-lg border bg-card transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          compact ? 'p-2.5' : 'p-3',
+        )}
+      >
+        <span className={cn('mt-0.5 rounded-md p-1.5', m.isUnread ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground')}>
+          <Megaphone className="h-4 w-4" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+              <p className={cn('text-sm font-semibold text-foreground', compact ? 'line-clamp-1' : 'line-clamp-2')}>{m.subject}</p>
+              {m.isUnread && <Badge variant="default" className="px-1.5 py-0 text-[10px]">New</Badge>}
+            </div>
+            {compact && <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{ago(m.sentAt)}</span>}
+          </div>
+          {m.excerpt && <p className={cn('mt-0.5 text-xs text-muted-foreground', compact ? 'line-clamp-1' : 'line-clamp-2')}>{m.excerpt}</p>}
+          {!compact && <p className="mt-1 text-[11px] text-muted-foreground">{ago(m.sentAt)}</p>}
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * Broadcast messages from Vivacity. The compact version is a card shaped like the Reporting reminders card beside it
+ * (same header, subtitle and "Show all" button), showing the first few and expanding to the rest.
+ */
+export function HomeMessagesView({ items, compact = false }: { items: HomeBroadcast[]; compact?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!compact) {
+    return (
+      <section aria-label="Messages from Vivacity">
+        <Header title="Messages from Vivacity" to="/client/inbox?tab=messages" linkLabel="Open inbox" />
+        <ul className="space-y-2">{items.map((m) => <MessageRow key={m.id} m={m} compact={false} />)}</ul>
+      </section>
+    );
+  }
+  const rows = expanded ? items : items.slice(0, MESSAGES_PREVIEW);
+  const more = items.length - MESSAGES_PREVIEW;
+  return (
+    <Card role="region" aria-label="Messages from Vivacity" className="h-full">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Megaphone className="h-5 w-5 text-primary" aria-hidden />
+            Messages from Vivacity
+          </CardTitle>
+          <Link to="/client/inbox?tab=messages" className="inline-flex shrink-0 items-center text-sm text-primary hover:underline">
+            Open inbox <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden />
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground">Broadcasts from your Vivacity team.</p>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <ul className="space-y-1.5">{rows.map((m) => <MessageRow key={m.id} m={m} compact />)}</ul>
+        {(expanded || more > 0) && (
+          <div className="pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)} className="w-full text-xs">
+              {expanded ? 'Show fewer' : `Show all ${items.length} messages`}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -101,7 +144,7 @@ export function HomeRegulatoryView({ items }: { items: HomeRegulatoryUpdate[] })
 
 /** Latest broadcast messages. Shows nothing when there are none, or while the inbox is not available to this person. */
 export function HomeMessagesCard({ compact = false }: { compact?: boolean }) {
-  const { data, isLoading, error } = useClientHomeBroadcasts();
+  const { data, isLoading, error } = useClientHomeBroadcasts(compact ? 10 : 3);
   if (isLoading) return <Skeleton className="h-28 w-full rounded-xl" />;
   if (error || !data || data.length === 0) return null;
   return <HomeMessagesView items={data} compact={compact} />;
