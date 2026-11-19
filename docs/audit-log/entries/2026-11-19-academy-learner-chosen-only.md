@@ -2,7 +2,7 @@
 
 **Trigger:** Carl said courses added automatically were polluting the Academy numbers ("Added automatically 825"), that the only data that matters is courses learners chose themselves, and asked for an investigation, a council review, and for anything contradicting that purpose to be reverted if safe. He then approved the metric fix plus cleaning the internal tenants ("Also clean internal").
 **Scope:** the Academy figures in the Client activity report and the scorecard Full Report now count only learner-chosen enrolments; one data clean-up in two internal tenants (migration `20261119120000_academy_remove_untouched_legacy_package_enrolments_internal.sql`).
-**Status:** pending merge and apply. Nothing in production has changed yet. The migration is applied only after the PR is merged, on Carl's go-ahead.
+**Status:** merged in PR 1552 (commit `ddb0072`). Migration applied to production on 19 November 2026 on Carl's explicit go-ahead ("Merge, then apply"). Postflight below.
 
 ## What was found (read-only, production)
 
@@ -34,6 +34,10 @@
 ## Dry run
 
 Run on production inside a block that raised at the end, so it rolled back: 440 backed up, 440 deleted, 4 left with progress, `self_enrol` 330, `auto_all_clients` 33 and `staff_impersonation` 14 unchanged, all 440 restored by the rollback statement, `auto_package` back to 792 and no leftover table.
+
+## Production
+
+Applied with the exact merged SQL after a clean preflight (440 eligible, backup table absent, migration not recorded). Postflight: `auto_package` 792 to 352 (4 internal rows with progress and 348 in real client tenants), `self_enrol` 330, `auto_all_clients` 33 and `staff_impersonation` 14 unchanged; the backup table holds 440 rows with none still in `academy_enrollments`; it has row security on and no grants for `anon` or `authenticated`; certificates (66) and PDP evidence (228) unchanged.
 
 ## Known limits and follow-ups
 
