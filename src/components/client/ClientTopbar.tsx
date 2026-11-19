@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useCondensedHeader } from "@/hooks/useCondensedHeader";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
+import type { DrawerItem } from "@/components/notifications/drawerModel";
 import {
   HelpCircle,
   Moon,
@@ -26,11 +28,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientNotifications } from "@/hooks/useClientNotifications";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
@@ -68,7 +65,8 @@ function ThemeToggle() {
 
 export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   
-  const [notifFilter, setNotifFilter] = useState<string | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const { unreadCount, unreadByType, notifications, markAllAsRead, markAsRead } = useClientNotifications();
@@ -104,9 +102,10 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const elapsedLabel =
     elapsedMin < 1 ? "< 1 min" : elapsedMin < 60 ? `${elapsedMin} min` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
 
-  const filteredClientNotifications = notifFilter
-    ? notifications.filter((n) => n.type === notifFilter)
-    : notifications;
+  const drawerItems = useMemo<DrawerItem[]>(
+    () => notifications.map((n) => ({ id: n.id, type: n.type, title: n.title, message: n.message, isRead: n.is_read, createdAt: n.created_at })),
+    [notifications],
+  );
 
   // In preview/impersonation mode, always show the parent account — never fall back to the SuperAdmin profile
   const displayUser = isPreview ? actingUser : (actingUser || profile);
@@ -218,104 +217,41 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <ThemeToggle />
 
         {/* Notifications */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 relative text-muted-foreground hover:text-foreground">
-              <Bell
-                className={`h-4 w-4 ${unreadCount > 0 ? "animate-[bell-ring_0.5s_ease-in-out]" : ""}`}
-                style={unreadCount > 0 ? { color: "hsl(330 86% 51%)" } : undefined}
-              />
-              {unreadCount > 0 && (
-                <>
-                  <span
-                    className="absolute top-0 right-0 h-2 w-2 rounded-full"
-                    style={{ backgroundColor: "hsl(0 72% 51%)" }}
-                  />
-                  <span
-                    className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white animate-pulse"
-                    style={{ backgroundColor: "hsl(330 86% 51%)" }}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                </>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-[480px] p-0">
-            <div className="p-3 border-b border-border flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">
-                Notifications
-              </h3>
-              {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => markAllAsRead()}>
-                  Mark all read
-                </Button>
-              )}
-            </div>
-            {/* Type filter badges */}
-            {Object.keys(unreadByType).length > 0 && (
-              <div className="px-3 py-2 border-b border-border flex gap-1.5 flex-wrap bg-muted/30">
-                {Object.entries(unreadByType).map(([type, count]) => (
-                  <span
-                    key={type}
-                    className={`text-[11px] px-2 py-0.5 rounded-full capitalize cursor-pointer select-none transition-colors ${
-                      notifFilter === type
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
-                    onClick={() => setNotifFilter(notifFilter === type ? null : type)}
-                  >
-                    {type.replace(/_/g, ' ')}: {count}
-                  </span>
-                ))}
-                {notifFilter && (
-                  <span
-                    className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground cursor-pointer select-none"
-                    onClick={() => setNotifFilter(null)}
-                  >
-                    Clear
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="max-h-[480px] overflow-y-auto">
-              {filteredClientNotifications.length === 0 ? (
-                <p className="text-sm text-muted-foreground p-4 text-center">
-                  {notifFilter ? 'No notifications of this type' : 'No notifications'}
-                </p>
-              ) : (
-                filteredClientNotifications.slice(0, 5).map((n) => (
-                  <Link
-                    key={n.id}
-                    to={n.link || '/client/inbox?tab=notifications'}
-                    onClick={() => { if (!n.is_read) markAsRead(n.id); }}
-                    className="block px-3 py-2.5 border-b last:border-0 hover:bg-muted/50 transition-colors border-border"
-                  >
-                    <div className="flex items-start gap-1.5">
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <p className="text-sm font-medium text-foreground leading-tight">{n.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {(n.message || '').replace(/<[^>]*>/g, '').slice(0, 100)}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/60">
-                          {new Date(n.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      {!n.is_read && (
-                        <span className="mt-1 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
-                      )}
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-            <div className="p-2 border-t border-border">
-              <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
-                <Link to="/client/inbox?tab=notifications">View all notifications</Link>
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 relative text-muted-foreground hover:text-foreground"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          aria-haspopup="dialog"
+          onClick={() => setNotifOpen(true)}
+        >
+          <Bell
+            className={`h-4 w-4 ${unreadCount > 0 ? "animate-[bell-ring_0.5s_ease-in-out]" : ""}`}
+            style={unreadCount > 0 ? { color: "hsl(330 86% 51%)" } : undefined}
+          />
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+              style={{ backgroundColor: "hsl(330 86% 51%)" }}
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </Button>
+        <NotificationsDrawer
+          open={notifOpen}
+          onOpenChange={setNotifOpen}
+          items={drawerItems}
+          onOpenItem={(id) => {
+            const n = notifications.find((x) => x.id === id);
+            if (!n) return;
+            if (!n.is_read) markAsRead(n.id);
+            navigate(n.link || "/client/inbox?tab=notifications");
+          }}
+          onMarkRead={markAsRead}
+          onMarkAllRead={markAllAsRead}
+          onViewAll={() => navigate("/client/inbox?tab=notifications")}
+        />
 
         {/* Tenant Logo */}
         {logoUrl && (
