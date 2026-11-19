@@ -11,7 +11,9 @@ import { UtilityFooter } from "@/components/layout/UtilityFooter";
 import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 
-import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
+import { AskVivPanel } from "@/components/ask-viv";
+import { MessengerDockProvider } from "@/components/messenger";
+import { StaffMessengerDock } from "@/components/staff/StaffMessengerDock";
 import { AskVivAssistantWidget } from "@/components/ask-viv-assistant/AskVivAssistantWidget";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
@@ -728,7 +730,10 @@ export const DashboardLayout = ({
 
         {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
         <AskVivPanel />
-        <AskVivFloatingLauncher />
+        {/* The messenger bubble for Vivacity staff (bottom right): Ask Viv, and the conversations that are yours by the routing. */}
+        <MessengerDockProvider>
+          <StaffMessengerDock />
+        </MessengerDockProvider>
         {/* Ask Viv Assistant - new, separate conversational RAG bot (self-gated, rollout-flagged) */}
         <AskVivAssistantWidget />
         <ScrollToTopButton />
