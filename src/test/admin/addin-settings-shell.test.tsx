@@ -82,7 +82,6 @@ vi.mock("@/components/client/ClientFooter", () => ({
 
 vi.mock("@/components/ask-viv", () => ({
   AskVivPanel: () => null,
-  AskVivFloatingLauncher: () => null,
 }));
 
 // The real provider also supplies the messenger bubble's open state, which the staff bubble in the layout needs.
