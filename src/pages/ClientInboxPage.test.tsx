@@ -45,7 +45,6 @@ vi.mock('@/hooks/useClientInbox', () => ({
 vi.mock('@/hooks/useNotificationPrefs', () => ({ useNotificationPrefs: () => ({ categories: { tasks: true, meetings: true, obligations: true, events: true } }) }));
 vi.mock('@/hooks/useConversationParticipants', () => ({ useConversationParticipants: () => ({ data: [] }) }));
 vi.mock('@/components/messaging/MessageAttachments', () => ({ MessageAttachments: () => null }));
-vi.mock('@/components/messaging/AttachmentChips', () => ({ AttachmentChips: () => null }));
 
 import ClientInboxPage from './ClientInboxPage';
 import { MessengerDockProvider, useMessengerDock } from '@/components/messenger';
