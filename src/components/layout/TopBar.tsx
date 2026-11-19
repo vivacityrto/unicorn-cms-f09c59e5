@@ -446,7 +446,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
           </Tooltip>
 
           {/* User Avatar Dropdown */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
