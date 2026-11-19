@@ -9,10 +9,10 @@ export function ClientFooter() {
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
 
   return (
-    <footer className="w-full border-t bg-card px-6 py-1 text-[11px] text-muted-foreground">
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span>
+    <footer className="box-border h-[25px] w-full border-t bg-card px-4 text-[11px] leading-none text-muted-foreground md:px-6">
+      <div className="flex h-full items-center justify-between gap-x-6">
+        <div className="flex min-w-0 items-center gap-x-4">
+          <span className="hidden sm:inline">
             Support:{" "}
             <a href="mailto:support@vivacity.com.au" className="text-foreground/80 hover:text-foreground transition-colors">
               support@vivacity.com.au
@@ -31,7 +31,7 @@ export function ClientFooter() {
             </button>
           )}
         </div>
-        <span className="text-muted-foreground/70">
+        <span className="hidden truncate text-muted-foreground/70 md:inline">
           © {currentYear} Vivacity Coaching &amp; Consulting Pty Ltd · ABN 40 140 059 016
         </span>
       </div>

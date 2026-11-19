@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 
 /**
  * Count unread client messages for the staff member viewing a tenant.
@@ -73,7 +74,7 @@ export function useClientMessagesUnread(tenantId: number | null | undefined) {
   useEffect(() => {
     if (!tenantId) return;
     const channel = supabase
-      .channel(`tenant-messages-unread:${tenantId}`)
+      .channel(uniqueChannelName(`tenant-messages-unread:${tenantId}`))
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'tenant_messages', filter: `tenant_id=eq.${tenantId}` },

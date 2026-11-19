@@ -85,8 +85,8 @@ export function ClientHomePage() {
       onAsk={canAccessHelpCenter ? () => openHelpCenter("chatbot") : undefined}
       academy={<HomeAcademyCard tenantId={activeTenantId} />}
       regulatory={<HomeRegulatoryCard />}
-      messages={<HomeMessagesCard />}
-      reminders={remindersLoading || (reminders && reminders.length > 0) ? <HomeReportingRemindersCard /> : null}
+      messages={<HomeMessagesCard compact />}
+      reminders={remindersLoading || (reminders && reminders.length > 0) ? <HomeReportingRemindersCard compact /> : null}
       audits={
         showAudits ? (
           <>
