@@ -20,6 +20,8 @@ describe('dark safety net', () => {
     expect(css).toContain(':where(.dark) .text-amber-800:not(');
     expect(css).toContain(':where(.dark) .border-blue-200:not(');
     expect(css).toContain(':where(.dark) .bg-white:not(');
+    // text-black usually sits on a bright fixed background that stays bright in dark mode, so it is left alone.
+    expect(css).not.toContain('text-black');
     // bg-white/20 is an overlay on a coloured surface; it must never be turned into a card colour.
     expect(css).not.toContain(String.raw`bg-white\/`);
     // Every rule is behind :where(.dark), so light mode is untouched.

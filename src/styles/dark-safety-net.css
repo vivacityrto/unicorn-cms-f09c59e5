@@ -1310,5 +1310,3 @@
 :where(.dark) .border-stone-300:not(:where(.light, .light *, .keep-light, .keep-light *)) { border-color: hsl(var(--border)); }
 
 :where(.dark) .bg-white:not(:where(.light, .light *, .keep-light, .keep-light *)) { background-color: hsl(var(--card)); }
-
-:where(.dark) .text-black:not(:where(.light, .light *, .keep-light, .keep-light *)) { color: hsl(var(--foreground)); }
