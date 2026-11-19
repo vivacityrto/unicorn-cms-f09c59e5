@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked to fix the three client data exposures found in the package analytics review ("alright fix the data exposures").
 **Scope:** migration `20261120110000_restrict_internal_notes_to_staff.sql`: replaces the row-level security policies on `public.notes`, `public.client_notes` and `public.tenant_notes` (12 policies); replaces the view `public.v_client_home_feed` (same columns, `security_invoker` kept) and the functions `get_client_package_dashboard` and `get_client_package_hours_recent` (same signatures and columns). Portal: the pinned-note banner and the notes line in the client "recent work" list are removed. No row is changed.
-**Status:** Written and dry-run in production (everything rolled back). **Not yet applied**: needs Carl's explicit go-ahead. Until it is applied, the exposures below remain live in production.
+**Status:** **Applied to production** on 19 November 2026 (Carl said "Apply it"), via the Supabase MCP `apply_migration` as `restrict_internal_notes_to_staff`, after a rolled-back dry run. Postflight verified (see "Postflight" below).
 
 ## The exposures
 
@@ -32,9 +32,15 @@ Inside one rolled-back block, as a real client contact of an organisation with a
 - **After (Vivacity staff):** 94 notes visible and updatable (94 rows), client notes readable.
 - No names, emails or note text were printed.
 
-## To apply
+## Postflight (production, after apply; the check itself was rolled back)
 
-Preflight, apply the exact migration SQL, postflight (policies per table, function and view definitions, repeat the client and staff checks), record here. Ask staff to re-test the staff notes screens once applied.
+- 12 policies on `notes`, `client_notes` and `tenant_notes`; 0 of them reference organisation membership.
+- `v_client_home_feed` no longer contains `urgent_notes` and is still `security_invoker = true`.
+- As a real client contact: 0 notes visible, update 0 rows, delete 0 rows, insert refused; 0 client notes; 0 tenant notes; all pinned dashboard fields NULL with the status pill unchanged ("drifting"); 0 time-entry notes; 0 urgent-note feed items (10 feed rows).
+- As Vivacity staff: 94 notes visible and updatable; client notes readable.
+- No names, emails or note text were printed.
+
+Still to do: ask staff to re-test the staff notes screens now that it is live.
 
 ## Not done
 
