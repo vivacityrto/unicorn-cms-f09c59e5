@@ -71662,6 +71662,10 @@ export type Database = {
           watch_seconds: number
         }[]
       }
+      fn_academy_engagement_dashboard: {
+        Args: { p_from?: string | null; p_to?: string | null; p_tenant_id?: number | null; p_source?: string }
+        Returns: Json
+      }
       fn_academy_enrollment_stats: { Args: never; Returns: Json }
       fn_academy_rule_dashboard_stats: {
         Args: never

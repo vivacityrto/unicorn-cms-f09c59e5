@@ -1,3 +1,4 @@
+import AcademyEngagementDashboard from "@/components/academy/admin/AcademyEngagementDashboard";
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -280,12 +281,12 @@ export default function AcademyEnrolmentsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {canExportCSV && (
+            {searchParams.get("view") !== "engagement" && canExportCSV && (
               <Button variant="outline" onClick={() => handleExport(filtered)} disabled={!filtered.length}>
                 <Download className="h-4 w-4 mr-1" /> Export CSV
               </Button>
             )}
-            {canCreateEnrolment && (
+            {searchParams.get("view") !== "engagement" && canCreateEnrolment && (
               <Button onClick={() => setNewOpen(true)} className="bg-primary text-primary-foreground">
                 <Plus className="h-4 w-4 mr-1" /> New Enrolment
               </Button>
@@ -293,6 +294,11 @@ export default function AcademyEnrolmentsPage() {
           </div>
         </div>
 
+        <div className="flex gap-2">
+          <Button variant={searchParams.get('view') === 'engagement' ? 'default' : 'outline'} onClick={() => setParam('view', 'engagement')}>Engagement dashboard</Button>
+          <Button variant={searchParams.get('view') !== 'engagement' ? 'default' : 'outline'} onClick={() => setParam('view', null)}>Manage enrolments</Button>
+        </div>
+        {searchParams.get('view') === 'engagement' ? <AcademyEngagementDashboard tenants={tenants} /> : <>
         {/* 6 stat tiles */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <AcademyStatCard label="Total" value={stats?.total ?? 0} icon={<Users className="h-5 w-5 text-primary" />} loading={loadingStats} />
@@ -615,6 +621,7 @@ export default function AcademyEnrolmentsPage() {
             </Table>
           </div>
         </Card>
+        </>}
       </div>
 
       {/* Revoke single */}
