@@ -326,7 +326,7 @@ export default function StaffPdpsPage() {
   // Resolution / access gates
   if (tenantUserLoading || activeTenantId == null) {
     return (
-      <div className="container mx-auto p-6 space-y-4">
+      <div className="w-full min-w-0 space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -336,7 +336,7 @@ export default function StaffPdpsPage() {
 
   if (!canManagePortalUsers) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full min-w-0">
         <Card>
           <CardContent className="p-6">
             <h1 className="text-lg font-semibold">You don't have access to this page</h1>
@@ -352,7 +352,7 @@ export default function StaffPdpsPage() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="w-full min-w-0 space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Staff PDPs</h1>
           <p className="text-sm text-muted-foreground">A decision-ready view of your team&apos;s development progress.</p>

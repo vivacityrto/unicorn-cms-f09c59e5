@@ -30,13 +30,18 @@ describe('ClientHomeView layout', () => {
     expect(root.className).not.toMatch(/max-w-/);
   });
 
-  it('puts learning and regulatory news with the packages, and messages and reminders beside them', () => {
+  it('puts learning and regulatory news with the packages, and messages and reminders in their own two-column row', () => {
     show();
     const side = screen.getByRole('complementary', { name: 'What needs you' });
-    expect(within(side).getByRole('region', { name: 'Messages slot' })).toBeInTheDocument();
-    expect(within(side).getByRole('region', { name: 'Reminders slot' })).toBeInTheDocument();
+    expect(within(side).queryByRole('region', { name: 'Messages slot' })).not.toBeInTheDocument();
+    expect(within(side).queryByRole('region', { name: 'Reminders slot' })).not.toBeInTheDocument();
     expect(within(side).queryByRole('region', { name: 'Academy slot' })).not.toBeInTheDocument();
     expect(within(side).queryByRole('region', { name: 'Regulatory slot' })).not.toBeInTheDocument();
+    const messages = screen.getByRole('region', { name: 'Messages slot' });
+    const reminders = screen.getByRole('region', { name: 'Reminders slot' });
+    // Both sit in the same grid row, which has two columns on large screens.
+    expect(messages.parentElement).toBe(reminders.parentElement);
+    expect(messages.parentElement?.className).toContain('lg:grid-cols-2');
     expect(screen.getByRole('region', { name: 'Academy slot' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Regulatory slot' })).toBeInTheDocument();
   });

@@ -81,7 +81,7 @@ function partitionDefault(rows: ClientReportingReminder[]) {
   return { visible, hidden: rows.filter((r) => !visibleIds.has(r.obligation_id)) };
 }
 
-function ReminderRow({ row }: { row: ClientReportingReminder }) {
+function ReminderRow({ row, compact = false }: { row: ClientReportingReminder; compact?: boolean }) {
   const meta = STATUS_META[row.status];
   const Icon = meta.icon;
 
@@ -99,7 +99,7 @@ function ReminderRow({ row }: { row: ClientReportingReminder }) {
   }
 
   return (
-    <div className="flex gap-3 py-3 border-b border-border last:border-b-0">
+    <div className={compact ? "flex gap-2.5 py-2 border-b border-border last:border-b-0" : "flex gap-3 py-3 border-b border-border last:border-b-0"}>
       <div className="shrink-0 pt-0.5">
         <Icon className={`h-4 w-4 ${meta.iconClass}`} />
       </div>
@@ -115,10 +115,10 @@ function ReminderRow({ row }: { row: ClientReportingReminder }) {
             {meta.pillLabel}
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+        <p className={compact ? "text-xs text-muted-foreground line-clamp-1 mt-0.5" : "text-sm text-muted-foreground line-clamp-2 mt-1"}>
           {row.description}
         </p>
-        <div className="flex flex-col md:flex-row md:items-center md:gap-2 mt-1.5 text-xs text-muted-foreground">
+        <div className={compact ? "flex flex-wrap items-center gap-x-2 mt-1 text-xs text-muted-foreground" : "flex flex-col md:flex-row md:items-center md:gap-2 mt-1.5 text-xs text-muted-foreground"}>
           {dateLine && <span>{dateLine}</span>}
           {dateLine && (
             <span className="hidden md:inline text-muted-foreground/60">·</span>
@@ -138,7 +138,7 @@ function ReminderRow({ row }: { row: ClientReportingReminder }) {
   );
 }
 
-export function HomeReportingRemindersCard() {
+export function HomeReportingRemindersCard({ compact = false }: { compact?: boolean }) {
   const { data, isLoading, isError } = useClientReportingReminders();
   const [expanded, setExpanded] = useState(false);
 
@@ -184,8 +184,11 @@ export function HomeReportingRemindersCard() {
 
   if (!data || data.length === 0) return null;
 
-  const rows = expanded ? [...visible, ...hidden] : visible;
+  // Compact (the Home panel) shows the three most pressing; the rest are one click away.
+  const ordered = [...visible, ...hidden];
+  const rows = expanded ? ordered : compact ? visible.slice(0, 3) : visible;
   const total = data.length;
+  const moreCount = total - rows.length;
 
   return (
     <Card>
@@ -201,11 +204,11 @@ export function HomeReportingRemindersCard() {
       <CardContent className="pt-0">
         <div>
           {rows.map((r) => (
-            <ReminderRow key={r.obligation_id} row={r} />
+            <ReminderRow key={r.obligation_id} row={r} compact={compact} />
           ))}
         </div>
-        {hidden.length > 0 && (
-          <div className="pt-3">
+        {(expanded || moreCount > 0) && (
+          <div className="pt-2">
             <Button
               variant="ghost"
               size="sm"
