@@ -83,7 +83,7 @@ export function ClientHomeView(p: ClientHomeViewProps) {
             {/* What Vivacity has sent and what is coming due, side by side and compact, inside this column under
                 Recent activity. If only one has anything to show it takes the full width. */}
             {(p.messages || p.reminders) && (
-              <div className="grid items-start gap-4 lg:grid-cols-2 lg:[&>*:only-child]:col-span-2">
+              <div className="grid items-stretch gap-4 lg:grid-cols-2 lg:[&>*:only-child]:col-span-2">
                 {p.messages}
                 {p.reminders}
               </div>
