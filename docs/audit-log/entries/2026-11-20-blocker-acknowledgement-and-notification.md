@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked to build the blocker acknowledgement and notifications, the follow-up left open when the staff view and the attention list were built.
 **Scope:** migration `20261120090000_blocker_acknowledgement_and_notification.sql`: five new empty columns on `public.package_checkins` (`acknowledged_at`, `acknowledged_by`, `resolved_at`, `resolved_by`, `staff_note`) with two check constraints, one new staff function `set_package_blocker_status`, and replacements (same names and signatures) of `submit_package_checkin`, `get_package_checkin_state`, `get_tenant_checkins_overview` and `get_checkins_attention`. Portal changes in the client check-in card, the staff client card and the dashboard attention card. No existing row is changed.
-**Status:** Written and dry-run in production (everything rolled back). **Not yet applied**: needs Carl's explicit go-ahead. Until it is applied the staff card and attention card keep working on the previous functions except that the new buttons fail with a plain error message, and no notification is created.
+**Status:** Applied to production on 20 November 2026 on Carl's explicit go-ahead ("Apply it"), after a dry run. Postflight below. The portal changes go live when this pull request is merged.
 
 ## What it does
 
@@ -21,6 +21,10 @@ Inside a rolled-back block, with a real package that has a manager:
 - The package manager saw exactly one notification of type `client_blocker`. Its text named the client, the person and the category and did not contain the words the client wrote. (The test printed that notification's title and message, so one client name and one person name appeared in the test output; no answer text did. Earlier dry runs printed no names.)
 - Staff attention list: 1 blocker, 1 new. An unknown action and a 281-character note were each refused. After "acknowledge" with a note: 1 blocker, 0 new. After "resolve": the package dropped off the list. After "reopen": back on the list with 1 blocker.
 - The staff client overview showed the resolved blocker with status "resolved", who saw it and the note. The client's own state afterwards showed status "seen" and the note.
+
+## Production
+
+Preflight: none of the five columns present, the status function absent, migration not recorded, the check-in table empty and no `client_blocker` notifications. Applied with the exact migration SQL. Postflight: all five columns and both constraints present; exactly one overload of `set_package_blocker_status`, executable by `authenticated` and not by `anon`; the four replaced functions each still exist once and `anon` cannot execute `submit_package_checkin` or `get_checkins_attention`; the check-in table still has no write policy and `authenticated` holds SELECT only; the table is still empty and no notifications were created. No existing row changed.
 
 ## Migration safety allowlist
 
