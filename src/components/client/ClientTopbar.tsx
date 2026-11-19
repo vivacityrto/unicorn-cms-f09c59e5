@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { useCondensedHeader } from "@/hooks/useCondensedHeader";
 import { Link } from "react-router-dom";
 import {
   HelpCircle,
@@ -74,6 +76,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
   const [elapsedMin, setElapsedMin] = useState(0);
   const [installOpen, setInstallOpen] = useState(false);
+  const condensed = useCondensedHeader();
 
   useEffect(() => {
     if (!isPreview) return;
@@ -122,20 +125,26 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
   return (
     <header
-      className="h-[72px] bg-card border-b border-border flex items-center justify-between px-4 md:px-6"
+      data-condensed={condensed}
+      className={cn(
+        "group/topbar sticky top-0 z-20 flex items-center justify-between border-b border-border px-4 md:px-6",
+        // Pinned, and quieter once you scroll: shorter and slightly see-through so it stays out of the way.
+        "transition-[height,background-color,box-shadow] duration-200 motion-reduce:transition-none",
+        condensed ? "h-11 bg-card/90 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80" : "h-[4.5rem] bg-card",
+      )}
     >
       {/* Left: Unicorn + Vivacity logos */}
       <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
         <img
           src={unicornLogo}
           alt="Unicorn 2.0"
-          className="h-14 w-auto flex-shrink-0"
+          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-7 w-[1.125rem] object-cover object-left" : "h-14 w-auto")}
           loading="eager"
         />
         <img
           src={vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className="h-10 w-auto flex-shrink-0"
+          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-7 w-[1.875rem] object-cover object-left" : "h-10 w-auto")}
           loading="eager"
         />
       </div>
@@ -189,7 +198,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
 
       {/* Right: Notifications + Help + Profile */}
-      <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+      <div className="topbar-actions flex items-center gap-1 flex-shrink-0 ml-2">
         {/* Help — gated to primary/secondary contacts */}
         {canAccessHelpCenter && (
           <Button
@@ -309,7 +318,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           <img
             src={logoUrl}
             alt="Tenant logo"
-            className="h-8 w-auto rounded object-contain"
+            className={cn("w-auto rounded object-contain transition-all", condensed ? "h-6" : "h-8")}
           />
         )}
 
@@ -317,7 +326,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 ml-1">
-              <Avatar className="h-8 w-8 border-2 border-border">
+              <Avatar className="h-8 w-8 border-2 border-border transition-all group-data-[condensed=true]/topbar:h-6 group-data-[condensed=true]/topbar:w-6">
                 <AvatarImage src={displayUser?.avatar_url || ""} alt={getUserDisplayName()} />
                 <AvatarFallback
                   className="text-xs font-semibold"
