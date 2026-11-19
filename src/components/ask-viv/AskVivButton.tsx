@@ -33,7 +33,7 @@ export function AskVivButton() {
         <Button
           variant="outline"
           size="icon"
-          className="relative h-10 w-10 rounded-full shrink-0 p-1.5"
+          className="relative h-10 w-10 md:h-8 md:w-8 rounded-full shrink-0 p-1.5"
           onClick={openWidget}
           aria-label="Open Ask Viv"
         >

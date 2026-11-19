@@ -430,7 +430,7 @@ export const DashboardLayout = ({
       {/* Mobile sidebar toggle - visible only on mobile when sidebar is closed */}
       <button
         onClick={() => setSidebarOpen(true)}
-        className={`fixed top-4 left-4 z-40 p-2 rounded-lg bg-primary text-primary-foreground shadow-lg md:hidden ${sidebarOpen ? 'hidden' : 'flex'} items-center justify-center min-w-[44px] min-h-[44px]`}
+        className={`fixed top-0.5 left-2 z-40 p-2 rounded-lg bg-primary text-primary-foreground shadow-lg md:hidden ${sidebarOpen ? 'hidden' : 'flex'} items-center justify-center min-w-[44px] min-h-[44px]`}
         aria-label="Open sidebar"
       >
         <Menu className="w-5 h-5" />
@@ -703,8 +703,17 @@ export const DashboardLayout = ({
           "pl-0"
         )}
       >
-        {/* Top Bar */}
-        <TopBar />
+        {/* Top Bar: fixed so it stays in view while the page scrolls. The spacer below
+            holds its place in the flow. z-10 sits under the mobile sidebar overlay and sidebar. */}
+        <div
+          className={cn(
+            "fixed top-0 right-0 left-0 z-10 transition-all duration-300",
+            sidebarOpen ? "md:left-64" : "md:left-20"
+          )}
+        >
+          <TopBar />
+        </div>
+        <div aria-hidden className="h-12 md:h-14 shrink-0" />
 
         {/* Time Inbox Banner */}
         <TimeInboxBanner />

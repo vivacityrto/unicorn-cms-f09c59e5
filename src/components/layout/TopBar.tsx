@@ -182,7 +182,8 @@ const getBreadcrumbs = (pathname: string) => {
 // framework so they read as a matched pair, with each keeping its own
 // accent (Support Tickets' brand-aqua fill) so they stay distinguishable
 // from one another at a glance.
-const UTILITY_BUTTON_CLASS = 'h-10 w-10 rounded-full shrink-0';
+// 40px touch target on mobile, 32px visual on desktop.
+const UTILITY_BUTTON_CLASS = 'h-10 w-10 md:h-8 md:w-8 rounded-full shrink-0';
 
 function SupportTicketsButton() {
   const [open, setOpen] = useState(false);
@@ -312,13 +313,13 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between pl-16 pr-6 md:px-6 sticky top-0 z-20">
+    <header className="h-12 md:h-14 bg-card border-b border-border flex items-center justify-between pl-14 pr-3 md:px-6">
       {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <img
           src={unicornLogo}
           alt="Unicorn 2.0"
-          className="h-16 flex-shrink-0"
+          className="h-8 flex-shrink-0 hidden sm:block"
           width="117"
           height="64"
           loading="eager"
@@ -326,7 +327,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
         <img
           src={vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className="h-10 flex-shrink-0 hidden sm:block"
+          className="h-6 flex-shrink-0 hidden xl:block"
           loading="eager"
         />
 
@@ -386,7 +387,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => helpCenter.openHelpCenter("chatbot")}
-                  className="h-10 w-10"
+                  className="h-10 w-10 md:h-8 md:w-8"
                 >
                   <HelpCircle className="h-5 w-5" />
                 </Button>
@@ -421,9 +422,9 @@ export function TopBar({ showSearch = false }: TopBarProps) {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-10 rounded-full p-0 hover:ring-2 hover:ring-primary/20 transition-all"
+                    className="relative h-10 w-10 md:h-8 md:w-8 rounded-full p-0 hover:ring-2 hover:ring-primary/20 transition-all"
                   >
-                    <Avatar className="h-10 w-10 border-2 border-border">
+                    <Avatar className="h-10 w-10 md:h-8 md:w-8 border-2 border-border">
                       <AvatarImage
                         src={profile?.avatar_url || ""}
                         alt={getUserDisplayName()}
