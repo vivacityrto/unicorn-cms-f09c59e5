@@ -712,13 +712,14 @@ export const DashboardLayout = ({
         {showVivacityMenu && <StaffLiveNotificationBanner />}
 
         {/* Page Content - w-full min-w-0 prevents content collapse */}
-        <main className="flex-1 w-full min-w-0 p-4 md:p-6 pb-16 overflow-y-auto">{children}</main>
+        <main className="flex-1 w-full min-w-0 p-4 md:p-6 pb-32 md:pb-20 overflow-y-auto">{children}</main>
 
         {/* Footer: pinned to the bottom of the window so it stays in view whatever the scroll position.
             Offset by the sidebar width so it sits beside the sidebar, as the content does. */}
         <div
           className={cn(
-            "fixed bottom-0 left-0 right-0 z-30 transition-all duration-300 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)]",
+            // z-20 keeps the footer below the mobile sidebar (z-30), which opens over it.
+            "fixed bottom-0 left-0 right-0 z-20 transition-all duration-300 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)]",
             sidebarOpen ? "md:left-64" : "md:left-20"
           )}
         >
