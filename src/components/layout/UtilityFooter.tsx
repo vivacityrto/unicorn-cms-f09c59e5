@@ -1,18 +1,17 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, HelpCircle, LifeBuoy } from "lucide-react";
+import { Building2, HelpCircle, LifeBuoy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useHelpCenter } from "@/components/help-center";
 import { cn } from "@/lib/utils";
 import { RefreshButton } from "@/components/layout/RefreshButton";
+import { BuildVersion } from "@/components/layout/BuildVersion";
 
 interface UtilityFooterProps {
   /** Shown only when a client or tenant is selected. Omitted otherwise, so the footer never claims a context it doesn't have. */
   activeTenantName?: string | null;
 }
-
-const BUILD_ID = import.meta.env.VITE_BUILD_ID as string | undefined;
 
 /** A time in a given zone, the way the team reads it ("3:45 pm AEDT"). `label` replaces the browser's zone name. */
 function zoneTime(now: Date, timeZone: string, label?: string): string {
@@ -75,20 +74,8 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const online = useOnline();
   const clock = useClocks();
-  const [copied, setCopied] = useState(false);
   const userRole = profile?.unicorn_role || "User";
   const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
-  const showBuild = !!BUILD_ID && BUILD_ID !== "__BUILD_ID__";
-
-  const copyBuild = async () => {
-    try {
-      await navigator.clipboard.writeText(BUILD_ID ?? "");
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* Clipboard can be blocked; the build id is still visible. */
-    }
-  };
 
   return (
     <footer className="box-border h-[25px] w-full border-t bg-card px-4 text-[11px] leading-none md:px-6">
@@ -132,20 +119,11 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
             <LifeBuoy aria-hidden className="h-3 w-3" />
             <span className="hidden sm:inline">Support Tickets</span>
           </Link>
-          {showBuild && (
-            <>
-              {divider}
-              <button
-                type="button"
-                onClick={copyBuild}
-                title="Build version. Click to copy"
-                className={cn(link, "hidden font-mono text-[10px] text-muted-foreground/70 md:inline-flex")}
-              >
-                {copied ? <Check aria-hidden className="h-3 w-3" /> : <Copy aria-hidden className="h-3 w-3" />}
-                {copied ? "Copied" : `Build ${BUILD_ID}`}
-              </button>
-            </>
-          )}
+          <Link to="/manage-tenants" aria-label="Manage Clients" className={link}>
+            <Building2 aria-hidden className="h-3 w-3" />
+            <span className="hidden sm:inline">Manage Clients</span>
+          </Link>
+          <BuildVersion />
         </div>
       </div>
     </footer>

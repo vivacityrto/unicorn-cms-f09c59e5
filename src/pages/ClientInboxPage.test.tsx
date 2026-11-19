@@ -43,18 +43,20 @@ vi.mock('@/hooks/useClientInbox', () => ({
   useClientInbox: () => ({ items: [], isLoading: false, unreadCount: 0 }),
 }));
 vi.mock('@/hooks/useNotificationPrefs', () => ({ useNotificationPrefs: () => ({ categories: { tasks: true, meetings: true, obligations: true, events: true } }) }));
-vi.mock('@/components/client/NewConversationDialog', () => ({ NewConversationDialog: () => null }));
 vi.mock('@/hooks/useConversationParticipants', () => ({ useConversationParticipants: () => ({ data: [] }) }));
 vi.mock('@/components/messaging/MessageAttachments', () => ({ MessageAttachments: () => null }));
 vi.mock('@/components/messaging/AttachmentChips', () => ({ AttachmentChips: () => null }));
 
 import ClientInboxPage from './ClientInboxPage';
+import { MessengerDockProvider, useMessengerDock } from '@/components/messenger';
 
 Element.prototype.scrollIntoView = () => undefined;
 
 const show = (url: string) => render(
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-    <MemoryRouter initialEntries={[url]}><ClientInboxPage /></MemoryRouter>
+    <MessengerDockProvider>
+      <MemoryRouter initialEntries={[url]}><ClientInboxPage /></MemoryRouter>
+    </MessengerDockProvider>
   </QueryClientProvider>,
 );
 

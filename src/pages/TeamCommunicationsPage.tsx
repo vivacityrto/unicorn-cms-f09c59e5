@@ -8,12 +8,11 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useStaffMessenger } from '@/hooks/useStaffMessenger';
 import { useStaffConversationPane } from '@/hooks/useStaffConversationPane';
 import { useBulkMessageSummary } from '@/hooks/useBulkMessageSummary';
-import { Messenger } from '@/components/messenger';
+import { Messenger, NEW_MESSAGE_THREAD_ID, useMessengerDock } from '@/components/messenger';
 import { InsightCard } from '@/components/staff/InsightCard';
 import { applyInsightView, communicationsInsights, waitingFor, type InsightView } from '@/components/staff/communicationsInsights';
 import { BulkMessageDialog } from '@/components/communications/BulkMessageDialog';
 import { BulkMessageHistory } from '@/components/communications/BulkMessageHistory';
-import { NewTeamMessageDialog } from '@/components/communications/NewTeamMessageDialog';
 import { Button } from '@/components/ui/button';
 import { SearchableFilter } from '@/components/staff/SearchableFilter';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -41,7 +40,7 @@ export default function TeamCommunicationsPage() {
   const [view, setView] = useState<InsightView>('all');
   const [filterTenant, setFilterTenant] = useState('all');
   const [filterStaff, setFilterStaff] = useState('all');
-  const [newOpen, setNewOpen] = useState(false);
+  const { openDock } = useMessengerDock();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -111,7 +110,7 @@ export default function TeamCommunicationsPage() {
               Bulk message
             </Button>
           )}
-          <Button onClick={() => setNewOpen(true)} className="gap-1.5">
+          <Button onClick={() => openDock(NEW_MESSAGE_THREAD_ID)} className="gap-1.5">
             <Plus className="h-4 w-4" />
             New message
           </Button>
@@ -223,16 +222,6 @@ export default function TeamCommunicationsPage() {
                 <Building2 className="h-4 w-4" aria-hidden />
               </Link>
             ) : undefined,
-        }}
-      />
-
-      <NewTeamMessageDialog
-        open={newOpen}
-        onOpenChange={setNewOpen}
-        currentUserId={profile?.user_uuid}
-        onCreated={(id) => {
-          select(id);
-          void qc.invalidateQueries({ queryKey: ['staff-messenger', 'threads'] });
         }}
       />
 

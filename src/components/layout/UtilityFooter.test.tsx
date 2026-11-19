@@ -55,3 +55,14 @@ describe('UtilityFooter', () => {
     expect(screen.getByText('We Make Compliance Simple!')).toBeInTheDocument();
   });
 });
+
+describe('UtilityFooter Manage Clients', () => {
+  it('links to the client list, between Support Tickets and the build version', () => {
+    show();
+    const links = screen.getAllByRole('link').map((l) => l.getAttribute('aria-label') ?? l.textContent);
+    expect(links.indexOf('Support Tickets')).toBeGreaterThanOrEqual(0);
+    expect(links.indexOf('Manage Clients')).toBe(links.indexOf('Support Tickets') + 1);
+    expect(screen.getByRole('link', { name: 'Manage Clients' })).toHaveAttribute('href', '/manage-tenants');
+  });
+});
+
