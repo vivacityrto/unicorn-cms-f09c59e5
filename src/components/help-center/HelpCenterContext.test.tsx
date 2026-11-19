@@ -26,11 +26,11 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   </QueryClientProvider>
 );
 
-const both = () => ({ help: useHelpCenter(), dock: useMessengerDock() });
+const useBoth = () => ({ help: useHelpCenter(), dock: useMessengerDock() });
 
 describe('the retired Help Center, now a thin layer over the messenger bubble', () => {
   it('opens the bubble on Ask Viv, your consultant or support, depending on the button', async () => {
-    const { result } = renderHook(both, { wrapper });
+    const { result } = renderHook(useBoth, { wrapper });
     await vi.waitFor(() => expect(result.current.help.canAccess).toBe(true));
 
     act(() => result.current.help.openHelpCenter());
@@ -52,7 +52,7 @@ describe('the retired Help Center, now a thin layer over the messenger bubble', 
 
   it('keeps the old rule: people with no relationship to the organisation get nothing', async () => {
     state.role = null;
-    const { result } = renderHook(both, { wrapper });
+    const { result } = renderHook(useBoth, { wrapper });
     await new Promise((r) => setTimeout(r, 30));
     expect(result.current.help.canAccess).toBe(false);
     act(() => result.current.help.openHelpCenter('support'));
