@@ -109,4 +109,19 @@ describe('a new message from staff, in the bubble', () => {
     await waitFor(() => expect(h.warn).toHaveBeenCalledWith(expect.stringContaining('2 client users could not be added')));
     expect(api.select).toHaveBeenCalledWith('conv-1');
   });
+
+  it('a message written to one person is never restored once everyone at the client is chosen', async () => {
+    const user = userEvent.setup();
+    const first = show(1);
+    await user.click(await screen.findByRole('combobox', { name: 'Recipient' }));
+    await user.click(await screen.findByText('Ana Lee (Primary)'));
+    write('Private note for Ana');
+    expect(window.localStorage.length).toBeGreaterThan(0);
+    // Reopening starts at everyone: the private draft must not be waiting there.
+    document.body.innerHTML = '';
+    show(1);
+    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('');
+    void first;
+  });
 });
+

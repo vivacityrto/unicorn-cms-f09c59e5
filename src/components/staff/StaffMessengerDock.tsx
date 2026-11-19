@@ -60,7 +60,12 @@ export function StaffMessengerDock() {
   const { isSuperAdmin, isVivacityTeam } = useRBAC();
   const isStaff = isSuperAdmin || isVivacityTeam;
   const [allClients, setAllClients] = useState(false);
-  const { threads: convoThreads, totalUnread, isLoading, scope, hasScope } = useStaffMessenger(allClients, isStaff);
+  const { selectedId, select } = useMessengerDock();
+  // A conversation that is open but outside the list (just written to a client who is not mine) is fetched on its own, so it
+  // opens instead of the bubble dropping back to the list.
+  const extraThreadId = selectedId && selectedId !== ASK_VIV_THREAD_ID && selectedId !== NEW_MESSAGE_THREAD_ID ? selectedId : null;
+  const { threads: listed, opened, totalUnread, isLoading, scope, hasScope } = useStaffMessenger(allClients, isStaff, { extraThreadId });
+  const convoThreads = useMemo(() => (opened && !listed.some((t) => t.id === opened.id) ? [...listed, opened] : listed), [listed, opened]);
   // Ask Viv appears here exactly when the old bottom-left widget did: the assistant's own rollout gate (master flag, then Super
   // Admin, named beta users or all staff).
   const { enabled: askVivEnabled } = useAskVivAssistantAccess();
@@ -68,7 +73,6 @@ export function StaffMessengerDock() {
     () => (askVivEnabled ? [ASK_VIV_THREAD, ...convoThreads, NEW_MESSAGE_THREAD] : [...convoThreads, NEW_MESSAGE_THREAD]),
     [askVivEnabled, convoThreads],
   );
-  const { select } = useMessengerDock();
   useOldWidgetOpensTheBubble(askVivEnabled);
 
   if (!isStaff) return null;

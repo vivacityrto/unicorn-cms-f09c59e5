@@ -77,7 +77,9 @@ export function StaffNewMessagePane({ api, initialTenantId = null }: Props) {
       headerActions={api.headerActions}
       ready={ready}
       notReadyReason="Choose a client to write to."
-      draftScope="staff-new"
+      // A draft belongs to who it was written to: a message written to one person comes back only when that same person is
+      // chosen again, and can never be sent to everyone by reopening the screen.
+      draftScope={`staff-new:${tenantId}:${recipientId}`}
       validateFile={attachmentProblem}
       accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
       onSend={async ({ body, files }) => {

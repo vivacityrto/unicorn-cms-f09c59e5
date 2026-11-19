@@ -2,11 +2,13 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ askVivEnabled: true, mounts: 0 }));
+const state = vi.hoisted(() => ({ askVivEnabled: true, mounts: 0, lastOpts: undefined as unknown, opened: null as unknown }));
 
 vi.mock('@/hooks/useRBAC', () => ({ useRBAC: () => ({ isSuperAdmin: false, isVivacityTeam: true }) }));
 vi.mock('@/hooks/useStaffMessenger', () => ({
-  useStaffMessenger: () => ({
+  useStaffMessenger: (_all: boolean, _en: boolean, opts?: unknown) => ({
+    opened: state.opened,
+    ...((state.lastOpts = opts), {}),
     threads: [{ id: 'c1', kind: 'general', title: 'Acme · hello', unread: false, tenantId: 1, lastActivityAt: '2026-11-19T01:00:00Z' }],
     totalUnread: 0,
     isLoading: false,
@@ -34,7 +36,7 @@ Element.prototype.scrollTo = vi.fn();
 Element.prototype.scrollIntoView = vi.fn();
 
 import { StaffMessengerDock } from './StaffMessengerDock';
-import { MessengerDockProvider } from '@/components/messenger';
+import { MessengerDockProvider, useMessengerDock } from '@/components/messenger';
 import { useAskVivAssistantWidget } from '@/hooks/useAskVivAssistantWidget';
 
 const show = () =>
@@ -119,3 +121,29 @@ describe('writing a new message from the staff bubble', () => {
     expect(screen.getByText('compose pane')).toBeVisible();
   });
 });
+
+describe('a conversation outside the list', () => {
+  it('is asked for on its own and stays open, instead of dropping back to the list', () => {
+    state.opened = { id: 'far', kind: 'general', title: 'Far Away College', unread: false, tenantId: 99 };
+    const { rerender } = render(
+      <MemoryRouter>
+        <MessengerDockProvider>
+          <Opener id="far" />
+          <StaffMessengerDock />
+        </MessengerDockProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'go' }));
+    expect(state.lastOpts).toMatchObject({ extraThreadId: 'far' });
+    expect(screen.getByRole('region', { name: 'Conversation' })).toBeInTheDocument();
+    expect(screen.getByText('Far Away College')).toBeInTheDocument();
+    rerender(<MemoryRouter />);
+    state.opened = null;
+  });
+});
+
+function Opener({ id }: { id: string }) {
+  const { openDock } = useMessengerDock();
+  return <button onClick={() => openDock(id)}>go</button>;
+}
+
