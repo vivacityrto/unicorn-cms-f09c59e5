@@ -27,6 +27,8 @@ export interface MessengerProps {
   emptyThreads?: ReactNode;
   /** Shown in the conversation area on wide screens when nothing is selected. */
   emptySelection?: ReactNode;
+  /** A new message being written. Takes the conversation area until it is sent or closed (a page's "New message"). */
+  compose?: ReactNode;
   className?: string;
 }
 
@@ -34,8 +36,9 @@ export interface MessengerProps {
  * The messenger shell: thread list plus open conversation. It owns layout only; data and actions come from the host,
  * so the client Inbox, the bubble, staff Communications and a client's Messages tab all share this.
  */
-export function Messenger({ threads, threadsLoading, selectedId, onSelect, openThread, conversation, mode = 'page', listAction, emptyThreads, emptySelection, className }: MessengerProps) {
-  const selected = threads.find((t) => t.id === selectedId) ?? (openThread && openThread.id === selectedId ? openThread : null);
+export function Messenger({ threads, threadsLoading, selectedId, onSelect, openThread, conversation, mode = 'page', listAction, emptyThreads, emptySelection, compose, className }: MessengerProps) {
+  const composing = !!compose;
+  const selected = composing ? null : threads.find((t) => t.id === selectedId) ?? (openThread && openThread.id === selectedId ? openThread : null);
   const dock = mode === 'dock';
   const showList = dock ? !selected : true;
   const showPane = dock ? !!selected : true;
@@ -43,13 +46,15 @@ export function Messenger({ threads, threadsLoading, selectedId, onSelect, openT
   return (
     <div className={cn('flex min-h-0 overflow-hidden', dock ? 'flex-col' : 'rounded-2xl border bg-card xl:grid xl:grid-cols-[22rem_1fr]', className)}>
       {showList && (
-        <section aria-label="Conversations" className={cn('flex min-h-0 flex-col p-2.5', !dock && 'xl:border-r', !dock && selected && 'hidden xl:flex', dock && 'flex-1')}>
+        <section aria-label="Conversations" className={cn('flex min-h-0 flex-col p-2.5', !dock && 'xl:border-r', !dock && (selected || composing) && 'hidden xl:flex', dock && 'flex-1')}>
           <ThreadList threads={threads} selectedId={selectedId} onSelect={onSelect} isLoading={threadsLoading} action={listAction} empty={emptyThreads} className="min-h-0 flex-1" />
         </section>
       )}
       {showPane && (
-        <div className={cn('flex min-h-0 flex-1 flex-col', !dock && !selected && 'hidden xl:flex')}>
-          {selected && conversation ? (
+        <div className={cn('flex min-h-0 flex-1 flex-col', !dock && !selected && !composing && 'hidden xl:flex')}>
+          {composing ? (
+            compose
+          ) : selected && conversation ? (
             <ConversationPane key={selected.id} thread={selected} onBack={() => onSelect(null)} backClassName={dock ? undefined : 'xl:hidden'} {...conversation} />
           ) : (
             (emptySelection ?? (

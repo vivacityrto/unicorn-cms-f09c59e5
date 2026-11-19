@@ -133,3 +133,18 @@ describe('Messenger shell', () => {
     expect(screen.getByLabelText('Search messages')).toBeTruthy();
   });
 });
+
+describe('Messenger compose slot', () => {
+  const t = (id: string): MessengerThread => ({ id, kind: 'general', title: `Thread ${id}`, unread: false });
+  it('takes the conversation area while a new message is being written, then gives it back', () => {
+    const base = { threads: [t('a')], selectedId: 'a', onSelect: vi.fn(), conversation: { messages: [], onSend: vi.fn() } };
+    const { rerender } = render(<Messenger {...base} />);
+    expect(screen.getByRole('region', { name: 'Conversation' })).toBeInTheDocument();
+    rerender(<Messenger {...base} compose={<p>writing</p>} />);
+    expect(screen.getByText('writing')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Conversation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Conversations' })).toBeInTheDocument();
+    rerender(<Messenger {...base} />);
+    expect(screen.queryByText('writing')).not.toBeInTheDocument();
+  });
+});

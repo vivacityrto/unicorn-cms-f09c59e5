@@ -5,7 +5,8 @@ import { Bell, CheckCheck, Info, Inbox, MessageSquare, Plus } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Messenger, NEW_MESSAGE_THREAD_ID, useMessengerDock } from "@/components/messenger";
+import { Messenger } from "@/components/messenger";
+import { NewMessagePane } from "@/components/client/NewMessagePane";
 import { toMessengerThread } from "@/components/messenger/adapters/tenantConversations";
 import { useClientConversationPane } from "@/hooks/useClientConversationPane";
 
@@ -57,7 +58,8 @@ export default function ClientInboxPage() {
   const { unreadCount, notifications } = useClientNotifications();
   const { isReadOnly } = useClientTenant();
   const stats = useMemo(() => inboxStats(conversations, notifications), [conversations, notifications]);
-  const { openDock } = useMessengerDock();
+  // Writing a new message takes the conversation area on the Messages tab, the same screen the bubble uses.
+  const [composing, setComposing] = useState(false);
 
   const setTab = (next: TabValue) => {
     const params = new URLSearchParams(searchParams);
@@ -67,8 +69,8 @@ export default function ClientInboxPage() {
   };
 
   const startMessage = () => {
-    // Writing a new message happens in the bubble, the same place as everywhere else.
-    openDock(NEW_MESSAGE_THREAD_ID);
+    if (activeTab !== "messages") setTab("messages");
+    setComposing(true);
   };
 
   return (
@@ -94,7 +96,7 @@ export default function ClientInboxPage() {
             <AllTab />
           </TabsContent>
           <TabsContent value="messages" className="mt-4">
-            <MessagesTab />
+            <MessagesTab composing={composing} setComposing={setComposing} />
           </TabsContent>
           <TabsContent value="notifications" className="mt-4">
             <NotificationsTab />
@@ -171,7 +173,7 @@ function AllTab() {
 /*  MESSAGES tab: the shared messenger, fed by this organisation's conversations */
 /* -------------------------------------------------------------------------- */
 
-function MessagesTab() {
+function MessagesTab({ composing, setComposing }: { composing: boolean; setComposing: (composing: boolean) => void }) {
   const { conversations, isLoading } = useClientCommunications();
   const [searchParams, setSearchParams] = useSearchParams();
   const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
@@ -191,6 +193,7 @@ function MessagesTab() {
 
   const handleSelect = useCallback(
     (id: string | null) => {
+      setComposing(false);
       setSelectedId(id);
       const params = new URLSearchParams(searchParams);
       if (id) {
@@ -202,7 +205,7 @@ function MessagesTab() {
       }
       setSearchParams(params, { replace: true });
     },
-    [searchParams, setSearchParams],
+    [searchParams, setSearchParams, setComposing],
   );
 
   return (
@@ -220,6 +223,7 @@ function MessagesTab() {
             threads={threads}
             selectedId={openId}
             onSelect={handleSelect}
+            compose={composing ? <NewMessagePane api={{ onBack: () => setComposing(false), select: handleSelect, headerActions: null }} /> : undefined}
             emptyThreads={
               <EmptyState
                 icon={MessageSquare}
