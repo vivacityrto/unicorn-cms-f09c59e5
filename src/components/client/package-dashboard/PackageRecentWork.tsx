@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatHours, formatWorkType, cleanWorkNote } from './formatters';
+import { formatHours, formatWorkType } from './formatters';
 import type { ClientPackageHoursRecentRow } from '@/hooks/use-client-package-hours-recent';
 
 interface Props {
@@ -44,11 +44,6 @@ function fmtDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return isSameYear(d, new Date()) ? format(d, 'd MMM') : format(d, 'd MMM yy');
-}
-
-function truncate(s: string, max = 80): string {
-  if (s.length <= max) return s;
-  return s.slice(0, max - 1).trimEnd() + '…';
 }
 
 function SectionHeading({ count }: { count?: number }) {
@@ -108,7 +103,6 @@ export function PackageRecentWork({
       <ul className="space-y-3">
         {visible.map((e) => {
           const { Icon, colorClass } = iconFor(e.work_type);
-          const cleanedNote = cleanWorkNote(e.notes);
           return (
             <li key={e.entry_id} className="flex items-start gap-3">
               {/* Date + icon */}
@@ -132,11 +126,6 @@ export function PackageRecentWork({
                     </Badge>
                   )}
                 </div>
-                {cleanedNote && (
-                  <div className="text-xs text-muted-foreground truncate">
-                    {truncate(cleanedNote, 80)}
-                  </div>
-                )}
               </div>
 
               {/* Hours */}
