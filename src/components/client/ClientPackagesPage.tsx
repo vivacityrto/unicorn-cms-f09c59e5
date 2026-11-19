@@ -9,7 +9,6 @@ import { useClientPackageActivity } from "@/hooks/use-client-package-activity";
 import { PackageAnalytics } from "@/components/client/package-dashboard/PackageAnalytics";
 import { PackageCheckIn } from "@/components/client/package-dashboard/PackageCheckIn";
 import { ClientInsightCard } from "@/components/client/insight/ClientInsightCard";
-import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
 import { PackageHoursBreakdown } from "@/components/client/package-dashboard/PackageHoursBreakdown";
 import { PackageBurndownChart } from "@/components/client/package-dashboard/PackageBurndownChart";
 import { PackageRecentWork } from "@/components/client/package-dashboard/PackageRecentWork";
@@ -387,15 +386,6 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
             </Button>
           )}
         </div>
-
-        {/* Pinned-note banner (only when present) */}
-        {dashboard?.pinned_note_text || dashboard?.pinned_note_title ? (
-          <PinnedNoteBanner
-            title={dashboard.pinned_note_title}
-            text={dashboard.pinned_note_text}
-            severity={dashboard.pinned_note_severity}
-          />
-        ) : null}
 
         {dashboard && !dashboard.is_complete && <PackageInsightCard dashboard={dashboard} forecast={forecast} />}
 
