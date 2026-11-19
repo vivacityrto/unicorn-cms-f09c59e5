@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked for the client portal Academy analytics to be redesigned around data that makes sense to a client. The agreed rule (19 November 2026) is that only courses learners chose themselves count.
 **Scope:** one new read-only function, `public.get_tenant_academy_learner_analytics(p_tenant_id bigint)` (migration `20261119150000_get_tenant_academy_learner_analytics.sql`). No table, column, policy, trigger or data change.
-**Status:** NOT yet applied to production. Dry-run done (below). Applying needs Carl's explicit go-ahead; the screen change in the same PR must not be merged before the function exists, because the page calls it.
+**Status:** Applied to production on 19 November 2026 on Carl's explicit go-ahead ("Apply, then merge"), before the screen change merged. Postflight below.
 
 ## Why a function
 
@@ -19,6 +19,10 @@ The same check as `get_tenant_academy_analytics`: a `primary_contact` or `second
 ## Dry run (production, read-only, rolled back)
 
 Run inside a block that raised at the end, with the access check removed and the function created in the session's temp schema, for tenant 7512 (the largest, which has 304 enrolments added another way): 103 chosen, 57 finished, 14 learners, 23 certificates, 478 lessons completed, 11,851 minutes, 4 active in 30 days, not counted 304 (3 finished), 69 courses, 20 untouched, 12 weeks of trend. Nothing was created or changed; the block's names and emails were not printed.
+
+## Production
+
+Preflight: function absent, migration not recorded. Applied with the exact migration SQL. Postflight: exactly one overload `(p_tenant_id bigint)`, `SECURITY DEFINER`, execute granted to `authenticated` (plus the default `postgres` and `service_role`), none to `anon` or `public`; a call with no signed-in access to tenant 7512 is refused with "Not authorized for this tenant". No table or data changed.
 
 ## Known limits
 
