@@ -10,6 +10,6 @@
 - `addin-email-capture`: upsert uses `onConflict: 'user_uuid,external_message_id,tenant_id'`.
 - `useLinkedEmails`: reads the function's response body, so the modal shows the real message.
 
-**Pending, applied only after the two functions are deployed:** `supabase/migrations/20261119100000_email_messages_unique_per_client.sql` drops `email_messages_unique_per_user` and `email_messages_user_uuid_external_message_id_key`. Dropping them earlier would break the add-in's upsert.
+**Deferred:** dropping `email_messages_unique_per_user` and `email_messages_user_uuid_external_message_id_key` is not applied. The add-in's upsert still relies on them, and dropping them would break every add-in capture. The step-2 file is a placeholder until the add-in's per-client key is decided.
 
 **Rollback:** re-add `UNIQUE (user_uuid, external_message_id)`, once no email is linked to more than one client.
