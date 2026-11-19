@@ -49,9 +49,10 @@ describe('the client messenger thread list', () => {
     expect(threads.find((t) => t.id === 'ticket:t1')).toMatchObject({ kind: 'support', title: 'ST-7 · Cannot log in', badge: { label: 'Waiting for your reply', tone: 'warning' } });
   });
 
-  it('gives academy-only people support and nothing that needs a conversation or Ask Viv', () => {
+  it('gives academy-only people only tickets they already have: no Ask Viv, no conversations, and no way to start a ticket (the database refuses it)', () => {
     const threads = buildClientThreads({ ...base, conversations: [conv({ id: 'a' })], tickets: [ticket()], cscName: 'Nova', hasCsc: true, academyOnly: true });
-    expect(threads.map((t) => t.id)).toEqual([NEW_TICKET_THREAD_ID, 'ticket:t1']);
+    expect(threads.map((t) => t.id)).toEqual(['ticket:t1']);
+    expect(buildClientThreads({ ...base, academyOnly: true })).toEqual([]);
   });
 });
 
@@ -65,6 +66,18 @@ describe('the old Help Center buttons', () => {
     expect(resolveHelpAlias(HELP_ALIAS_CSC, withReal)).toBe('real');
     const none = buildClientThreads({ ...base, hasCsc: true });
     expect(resolveHelpAlias(HELP_ALIAS_CSC, none)).toBe(NEW_CSC_THREAD_ID);
+  });
+
+  it('waits for the conversations to load, so it never picks "start one" while the real conversation is still on its way', () => {
+    const beforeLoad = buildClientThreads({ ...base, hasCsc: true });
+    expect(resolveHelpAlias(HELP_ALIAS_CSC, beforeLoad, false)).toBeNull();
+    expect(resolveHelpAlias(HELP_ALIAS_SUPPORT, beforeLoad, false)).toBeNull();
+    const afterLoad = buildClientThreads({ ...base, conversations: [conv({ id: 'real', topic: 'csc', type: 'direct' })], hasCsc: true });
+    expect(resolveHelpAlias(HELP_ALIAS_CSC, afterLoad, true)).toBe('real');
+  });
+
+  it('does not send "Support" to a place that does not exist for academy-only people', () => {
+    expect(resolveHelpAlias(HELP_ALIAS_SUPPORT, buildClientThreads({ ...base, academyOnly: true }))).toBeNull();
   });
 
   it('stays unresolved when there is no consultant, and ignores ids that are not aliases', () => {

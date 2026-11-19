@@ -29,12 +29,17 @@ function useEffectiveUserId(): string | null {
   return isPreviewMode ? actingUserId : user?.id ?? null;
 }
 
-export function useClientTickets() {
+/**
+ * The signed-in client's own tickets. Pass `pollMs` where the list stays on screen or mounted for a long time (the messenger
+ * bubble), so a status change by the team shows without a reload.
+ */
+export function useClientTickets(opts: { pollMs?: number } = {}) {
   const userId = useEffectiveUserId();
   return useQuery({
     queryKey: ['client-support-tickets', userId],
     enabled: !!userId,
     staleTime: 30_000,
+    refetchInterval: opts.pollMs,
     queryFn: async (): Promise<ClientTicketRow[]> => {
       const { data, error } = await supabase
         .from('support_tickets')

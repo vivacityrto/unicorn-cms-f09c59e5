@@ -72,7 +72,7 @@ function TicketThreadPane({ thread, api }: { thread: MessengerThread; api: DockT
           });
           // The ticket exists now. Everything after this is best effort and must not hide that.
           if (user) {
-            for (const f of files.slice(0, 1)) {
+            for (const f of files) {
               try {
                 await uploadTicketFile({ ticketId: created.id, messageId: null, file: f, userId: user.id });
               } catch {
@@ -98,7 +98,8 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
   const { conversations, totalUnread, isLoading, createConversation } = useClientCommunications();
   const { activeTenantId, isReadOnly, isAcademyOnly } = useClientTenant();
   const { data: hero } = useClientHomeHero();
-  const { data: tickets = [] } = useClientTickets();
+  // The layout keeps this mounted for the whole visit, so poll: a status change by the team shows without a reload.
+  const { data: tickets = [] } = useClientTickets({ pollMs: 30_000 });
   const { selectedId, select } = useMessengerDock();
   const [newOpen, setNewOpen] = useState(false);
 
@@ -110,9 +111,12 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
 
   // A Help Center button asked for "csc" or "support" before the thread list was known: swap in the real thread.
   useEffect(() => {
-    const real = resolveHelpAlias(selectedId, threads);
+    const real = resolveHelpAlias(selectedId, threads, !isLoading);
     if (real) select(real);
-  }, [selectedId, threads, select]);
+  }, [selectedId, threads, isLoading, select]);
+
+  // Nothing to offer (an academy-only person with no tickets): no bubble, rather than an empty one.
+  if (isAcademyOnly && threads.length === 0) return null;
 
   return (
     <>

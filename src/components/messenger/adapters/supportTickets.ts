@@ -54,16 +54,33 @@ export function toTicketThread(t: ClientTicketRow): MessengerThread {
  * The ticket's visible replies as messages. Only replies a client may see are drawn (never staff notes, AI drafts or events),
  * the reporter is "You", and everyone else is "Vivacity team" (clients never learn individual staff names here).
  */
+/** The replies a client may see, oldest first. */
+function visibleReplies(messages: readonly ThreadMessage[]): ThreadMessage[] {
+  return messages.filter((m) => m.kind === 'reply' && !m.staff_only).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+}
+
+/**
+ * Which message each file belongs to. Files sent with a reply carry that reply's id. Files sent when the ticket was created
+ * (a screenshot with the first message) carry no message id, so they belong to the ticket's first visible reply, which is
+ * the client's original message. Without this the first screenshot would never be drawn.
+ */
+export function attachmentsByMessageId(messages: readonly ThreadMessage[], attachments: readonly ThreadAttachment[]): Map<string, ThreadAttachment[]> {
+  const first = visibleReplies(messages)[0]?.id ?? null;
+  const out = new Map<string, ThreadAttachment[]>();
+  for (const a of attachments) {
+    const owner = a.message_id ?? first;
+    if (!owner) continue;
+    out.set(owner, [...(out.get(owner) ?? []), a]);
+  }
+  return out;
+}
+
 export function toTicketMessages(messages: readonly ThreadMessage[], attachments: readonly ThreadAttachment[], reporterId: string): MessengerMessage[] {
   const byMessage = new Map<string, MessengerAttachment[]>();
-  for (const a of attachments) {
-    if (!a.message_id) continue;
-    const list = byMessage.get(a.message_id) ?? [];
-    list.push({ id: a.id, name: a.file_name, mimeType: a.mime_type, size: a.size_bytes });
-    byMessage.set(a.message_id, list);
+  for (const [id, list] of attachmentsByMessageId(messages, attachments)) {
+    byMessage.set(id, list.map((a) => ({ id: a.id, name: a.file_name, mimeType: a.mime_type, size: a.size_bytes })));
   }
-  return messages
-    .filter((m) => m.kind === 'reply' && !m.staff_only)
+  return visibleReplies(messages)
     .map((m) => {
       const fromMe = m.author_id === reporterId;
       return {
