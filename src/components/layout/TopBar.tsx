@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { useCondensedHeader } from "@/hooks/useCondensedHeader";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
@@ -42,6 +44,8 @@ import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
 import { usePageTitleValue } from "@/contexts/PageTitleContext";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
+import unicornMark from "@/assets/unicorn-mark.png";
+import vivacityMark from "@/assets/vivacity-mark.png";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import { HelpCircle } from "lucide-react";
 
@@ -182,7 +186,7 @@ const getBreadcrumbs = (pathname: string) => {
 // framework so they read as a matched pair, with each keeping its own
 // accent (Support Tickets' brand-aqua fill) so they stay distinguishable
 // from one another at a glance.
-const UTILITY_BUTTON_CLASS = 'h-10 w-10 rounded-full shrink-0';
+const UTILITY_BUTTON_CLASS = 'h-10 w-10 rounded-full shrink-0 transition-all';
 
 function SupportTicketsButton() {
   const [open, setOpen] = useState(false);
@@ -269,6 +273,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [installOpen, setInstallOpen] = useState(false);
   const helpCenter = useHelpCenter();
+  const condensed = useCondensedHeader();
 
   const userRole = profile?.unicorn_role || "User";
   const isClientRole = userRole === "Admin" || userRole === "User";
@@ -312,28 +317,35 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between pl-16 pr-6 md:px-6 sticky top-0 z-20">
+    <header
+      data-condensed={condensed}
+      className={cn(
+        "group/topbar sticky top-0 z-20 flex items-center justify-between border-b border-border pl-16 pr-6 md:px-6",
+        // Pinned, and quieter once you scroll: shorter, slightly see-through, so it stays out of the way of the work.
+        "transition-[height,background-color,box-shadow] duration-200 motion-reduce:transition-none",
+        condensed ? "h-11 bg-card/90 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80" : "h-16 bg-card",
+      )}
+    >
       {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
+        {/* Condensed: just the marks (the full logos cropped to their emblem), so the bar can be slim. */}
         <img
-          src={unicornLogo}
+          src={condensed ? unicornMark : unicornLogo}
           alt="Unicorn 2.0"
-          className="h-16 flex-shrink-0"
-          width="117"
-          height="64"
+          className={cn("flex-shrink-0 transition-all duration-200 motion-reduce:transition-none", condensed ? "h-8 w-8 object-contain" : "h-16")}
           loading="eager"
         />
         <img
-          src={vivacityLogo}
+          src={condensed ? vivacityMark : vivacityLogo}
           alt="Vivacity Coaching & Consulting"
-          className="h-10 flex-shrink-0 hidden sm:block"
+          className={cn("flex-shrink-0 hidden sm:block transition-all duration-200 motion-reduce:transition-none", condensed ? "h-8 w-8 object-contain" : "h-10")}
           loading="eager"
         />
 
-        <div className="h-8 w-px bg-border flex-shrink-0 hidden sm:block" />
+        <div className={cn("w-px bg-border flex-shrink-0 hidden sm:block", condensed ? "h-5" : "h-8")} />
         
         <div className="flex flex-col min-w-0">
-          {showBreadcrumbs && (
+          {showBreadcrumbs && !condensed && (
             <nav className="flex items-center gap-1 text-xs text-muted-foreground">
               {breadcrumbs.slice(0, -1).map((crumb, index) => (
                 <span key={crumb.path} className="flex items-center gap-1">
@@ -348,7 +360,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
               ))}
             </nav>
           )}
-          <h1 className="text-lg font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
+          <h1 className={cn("font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]", condensed ? "text-sm" : "text-lg")}>
             {pageTitle}
           </h1>
         </div>
@@ -370,7 +382,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       )}
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
-      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+      <div className="topbar-actions flex items-center gap-2 flex-shrink-0 ml-2">
         <TooltipProvider>
           {/* Dark mode toggle */}
           <ThemeToggleButton />
@@ -423,7 +435,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
                     variant="ghost"
                     className="relative h-10 w-10 rounded-full p-0 hover:ring-2 hover:ring-primary/20 transition-all"
                   >
-                    <Avatar className="h-10 w-10 border-2 border-border">
+                    <Avatar className="h-10 w-10 border-2 border-border transition-all group-data-[condensed=true]/topbar:h-7 group-data-[condensed=true]/topbar:w-7">
                       <AvatarImage
                         src={profile?.avatar_url || ""}
                         alt={getUserDisplayName()}

@@ -96,7 +96,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     // The client portal follows the theme the user chose (light by default, dark from the
     // toggle in the top bar). It used to be pinned to light; portalled content (dialogs,
     // drawers, menus) now matches because the theme class sits on <html>, not on this div.
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-clip">
       {/* Impersonation Banner (in flow, not fixed) */}
       {isPreview && (
         <>
@@ -114,7 +114,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div
         className={cn(
-          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-hidden",
+          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-clip",
           sidebarOpen ? "md:pl-60" : "md:pl-16",
           "pl-0"
         )}
