@@ -2,7 +2,7 @@
 
 **Trigger:** the messenger redesign review (Carl: "make sure we don't mess up the broadcast message feature", then approved "design A" on 20 November 2026 after pointing out that `tenant_members` is canonical, ADR-019).
 **Scope:** migration `20261120130000_broadcast_recipients_use_active_members.sql` replaces `public.fn_resolve_broadcast_recipients` (same signature, columns and access; it feeds the audience preview, queueing and the scheduled delivery function). Edge function `send-broadcast-campaign` changes who is added as a conversation participant on an immediate send. No row is changed.
-**Status:** **Written and dry-run in production (rolled back). NOT applied. The edge function change deploys when this PR is merged, so the migration should be applied first, with explicit go-ahead.**
+**Status:** **Migration applied to production on 20 November 2026** (Carl: "Apply both"), via the Supabase MCP `apply_migration` as `broadcast_recipients_use_active_members`, after a rolled-back dry run. Postflight verified (below). **The edge function change is NOT live until this PR is merged** (merging deploys it). The migration is safe on its own: the old edge function keeps adding every `tenant_users` row as a participant until then.
 
 ## What was wrong
 
@@ -22,10 +22,16 @@
 - The dry run used the same function body for the modes it exercised (everyone, tier); the migration file carries all five modes, covered by a source guard test.
 - No names, emails or message text were printed. The block ended with a deliberate exception so nothing persisted.
 
+## Postflight (production, after apply)
+
+- One `fn_resolve_broadcast_recipients` (no overload), same signature, still not executable by `authenticated` or `anon`, and it requires an active `tenant_members` row.
+- All five audience modes run: everyone (parent and user) 121, everyone (parent only) 76, members 107, superhero 17, gold tier 18, package type "audit" 1; no duplicate people (matches the dry run for everyone, parent only and gold).
+- One campaign is currently scheduled, queued or sending; it will resolve its audience with the new function when it is delivered.
+
 ## Not done
 
 - **No backfill.** The 4 gained people are not added to earlier broadcasts (they would suddenly see old broadcasts as unread). Their next broadcast reaches them.
 - Moving the contact data (primary and secondary contact, relationship role) onto `tenant_members` and retiring `tenant_users` as a second authority (ADR-019, separately authorised).
-- After applying: postflight (function replaced once, same signature, access unchanged, a preview for a normal audience returns recipients), then merge, then confirm the edge function deployed and the next broadcast sends.
+- Merge this PR (Carl) and then confirm the edge function deployed and the next immediate broadcast adds only recipients as participants.
 
 **Rollback:** restore the previous function body from `supabase/migrations/20261119130000_schedule_bulk_messages.sql` (`CREATE OR REPLACE`), and revert the edge function change.
