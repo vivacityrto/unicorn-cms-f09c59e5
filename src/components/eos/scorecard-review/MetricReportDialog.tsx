@@ -181,7 +181,7 @@ function CertificateSections({ weekKey, tenantIds }: { weekKey: string; tenantId
           </Section>
         </div>
       )}
-      <Section title="Academy activity, last 28 days" hint="Live Clients only. Only courses a learner chose themselves are counted, on the day they chose them, and finished on the day they were completed.">
+      <Section title="Academy activity, last 28 days" hint="Live Clients only. Only courses a learner chose themselves are counted. A choice counts on the day it was made and a finish on the day it happened, so a course chosen earlier can be finished in this window.">
         {academy.isLoading ? (
           <div className="h-16 animate-pulse rounded-lg bg-muted/50" aria-busy="true" />
         ) : academy.error || !a ? (
@@ -190,7 +190,7 @@ function CertificateSections({ weekKey, tenantIds }: { weekKey: string; tenantId
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <Stat label="Courses chosen by learners" value={a.enrolled} />
-              <Stat label="Of those, finished" value={a.completed} />
+              <Stat label="Courses finished" value={a.completed} />
             </div>
             {a.notCounted.enrolled + a.notCounted.completed > 0 && (
               <p className="text-xs text-muted-foreground">

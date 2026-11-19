@@ -606,6 +606,29 @@
       "owner": "Carl",
       "reason": "Rollback file. Unschedules only the job named notification-escalate-unread-client-messages, restores fn_tm_on_message_insert to the live version from migration 20260703061102 (its INSERT and UPDATE are inside the function body), and drops the objects the migration added.",
       "expires": "2026-12-17"
+    },
+    {
+      "id": "academy-remove-untouched-legacy-package-enrolments-internal",
+      "file": "supabase/migrations/20261119120000_academy_remove_untouched_legacy_package_enrolments_internal.sql",
+      "categories": [
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Carl-approved (2026-11-19, \"Also clean internal\"): backs up to a private table and deletes exactly the untouched legacy auto_package academy_enrollments rows in two internal tenants, 6372 (Vivacity Coaching & Consulting) and 7547 (Demo RTO): 440 rows, active, never revoked or completed, with no lesson progress, assessment attempt, certificate or PDP evidence. The 4 rows with progress stay. The block raises and changes nothing if the live count is not 440. Real client tenants, auto_all_clients, self_enrol and staff_impersonation rows are untouched. Dry-run on production inside a rolled-back block matched. Audit entry: docs/audit-log/entries/2026-11-19-academy-learner-chosen-only.md.",
+      "expires": "2026-12-18"
+    },
+    {
+      "id": "academy-remove-untouched-legacy-package-enrolments-internal-rollback",
+      "file": "supabase/migrations/rollback/20261119120000_academy_remove_untouched_legacy_package_enrolments_internal.down.sql",
+      "categories": [
+        "data-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Carl",
+      "reason": "Rollback file for the entry above. Re-inserts only the 440 rows held in the backup table _bak_academy_enrollments_legacy_auto_20261119, with their original ids, skipping any learner who has since enrolled in the same course. Touches nothing else.",
+      "expires": "2026-12-18"
     }
   ]
 }

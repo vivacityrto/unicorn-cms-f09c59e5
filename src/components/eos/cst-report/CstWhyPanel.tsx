@@ -254,7 +254,7 @@ function AcademyWhy({ report, label, academy }: { report: CstReport; label: stri
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <StatTile label="Courses chosen by learners" value={a.enrolled} />
-        <StatTile label="Of those, finished" value={a.completed} tone="text-green-700 dark:text-green-400" />
+        <StatTile label="Courses finished" value={a.completed} tone="text-green-700 dark:text-green-400" />
         <StatTile label="Clients using the Academy" value={`${using.length} of ${rows.length}`} />
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
@@ -286,7 +286,7 @@ function AcademyWhy({ report, label, academy }: { report: CstReport; label: stri
         </Panel>
       </div>
       <p className="text-xs text-muted-foreground">
-        Only courses a learner chose themselves are counted, on the day they chose them, and finished on the day they were completed, for Live Clients only.
+        Only courses a learner chose themselves are counted. A choice counts on the day it was made and a finish on the day it happened, so a course chosen earlier can be finished in this period. Live Clients only.
         {a.notCounted.enrolled + a.notCounted.completed > 0 && ` Left out: ${plural(a.notCounted.enrolled, 'enrolment')} added for learners (package, required training or by staff), ${a.notCounted.completed} of them finished.`}
       </p>
     </div>
