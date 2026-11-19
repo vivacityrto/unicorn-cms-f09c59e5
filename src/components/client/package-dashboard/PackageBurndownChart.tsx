@@ -13,6 +13,7 @@ import { format, parseISO, differenceInMonths } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatHours } from './formatters';
 import type { ClientPackageHoursTimelinePoint } from '@/hooks/use-client-package-hours-timeline';
+import type { HoursForecast } from './packageInsights';
 
 interface Props {
   points: ClientPackageHoursTimelinePoint[];
@@ -22,6 +23,8 @@ interface Props {
   endDate: string | null;         // dashboard.end_date — ISO date or null for ongoing
   isLoading: boolean;
   isError: boolean;
+  /** Where hours are heading at the recent pace; drawn as a dashed line from the latest point. */
+  forecast?: HoursForecast | null;
 }
 
 interface ChartPoint {
@@ -31,6 +34,7 @@ interface ChartPoint {
   ts: number;
   actual?: number;
   ideal?: number;
+  projected?: number;
 }
 
 function SectionHeading() {
@@ -133,9 +137,9 @@ function CustomTooltip({
         <div
           className={
             delta.tone === 'ahead'
-              ? 'mt-1 text-emerald-600 font-medium'
+              ? 'mt-1 text-emerald-700 dark:text-emerald-300 font-medium'
               : delta.tone === 'behind'
-              ? 'mt-1 text-amber-600 font-medium'
+              ? 'mt-1 text-amber-700 dark:text-amber-300 font-medium'
               : 'mt-1 text-muted-foreground'
           }
         >
@@ -154,6 +158,7 @@ export function PackageBurndownChart({
   endDate,
   isLoading,
   isError,
+  forecast = null,
 }: Props) {
   const hasIdeal = !!startDate && !!endDate && hoursTotal > 0;
 
@@ -188,6 +193,17 @@ export function PackageBurndownChart({
         upsert(p.activity_date, { actual: Number(p.cumulative_hours_used) });
       });
 
+      // Projection: from the latest recorded point to the day the hours would run out (or the end date, whichever is first).
+      const latest = points.length > 0 ? points[points.length - 1] : null;
+      if (latest && forecast?.runOutDate && hoursTotal > 0) {
+        const target = endDate && forecast.runOutDate > endDate ? endDate : forecast.runOutDate;
+        const spanDays = Math.max(1, (parseISO(forecast.runOutDate).getTime() - parseISO(latest.activity_date).getTime()) / 86_400_000);
+        const reachDays = Math.max(0, (parseISO(target).getTime() - parseISO(latest.activity_date).getTime()) / 86_400_000);
+        const remaining = Math.max(0, hoursTotal - Number(latest.cumulative_hours_used));
+        upsert(latest.activity_date, { projected: Number(latest.cumulative_hours_used) });
+        upsert(target, { projected: Number(latest.cumulative_hours_used) + remaining * Math.min(1, reachDays / spanDays) });
+      }
+
       const sorted = Array.from(byDate.values()).sort((a, b) => a.ts - b.ts);
 
       const minTs = sorted.length > 0 ? sorted[0].ts : 0;
@@ -211,7 +227,7 @@ export function PackageBurndownChart({
         dateSpanMonths: span,
         todayWithinRange: todayInRange,
       };
-    }, [points, startDate, endDate, hoursTotal, hoursUsed, hasIdeal]);
+    }, [points, startDate, endDate, hoursTotal, hoursUsed, hasIdeal, forecast]);
 
   if (isLoading) {
     return (
@@ -292,6 +308,19 @@ export function PackageBurndownChart({
                 stroke="rgb(148 163 184)" /* slate-400 */
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
+                dot={false}
+                activeDot={false}
+                connectNulls
+                isAnimationActive={false}
+              />
+            )}
+            {forecast?.runOutDate && (
+              <Line
+                type="linear"
+                dataKey="projected"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                strokeDasharray="2 4"
                 dot={false}
                 activeDot={false}
                 connectNulls

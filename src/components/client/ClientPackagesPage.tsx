@@ -24,6 +24,10 @@ import { Activity, AlertCircle, CalendarClock, CheckCircle2, ChevronUp, Clock, L
 import { format } from "date-fns";
 import { usePackageTypeOptions, getPackageTypeLabel } from "@/hooks/usePackageTypeOptions";
 import { formatHours } from "./package-dashboard/formatters";
+import { PackageInsightCard } from "./package-dashboard/PackageInsightCard";
+import { hoursForecast } from "./package-dashboard/packageInsights";
+import { Bar } from "./home/Ring";
+import { hoursPercent, stagePercent } from "./home/homeInsights";
 
 export default function ClientPackagesPage() {
   const { data: dashboards = [], isLoading, error } = useClientPackageDashboards();
@@ -120,7 +124,7 @@ export default function ClientPackagesPage() {
         )}
       </div>
 
-      {activePackages.length > 0 && <PackageOverview overview={overview} />}
+      {activePackages.length > 0 && <PackageOverview overview={overview} packages={activePackages} />}
 
       {!hasAny && (
         <Card>
@@ -220,7 +224,7 @@ function OverviewTile({
   detail: string;
   tone?: "default" | "warning" | "success";
 }) {
-  const toneClass = tone === "warning" ? "text-amber-700" : tone === "success" ? "text-emerald-700" : "text-foreground";
+  const toneClass = tone === "warning" ? "text-amber-700 dark:text-amber-300" : tone === "success" ? "text-emerald-700 dark:text-emerald-300" : "text-foreground";
   return (
     <div className="rounded-xl border bg-background/80 p-4 shadow-sm">
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -233,7 +237,7 @@ function OverviewTile({
   );
 }
 
-function PackageOverview({ overview }: { overview: PackageOverviewData }) {
+function PackageOverview({ overview, packages }: { overview: PackageOverviewData; packages: ClientPackageDashboardRow[] }) {
   const stageProgress = overview.stagesTotal > 0 ? Math.round((overview.stagesComplete / overview.stagesTotal) * 100) : 0;
   const hoursProgress = overview.hoursTotal > 0 ? Math.round((overview.hoursUsed / overview.hoursTotal) * 100) : 0;
   const renewal = overview.nextRenewal ? format(new Date(overview.nextRenewal), "d MMM yyyy") : "No renewal date set";
@@ -247,7 +251,7 @@ function PackageOverview({ overview }: { overview: PackageOverviewData }) {
             See how your active packages are tracking overall, then open a package below for the full detail.
           </p>
         </div>
-        <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 md:mt-0">
+        <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 md:mt-0">
           <CheckCircle2 className="h-3.5 w-3.5" />
           {overview.packageCount} active {overview.packageCount === 1 ? "package" : "packages"}
         </span>
@@ -260,8 +264,34 @@ function PackageOverview({ overview }: { overview: PackageOverviewData }) {
         <OverviewTile icon={CalendarClock} label="Next renewal" value={renewal} detail={`${hoursProgress}% of included hours used`} />
       </div>
 
+      {packages.length > 1 && (
+        <div className="mt-5 space-y-2" role="group" aria-label="Packages compared">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Packages compared</h3>
+          {packages.map((p) => {
+            const stages = stagePercent(p);
+            const hours = hoursPercent(p);
+            return (
+              <div key={p.package_instance_id} className="grid items-center gap-x-4 gap-y-1 rounded-lg border bg-background/80 p-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm font-medium text-foreground">{p.package_name ?? "Package"}</span>
+                  <PackageStatusPill status={p.status_pill} />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground"><span>Progress</span><span className="tabular-nums">{stages}%</span></div>
+                  <Bar value={stages} label={`${p.package_name ?? "Package"}: ${stages}% of stages complete`} />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground"><span>Hours used</span><span className="tabular-nums">{hours}%</span></div>
+                  <Bar value={hours} tone={hours >= 95 ? "bad" : hours >= 75 ? "warn" : "primary"} ticks={[75, 95]} label={`${p.package_name ?? "Package"}: ${hours}% of hours used`} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {overview.overdueTasks > 0 && (
-        <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-300">
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>You have {overview.overdueTasks} overdue {overview.overdueTasks === 1 ? "task" : "tasks"}. Open the relevant package below to see what needs action.</span>
         </div>
@@ -293,6 +323,10 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
   const timeline = useClientPackageHoursTimeline(packageInstanceId);
   const { options: packageTypes } = usePackageTypeOptions();
+  const forecast = useMemo(
+    () => hoursForecast(timeline.data ?? [], Number(dashboard?.hours_total ?? 0), Number(dashboard?.hours_used ?? 0), dashboard?.end_date ?? null),
+    [timeline.data, dashboard?.hours_total, dashboard?.hours_used, dashboard?.end_date],
+  );
 
   return (
     <Card className="overflow-hidden">
@@ -355,6 +389,8 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           />
         ) : null}
 
+        {dashboard && !dashboard.is_complete && <PackageInsightCard dashboard={dashboard} forecast={forecast} />}
+
         {/* Stat tiles */}
         {dashboardLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -388,6 +424,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
             endDate={dashboard?.end_date ?? null}
             isLoading={timeline.isLoading}
             isError={timeline.isError}
+            forecast={forecast}
           />
         </div>
 
