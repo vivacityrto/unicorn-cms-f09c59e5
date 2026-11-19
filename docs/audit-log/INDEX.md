@@ -7,6 +7,7 @@ Newest first.
 
 ---
 
+- [2026-11-19 — Conversation sender profiles (staff name and picture for clients)](entries/2026-11-19-conversation-sender-profiles.md) — new read-only `get_conversation_sender_profiles` so clients see who they are talking to instead of "Vivacity Team". Dry-run done; not yet applied to production.
 - [2026-11-19 — Scheduled Bulk Message delivery](entries/2026-11-19-scheduled-bulk-messages.md) — approved production migration applied and its worker verified. PR 1554 merged, with custom-domain publication blocked by a Lovable build failure. The 2027 broadcast remains on hold.
 - [2026-11-19 — Client Academy analytics function (learner-chosen only)](entries/2026-11-19-academy-learner-analytics-function.md) — new read-only `get_tenant_academy_learner_analytics` for the client Academy page. Dry-run on tenant 7512, then applied to production on 19 November 2026 with a postflight (one overload, authenticated only, unauthorised callers refused).
 - [2026-11-19 — Academy numbers count only learner-chosen courses](entries/2026-11-19-academy-learner-chosen-only.md) — the Client activity report and Full Report Academy figures now count only self-enrolled courses; 440 untouched legacy package enrolments in two internal tenants removed with a backup. Merged in PR 1552 and applied to production on 19 November 2026 with a postflight that matched the dry run.

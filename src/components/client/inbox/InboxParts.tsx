@@ -166,7 +166,12 @@ export function MessageBubbles({ messages, currentUserId }: { messages: Conversa
                 <AvatarFallback className="bg-primary/15 text-[10px] text-primary">{initialsOf(own ? 'You' : msg.sender_name)}</AvatarFallback>
               </Avatar>
               <div className={cn('max-w-[80%] rounded-2xl px-3.5 py-2', own ? 'rounded-br-sm bg-primary/15 text-foreground' : 'rounded-bl-sm bg-muted text-foreground')}>
-                {!own && <p className="mb-0.5 text-xs font-semibold text-muted-foreground">{msg.sender_name}</p>}
+                {!own && (
+                  <p className="mb-0.5 flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-muted-foreground">
+                    {msg.sender_name}
+                    {msg.sender_is_staff && <span className="rounded-full bg-primary/15 px-1.5 py-0 text-[10px] font-semibold text-[var(--badge-default-fg)]">Vivacity</span>}
+                  </p>
+                )}
                 <p className="whitespace-pre-wrap break-words text-sm">{msg.body}</p>
                 {msg.attachments && msg.attachments.length > 0 && <MessageAttachments attachments={msg.attachments} />}
                 <p className="mt-1 text-right text-[11px] text-muted-foreground">{format(new Date(msg.created_at), 'h:mm a')}</p>

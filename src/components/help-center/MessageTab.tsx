@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ClientMessageBox } from "@/components/client-portal/support-tickets/ClientMessageBox";
 import { useHelpCenter } from "./HelpCenterContext";
+import { displayName, fetchSenderProfiles } from "@/lib/conversationSenders";
 
 interface Message {
   id: string;
@@ -200,16 +201,12 @@ function CscMessageTab({ channel }: { channel: "csc" }) {
           .filter((u) => u && u !== myUuid)
       ));
       if (staffIds.length > 0) {
-        const { data: staffUsers } = await supabase
-          .from("users")
-          .select("user_uuid, first_name, last_name, avatar_url")
-          .in("user_uuid", staffIds);
-        if (!cancelled && staffUsers) {
+        const staffProfiles = await fetchSenderProfiles(conversationId, staffIds as string[]);
+        if (!cancelled && staffProfiles.size > 0) {
           const nm = new Map<string, string>();
           const am = new Map<string, string | null>();
-          staffUsers.forEach((u) => {
-            const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
-            nm.set(u.user_uuid, name);
+          staffProfiles.forEach((u) => {
+            nm.set(u.user_uuid, displayName(u, "Vivacity Team"));
             am.set(u.user_uuid, u.avatar_url ?? null);
           });
           setStaffNameMap(nm);
@@ -274,14 +271,10 @@ function CscMessageTab({ channel }: { channel: "csc" }) {
           // Backfill staff identity if unseen.
           if (r.sender_user_uuid && r.sender_user_uuid !== myUuid && !staffAvatarMapRef.current.has(r.sender_user_uuid)) {
             void (async () => {
-              const { data: u } = await supabase
-                .from("users")
-                .select("user_uuid, first_name, last_name, avatar_url")
-                .eq("user_uuid", r.sender_user_uuid!)
-                .maybeSingle();
+              const found = await fetchSenderProfiles(threadId, [r.sender_user_uuid!]);
+              const u = found.get(r.sender_user_uuid!);
               if (!u) return;
-              const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
-              setStaffNameMap(prev => new Map(prev).set(u.user_uuid, name));
+              setStaffNameMap(prev => new Map(prev).set(u.user_uuid, displayName(u, "Vivacity Team")));
               setStaffAvatarMap(prev => new Map(prev).set(u.user_uuid, u.avatar_url ?? null));
             })();
           }
