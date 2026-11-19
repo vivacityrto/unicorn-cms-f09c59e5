@@ -403,7 +403,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           isError={activity.isError}
           stages={stages.data ?? []}
           hoursTotal={Number(dashboard?.hours_total ?? 0)}
-          percentUsed={Number(dashboard?.hours_pct_used ?? 0)}
+          percentUsed={Math.min(100, Math.max(0, Math.round(Number(dashboard?.hours_pct_used ?? 0) * 100)))}
         />
 
         {/* Stat tiles */}

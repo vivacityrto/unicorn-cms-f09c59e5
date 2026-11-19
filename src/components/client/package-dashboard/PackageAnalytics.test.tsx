@@ -33,6 +33,12 @@ describe('PackageAnalytics', () => {
     expect(screen.getByRole('region', { name: 'Mix of work by month' }) ?? null).toBeTruthy();
   });
 
+  it('shows the share of the package used on the ring as a percentage (the page passes 0 to 100)', () => {
+    show({ percentUsed: 80 });
+    const ring = screen.getByRole('img', { name: '80% of the package hours used' });
+    expect(ring).toHaveTextContent('80%');
+  });
+
   it('opens a mini page for a week from the table view, with counts only', async () => {
     show();
     await userEvent.click(screen.getByRole('button', { name: 'View as table' }));
