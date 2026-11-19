@@ -7,13 +7,13 @@ type Week = TenantAcademyLearnerAnalytics['trend'][number];
  * Lessons completed each week as bars drawn to a real scale (the tallest week fills the chart), with how many
  * people were active that week underneath. Plain HTML so the text stays sharp at any width.
  */
-export function WeeklyBars({ weeks }: { weeks: readonly Week[] }) {
+export function WeeklyBars({ weeks, compact = false }: { weeks: readonly Week[]; compact?: boolean }) {
   const max = Math.max(1, ...weeks.map((w) => w.lessons));
   const total = weeks.reduce((n, w) => n + w.lessons, 0);
   const summary = `Lessons completed per week over the last ${weeks.length} weeks, ${total} in total.`;
   return (
     <figure className="space-y-2">
-      <div className="flex h-36 items-end gap-1.5" role="img" aria-label={summary}>
+      <div className={compact ? "flex h-24 items-end gap-1.5" : "flex h-36 items-end gap-1.5"} role="img" aria-label={summary}>
         {weeks.map((w) => {
           const h = Math.max(w.lessons > 0 ? 6 : 2, Math.round((w.lessons / max) * 100));
           return (
@@ -32,7 +32,7 @@ export function WeeklyBars({ weeks }: { weeks: readonly Week[] }) {
           </div>
         ))}
       </div>
-      <figcaption className="text-xs text-muted-foreground">Lessons completed each week. The line under each week shows how many people were active.</figcaption>
+      <figcaption className={compact ? "sr-only" : "text-xs text-muted-foreground"}>Lessons completed each week. The line under each week shows how many people were active.</figcaption>
     </figure>
   );
 }

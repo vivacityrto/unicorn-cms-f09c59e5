@@ -53,13 +53,13 @@ export function HomeKpiTiles({ totals }: { totals: HomeTotals }) {
       <Tile
         to="/client/packages"
         ring={
-          <Ring value={100} tone="primary" label="Package end date">
+          <Ring value={totals.nextEnd ? 100 : 0} tone="primary" label={totals.nextEnd ? 'Package end date' : 'No package end date set'}>
             <span className="text-[10px] leading-none">{totals.nextEnd ? format(parseISO(totals.nextEnd), 'MMM') : '–'}</span>
           </Ring>
         }
         title="Next renewal"
         value={totals.nextEnd ? format(parseISO(totals.nextEnd), 'd MMM yyyy') : 'No end date'}
-        note="when your package period ends"
+        note={totals.nextEnd ? 'when your package period ends' : 'Your consultant will confirm it'}
       />
     </section>
   );
