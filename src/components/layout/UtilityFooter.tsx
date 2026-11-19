@@ -17,7 +17,7 @@ const BUILD_ID = import.meta.env.VITE_BUILD_ID as string | undefined;
  */
 export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
   const { profile } = useAuth();
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const userRole = profile?.unicorn_role || "User";
   const showBuild = !!BUILD_ID && BUILD_ID !== "__BUILD_ID__";
 
@@ -36,14 +36,17 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
-          <button
-            type="button"
-            onClick={() => openHelpCenter()}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <HelpCircle aria-hidden className="h-3.5 w-3.5" />
-            <span>Help Centre</span>
-          </button>
+          {/* Only offered where the Help Centre can open; otherwise the click would do nothing. */}
+          {canAccessHelpCenter && (
+            <button
+              type="button"
+              onClick={() => openHelpCenter()}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <HelpCircle aria-hidden className="h-3.5 w-3.5" />
+              <span>Help Centre</span>
+            </button>
+          )}
           <Link
             to="/support-tickets"
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
