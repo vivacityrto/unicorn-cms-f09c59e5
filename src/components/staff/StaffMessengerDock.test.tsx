@@ -13,6 +13,7 @@ vi.mock('@/hooks/useStaffMessenger', () => ({
     totalUnread: 0,
     isLoading: false,
     scope: new Map([[1, { reason: 'primary_csc' }]]),
+    participating: new Set<string>(),
     hasScope: true,
   }),
 }));

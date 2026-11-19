@@ -39,6 +39,7 @@ vi.mock('@/hooks/useStaffMessenger', () => ({
       isLoading: !!opts?.memberId && state.loadingMember,
       limited: state.limited,
       scope: state.scope,
+      participating: new Set<string>(),
       hasScope: state.scope.size > 0,
     };
   },

@@ -47,7 +47,7 @@ export default function TeamCommunicationsPage() {
   const selectedId = searchParams.get('thread');
   // A conversation opened by link, or just created, is fetched on its own, so it opens even when it is older than the list
   // or belongs to a client that is not mine. Choosing a client lists all of that client's conversations.
-  const { threads, opened, isLoading, scope, tenants, hasScope, limited } = useStaffMessenger(allClients, true, {
+  const { threads, opened, isLoading, scope, participating, tenants, hasScope, limited } = useStaffMessenger(allClients, true, {
     tenantId: filterTenant === 'all' ? null : Number(filterTenant),
     extraThreadId: selectedId,
     memberId: isSuperAdmin && filterStaff !== 'all' ? filterStaff : null,
@@ -68,7 +68,7 @@ export default function TeamCommunicationsPage() {
   }, [threads, view, filterTenant]);
 
   const tenantId = selectedThread?.tenantId ?? null;
-  const pane = useStaffConversationPane(selectedThread?.id ?? null, { tenantId, mine: tenantId != null && scope.has(tenantId) });
+  const pane = useStaffConversationPane(selectedThread?.id ?? null, { tenantId, mine: (tenantId != null && scope.has(tenantId)) || (!!selectedThread && participating.has(selectedThread.id)) });
 
   const select = (id: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -87,7 +87,7 @@ export default function TeamCommunicationsPage() {
   const toggleScope = () => {
     const next = !allClients;
     setAllClients(next);
-    if (!next && selectedThread && !(selectedThread.tenantId != null && scope.has(selectedThread.tenantId))) select(null);
+    if (!next && selectedThread && !(selectedThread.tenantId != null && scope.has(selectedThread.tenantId)) && !participating.has(selectedThread.id)) select(null);
   };
 
   const waited = waitingFor(insights.needsYou.oldestAt);
