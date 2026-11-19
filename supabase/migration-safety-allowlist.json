@@ -663,7 +663,7 @@
       ],
       "targetProject": "yxkgdalkbrriasiyyrwk",
       "owner": "Carl",
-      "reason": "Proposed for review in the blocker acknowledgement pull request; not yet approved. All flagged statements are runtime DML inside function bodies, not migration-time DML. Two inserts: submit_package_checkin (the client's own check-in row, as before) and one in-app notification row for the package manager, deduplicated by a per-blocker key. Three updates, all in set_package_blocker_status, which only Vivacity staff can call and which only touches the status columns (acknowledged_at, acknowledged_by, resolved_at, resolved_by, staff_note) of a single blocker row it has locked. The migration adds five empty columns and replaces four functions; it inserts or changes no row when applied, so there is nothing to replay.",
+      "reason": "Carl-approved (2026-11-20, \"go ahead\" in reply to being told this entry and the merge of PR 1598 were waiting on him). All flagged statements are runtime DML inside function bodies, not migration-time DML. Two inserts: submit_package_checkin (the client's own check-in row, as before) and one in-app notification row for the package manager, deduplicated by a per-blocker key. Three updates, all in set_package_blocker_status, which only Vivacity staff can call and which only touches the status columns (acknowledged_at, acknowledged_by, resolved_at, resolved_by, staff_note) of a single blocker row it has locked. The migration adds five empty columns and replaces four functions; it inserts or changes no row when applied, so there is nothing to replay.",
       "expires": "2026-12-18"
     }
   ]
