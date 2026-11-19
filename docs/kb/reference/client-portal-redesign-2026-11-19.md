@@ -46,3 +46,11 @@ The Academy page counts only courses the team chose themselves. It shows active 
 ## Findings for the next pieces (not yet changed)
 
 - **AI summary:** needs a new client-safe function: caller's tenant taken from the sign-in, never the request body; facts built on the server; numbers in the answer checked against the facts; its own usage cap so it does not use up the chat quota. Merging a function deploys it to production.
+
+## Tasks and Users (shipped)
+
+Both pages open with a brand banner and use insight cards instead of tabs and filter buttons. Each card shows a count plus one line about what it means, and clicking it filters the table below (they are toggle buttons, so keyboard and screen readers work like the tabs they replace). The shared pieces live in `src/components/client/insight/InsightCards.tsx` (cards, stacked status bar, ranked bars).
+
+- **Tasks:** cards for All, Overdue (oldest is N days late), Due soon (next task and when) and Completed (percent done). "My tasks" is now a pill in the banner, and "Show archived" sits beside it. A panel shows where the work stands (status bar) and open tasks per person, with unassigned as its own row. The editable table, bulk selection and optimistic edits are unchanged. Figures come from `taskInsights.ts`.
+- **Users:** cards for Everyone, Active (seen in the last 7 days), Pending invites (soonest expiry) and Quiet (not seen in 30 days, or never signed in). Panels show access mix and when people were last seen. Seats used appear in the banner. Invite, role switch, position, swap and ghost-contact behaviour are unchanged. Figures come from `userInsights.ts`.
+- Not checked on live client data yet; layout was verified by tests and typecheck only.
