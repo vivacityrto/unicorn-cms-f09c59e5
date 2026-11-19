@@ -86,7 +86,7 @@ export default function MembershipDashboard() {
   return (
     <div className="w-full min-w-0 min-h-full bg-background">
       {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20">
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-[var(--topbar-h,0px)] z-10">
         <div className="px-4 md:px-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">

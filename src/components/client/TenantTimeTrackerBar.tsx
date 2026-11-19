@@ -133,7 +133,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName, unicorn1Id }: Tenan
 
   if (loading || membership.loading) {
     return (
-      <div className="sticky top-0 z-20 mx-6 mt-3 rounded-xl border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
+      <div className="sticky top-[var(--topbar-h,0px)] z-10 mx-6 mt-3 rounded-xl border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
         <div className="flex items-center gap-3 px-6 py-2">
           <div className="h-8 w-24 bg-muted animate-pulse rounded" />
           <div className="h-8 w-20 bg-muted animate-pulse rounded" />
@@ -145,7 +145,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName, unicorn1Id }: Tenan
 
   return (
     <>
-      <div className="sticky top-0 z-20 mx-6 mt-3 rounded-xl border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
+      <div className="sticky top-[var(--topbar-h,0px)] z-10 mx-6 mt-3 rounded-xl border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
         <div className="flex items-center gap-2 px-6 py-2 flex-wrap">
           {/* Scope selector (replaces package selector for time logging) */}
           <ScopeSelectorBadge

@@ -29,7 +29,7 @@ export function PortfolioFilterBar({ filters, onFiltersChange, savedView, onSave
   const hasFilters = filters.search || filters.riskStatus || filters.stageHealth || filters.mandatoryGapsOnly || filters.burnRiskOnly;
 
   return (
-    <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b px-4 py-3 space-y-3">
+    <div className="sticky top-[var(--topbar-h,0px)] z-10 bg-card/95 backdrop-blur-sm border-b px-4 py-3 space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         {/* Saved view toggle */}
         {canSeeAll && (
