@@ -8,9 +8,11 @@ const CSS = join(ROOT, 'src', 'styles', 'dark-safety-net.css');
 
 describe('dark safety net', () => {
   it('is up to date with its generator', () => {
-    const before = readFileSync(CSS, 'utf8');
+    // Compare ignoring line endings: Windows checkouts may convert LF to CRLF.
+    const norm = (text: string) => text.replace(/\r\n/g, '\n');
+    const before = norm(readFileSync(CSS, 'utf8'));
     execFileSync(process.execPath, [join(ROOT, 'scripts', 'generate-dark-safety-net.mjs')], { stdio: 'ignore' });
-    expect(readFileSync(CSS, 'utf8')).toBe(before);
+    expect(norm(readFileSync(CSS, 'utf8'))).toBe(before);
   });
 
   it('remaps pale backgrounds, text and borders in dark mode only, and leaves light scopes and overlays alone', () => {
