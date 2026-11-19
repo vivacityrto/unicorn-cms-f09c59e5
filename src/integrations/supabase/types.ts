@@ -7937,6 +7937,9 @@ export type Database = {
           id: string
           include_roles: string[]
           package_type: string | null
+          schedule_failure_reason: string | null
+          scheduled_attachments: Json
+          scheduled_category_id: string | null
           scheduled_for: string | null
           sent_at: string | null
           status: string
@@ -7953,6 +7956,9 @@ export type Database = {
           id?: string
           include_roles?: string[]
           package_type?: string | null
+          schedule_failure_reason?: string | null
+          scheduled_attachments?: Json
+          scheduled_category_id?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
           status?: string
@@ -7969,6 +7975,9 @@ export type Database = {
           id?: string
           include_roles?: string[]
           package_type?: string | null
+          schedule_failure_reason?: string | null
+          scheduled_attachments?: Json
+          scheduled_category_id?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
           status?: string
@@ -7979,6 +7988,13 @@ export type Database = {
           total_sent?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "broadcast_campaigns_scheduled_category_id_fkey"
+            columns: ["scheduled_category_id"]
+            isOneToOne: false
+            referencedRelation: "message_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "broadcast_campaigns_created_by_fk"
             columns: ["created_by"]
@@ -71745,6 +71761,23 @@ export type Database = {
           tenant_name: string
           user_id: string
         }[]
+      }
+      fn_cancel_scheduled_bulk_message: {
+        Args: { p_campaign_id: string }
+        Returns: undefined
+      }
+      fn_schedule_bulk_message: {
+        Args: {
+          p_campaign_id: string
+          p_title: string
+          p_body: string
+          p_target_mode: string
+          p_package_type: string | null
+          p_scheduled_for: string
+          p_category_id: string | null
+          p_attachments: Json
+        }
+        Returns: string
       }
       fn_queue_broadcast_campaign: {
         Args: { p_campaign_id: string }

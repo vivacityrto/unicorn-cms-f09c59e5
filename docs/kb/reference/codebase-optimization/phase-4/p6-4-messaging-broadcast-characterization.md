@@ -9,6 +9,8 @@
 >
 > **Prerequisite:** none — independent of slices #1/#2/#3, taken in the P6 order
 
+The [scheduled delivery audit](../../../../audit-log/entries/2026-11-19-scheduled-bulk-messages.md) records a later scheduling change and its rollout status. The characterization below captures the immediate-send flow before that change.
+
 ## Purpose and non-goals
 
 Characterizes the broadcast-campaign and team-communications messaging
