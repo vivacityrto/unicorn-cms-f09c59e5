@@ -60,6 +60,7 @@ import { DocumentsHub } from '@/components/documents/DocumentsHub';
 import { ClientAuditsTab } from '@/components/client/ClientAuditsTab';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
+import { TenantCheckinsCard } from '@/components/client/checkins-staff/TenantCheckinsCard';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
@@ -705,6 +706,9 @@ export default function ClientDetail() {
           <TabsContent value="overview" className="mt-0 space-y-6">
             {/* Pinned notes (client + package level) */}
             <PinnedNotesCard tenantId={tenantIdNum!} />
+
+            {/* What the client's team has said in their package check-ins */}
+            <TenantCheckinsCard tenantId={tenantIdNum!} />
 
             {/* Time Summary & Users Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
