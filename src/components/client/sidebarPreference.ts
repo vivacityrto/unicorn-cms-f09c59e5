@@ -26,3 +26,28 @@ export function writeSidebarPreference(open: boolean): void {
     /* the choice just will not be remembered */
   }
 }
+
+/** The staff portal's own setting. Unlike the client portal it starts open, as it always has, unless someone pins it closed. */
+export const STAFF_SIDEBAR_STORAGE_KEY = 'staff-sidebar-open';
+
+/** The staff layout has always judged "desktop" by the window width (768px and up), so the setting does too. */
+const staffIsDesktop = () => typeof window === 'undefined' || window.innerWidth >= 768;
+
+/** Whether the staff sidebar starts open on a laptop or desktop. Open unless this person chose otherwise on this device. */
+export function readStaffSidebarDefault(): boolean {
+  if (!staffIsDesktop()) return false;
+  try {
+    return window.localStorage.getItem(STAFF_SIDEBAR_STORAGE_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export function writeStaffSidebarDefault(open: boolean): void {
+  if (!staffIsDesktop()) return;
+  try {
+    window.localStorage.setItem(STAFF_SIDEBAR_STORAGE_KEY, open ? 'true' : 'false');
+  } catch {
+    /* the choice just will not be remembered */
+  }
+}

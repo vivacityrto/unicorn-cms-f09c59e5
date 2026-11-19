@@ -100,3 +100,45 @@ describe('the collapsed rail', () => {
     expect(setSidebarOpen).toHaveBeenCalledWith(true);
   });
 });
+
+describe('the pin that sets how the staff menu starts', () => {
+  it('shows pinned when it starts open, flips the setting on press, and does not collapse the menu', async () => {
+    const user = userEvent.setup();
+    const setDefaultOpen = vi.fn();
+    const { setSidebarOpen } = show(true, '/dashboard', { defaultOpen: true, setDefaultOpen });
+    const pin = screen.getByRole('button', { name: 'Start with the menu open' });
+    expect(pin).toHaveAttribute('aria-pressed', 'true');
+    await user.click(pin);
+    expect(setDefaultOpen).toHaveBeenCalledWith(false);
+    expect(setSidebarOpen).not.toHaveBeenCalled();
+  });
+
+  it('shows unpinned when it starts as icons, and pins on press', async () => {
+    const user = userEvent.setup();
+    const setDefaultOpen = vi.fn();
+    show(true, '/dashboard', { defaultOpen: false, setDefaultOpen });
+    const pin = screen.getByRole('button', { name: 'Start with the menu open' });
+    expect(pin).toHaveAttribute('aria-pressed', 'false');
+    await user.click(pin);
+    expect(setDefaultOpen).toHaveBeenCalledWith(true);
+  });
+
+  it('has no pin on the collapsed rail, or where there is no such setting', () => {
+    show(false, '/dashboard', { setDefaultOpen: vi.fn() });
+    expect(screen.queryByRole('button', { name: 'Start with the menu open' })).not.toBeInTheDocument();
+  });
+});
+
+
+describe('long names are never cut off', () => {
+  it('lets labels wrap, in the group rows, the nested rows and the flyout, and the stylesheet does not force one line', async () => {
+    show(true, '/nowhere');
+    const group = screen.getByRole('button', { name: /^Clients/ });
+    expect(group.querySelector('span.flex-1')?.className).toMatch(/break-words/);
+    expect(group.querySelector('svg:last-child')).toBeTruthy();
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/index.css', 'utf8');
+    const rule = css.slice(css.indexOf('.sidebar-motion {'), css.indexOf('@media (prefers-reduced-motion'));
+    expect(rule).not.toMatch(/white-space:\s*nowrap/);
+  });
+});

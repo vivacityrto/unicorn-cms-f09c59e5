@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { RailTip } from "./sidebarKit";
+import { RailTip, StartOpenPin } from "./sidebarKit";
 import { sectionForPath, type StaffMenuItem, type StaffSection, type StaffSectionKey } from "./staffMenu";
 
 interface Props {
@@ -17,6 +17,9 @@ interface Props {
   roleName: string;
   /** Shown under the header when a staff member is looking at the portal as a client. */
   isViewingAsClient?: boolean;
+  /** Whether the menu starts open, and how to change that. Omitted where there is no such setting. */
+  defaultOpen?: boolean;
+  setDefaultOpen?: (open: boolean) => void;
 }
 
 const CYAN = "hsl(189 74% 50%)";
@@ -39,14 +42,14 @@ function NavLink({ item, active, nested, onNavigate }: { item: StaffMenuItem; ac
       aria-current={active ? "page" : undefined}
       onClick={onNavigate}
       className={cn(
-        "relative mb-1 flex min-h-[40px] items-center gap-3 rounded-lg px-3 text-sm transition-colors",
-        nested ? "ml-1 mr-2" : "mx-2",
+        "relative mb-1 flex min-h-[40px] items-center rounded-lg py-2 text-sm transition-colors",
+        nested ? "ml-1 mr-1 gap-2.5 px-2.5" : "mx-2 gap-3 px-3",
         active ? "bg-white/15 font-semibold text-white" : "text-white/80 hover:bg-white/10 hover:text-white",
       )}
     >
       {active && <span aria-hidden className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full" style={{ backgroundColor: CYAN }} />}
       <Icon className="h-[18px] w-[18px] flex-shrink-0" style={{ color: active ? CYAN : "currentColor" }} aria-hidden />
-      <span className="leading-snug">{item.label}</span>
+      <span className="min-w-0 flex-1 break-words leading-snug">{item.label}</span>
       {item.badge ? <Badge count={item.badge} /> : null}
     </Link>
   );
@@ -60,17 +63,17 @@ function OpenSection({ section, open, onOpenChange, pathname }: { section: Staff
     <Collapsible open={open} onOpenChange={onOpenChange} className="mb-1">
       <CollapsibleTrigger
         className={cn(
-          "group mx-2 flex min-h-[44px] w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-3 text-sm transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+          "group mx-2 flex min-h-[44px] w-[calc(100%-1rem)] items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
           here && !open ? "text-white" : "text-white/85",
         )}
       >
         <Icon className="h-[18px] w-[18px] flex-shrink-0" style={{ color: here ? CYAN : "currentColor" }} aria-hidden />
-        <span className="font-medium">{section.title}</span>
+        <span className="min-w-0 flex-1 break-words font-medium leading-snug">{section.title}</span>
         {section.alert && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#ED1878] ring-2 ring-white/70" aria-label={`${section.title} has items that need you`} />}
-        <ChevronRight aria-hidden className={cn("ml-auto h-4 w-4 flex-shrink-0 text-white/60 transition-transform duration-200", open && "rotate-90")} />
+        <ChevronRight aria-hidden className={cn("h-4 w-4 flex-shrink-0 text-white/60 transition-transform duration-200", open && "rotate-90")} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-[1.45rem] mt-1 border-l border-white/20 pb-1 pl-1">
+        <div className="ml-[1.4rem] mt-1 border-l border-white/20 pb-1 pl-1">
           {section.items.map((item) => (
             <NavLink key={item.path} item={item} active={pathname === item.path} nested />
           ))}
@@ -132,7 +135,7 @@ function RailSection({ section, pathname }: { section: StaffSection; pathname: s
                   )}
                 >
                   <ItemIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <span className="min-w-0 flex-1 break-words leading-snug">{item.label}</span>
                   {item.badge ? <Badge count={item.badge} /> : null}
                 </Link>
               </li>
@@ -149,7 +152,7 @@ function RailSection({ section, pathname }: { section: StaffSection; pathname: s
  * collapsed), keeping the staff menu's groups and pages in the order people already know. Open, each group opens in place;
  * collapsed, each group is an icon that opens its pages beside the rail. The group you are in opens by itself.
  */
-export function StaffSidebar({ sidebarOpen, setSidebarOpen, sections, pathname, roleName, isViewingAsClient }: Props) {
+export function StaffSidebar({ sidebarOpen, setSidebarOpen, sections, pathname, roleName, isViewingAsClient, defaultOpen = true, setDefaultOpen }: Props) {
   const navRef = useRef<HTMLElement>(null);
   const [openKeys, setOpenKeys] = useState<ReadonlySet<StaffSectionKey>>(() => {
     const here = sectionForPath(sections, pathname);
@@ -182,7 +185,7 @@ export function StaffSidebar({ sidebarOpen, setSidebarOpen, sections, pathname, 
           <>
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="text-xs font-medium uppercase tracking-wider text-white/60">Staff Portal</span>
-              <span className="max-w-[160px] truncate text-sm font-semibold text-white" title={roleName}>{roleName}</span>
+              <span className="break-words text-sm font-semibold leading-snug text-white">{roleName}</span>
               {isViewingAsClient && (
                 <span className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
                   <span className="keep-light h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
@@ -190,9 +193,12 @@ export function StaffSidebar({ sidebarOpen, setSidebarOpen, sections, pathname, 
                 </span>
               )}
             </div>
-            <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Collapse the menu" className="rounded-full p-1.5 text-white/70 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              {setDefaultOpen && <StartOpenPin pinned={defaultOpen} onChange={setDefaultOpen} />}
+              <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Collapse the menu" className="rounded-full p-1.5 text-white/70 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </>
         ) : (
           <RailTip show label="Open the menu" description="Show the full menu with names">

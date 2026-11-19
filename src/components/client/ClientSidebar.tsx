@@ -1,4 +1,4 @@
-import { RailTip, SIDEBAR_GRADIENT } from "@/components/layout/sidebarKit";
+import { RailTip, SIDEBAR_GRADIENT, StartOpenPin } from "@/components/layout/sidebarKit";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -26,8 +26,6 @@ import {
   Award,
   Globe,
   Activity,
-  Pin,
-  PinOff,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,34 +75,6 @@ interface ClientSidebarProps {
   /** Whether the menu starts open, and how to change that. Omitted where there is no such setting. */
   defaultOpen?: boolean;
   setDefaultOpen?: (open: boolean) => void;
-}
-
-/** The pin in the open sidebar's header: pinned means the menu starts open every time, unpinned means it starts as icons. */
-function StartOpenPin({ pinned, onChange }: { pinned: boolean; onChange: (open: boolean) => void }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-pressed={pinned}
-          aria-label="Start with the menu open"
-          onClick={() => onChange(!pinned)}
-          className={cn(
-            'p-1.5 rounded-full transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
-            pinned ? 'bg-white/20 text-white' : 'text-white/70',
-          )}
-        >
-          {pinned ? <Pin className="w-4 h-4" /> : <PinOff className="w-4 h-4" />}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-[16rem] rounded-xl border-border bg-popover px-3 py-2 shadow-lg">
-        <p className="text-[13px] font-semibold leading-tight text-foreground">{pinned ? 'Menu starts open' : 'Menu starts as icons'}</p>
-        <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-          {pinned ? 'Press to start with icons only.' : 'Press to always start with the full menu open.'}
-        </p>
-      </TooltipContent>
-    </Tooltip>
-  );
 }
 
 function NavItem({ item, isActive, sidebarOpen: sOpen }: { item: SidebarMenuItem; isActive: boolean; sidebarOpen: boolean }) {
