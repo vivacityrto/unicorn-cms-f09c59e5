@@ -50,7 +50,7 @@ import {
 import { usePermission } from "@/hooks/usePermission";
 
 type StatusFilter = "all" | "active" | "completed" | "expired" | "revoked";
-const SOURCE_VALUES = ["manual", "auto_package", "auto_package_backfill"] as const;
+const SOURCE_VALUES = ["self_enrol", "manual", "auto_package", "auto_package_backfill"] as const;
 type SourceValue = (typeof SOURCE_VALUES)[number];
 
 const sourceTone = (s?: string | null) => {
