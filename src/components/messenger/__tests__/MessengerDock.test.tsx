@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessengerDock } from '../dock/MessengerDock';
 import { MessengerDockProvider } from '../dock/MessengerDockProvider';
 import type { MessengerThread } from '../types';
@@ -11,6 +11,18 @@ const threads: MessengerThread[] = [
 ];
 
 const mounts = vi.hoisted(() => ({ viv: 0 }));
+
+// jsdom has no PointerEvent: a mouse event with a pointer id does the job.
+if (!('PointerEvent' in window)) {
+  class TestPointerEvent extends MouseEvent {
+    pointerId: number;
+    constructor(type: string, init: MouseEventInit & { pointerId?: number } = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 1;
+    }
+  }
+  (window as unknown as { PointerEvent: unknown }).PointerEvent = TestPointerEvent;
+}
 
 function Viv() {
   // Counts mounts so we can tell it was kept, not rebuilt.
@@ -143,5 +155,87 @@ describe('MessengerDock', () => {
     fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Close messages' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('moving the bubble out of the way', () => {
+  const launcher = () => screen.getByRole('button', { name: /Open messages/ });
+  const drag = (from: [number, number], to: [number, number]) => {
+    fireEvent.pointerDown(launcher(), { clientX: from[0], clientY: from[1], button: 0, pointerId: 1 });
+    fireEvent.pointerMove(launcher(), { clientX: to[0], clientY: to[1], pointerId: 1 });
+    fireEvent.pointerUp(launcher(), { clientX: to[0], clientY: to[1], pointerId: 1 });
+    fireEvent.click(launcher());
+  };
+
+  beforeEach(() => window.localStorage.clear());
+
+  it('sits in the bottom right corner until it is moved', () => {
+    show();
+    expect(launcher().getAttribute('style') ?? '').toBe('');
+    expect(launcher().className).toContain('bottom-12');
+    expect(launcher().className).toContain('right-5');
+  });
+
+  it('still opens on a plain click, and on a press that barely moves', () => {
+    show();
+    fireEvent.pointerDown(launcher(), { clientX: 10, clientY: 10, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(launcher(), { clientX: 12, clientY: 11, pointerId: 1 });
+    fireEvent.pointerUp(launcher(), { clientX: 12, clientY: 11, pointerId: 1 });
+    fireEvent.click(launcher());
+    expect(screen.getByRole('dialog', { name: 'Messages' })).toBeInTheDocument();
+  });
+
+  it('drags to the other side, snaps to that edge, does not open, and is remembered', () => {
+    show();
+    drag([30, 30], [100, 300]);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(launcher().style.left).toBe('20px');
+    expect(launcher().style.top).not.toBe('');
+    const saved = JSON.parse(window.localStorage.getItem('messenger:dock-position') ?? 'null');
+    expect(saved.side).toBe('left');
+    expect(saved.y).toBeGreaterThan(0);
+    expect(saved.y).toBeLessThan(1);
+  });
+
+  it('opens its panel on the side it was moved to', async () => {
+    show();
+    drag([30, 30], [100, 300]);
+    // The click that ends a drag is ignored; a later, real click opens the bubble.
+    await new Promise((r) => setTimeout(r, 5));
+    fireEvent.click(launcher());
+    const panel = screen.getByRole('dialog', { name: 'Messages' });
+    expect(panel.className).toContain('sm:left-5');
+    expect(panel.className).not.toContain('sm:right-5');
+  });
+
+  it('comes back where it was left, on the next visit', () => {
+    window.localStorage.setItem('messenger:dock-position', JSON.stringify({ side: 'left', y: 0 }));
+    show();
+    expect(launcher().style.left).toBe('20px');
+    expect(launcher().style.top).toBe('56px');
+  });
+
+  it('moves with Shift and the arrow keys, and goes back with Shift and Home', () => {
+    show();
+    fireEvent.keyDown(launcher(), { key: 'ArrowLeft', shiftKey: true });
+    expect(launcher().style.left).toBe('20px');
+    const before = launcher().style.top;
+    fireEvent.keyDown(launcher(), { key: 'ArrowUp', shiftKey: true });
+    expect(parseInt(launcher().style.top, 10)).toBeLessThan(parseInt(before, 10));
+    fireEvent.keyDown(launcher(), { key: 'Home', shiftKey: true });
+    expect(launcher().getAttribute('style') ?? '').toBe('');
+    expect(window.localStorage.getItem('messenger:dock-position')).toBeNull();
+  });
+
+  it('leaves the arrow keys alone without Shift, so nothing else is hijacked', () => {
+    show();
+    fireEvent.keyDown(launcher(), { key: 'ArrowLeft' });
+    expect(launcher().getAttribute('style') ?? '').toBe('');
+  });
+
+  it('tells people how to move it', () => {
+    show();
+    expect(launcher()).toHaveAttribute('aria-describedby', 'messenger-dock-move-hint');
+    expect(document.getElementById('messenger-dock-move-hint')?.textContent).toMatch(/drag/i);
   });
 });
