@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { ClientAskVivChat } from '@/components/ask-viv/ClientAskVivChat';
+import { useClientTickets } from '@/components/client-portal/support-tickets/useClientTickets';
 import { NewConversationDialog } from '@/components/client/NewConversationDialog';
 import {
   ConversationPane,
@@ -10,11 +12,17 @@ import {
   type DockThreadApi,
   type MessengerThread,
 } from '@/components/messenger';
-import { ASK_VIV_THREAD_ID, NEW_CSC_THREAD_ID, buildClientThreads } from './clientThreads';
+import { NEW_TICKET_THREAD_ID, ticketIdFromThreadId, ticketThreadId } from '@/components/messenger/adapters/supportTickets';
+import { collectDiagnostics } from '@/components/support-tickets/diagnostics';
+import { createTicket, requestAiDraft } from '@/components/support-tickets/useCreateTicket';
+import { uploadTicketFile } from '@/components/support-tickets/useTicketThread';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useClientHomeHero } from '@/hooks/use-client-home-hero';
 import { useClientCommunications } from '@/hooks/useClientCommunications';
 import { useClientConversationPane } from '@/hooks/useClientConversationPane';
+import { useClientTicketPane } from '@/hooks/useClientTicketPane';
+import { ASK_VIV_THREAD_ID, NEW_CSC_THREAD_ID, buildClientThreads, resolveHelpAlias } from './clientThreads';
 
 function TenantThread({ thread, api, cscName }: { thread: MessengerThread; api: DockThreadApi; cscName: string | null }) {
   const { createConversation } = useClientCommunications();
@@ -42,22 +50,69 @@ function TenantThread({ thread, api, cscName }: { thread: MessengerThread; api: 
   );
 }
 
+/** One support ticket, or "Contact support" (no ticket yet: the first message creates it, then the bubble moves onto it). */
+function TicketThreadPane({ thread, api }: { thread: MessengerThread; api: DockThreadApi }) {
+  const { user, profile } = useAuth();
+  const { activeTenantId } = useClientTenant();
+  const { data: tickets = [] } = useClientTickets();
+  const qc = useQueryClient();
+  const ticketId = ticketIdFromThreadId(thread.id);
+  const ticket = ticketId ? tickets.find((t) => t.id === ticketId) ?? null : null;
+  const isNew = thread.id === NEW_TICKET_THREAD_ID;
+
+  const pane = useClientTicketPane(ticket, {
+    sendOverride: isNew
+      ? async ({ body, files }) => {
+          const created = await createTicket({
+            subject: '',
+            body,
+            pagePath: window.location.pathname,
+            diagnostics: collectDiagnostics(),
+            tenantId: activeTenantId ?? profile?.tenant_id ?? null,
+          });
+          // The ticket exists now. Everything after this is best effort and must not hide that.
+          if (user) {
+            for (const f of files.slice(0, 1)) {
+              try {
+                await uploadTicketFile({ ticketId: created.id, messageId: null, file: f, userId: user.id });
+              } catch {
+                toast.error(`Your message was sent, but ${f.name} could not be attached.`);
+              }
+            }
+          }
+          requestAiDraft(created.id);
+          await qc.refetchQueries({ queryKey: ['client-support-tickets'] });
+          api.select(ticketThreadId(created.id));
+        }
+      : undefined,
+  });
+  return <ConversationPane thread={thread} onBack={api.onBack} headerActions={api.headerActions} {...pane} />;
+}
+
 /**
- * The messenger bubble for the client portal. One place for Ask Viv, the consultant, notices from Vivacity and every other
- * conversation, with an unread count on the launcher. It replaces the old Ask Viv-only bubble.
+ * The messenger bubble for the client portal: one place for Ask Viv, the consultant, support (tickets), notices from
+ * Vivacity and every other conversation, with an unread count on the launcher. It replaced the Ask Viv-only bubble and the
+ * Help Center drawer. The old Help Center buttons still call openHelpCenter; they now open this bubble on the right thread.
  */
 export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: number }) {
   const { conversations, totalUnread, isLoading, createConversation } = useClientCommunications();
-  const { activeTenantId, isReadOnly } = useClientTenant();
+  const { activeTenantId, isReadOnly, isAcademyOnly } = useClientTenant();
   const { data: hero } = useClientHomeHero();
-  const { select } = useMessengerDock();
+  const { data: tickets = [] } = useClientTickets();
+  const { selectedId, select } = useMessengerDock();
   const [newOpen, setNewOpen] = useState(false);
 
   const cscName = hero?.csc_display_name ?? null;
   const threads = useMemo(
-    () => buildClientThreads({ conversations, cscName, cscAvatarUrl: hero?.csc_avatar_url ?? null, hasCsc: !!hero?.csc_user_id }),
-    [conversations, cscName, hero?.csc_avatar_url, hero?.csc_user_id],
+    () => buildClientThreads({ conversations, tickets, cscName, cscAvatarUrl: hero?.csc_avatar_url ?? null, hasCsc: !!hero?.csc_user_id, academyOnly: isAcademyOnly }),
+    [conversations, tickets, cscName, hero?.csc_avatar_url, hero?.csc_user_id, isAcademyOnly],
   );
+
+  // A Help Center button asked for "csc" or "support" before the thread list was known: swap in the real thread.
+  useEffect(() => {
+    const real = resolveHelpAlias(selectedId, threads);
+    if (real) select(real);
+  }, [selectedId, threads, select]);
 
   return (
     <>
@@ -66,9 +121,15 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
         threadsLoading={isLoading}
         unreadTotal={totalUnread}
         keepMounted={[ASK_VIV_THREAD_ID]}
-        fullPageHref={(t) => (t && t.id !== ASK_VIV_THREAD_ID && t.id !== NEW_CSC_THREAD_ID ? `/client/inbox?tab=messages&thread=${t.id}` : '/client/inbox?tab=messages')}
+        fullPageHref={(t) => {
+          if (!t) return '/client/inbox?tab=messages';
+          if (t.id === ASK_VIV_THREAD_ID || t.id === NEW_CSC_THREAD_ID) return '/client/inbox?tab=messages';
+          if (t.id === NEW_TICKET_THREAD_ID) return '/client/support-tickets';
+          const ticketId = ticketIdFromThreadId(t.id);
+          return ticketId ? `/client/support-tickets/${ticketId}` : `/client/inbox?tab=messages&thread=${t.id}`;
+        }}
         listAction={
-          !isReadOnly ? (
+          !isReadOnly && !isAcademyOnly ? (
             <button
               type="button"
               onClick={() => setNewOpen(true)}
@@ -80,13 +141,13 @@ export function ClientMessengerDock({ previewTenantId }: { previewTenantId?: num
             </button>
           ) : undefined
         }
-        renderThread={(thread, api) =>
-          thread.id === ASK_VIV_THREAD_ID ? (
-            <ClientAskVivChat previewTenantId={previewTenantId} active={api.active} onBack={api.onBack} headerActions={api.headerActions} />
-          ) : (
-            <TenantThread thread={thread} api={api} cscName={cscName} />
-          )
-        }
+        renderThread={(thread, api) => {
+          if (thread.id === ASK_VIV_THREAD_ID) {
+            return <ClientAskVivChat previewTenantId={previewTenantId} active={api.active} onBack={api.onBack} headerActions={api.headerActions} />;
+          }
+          if (thread.kind === 'support') return <TicketThreadPane thread={thread} api={api} />;
+          return <TenantThread thread={thread} api={api} cscName={cscName} />;
+        }}
       />
 
       <NewConversationDialog

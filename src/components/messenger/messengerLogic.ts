@@ -22,7 +22,8 @@ const time = (iso: string | null | undefined): number => {
 
 /** Pinned threads first, then the most recent activity. Does not change the input. */
 export function sortThreads(threads: readonly MessengerThread[]): MessengerThread[] {
-  return [...threads].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || time(b.lastActivityAt) - time(a.lastActivityAt));
+  // Pinned threads keep the order they were given (Ask Viv, your consultant, support); the rest go by recent activity.
+  return [...threads].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (a.pinned && b.pinned ? 0 : time(b.lastActivityAt) - time(a.lastActivityAt)));
 }
 
 export function filterThreads(threads: readonly MessengerThread[], filter: ThreadFilter, query: string): MessengerThread[] {

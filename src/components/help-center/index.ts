@@ -1,2 +1,1 @@
-export { HelpCenterProvider, useHelpCenter } from "./HelpCenterContext";
-export { HelpCenterDrawer } from "./HelpCenterDrawer";
+export { HelpCenterProvider, useHelpCenter, type HelpCenterTab } from "./HelpCenterContext";

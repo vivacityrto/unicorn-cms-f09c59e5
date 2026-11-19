@@ -25,7 +25,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Link, useLocation } from "react-router-dom";
 import { AcademyTopBar } from "@/components/layout/AcademyTopBar";
 import { AcademyFooter } from "@/components/layout/AcademyFooter";
-import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
+import { HelpCenterProvider } from "@/components/help-center";
+import { ClientMessengerDock } from "@/components/client/ClientMessengerDock";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
@@ -280,7 +281,7 @@ const AcademyLayoutInner = ({
         {/* Academy Footer */}
         <AcademyFooter />
       </div>
-      <HelpCenterDrawer />
+      <ClientMessengerDock />
     </div>
   );
 };

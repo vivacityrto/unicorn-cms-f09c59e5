@@ -15,6 +15,11 @@ describe('threads', () => {
     expect(input.map((t) => t.id)).toEqual(['old', 'new', 'pin']);
   });
 
+  it('keeps pinned threads in the order they were given, whatever their activity', () => {
+    const input = [thread('viv', { pinned: true }), thread('csc', { pinned: true, lastActivityAt: '2026-11-18T00:00:00Z' }), thread('other', { lastActivityAt: '2026-11-19T00:00:00Z' })];
+    expect(sortThreads(input).map((t) => t.id)).toEqual(['viv', 'csc', 'other']);
+  });
+
   it('filters by unread, by kind and by search over title, kind label and preview', () => {
     const list = [
       thread('Ask Viv', { kind: 'ask_viv', preview: 'compliance question' }),
