@@ -95,6 +95,21 @@ describe('MessengerDock', () => {
     expect(mounts.viv - mountsAfterOpen).toBeLessThanOrEqual(2);
   });
 
+  it('keeps a keep-mounted thread alive even when the whole dock is closed and reopened', () => {
+    mounts.viv = 0;
+    show();
+    fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
+    fireEvent.click(within(screen.getByRole('list', { name: 'Conversations' })).getByText('Ask Viv'));
+    const mountsAfterOpen = mounts.viv;
+    fireEvent.click(screen.getByRole('button', { name: 'Close messages' }));
+    // Closed: nothing is on screen, but the chat is still in the page (hidden), so an answer on its way still lands.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('viv chat', { selector: 'p' })).not.toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
+    expect(screen.getByText('viv chat')).toBeVisible();
+    expect(mounts.viv - mountsAfterOpen).toBeLessThanOrEqual(2);
+  });
+
   it('closes from the close button', () => {
     show();
     fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
