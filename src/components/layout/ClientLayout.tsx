@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
@@ -55,7 +56,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     if (!activeTenantId) return;
 
     const channel = supabase
-      .channel(`client-inbox-notifier-${activeTenantId}`)
+      .channel(uniqueChannelName(`client-inbox-notifier-${activeTenantId}`))
       .on(
         "postgres_changes",
         {

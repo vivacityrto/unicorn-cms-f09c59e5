@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useEffect, useState } from "react";
 import type { Tables } from "@/integrations/supabase/types";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 export interface ConversationThread extends Tables<"tenant_conversations"> {
   // computed client-side
@@ -42,7 +43,7 @@ export function useConversationRealtime(conversationId: string | null) {
   useEffect(() => {
     if (!conversationId || isAcademyOnly) return;
     const channel = supabase
-      .channel(`conv-live:${conversationId}`)
+      .channel(uniqueChannelName(`conv-live:${conversationId}`))
       .on(
         "postgres_changes",
         {
