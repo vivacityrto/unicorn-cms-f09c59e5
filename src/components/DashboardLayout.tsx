@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useLayoutEffect } from "react";
+import { useState, useMemo, useRef, useLayoutEffect, useCallback } from "react";
+import { readStaffSidebarDefault, writeStaffSidebarDefault } from "@/components/client/sidebarPreference";
 import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronUp, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge, Activity, AlertTriangle, Radar, Compass, Network, UserPlus, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -53,9 +54,13 @@ export const DashboardLayout = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(
-    () => typeof window === "undefined" || window.innerWidth >= 768
-  );
+  // How the menu starts is a setting (the pin in its header). Opening or closing it while you work lasts for this visit only.
+  const [defaultOpen, setDefaultOpenState] = useState<boolean>(() => readStaffSidebarDefault());
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(defaultOpen);
+  const setDefaultOpen = useCallback((open: boolean) => {
+    setDefaultOpenState(open);
+    writeStaffSidebarDefault(open);
+  }, []);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [showScrollUpIndicator, setShowScrollUpIndicator] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState({
@@ -256,6 +261,8 @@ export const DashboardLayout = ({
             pathname={location.pathname}
             roleName={roleLabel(userRole)}
             isViewingAsClient={isViewingAsClient}
+            defaultOpen={defaultOpen}
+            setDefaultOpen={setDefaultOpen}
           />
         ) : (
         <>

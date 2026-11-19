@@ -79,7 +79,7 @@ const show = (url = '/communications') =>
 const thread = (id: string, over: Partial<MessengerThread> = {}): MessengerThread => ({ id, kind: 'general', title: `Acme Training · ${id}`, unread: false, tenantId: 1, lastActivityAt: hoursAgo(50), preview: `preview ${id}`, ...over });
 
 beforeEach(() => {
-  // "Active today" is by calendar day, so pin the clock to midday: a run just after midnight must not see 1 hour ago as yesterday.
+  // "Active today" is by calendar day, so pin the clock to midday: a test run just after midnight must not see 1 hour ago as yesterday.
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 10, 19, 12, 0, 0));
   state.allClientsCalls = [];

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SIDEBAR_STORAGE_KEY, readSidebarPreference, writeSidebarPreference } from './sidebarPreference';
+import { SIDEBAR_STORAGE_KEY, readSidebarPreference, writeSidebarPreference, readStaffSidebarDefault, writeStaffSidebarDefault } from './sidebarPreference';
 
 const setWidth = (desktop: boolean) => {
   window.matchMedia = ((q: string) => ({ matches: desktop && q.includes('768'), media: q, addEventListener: vi.fn(), removeEventListener: vi.fn() })) as unknown as typeof window.matchMedia;
@@ -40,3 +40,36 @@ describe('the client sidebar preference', () => {
     Object.defineProperty(window, 'localStorage', orig);
   });
 });
+
+describe('the staff sidebar preference', () => {
+  it('starts open for someone who has never chosen, as the staff portal always has', () => {
+    expect(readStaffSidebarDefault()).toBe(true);
+  });
+
+  it('remembers a choice to start collapsed, and to start open again', () => {
+    writeStaffSidebarDefault(false);
+    expect(readStaffSidebarDefault()).toBe(false);
+    writeStaffSidebarDefault(true);
+    expect(readStaffSidebarDefault()).toBe(true);
+  });
+
+  it('is kept apart from the client portal setting', () => {
+    writeStaffSidebarDefault(false);
+    expect(readSidebarPreference()).toBe(false);
+    writeSidebarPreference(true);
+    expect(readStaffSidebarDefault()).toBe(false);
+  });
+
+  it('never opens on a phone, and survives storage being blocked', () => {
+    const wide = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
+    expect(readStaffSidebarDefault()).toBe(false);
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: wide });
+    const orig = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new Error('blocked'); } });
+    expect(readStaffSidebarDefault()).toBe(true);
+    expect(() => writeStaffSidebarDefault(false)).not.toThrow();
+    Object.defineProperty(window, 'localStorage', orig);
+  });
+});
+
