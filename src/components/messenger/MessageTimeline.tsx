@@ -71,6 +71,9 @@ export function MessageTimeline({ messages, isLoading, people, unreadAfter, typi
   const [shown, setShown] = useState(pageSize);
   const scroller = useRef<HTMLDivElement>(null);
   const [away, setAway] = useState(false);
+  // Whether the reader was at the bottom before the newest message was drawn. Measured on scroll, not after the new
+  // message has already made the content taller, so a tall message does not look like the reader had scrolled away.
+  const atBottom = useRef(true);
   const lastId = messages[messages.length - 1]?.id;
 
   const slice = useMemo(() => (messages.length > shown ? messages.slice(messages.length - shown) : messages), [messages, shown]);
@@ -82,6 +85,7 @@ export function MessageTimeline({ messages, isLoading, people, unreadAfter, typi
   const toBottom = (smooth = false) => {
     const el = scroller.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    atBottom.current = true;
   };
 
   // Open at the first unread message, otherwise at the latest.
@@ -97,18 +101,18 @@ export function MessageTimeline({ messages, isLoading, people, unreadAfter, typi
   // A new message follows you down if you were already at the bottom; otherwise the pill offers it.
   useEffect(() => {
     if (!opened.current) return;
-    const el = scroller.current;
-    if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
     const mine = messages[messages.length - 1]?.fromMe;
-    if (nearBottom || mine) toBottom(true);
+    if (atBottom.current || mine) toBottom(true);
     else setAway(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastId]);
 
   const onScroll = () => {
     const el = scroller.current;
-    if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 80) setAway(false);
+    if (!el) return;
+    const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+    atBottom.current = gap < 140;
+    if (gap < 80) setAway(false);
   };
 
   if (isLoading && messages.length === 0) {

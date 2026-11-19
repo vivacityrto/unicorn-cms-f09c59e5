@@ -102,9 +102,12 @@ export function seenSummary(messages: readonly MessengerMessage[], people: reado
   if (!people?.length) return null;
   const mine = [...messages].filter((m) => m.fromMe && m.delivery !== 'sending' && m.delivery !== 'failed').sort((a, b) => time(b.createdAt) - time(a.createdAt))[0];
   if (!mine) return null;
-  const readers = people.filter((p) => p.lastReadAt && time(p.lastReadAt) >= time(mine.createdAt));
+  // The sender's own read position never counts as someone having seen their message.
+  const others = people.filter((p) => p.id !== mine.senderId);
+  if (others.length === 0) return null;
+  const readers = others.filter((p) => p.lastReadAt && time(p.lastReadAt) >= time(mine.createdAt));
   if (readers.length === 0) return null;
-  if (readers.length === 1 && people.length === 1) return { messageId: mine.id, label: 'Seen' };
+  if (readers.length === 1 && others.length === 1) return { messageId: mine.id, label: 'Seen' };
   return { messageId: mine.id, label: readers.length === 1 ? `Seen by ${readers[0].name.split(/\s+/)[0]}` : `Seen by ${readers.length}` };
 }
 

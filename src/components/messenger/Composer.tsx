@@ -32,6 +32,11 @@ export function Composer({ onSend, draftKey: key, placeholder = 'Type a message'
   const box = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const lastTyping = useRef(0);
+  // What is in the box right now, so a failed send can put the old message back without overwriting a newer one.
+  const textNow = useRef(text);
+  const filesNow = useRef<File[]>([]);
+  textNow.current = text;
+  filesNow.current = files;
 
   // A different thread means a different draft.
   useEffect(() => {
@@ -77,10 +82,15 @@ export function Composer({ onSend, draftKey: key, placeholder = 'Type a message'
     try {
       await onSend(outgoing);
     } catch {
-      // Put it back so nothing typed is lost.
-      setText(body);
-      setFiles(outgoing.files);
-      if (key) writeDraft(key, body);
+      // Put it back so nothing typed is lost. If something new was typed or attached meanwhile, keep both:
+      // the failed message first, then the new text, and the files without duplicates.
+      const newer = textNow.current.trim();
+      const restored = newer ? (body ? `${body}
+${newer}` : newer) : body;
+      const restoredFiles = [...outgoing.files, ...filesNow.current.filter((f) => !outgoing.files.includes(f))].slice(0, maxFiles);
+      setText(restored);
+      setFiles(restoredFiles);
+      if (key) writeDraft(key, restored);
       setError("Couldn't send. Check your connection and try again.");
     } finally {
       setSending(false);

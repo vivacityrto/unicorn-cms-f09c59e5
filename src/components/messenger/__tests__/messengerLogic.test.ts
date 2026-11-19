@@ -79,6 +79,13 @@ describe('seen and typing', () => {
     expect(seenSummary([mine], [person('p', 'Sam', '2026-11-19T02:00:00Z'), person('q', 'Al', '2026-11-19T03:00:00Z')])?.label).toBe('Seen by 2');
   });
 
+  it("never counts the sender's own read position, even when they are in the participant list", () => {
+    const me = person('me', 'Me Myself', '2026-11-19T05:00:00Z');
+    expect(seenSummary([mine], [me, person('p', 'Sam', null)])).toBeNull();
+    expect(seenSummary([mine], [me])).toBeNull();
+    expect(seenSummary([mine], [me, person('p', 'Sam Lee', '2026-11-19T02:00:00Z')])).toEqual({ messageId: 'mine', label: 'Seen' });
+  });
+
   it('shows nothing when no one has read it, read state is unknown, or the message did not send', () => {
     expect(seenSummary([mine], [person('p', 'Sam', '2026-11-18T00:00:00Z')])).toBeNull();
     expect(seenSummary([mine], undefined)).toBeNull();

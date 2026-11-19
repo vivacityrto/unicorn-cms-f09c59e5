@@ -74,6 +74,21 @@ describe('Messenger shell', () => {
     await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
   });
 
+  it('does not overwrite text typed after a failed send; it keeps both', async () => {
+    let fail: (e: Error) => void = () => {};
+    const onSend = vi.fn().mockImplementationOnce(() => new Promise<void>((_, reject) => { fail = reject; }));
+    render(<Harness onSend={onSend} />);
+    open('Ask Viv');
+    const box = screen.getByLabelText('Message') as HTMLTextAreaElement;
+    fireEvent.change(box, { target: { value: 'first' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    await waitFor(() => expect(onSend).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'second' } });
+    fail(new Error('offline'));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('first\nsecond');
+  });
+
   it('keeps a draft when you switch threads and come back', () => {
     render(<Harness />);
     open('Ask Viv');
