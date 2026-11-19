@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({ canAccess: true }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { unicorn_role: 'Super Admin', first_name: 'Carl', last_name: 'Simpao' } }) }));
 vi.mock('@/components/help-center', () => ({ useHelpCenter: () => ({ openHelpCenter: vi.fn(), canAccess: state.canAccess }) }));
 
-import { UtilityFooter, sydneyTime } from './UtilityFooter';
+import { UtilityFooter, manilaTime, sydneyTime } from './UtilityFooter';
 
 const show = (tenant?: string) => render(<MemoryRouter><UtilityFooter activeTenantName={tenant} /></MemoryRouter>);
 
@@ -37,5 +37,21 @@ describe('UtilityFooter', () => {
   it('formats Sydney time the way the team writes it', () => {
     expect(sydneyTime(new Date('2026-11-19T04:45:00Z'))).toBe('3:45 pm AEDT');
     expect(sydneyTime(new Date('2026-07-01T00:00:00Z'))).toBe('10:00 am AEST');
+  });
+
+  it('shows Philippines time as PHT, three hours behind Sydney in summer and two in winter', () => {
+    expect(manilaTime(new Date('2026-11-19T04:45:00Z'))).toBe('12:45 pm PHT');
+    expect(manilaTime(new Date('2026-07-01T00:00:00Z'))).toBe('8:00 am PHT');
+  });
+
+  it('shows both clocks, each labelled for screen readers and tooltips', () => {
+    show();
+    expect(screen.getByTitle('Sydney time').textContent).toMatch(/^\d{1,2}:\d{2} (am|pm) (AEDT|AEST)$/);
+    expect(screen.getByTitle('Philippines time').textContent).toMatch(/^\d{1,2}:\d{2} (am|pm) PHT$/);
+  });
+
+  it('writes the tagline with a capital M', () => {
+    show();
+    expect(screen.getByText('We Make Compliance Simple!')).toBeInTheDocument();
   });
 });
