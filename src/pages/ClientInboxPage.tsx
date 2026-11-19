@@ -68,8 +68,20 @@ export default function ClientInboxPage() {
     setSearchParams(params, { replace: true });
   };
 
+  // The compose screen belongs to the Messages tab with nothing chosen. Leaving that tab, or opening a conversation from
+  // anywhere (the Everything tab's links set ?thread=), ends it, so the chosen conversation is the one shown.
+  const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
+  useEffect(() => {
+    if (activeTab !== "messages" || threadParam) setComposing(false);
+  }, [activeTab, threadParam]);
+
   const startMessage = () => {
-    if (activeTab !== "messages") setTab("messages");
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", "messages");
+    params.delete("type");
+    params.delete("thread");
+    params.delete("conversation");
+    setSearchParams(params, { replace: true });
     setComposing(true);
   };
 

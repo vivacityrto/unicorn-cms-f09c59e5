@@ -238,6 +238,19 @@ describe('Inbox flows with real hooks', () => {
     clean();
   });
 
+  it('ends the new message when you leave the Messages tab, so it does not come back later', async () => {
+    const user = userEvent.setup();
+    show('/client/inbox?tab=all');
+    await screen.findByText('Annual Declaration opens');
+    await user.click(screen.getByRole('button', { name: 'New message' }));
+    expect(screen.getByText('compose pane')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: /Everything/ }));
+    expect(screen.queryByText('compose pane')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: /Messages/ }));
+    expect(screen.queryByText('compose pane')).not.toBeInTheDocument();
+    clean();
+  });
+
   it('opens the new message in the conversation area from the banner', async () => {
     const user = userEvent.setup();
     show('/client/inbox?tab=all');
