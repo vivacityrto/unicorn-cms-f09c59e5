@@ -117,7 +117,7 @@ export default function RegulatoryUpdateDetailPage() {
 
       <RegulatoryBanner eyebrow="Regulatory update" title={wl?.name || "Regulatory Update"}>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          {impact && <ImpactChip level={impact} suffix=" impact" />}
+          {impact && <ImpactChip level={impact} suffix=" impact" onBrand />}
           {wl?.category && <Badge variant="outline" className="border-white/30 px-2 py-0 text-[11px] capitalize text-white">{wl.category}</Badge>}
         </div>
       </RegulatoryBanner>

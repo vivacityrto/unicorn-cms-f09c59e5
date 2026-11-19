@@ -22,8 +22,20 @@ const IMPACT_STYLE: Record<ImpactLevel, { chip: string; bar: string; tile: strin
 
 const NO_IMPACT = { chip: 'border-border bg-muted text-muted-foreground', bar: 'bg-border' };
 
-export function ImpactChip({ level, suffix = '' }: { level: ImpactLevel | null; suffix?: string }) {
+/**
+ * The impact level as a pill. On the purple banner (onBrand) it is a solid white pill with a coloured dot, because
+ * the tinted pill used elsewhere has dark text in light mode and disappears into the purple.
+ */
+export function ImpactChip({ level, suffix = '', onBrand = false }: { level: ImpactLevel | null; suffix?: string; onBrand?: boolean }) {
   if (!level) return null;
+  if (onBrand) {
+    return (
+      <Badge variant="outline" className="keep-light inline-flex items-center gap-1.5 border-transparent bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#44235F] hover:bg-white">
+        <span className={cn('h-2 w-2 rounded-full', IMPACT_STYLE[level].bar)} aria-hidden />
+        {IMPACT_LABEL[level]}{suffix}
+      </Badge>
+    );
+  }
   return <Badge variant="outline" className={cn('px-2 py-0 text-[11px] font-semibold', IMPACT_STYLE[level].chip)}>{IMPACT_LABEL[level]}{suffix}</Badge>;
 }
 
