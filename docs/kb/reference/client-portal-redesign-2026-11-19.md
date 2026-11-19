@@ -132,3 +132,9 @@ Three exposures of internal data to clients were found in the package analytics 
 - **Removed for clients, by Carl's decision ("Remove both for now"):** the pinned-note banner on the package page, the "urgent note" item on Home (it showed the title of an internal pinned note), and the staff notes line under each entry in "recent work". The package status pill, including "on hold", is unchanged.
 - No client has ever written a note, and no client-portal page read these tables directly, so nothing a client used is lost except the two note-based items above.
 - If staff should share a note with a client on purpose, that needs an explicit "share with client" option; it is not built.
+
+## Client sidebar: collapsed icon rail by default (20 November 2026)
+
+The client portal sidebar now opens as a narrow icon rail and remembers if someone widens it (on a laptop or desktop; on a phone the sidebar is an overlay that always starts closed). In the rail, hovering or focusing an icon floats the item's name and one line about it beside it (`RailTip` in `ClientSidebar.tsx`; every item has a short `description`), and each icon has an accessible name. When the sidebar is open the words are on screen and no floating label shows. The preference is kept in `client-sidebar-open` (`sidebarPreference.ts`).
+
+**Open question for the staff portal (nested menus):** the staff menu has groups with items inside them, which a flat icon rail cannot show. Recommended approach, to decide after reviewing the client rail live: group icons in the rail; hovering, focusing or tapping a group opens a floating panel beside it listing the group's items (name plus one line each, the current page marked), keyboard friendly (Enter, Space or Right arrow opens it, Up and Down move, Escape closes), a tap on touch devices; the expanded sidebar keeps ordinary expandable groups; and a quick "Go to…" search (Ctrl+K) to reach any page without opening groups at all.

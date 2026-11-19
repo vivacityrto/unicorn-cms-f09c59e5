@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, useEffect } from "react";
+import { useState, createContext, useContext, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
 import { HelpCenterProvider } from "@/components/help-center";
 import { ClientSidebar } from "@/components/client/ClientSidebar";
+import { readSidebarPreference, writeSidebarPreference } from "@/components/client/sidebarPreference";
 import { ClientTopbar } from "@/components/client/ClientTopbar";
 import { ClientFooter } from "@/components/client/ClientFooter";
 
@@ -32,7 +33,12 @@ const ClientRequestContext = createContext<OpenDocRequestFn>(() => {});
 export const useOpenDocumentRequest = () => useContext(ClientRequestContext);
 
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Collapsed to icons by default, remembered once someone widens it (see sidebarPreference).
+  const [sidebarOpen, setSidebarOpenState] = useState<boolean>(() => readSidebarPreference());
+  const setSidebarOpen = useCallback((open: boolean) => {
+    setSidebarOpenState(open);
+    writeSidebarPreference(open);
+  }, []);
   const { isPreview, activeTenantId } = useClientTenant();
   const { requestModalOpen, setRequestModalOpen, prefill, openDocumentRequest } = useClientRequestActions();
   const { profile } = useAuth();
