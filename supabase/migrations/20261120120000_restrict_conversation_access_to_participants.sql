@@ -46,7 +46,9 @@ create policy tc_select on public.tenant_conversations
     )
   );
 
--- Create: unchanged (staff, or a member creating their own conversation in their own organisation).
+-- Create: staff, or an active member creating their own conversation in their own organisation.
+-- Membership is judged by the canonical gate (tenant_members, ADR-019) rather than the legacy tenant_users table, so an
+-- active member missing from tenant_users can start a conversation and a stale tenant_users row cannot.
 create policy tc_insert_auth on public.tenant_conversations
   for insert to authenticated
   with check (
@@ -54,7 +56,7 @@ create policy tc_insert_auth on public.tenant_conversations
     or public.is_vivacity_team_safe((select auth.uid()))
     or (
       created_by_user_uuid = (select auth.uid())
-      and tenant_id in (select tu.tenant_id from public.tenant_users tu where tu.user_id = (select auth.uid()))
+      and public.has_tenant_access_safe(tenant_id, (select auth.uid()))
     )
   );
 

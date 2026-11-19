@@ -17,7 +17,8 @@ Any member of a client organisation (through the legacy `tenant_users` table or 
 - **`tc_select`:** Vivacity staff and super admins, or a person who has access to the organisation and either started the conversation or is a participant.
 - **`tc_update_auth`:** staff and super admins only. No client code path updates conversations (previews are kept by the message trigger, which is `SECURITY DEFINER`).
 - **`cp_insert_auth`:** staff and super admins, or the creator of the conversation adding a person with access to that organisation. This keeps the client "start a conversation" flow working (add yourself, add the primary consultant).
-- **Unchanged in effect:** `tc_insert_auth`, `tc_delete_staff`, `cp_select_member`, `cp_update_own`, `cp_delete_admin`. They are recreated (all policies on both tables are swept first, so an older differently named policy cannot still admit members) and now apply to signed-in users only.
+- **`tc_insert_auth`:** staff and super admins, or an active member (the canonical `has_tenant_access_safe` gate, ADR-019) creating their own conversation. It previously checked the legacy `tenant_users` table, so an active member missing from it could not start a conversation and a stale `tenant_users` row could.
+- **Unchanged in effect:** `tc_delete_staff`, `cp_select_member`, `cp_update_own`, `cp_delete_admin`. They are recreated (all policies on both tables are swept first, so an older differently named policy cannot still admit members) and now apply to signed-in users only.
 
 ## Impact measured before writing (production, read-only, counts only)
 
@@ -38,11 +39,12 @@ As a real client contact who is in some conversations of their organisation and 
 - **Add themselves to a conversation they are not in:** allowed, then refused.
 - **Create a conversation, add themselves and the primary consultant:** worked before and still works.
 - **As Vivacity staff:** all 15 visible and 15 updatable, unchanged.
+- **Membership gate change (second dry run):** a real active member who is not in `tenant_users` could not start a conversation before (refused) and can after, adding themselves; a person with only a stale `tenant_users` row (not an active member) could start one before (allowed) and cannot after (refused). Of the 37 active members missing from `tenant_users`, only 8 have both a valid organisation and an auth account; the rest are historical orphans (ADR-020).
 - 4 policies on each table after. No names, emails or message text were printed. The block ended with a deliberate exception so nothing persisted.
 
 ## Not done
 
 - Applying it to production (waits for go-ahead). After applying: postflight (4 + 4 policies, client cannot update a conversation or join one they are not in, create flow works, staff intact) and the status here changes to "applied".
-- Retiring the legacy `tenant_users` clauses elsewhere; `tc_insert_auth` still uses `tenant_users` as before.
+- Retiring the legacy `tenant_users` clauses on other tables (ADR-019 item 3, separately authorised).
 
 **Rollback:** restore the previous eight policies from `supabase/migrations/20260506045321*` and `20260513045909*` (and any later changes to them). Doing so re-opens the exposures.

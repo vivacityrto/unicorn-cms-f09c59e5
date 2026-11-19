@@ -35,6 +35,14 @@ describe('conversation access is for the people in a conversation and Vivacity s
     expect(p).toContain('is_vivacity_team_safe');
   });
 
+  it('judges who may start a conversation by the canonical membership gate, not the legacy tenant_users table (ADR-019)', () => {
+    const p = policy('tc_insert_auth');
+    expect(p).toContain('has_tenant_access_safe(tenant_id, (select auth.uid()))');
+    expect(p).toContain('created_by_user_uuid = (select auth.uid())');
+    expect(p).not.toContain('tenant_users');
+    expect(sql).not.toContain('tenant_users');
+  });
+
   it('lets only staff change a conversation', () => {
     const p = policy('tc_update_auth');
     expect(p).toContain('is_vivacity_team_safe');
