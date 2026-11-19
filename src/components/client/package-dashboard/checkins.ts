@@ -9,7 +9,25 @@ export interface CheckinState {
   confidence_due?: boolean;
   history?: Array<{ kind: 'pulse' | 'confidence'; score: number; created_at: string }>;
   blockers_last_30_days?: number;
+  /** This person's own blockers from the last 30 days, with where each one stands and any note the consultant left. */
+  my_blockers?: MyBlocker[];
 }
+
+export type BlockerStatus = 'flagged' | 'seen' | 'resolved';
+
+export interface MyBlocker {
+  category: BlockerCategory;
+  created_at: string;
+  status: BlockerStatus;
+  /** Written by Vivacity staff for the client, so it is shown to them. */
+  staff_note: string | null;
+}
+
+export const BLOCKER_STATUS_LABEL: Record<BlockerStatus, string> = {
+  flagged: 'Sent to your consultant',
+  seen: 'Seen by your consultant',
+  resolved: 'Resolved',
+};
 
 export const PULSE_LABELS: Record<number, string> = { 1: 'Struggling', 2: 'Not great', 3: 'OK', 4: 'Good', 5: 'Great' };
 export const CONFIDENCE_LABELS: Record<number, string> = { 1: 'Not at all', 2: 'Not very', 3: 'Fairly', 4: 'Confident', 5: 'Very confident' };

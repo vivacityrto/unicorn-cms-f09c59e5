@@ -18,10 +18,10 @@ const iso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toI
 let n = 0;
 const item = (over: Partial<CheckinAttentionItem> = {}): CheckinAttentionItem => ({
   package_instance_id: ++n, tenant_id: 100 + n, tenant_name: `Client ${n}`, package_name: 'Diamond RTO Membership', manager_id: 'someone', manager_name: 'Sam Manager',
-  blocker_count: 0, latest_blocker: null, low_streak_people: 0, ...over,
+  blocker_count: 0, new_blocker_count: 0, latest_blocker: null, low_streak_people: 0, ...over,
 });
 const blocked = (over: Partial<CheckinAttentionItem> = {}) =>
-  item({ blocker_count: 1, latest_blocker: { category: 'evidence', comment: '<i>Cannot</i> find records', name: 'Ana Low', created_at: iso(2) }, ...over });
+  item({ blocker_count: 1, new_blocker_count: 1, latest_blocker: { category: 'evidence', comment: '<i>Cannot</i> find records', name: 'Ana Low', created_at: iso(2), status: 'flagged' }, ...over });
 
 beforeEach(() => {
   h.profile = { user_uuid: 'me' };
@@ -40,8 +40,9 @@ describe('attention helpers', () => {
 
   it('describes what is flagged in plain words', () => {
     expect(describeItem(blocked())[0]).toMatch(/^Blocker flagged: Evidence, Ana Low 2 days ago$/);
-    expect(describeItem(blocked({ blocker_count: 3, low_streak_people: 2 }))).toEqual([
-      expect.stringContaining('(3 in the last 30 days)'),
+    expect(describeItem(blocked({ new_blocker_count: 0 }))[0]).toMatch(/2 days ago, seen$/);
+    expect(describeItem(blocked({ blocker_count: 3, new_blocker_count: 1, low_streak_people: 2 }))).toEqual([
+      expect.stringContaining('(3 unresolved)'),
       '2 people have given two low pulses in a row',
     ]);
     expect(describeItem(item({ low_streak_people: 1 }))).toEqual(['1 person has given two low pulses in a row']);
@@ -52,8 +53,8 @@ describe('attention helpers', () => {
     expect(attentionSentence([])).toBe('No client check-ins need attention right now.');
     const a = blocked({ tenant_id: 1 });
     const b = item({ tenant_id: 1, low_streak_people: 1 });
-    expect(attentionSentence([a, b])).toBe('1 client to look at: 1 package has a blocker and 1 package has two low pulses in a row.');
-    expect(attentionSentence([blocked({ tenant_id: 1 }), blocked({ tenant_id: 2 })])).toBe('2 clients to look at: 2 packages have a blocker.');
+    expect(attentionSentence([a, b])).toBe('1 client to look at: 1 package has an unresolved blocker (1 new) and 1 package has two low pulses in a row.');
+    expect(attentionSentence([blocked({ tenant_id: 1, new_blocker_count: 0 }), blocked({ tenant_id: 2, new_blocker_count: 0 })])).toBe('2 clients to look at: 2 packages have an unresolved blocker.');
   });
 });
 
@@ -82,6 +83,15 @@ describe('CheckinsAttentionCard', () => {
     expect(screen.getByText('<i>Cannot</i> find records')).toBeInTheDocument();
     expect(container.querySelector('i')).toBeNull();
     expect(screen.getByText('Managed by Sam Manager')).toBeInTheDocument();
+  });
+
+  it('marks packages with a blocker nobody has seen yet as New, and not the ones already seen', () => {
+    h.state = { data: { items: [blocked({ tenant_name: 'Fresh Pty' }), blocked({ tenant_name: 'Seen Pty', new_blocker_count: 0 })] }, isLoading: false, isError: false };
+    show();
+    const fresh = screen.getByRole('link', { name: /Fresh Pty/ });
+    const seen = screen.getByRole('link', { name: /Seen Pty/ });
+    expect(within(fresh).getByText('New')).toBeInTheDocument();
+    expect(within(seen).queryByText('New')).not.toBeInTheDocument();
   });
 
   it('says nothing needs attention, and says when a package has no manager', () => {

@@ -116,3 +116,11 @@ The staff dashboard has a "Client check-ins needing attention" card under the si
 - Two plain flags, no score; answers feed no health score and are never sent to AI. The client's description is clipped to 160 characters and shown as plain text.
 - Staff and super admins only; names only (no emails or ids).
 - Not built yet: acknowledging or resolving a blocker, and push notifications when a blocker arrives (the list is something to look at, not something that interrupts).
+
+## Blocker acknowledgement and notification (database applied)
+
+When a client flags a blocker, the package manager now gets an in-app notification (it names the client, the person and the category, not the client's words). On the staff client card each blocker has a status (New, Seen, Resolved) and buttons to mark it seen, resolve it or reopen it, with an optional note. Audit entry `2026-11-20-blocker-acknowledgement-and-notification`; migration applied to production.
+
+- **The note is for the client.** It appears on the client's own package page next to that blocker ("From your consultant"), together with its status (sent, seen, resolved), so staff must keep it to what the client should read. The staff screen says so.
+- Only unresolved blockers count as needing attention, on the client card and on the dashboard attention list, which also shows a "New" badge for blockers nobody has seen. Resolved blockers stay on the client card, dimmed, for context.
+- In-app only: no email or other push message. Notifying the client when their blocker is seen or resolved is not built (they see the status when they next open the package).

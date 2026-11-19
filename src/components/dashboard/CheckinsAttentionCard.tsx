@@ -24,7 +24,7 @@ function Row({ item }: { item: CheckinAttentionItem }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <p className="truncate text-sm font-semibold">{item.tenant_name}</p>
+            <p className="flex min-w-0 items-center gap-2 text-sm font-semibold"><span className="truncate">{item.tenant_name}</span>{item.new_blocker_count > 0 && <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:text-amber-300">New</span>}</p>
             <p className="text-xs text-muted-foreground">{item.manager_name ? `Managed by ${item.manager_name}` : "No package manager"}</p>
           </div>
           <p className="text-xs text-muted-foreground">{item.package_name}</p>
