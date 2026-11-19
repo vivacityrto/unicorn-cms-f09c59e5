@@ -1,5 +1,6 @@
 /**
- * The client sidebar opens collapsed to icons (names float beside them on hover) and remembers if someone widens it.
+ * The client sidebar opens collapsed to icons (names float beside them on hover) unless someone pins it open with the pin in
+ * its header. That pin is the only thing saved: opening or closing the menu while working lasts for that visit.
  * Only on a laptop or desktop: on a phone the sidebar is an overlay that starts closed every time, so what the overlay was
  * last doing is never saved.
  */
