@@ -4,7 +4,7 @@
  * person is not a participant of), and clicks every card, filter and row. The page must never throw and React must
  * never log an error while it does.
  */
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
 
-const db = vi.hoisted(() => ({ tables: {} as Record<string, unknown[]>, rpcCalls: [] as string[] }));
+const db = vi.hoisted(() => ({ tables: {} as Record<string, unknown[]>, rpcCalls: [] as string[], authDelay: 0 }));
 
 vi.mock('@/integrations/supabase/client', () => {
   const builder = (table: string) => {
@@ -57,7 +57,7 @@ vi.mock('@/integrations/supabase/client', () => {
         db.rpcCalls.push(name);
         return Promise.resolve({ data: null, error: null });
       },
-      auth: { getUser: () => Promise.resolve({ data: { user: { id: 'me' } } }) },
+      auth: { getUser: () => new Promise((resolve) => setTimeout(() => resolve({ data: { user: { id: 'me' } } }), db.authDelay)) },
       channel,
       removeChannel,
     },
@@ -77,8 +77,10 @@ function Where() {
   return <output data-testid="where">{loc.pathname + loc.search}</output>;
 }
 
+let lastClient: QueryClient | null = null;
 const show = (url: string) => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  lastClient = qc;
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[url]}>
@@ -97,6 +99,7 @@ beforeEach(() => {
   });
   Element.prototype.scrollIntoView = () => undefined;
   db.rpcCalls = [];
+  db.authDelay = 0;
   db.tables = {
     tenant_conversations: [
       { id: 'c1', tenant_id: 1, subject: 'Annual Declaration opens', topic: 'general', type: 'broadcast', last_message_at: hoursAgo(3), last_message_preview: 'Your CEO receives a link', created_at: hoursAgo(5), status: 'open' },
@@ -228,6 +231,23 @@ describe('Inbox flows with real hooks', () => {
     await user.click(screen.getByRole('button', { name: 'New message' }));
     expect(screen.getByRole('dialog', { name: 'New message dialog' })).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('tab=messages');
+    clean();
+  });
+
+  it('keeps the conversations when the Messages tab opens while a refresh is running', async () => {
+    // Each part of the page learns the signed-in user a moment after it appears. A refresh that ran in that moment used
+    // to save an empty list for everyone, so Everything, Messages and every card read zero.
+    const user = userEvent.setup();
+    db.authDelay = 80;
+    show('/client/inbox?tab=all');
+    await screen.findByText('Annual Declaration opens', undefined, { timeout: 3000 });
+    await user.click(screen.getByRole('tab', { name: /Messages/ }));
+    await lastClient!.invalidateQueries({ queryKey: ['client-conversations'] });
+    await new Promise((r) => setTimeout(r, 300));
+    const list = screen.getByRole('region', { name: 'Conversations' });
+    expect(within(list).getByRole('button', { name: /Annual Declaration opens/ })).toBeInTheDocument();
+    expect(screen.queryByText('No conversations yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Everything/ })).toHaveTextContent(/7 items/);
     clean();
   });
 });

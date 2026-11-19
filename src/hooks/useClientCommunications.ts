@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 import type { Tables } from "@/integrations/supabase/types";
 import { displayName, fetchSenderProfiles } from "@/lib/conversationSenders";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
@@ -70,17 +71,18 @@ export function useConversationRealtime(conversationId: string | null) {
 export function useClientCommunications() {
   const { activeTenantId, isAcademyOnly } = useClientTenant();
   const qc = useQueryClient();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
-  }, []);
+  // The signed-in person comes from the app's single auth state, so every part of the page agrees on it straight away.
+  // It used to be looked up separately, and later, by each part that used this hook; the conversations query is shared
+  // between them, and a copy that did not know the person yet could save an empty list for everyone.
+  const { profile } = useAuth();
+  const currentUserId = profile?.user_uuid ?? null;
 
   // Fetch conversations for this tenant
   const conversationsQuery = useQuery({
-    queryKey: ["client-conversations", activeTenantId],
+    queryKey: ["client-conversations", activeTenantId, currentUserId],
     queryFn: async (): Promise<ConversationThread[]> => {
-      if (!activeTenantId || !currentUserId) return [];
+      // Never reached without both (the query is disabled), but an empty answer must not be saved as a real one.
+      if (!activeTenantId || !currentUserId) throw new Error("Not signed in");
 
       const { data: convos, error } = await supabase
         .from("tenant_conversations")
