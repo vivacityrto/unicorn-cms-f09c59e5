@@ -40,7 +40,6 @@ import { SupportTicketsPanel } from "@/components/support-tickets/SupportTickets
 import { DailyNotesPanel } from "@/components/task-notes/DailyNotesPanel";
 import { InstallAppDialog } from "@/components/layout/InstallAppDialog";
 
-import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
 import { usePageTitleValue } from "@/contexts/PageTitleContext";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
@@ -186,7 +185,8 @@ const getBreadcrumbs = (pathname: string) => {
 // framework so they read as a matched pair, with each keeping its own
 // accent (Support Tickets' brand-aqua fill) so they stay distinguishable
 // from one another at a glance.
-const UTILITY_BUTTON_CLASS = 'h-10 w-10 rounded-full shrink-0 transition-all';
+// The same quiet icon buttons as the client portal's top bar: ghost, 36px, muted until hovered, no outlines or fills.
+const UTILITY_BUTTON_CLASS = 'h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground';
 
 function SupportTicketsButton() {
   const [open, setOpen] = useState(false);
@@ -195,9 +195,11 @@ function SupportTicketsButton() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
+            variant="ghost"
             size="icon"
-            className={`${UTILITY_BUTTON_CLASS} bg-brand-aqua text-white hover:bg-brand-aqua-600 border border-transparent`}
+            className={UTILITY_BUTTON_CLASS}
             onClick={() => setOpen(prev => !prev)}
+            aria-label="Support tickets"
           >
             <LifeBuoy className="h-4 w-4" />
           </Button>
@@ -218,7 +220,7 @@ function ThemeToggleButton() {
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           className={UTILITY_BUTTON_CLASS}
           onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -245,7 +247,7 @@ function DailyNotesButton() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             className={UTILITY_BUTTON_CLASS}
             onClick={() => setOpen(prev => !prev)}
@@ -382,7 +384,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       )}
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
-      <div className="topbar-actions flex items-center gap-2 flex-shrink-0 ml-2">
+      <div className="topbar-actions flex items-center gap-1 flex-shrink-0 ml-2">
         <TooltipProvider>
           {/* Dark mode toggle */}
           <ThemeToggleButton />
@@ -398,9 +400,10 @@ export function TopBar({ showSearch = false }: TopBarProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => helpCenter.openHelpCenter("chatbot")}
-                  className="h-10 w-10"
+                  className={UTILITY_BUTTON_CLASS}
+                  aria-label="Help"
                 >
-                  <HelpCircle className="h-5 w-5" />
+                  <HelpCircle className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -408,11 +411,6 @@ export function TopBar({ showSearch = false }: TopBarProps) {
               </TooltipContent>
             </Tooltip>
           )}
-
-          {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
-          <AskVivButton />
-
-
 
           {/* Notifications */}
           <Tooltip>
@@ -433,9 +431,9 @@ export function TopBar({ showSearch = false }: TopBarProps) {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-10 rounded-full p-0 hover:ring-2 hover:ring-primary/20 transition-all"
+                    className="relative h-9 w-9 rounded-full p-0 hover:ring-2 hover:ring-primary/20 transition-all"
                   >
-                    <Avatar className="h-10 w-10 border-2 border-border transition-all group-data-[condensed=true]/topbar:h-7 group-data-[condensed=true]/topbar:w-7">
+                    <Avatar className="h-8 w-8 border-2 border-border transition-all group-data-[condensed=true]/topbar:h-6 group-data-[condensed=true]/topbar:w-6">
                       <AvatarImage
                         src={profile?.avatar_url || ""}
                         alt={getUserDisplayName()}
@@ -445,8 +443,6 @@ export function TopBar({ showSearch = false }: TopBarProps) {
                         {getInitials(profile?.email || "U")}
                       </AvatarFallback>
                     </Avatar>
-                    {/* Online indicator */}
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-[hsl(var(--success,142_76%_36%))]" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
