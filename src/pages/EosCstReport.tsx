@@ -234,7 +234,7 @@ export default function EosCstReport() {
                 onSelect={() => choose('academy')}
                 label="Academy: courses finished"
                 value={academy.data ? String(academy.data.completed) : academy.isLoading ? '…' : '–'}
-                note={academy.data ? `${academy.data.enrolled} enrolments, ${academy.data.selfEnrolled} chosen by the learner.` : 'Enrolments and completions in this period.'}
+                note={academy.data ? `${academy.data.enrolled} courses chosen by learners and ${academy.data.completed} finished.` : 'Courses learners chose, and finished.'}
                 ring={{ pct: percent(academyClients, data.totals.live_rtos), caption: 'of clients used it', tone: 'good', text: `${academyClients}` }}
               />
             </div>
