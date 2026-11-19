@@ -81,6 +81,11 @@ describe('RegulatoryUpdateDetailPage', () => {
     expect(glance).toHaveTextContent('Critical impact');
     expect(glance).toHaveTextContent('2');
     expect(within(glance).getByRole('link', { name: /Open the regulator page/ })).toHaveAttribute('href', 'https://asqa.gov.au');
+    // On the purple banner the impact pill is solid white so it stays readable in light and dark mode.
+    const banner = screen.getByRole('region', { name: 'ASQA' });
+    const pill = within(banner).getByText('Critical impact').closest('[class*="bg-white"]');
+    expect(pill).not.toBeNull();
+    expect(pill?.className).toContain('keep-light');
     expect(screen.getByRole('button', { name: /Message your CSC/ })).toBeInTheDocument();
     expect(screen.getByText(/Human review required/)).toBeInTheDocument();
   });
