@@ -19,4 +19,3 @@ export type {
 export { default as AppLayout } from "./AppLayout";
 export { TopBar } from "./TopBar";
 export { UtilityFooter } from "./UtilityFooter";
-export { default as Footer } from "./Footer";
