@@ -629,6 +629,19 @@
       "owner": "Carl",
       "reason": "Rollback file for the entry above. Re-inserts only the 440 rows held in the backup table _bak_academy_enrollments_legacy_auto_20261119, with their original ids, skipping any learner who has since enrolled in the same course. Touches nothing else.",
       "expires": "2026-12-18"
+    },
+    {
+      "id": "scheduled-bulk-message-delivery",
+      "file": "supabase/migrations/20261119130000_schedule_bulk_messages.sql",
+      "categories": [
+        "cron-registration",
+        "data-mutation",
+        "destructive-mutation"
+      ],
+      "targetProject": "yxkgdalkbrriasiyyrwk",
+      "owner": "Unicorn engineering",
+      "reason": "Proposed for review in PR 1554. Registers only the named local PostgreSQL delivery job. The migration does not create campaign or recipient rows. The scanned writes are inside the permission-checked schedule and cancel RPCs and the owner-only worker, which locks due campaigns and scopes writes by campaign and tenant. Production activation requires separate approval.",
+      "expires": "2026-12-16"
     }
   ]
 }
