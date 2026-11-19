@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useEffect, useState } from "react";
 import type { Tables } from "@/integrations/supabase/types";
+import { displayName, fetchSenderProfiles } from "@/lib/conversationSenders";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 export interface ConversationThread extends Tables<"tenant_conversations"> {
@@ -30,6 +31,8 @@ export interface ConversationMessage {
   created_at: string;
   sender_name?: string;
   sender_avatar_url: string | null;
+  /** True for Vivacity staff, so the portal can say who they are talking to. */
+  sender_is_staff?: boolean;
   attachments?: ConversationMessageAttachment[];
 }
 
@@ -130,20 +133,7 @@ export function useClientCommunications() {
         if (!data?.length) return [];
 
         const senderIds = Array.from(new Set(data.map((m) => m.sender_user_uuid)));
-        const { data: users } = await supabase
-          .from("users")
-          .select("user_uuid, first_name, last_name, avatar_url")
-          .in("user_uuid", senderIds);
-
-        const nameMap = new Map<string, string>();
-        const avatarMap = new Map<string, string | null>();
-        (users || []).forEach((u) => {
-          nameMap.set(
-            u.user_uuid,
-            [u.first_name, u.last_name].filter(Boolean).join(" ")
-          );
-          avatarMap.set(u.user_uuid, u.avatar_url ?? null);
-        });
+        const profiles = await fetchSenderProfiles(conversationId, senderIds);
 
         const messageIds = data.map((m) => m.id);
         const attMap = new Map<string, ConversationMessageAttachment[]>();
@@ -160,7 +150,7 @@ export function useClientCommunications() {
         }
 
         const mapped: ConversationMessage[] = data.map((m) => {
-          const resolved = nameMap.get(m.sender_user_uuid) || "";
+          const profile = profiles.get(m.sender_user_uuid);
           const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
           return {
             id: m.id,
@@ -169,8 +159,11 @@ export function useClientCommunications() {
             sender_type: m.sender_type ?? null,
             body: m.body,
             created_at: m.created_at,
-            sender_name: resolved || fallback,
-            sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
+            sender_name: displayName(profile, fallback),
+            sender_avatar_url: profile?.avatar_url ?? null,
+            // Only the database may say someone is staff. A message's own sender_type is written by the sender, so it
+            // is never used for the badge (it is still used above as the fallback label for a name we cannot resolve).
+            sender_is_staff: profile?.is_staff === true,
             attachments: attMap.get(m.id) || [],
           };
         });

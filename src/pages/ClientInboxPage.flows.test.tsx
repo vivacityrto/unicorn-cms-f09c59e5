@@ -187,6 +187,8 @@ describe('Inbox flows with real hooks', () => {
     const thread = screen.getByRole('region', { name: 'Conversation' });
     expect(await within(thread).findByText('Hello from Vivacity')).toBeInTheDocument();
     expect(within(thread).getByText('A message with no sender')).toBeInTheDocument();
+    // Staff are named rather than shown as a generic team. The badge itself is not asserted here: it needs the database function, which this fake does not provide.
+    expect(within(thread).getByText('Nova Canto')).toBeInTheDocument();
     expect(db.rpcCalls).toContain('fn_mark_conversation_read');
     clean();
   });
