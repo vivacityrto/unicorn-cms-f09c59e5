@@ -8,7 +8,8 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useStaffMessenger } from '@/hooks/useStaffMessenger';
 import { useStaffConversationPane } from '@/hooks/useStaffConversationPane';
 import { useBulkMessageSummary } from '@/hooks/useBulkMessageSummary';
-import { Messenger, NEW_MESSAGE_THREAD_ID, useMessengerDock } from '@/components/messenger';
+import { Messenger } from '@/components/messenger';
+import { StaffNewMessagePane } from '@/components/staff/StaffNewMessagePane';
 import { InsightCard } from '@/components/staff/InsightCard';
 import { applyInsightView, communicationsInsights, waitingFor, type InsightView } from '@/components/staff/communicationsInsights';
 import { BulkMessageDialog } from '@/components/communications/BulkMessageDialog';
@@ -40,7 +41,8 @@ export default function TeamCommunicationsPage() {
   const [view, setView] = useState<InsightView>('all');
   const [filterTenant, setFilterTenant] = useState('all');
   const [filterStaff, setFilterStaff] = useState('all');
-  const { openDock } = useMessengerDock();
+  // Writing a new message takes the conversation area (the same screen the bubble uses), instead of a pop-up.
+  const [composing, setComposing] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -71,6 +73,7 @@ export default function TeamCommunicationsPage() {
   const pane = useStaffConversationPane(selectedThread?.id ?? null, { tenantId, mine: (tenantId != null && scope.has(tenantId)) || (!!selectedThread && participating.has(selectedThread.id)) });
 
   const select = (id: string | null) => {
+    setComposing(false);
     const next = new URLSearchParams(searchParams);
     if (id) next.set('thread', id);
     else next.delete('thread');
@@ -110,7 +113,13 @@ export default function TeamCommunicationsPage() {
               Bulk message
             </Button>
           )}
-          <Button onClick={() => openDock(NEW_MESSAGE_THREAD_ID)} className="gap-1.5">
+          <Button
+            onClick={() => {
+              select(null);
+              setComposing(true);
+            }}
+            className="gap-1.5"
+          >
             <Plus className="h-4 w-4" />
             New message
           </Button>
@@ -194,6 +203,14 @@ export default function TeamCommunicationsPage() {
         selectedId={selectedThread?.id ?? null}
         openThread={selectedThread}
         onSelect={select}
+        compose={
+          composing ? (
+            <StaffNewMessagePane
+              api={{ onBack: () => setComposing(false), select, headerActions: null }}
+              initialTenantId={filterTenant === 'all' ? null : Number(filterTenant)}
+            />
+          ) : undefined
+        }
         emptyThreads={
           <p className="px-3 py-8 text-center text-xs text-muted-foreground">
             {view !== 'all' || filterTenant !== 'all' || filterStaff !== 'all'

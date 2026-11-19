@@ -44,6 +44,7 @@ vi.mock('@/hooks/useStaffMessenger', () => ({
     };
   },
 }));
+vi.mock('@/components/staff/StaffNewMessagePane', () => ({ StaffNewMessagePane: () => <p>compose pane</p> }));
 vi.mock('@/hooks/useStaffConversationPane', () => ({
   useStaffConversationPane: () => ({ messages: [], isLoading: false, onSend: vi.fn().mockResolvedValue(undefined), draftScope: 'test' }),
 }));
@@ -143,7 +144,11 @@ describe('Team Communications', () => {
     const user = userEvent.setup();
     show();
     await user.click(screen.getByRole('button', { name: 'New message' }));
-    expect(screen.getByTestId('dock')).toHaveTextContent('open:compose:new');
+    expect(screen.getByText('compose pane')).toBeInTheDocument();
+    expect(screen.getByTestId('dock')).toHaveTextContent('closed');
+    // Choosing a conversation closes it again.
+    await user.click(within(list()).getAllByRole('button')[0]);
+    expect(screen.queryByText('compose pane')).not.toBeInTheDocument();
   });
 
   it('starts on my clients and switches to all clients', async () => {
