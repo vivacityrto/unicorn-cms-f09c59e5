@@ -69,10 +69,10 @@ export function InstallAppDialog({ open, onOpenChange }: { open: boolean; onOpen
           </DialogDescription>
         </DialogHeader>
 
-        {installed ? (
-          <p className="text-sm text-muted-foreground">Unicorn is already installed on this device.</p>
-        ) : (
-          <div className="space-y-4">
+        <div className="space-y-4">
+          {installed ? (
+            <p className="text-sm text-muted-foreground">Unicorn is already installed on this device.</p>
+          ) : (
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">1. Install the app</p>
               {canInstall ? (
@@ -87,12 +87,12 @@ export function InstallAppDialog({ open, onOpenChange }: { open: boolean; onOpen
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">2. Open it when you sign in</p>
-              <StartupSteps platform={platform} />
-            </div>
+          )}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">{installed ? '1. Open it when you sign in' : '2. Open it when you sign in'}</p>
+            <StartupSteps platform={platform} />
           </div>
-        )}
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} className="text-foreground min-h-11 sm:min-h-9">
