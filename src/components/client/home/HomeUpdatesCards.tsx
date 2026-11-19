@@ -35,24 +35,33 @@ function Header({ title, to, linkLabel }: { title: string; to: string; linkLabel
   );
 }
 
-export function HomeMessagesView({ items }: { items: HomeBroadcast[] }) {
+export function HomeMessagesView({ items, compact = false }: { items: HomeBroadcast[]; compact?: boolean }) {
   return (
     <section aria-label="Messages from Vivacity">
       <Header title="Messages from Vivacity" to="/client/inbox?tab=messages" linkLabel="Open inbox" />
-      <ul className="space-y-2">
+      <ul className={compact ? 'space-y-1.5' : 'space-y-2'}>
         {items.map((m) => (
           <li key={m.id}>
-            <Link to={`/client/inbox?tab=messages&thread=${m.id}`} className="flex items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Link
+              to={`/client/inbox?tab=messages&thread=${m.id}`}
+              className={cn(
+                'flex items-start gap-3 rounded-lg border bg-card transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                compact ? 'p-2.5' : 'p-3',
+              )}
+            >
               <span className={cn('mt-0.5 rounded-md p-1.5', m.isUnread ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground')}>
                 <Megaphone className="h-4 w-4" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <p className="text-sm font-semibold text-foreground line-clamp-2">{m.subject}</p>
-                  {m.isUnread && <Badge variant="default" className="px-1.5 py-0 text-[10px]">New</Badge>}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <p className={cn('text-sm font-semibold text-foreground', compact ? 'line-clamp-1' : 'line-clamp-2')}>{m.subject}</p>
+                    {m.isUnread && <Badge variant="default" className="px-1.5 py-0 text-[10px]">New</Badge>}
+                  </div>
+                  {compact && <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{ago(m.sentAt)}</span>}
                 </div>
-                {m.excerpt && <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{m.excerpt}</p>}
-                <p className="mt-1 text-[11px] text-muted-foreground">{ago(m.sentAt)}</p>
+                {m.excerpt && <p className={cn('mt-0.5 text-xs text-muted-foreground', compact ? 'line-clamp-1' : 'line-clamp-2')}>{m.excerpt}</p>}
+                {!compact && <p className="mt-1 text-[11px] text-muted-foreground">{ago(m.sentAt)}</p>}
               </div>
             </Link>
           </li>
@@ -91,11 +100,11 @@ export function HomeRegulatoryView({ items }: { items: HomeRegulatoryUpdate[] })
 }
 
 /** Latest broadcast messages. Shows nothing when there are none, or while the inbox is not available to this person. */
-export function HomeMessagesCard() {
+export function HomeMessagesCard({ compact = false }: { compact?: boolean }) {
   const { data, isLoading, error } = useClientHomeBroadcasts();
   if (isLoading) return <Skeleton className="h-28 w-full rounded-xl" />;
   if (error || !data || data.length === 0) return null;
-  return <HomeMessagesView items={data} />;
+  return <HomeMessagesView items={data} compact={compact} />;
 }
 
 /** Latest regulator changes. Shows nothing when there are none or they cannot be loaded. */
