@@ -12,6 +12,8 @@
 - `addin-email-capture`: upsert uses `onConflict: 'user_uuid,external_message_id,tenant_id'`.
 - `useLinkedEmails`: reads the function's response body, so the modal shows the real message.
 
-**Step 2, after the functions deploy:** `supabase/migrations/20261119100000_email_messages_unique_per_client.sql` drops `email_messages_unique_per_user`, `email_messages_user_uuid_external_message_id_key` and the tenant index. Applying it before the deploy breaks the add-in's upsert.
+**Step 2 — applied 19 Nov 2026 after the edge function deploy (run 44456646498, success), as `email_messages_unique_per_client_drop_old`.** Verified: the only unique index on linked emails is now `(user_uuid, external_message_id, client_id)`.
+
+The original step-2 instruction, for reference: `supabase/migrations/20261119100000_email_messages_unique_per_client.sql` drops `email_messages_unique_per_user`, `email_messages_user_uuid_external_message_id_key` and the tenant index. Applying it before the deploy breaks the add-in's upsert.
 
 **Rollback:** re-add `UNIQUE (user_uuid, external_message_id)`, once no email is linked to more than one client.
