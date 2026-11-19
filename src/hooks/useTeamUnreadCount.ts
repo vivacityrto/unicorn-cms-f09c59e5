@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 /**
  * Vivacity team Communications nav badge.
@@ -39,7 +40,7 @@ export function useTeamUnreadCount() {
       qc.invalidateQueries({ queryKey: ["team-unread-count", currentUserId] });
 
     const convoChannel = supabase
-      .channel("team-unread-badge-convos")
+      .channel(uniqueChannelName("team-unread-badge-convos"))
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "tenant_conversations" },
@@ -48,7 +49,7 @@ export function useTeamUnreadCount() {
       .subscribe();
 
     const participantChannel = supabase
-      .channel("team-unread-badge-participants")
+      .channel(uniqueChannelName("team-unread-badge-participants"))
       .on(
         "postgres_changes",
         {

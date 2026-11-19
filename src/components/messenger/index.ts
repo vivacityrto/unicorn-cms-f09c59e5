@@ -3,6 +3,7 @@ export { ConversationPane, type ConversationPaneProps } from './ConversationPane
 export { ThreadList, ThreadRow, ThreadTile } from './ThreadList';
 export { MessageTimeline, MessageText } from './MessageTimeline';
 export { Composer } from './Composer';
+export { ChoiceMenu } from './ChoiceMenu';
 export { ComposePane, type ComposePaneProps } from './ComposePane';
 export { MessengerDock, type DockThreadApi, type MessengerDockProps } from './dock/MessengerDock';
 export { MessengerDockProvider } from './dock/MessengerDockProvider';
