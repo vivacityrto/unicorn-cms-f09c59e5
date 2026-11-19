@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export type InsightSurface = 'home' | 'packages' | 'academy';
 
@@ -57,8 +58,12 @@ async function requestInsight(surface: InsightSurface, previewTenantId: number |
 export function useClientInsight(surface: InsightSurface) {
   const qc = useQueryClient();
   const { activeTenantId, isPreview, isAcademyOnly } = useClientTenant();
+  // The result is kept per person: what one person was allowed to see (Academy figures are for main contacts only)
+  // must never be shown to someone else who signs in on the same browser.
+  const { profile } = useAuth();
+  const userId = profile?.user_uuid ?? null;
   const previewTenantId = isPreview && activeTenantId ? activeTenantId : null;
-  const key = ['client-insight', surface, activeTenantId, previewTenantId] as const;
+  const key = ['client-insight', userId, surface, activeTenantId, previewTenantId] as const;
   const queryFn = useCallback(() => requestInsight(surface, previewTenantId), [surface, previewTenantId]);
 
   // Never fetches on its own (enabled: false); it only shows what `ask` has fetched.
@@ -71,7 +76,7 @@ export function useClientInsight(surface: InsightSurface) {
     isLoading: query.isFetching,
     error: query.error instanceof InsightError ? query.error : query.error ? new InsightError('FAILED', 'Viv could not write a summary. Please try again.') : null,
     /** Academy-only people have no client AI at all. */
-    available: !isAcademyOnly && !!activeTenantId,
+    available: !isAcademyOnly && !!activeTenantId && !!userId,
     ask,
   };
 }

@@ -105,6 +105,18 @@ export interface AcademyTotals {
   not_counted?: { enrolments: number; finished: number };
 }
 
+/**
+ * Chosen courses untouched for 30 days, counted across ALL courses. The analytics function's own `stalled` list is
+ * capped at 20 rows for display, so counting its length would understate a large organisation.
+ */
+export function totalStalled(courses: unknown): number {
+  if (!Array.isArray(courses)) return 0;
+  return courses.reduce((n: number, c) => {
+    const v = Number((c as { stalled?: unknown } | null)?.stalled);
+    return n + (Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+  }, 0);
+}
+
 export interface AcademyInput {
   totals: AcademyTotals;
   stalledCount: number;

@@ -33,6 +33,7 @@ import {
   isSurface,
   packageSection,
   parseSummary,
+  totalStalled,
   type AcademyInput,
   type FactSection,
   type PackageRow,
@@ -116,8 +117,8 @@ Deno.serve(async (req) => {
         // on Home it just means the Academy line is left out.
         if (surface === "academy") return jsonError(req, 403, "NOT_AVAILABLE", "Academy figures are not available to you.");
       } else if (data) {
-        const a = data as { totals: AcademyInput["totals"]; stalled?: unknown[] };
-        sections.push(academySection({ totals: a.totals, stalledCount: Array.isArray(a.stalled) ? a.stalled.length : 0 }));
+        const a = data as { totals: AcademyInput["totals"]; courses?: unknown };
+        sections.push(academySection({ totals: a.totals, stalledCount: totalStalled(a.courses) }));
       }
     }
 

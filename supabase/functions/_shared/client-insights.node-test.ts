@@ -15,6 +15,7 @@ import {
   parseSummary,
   statusReason,
   type PackageRow,
+  totalStalled,
 } from "./client-insights.ts";
 
 const today = new Date("2026-11-19T00:00:00Z");
@@ -96,5 +97,17 @@ describe("client-insights shared", () => {
 
   it("lists the scope fields a client may never send", () => {
     for (const f of ["tenant_id", "client_id", "package_id", "user_id"]) assert.ok((FORBIDDEN_BODY_FIELDS as readonly string[]).includes(f));
+  });
+});
+
+describe("totalStalled", () => {
+  it("adds up every course, so a large organisation is not capped at the 20-row display list", () => {
+    const courses = Array.from({ length: 5 }, (_, i) => ({ course_id: i, stalled: 6 }));
+    assert.equal(totalStalled(courses), 30);
+  });
+  it("ignores missing, negative or non-numeric values and non-arrays", () => {
+    assert.equal(totalStalled([{ stalled: 3 }, { stalled: -2 }, { stalled: "x" }, {}, null, { stalled: 2.9 }]), 5);
+    assert.equal(totalStalled(undefined), 0);
+    assert.equal(totalStalled({ stalled: 4 }), 0);
   });
 });

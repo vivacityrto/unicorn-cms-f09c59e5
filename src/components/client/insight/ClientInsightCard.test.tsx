@@ -6,8 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   tenant: { activeTenantId: 7 as number | null, isPreview: false, isAcademyOnly: false },
   invoke: vi.fn(),
+  profile: { user_uuid: 'user-a' } as { user_uuid: string } | null,
 }));
 
+vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: state.profile }) }));
 vi.mock('@/contexts/ClientTenantContext', () => ({ useClientTenant: () => state.tenant }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { functions: { invoke: (...a: unknown[]) => state.invoke(...a) } } }));
 
@@ -25,6 +27,7 @@ const show = (surface: 'home' | 'packages' | 'academy' = 'packages') =>
 const failure = (code: string, detail: string, status = 403) => ({ data: null, error: { message: 'x', context: new Response(JSON.stringify({ ok: false, code, detail }), { status }) } });
 
 beforeEach(() => {
+  state.profile = { user_uuid: 'user-a' };
   state.tenant = { activeTenantId: 7, isPreview: false, isAcademyOnly: false };
   state.invoke = vi.fn().mockResolvedValue({ data: summary, error: null });
 });
@@ -82,6 +85,29 @@ describe('Viv insight card', () => {
     expect(a.container).toBeEmptyDOMElement();
     a.unmount();
     state.tenant = { activeTenantId: null, isPreview: false, isAcademyOnly: false };
+    expect(show().container).toBeEmptyDOMElement();
+  });
+
+  it("never shows one person's insight to another who signs in on the same browser", async () => {
+    const qc = new QueryClient();
+    const tree = (
+      <QueryClientProvider client={qc}>
+        <ClientInsightCard surface="home" />
+      </QueryClientProvider>
+    );
+    const first = render(tree);
+    await userEvent.click(screen.getByRole('button', { name: 'Ask Viv for an insight' }));
+    await screen.findByText('Your package is on track.');
+    first.unmount();
+    state.profile = { user_uuid: 'user-b' };
+    render(tree);
+    expect(screen.queryByText('Your package is on track.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ask Viv for an insight' })).toBeInTheDocument();
+    expect(state.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('is not shown until the person is known', () => {
+    state.profile = null;
     expect(show().container).toBeEmptyDOMElement();
   });
 });
