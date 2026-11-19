@@ -13,18 +13,24 @@ interface UtilityFooterProps {
 
 const BUILD_ID = import.meta.env.VITE_BUILD_ID as string | undefined;
 
-/** Time in Sydney, the way the team reads it ("3:45 pm AEDT"). */
-export function sydneyTime(now: Date): string {
+/** A time in a given zone, the way the team reads it ("3:45 pm AEDT"). `label` replaces the browser's zone name. */
+function zoneTime(now: Date, timeZone: string, label?: string): string {
   const parts = new Intl.DateTimeFormat("en-AU", {
-    timeZone: "Australia/Sydney",
+    timeZone,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
     timeZoneName: "short",
   }).formatToParts(now);
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("hour")}:${get("minute")} ${get("dayPeriod").toLowerCase()} ${get("timeZoneName")}`;
+  return `${get("hour")}:${get("minute")} ${get("dayPeriod").toLowerCase()} ${label ?? get("timeZoneName")}`;
 }
+
+/** Time in Sydney ("3:45 pm AEDT"; AEST in winter). */
+export const sydneyTime = (now: Date): string => zoneTime(now, "Australia/Sydney");
+
+/** Time in the Philippines. The browser would call it "GMT+8", so it is labelled PHT, as the team says it. */
+export const manilaTime = (now: Date): string => zoneTime(now, "Asia/Manila", "PHT");
 
 function useOnline(): boolean {
   return useSyncExternalStore(
@@ -41,10 +47,14 @@ function useOnline(): boolean {
   );
 }
 
-function useSydneyClock(): string {
-  const [text, setText] = useState(() => sydneyTime(new Date()));
+function useClocks(): { sydney: string; manila: string } {
+  const read = () => {
+    const now = new Date();
+    return { sydney: sydneyTime(now), manila: manilaTime(now) };
+  };
+  const [text, setText] = useState(read);
   useEffect(() => {
-    const id = window.setInterval(() => setText(sydneyTime(new Date())), 30_000);
+    const id = window.setInterval(() => setText(read()), 30_000);
     return () => window.clearInterval(id);
   }, []);
   return text;
@@ -63,7 +73,7 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
   const { profile } = useAuth();
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const online = useOnline();
-  const clock = useSydneyClock();
+  const clock = useClocks();
   const [copied, setCopied] = useState(false);
   const userRole = profile?.unicorn_role || "User";
   const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
@@ -96,7 +106,9 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
 
         {/* Middle: time and connection, only where there is room */}
         <div className="hidden min-w-0 items-center gap-3 lg:flex">
-          <span className="tabular-nums" title="Sydney time">{clock}</span>
+          <span className="tabular-nums" title="Sydney time">{clock.sydney}</span>
+          {divider}
+          <span className="tabular-nums" title="Philippines time">{clock.manila}</span>
           {divider}
           <span className="inline-flex items-center gap-1.5" role="status" aria-label={online ? "Online" : "Offline"}>
             <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", online ? "bg-emerald-500" : "bg-destructive")} />
