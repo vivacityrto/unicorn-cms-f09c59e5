@@ -94,6 +94,9 @@ export function MessengerDock({ threads, threadsLoading, unreadTotal, renderThre
     };
   };
 
+  // Once a keep-mounted thread has been opened the panel stays in the page, hidden, when the dock is closed, so an answer
+  // still on its way (Ask Viv) is not lost by closing and reopening the bubble.
+  const panelInPage = open || visited.size > 0;
   const listHref = fullPageHref?.(null) ?? null;
   const unreadLabel = unreadTotal > 0 ? `Open messages, ${unreadTotal} unread` : 'Open messages';
 
@@ -122,17 +125,19 @@ export function MessengerDock({ threads, threadsLoading, unreadTotal, renderThre
         </button>
       )}
 
-      {open && (
+      {panelInPage && (
         <div
           ref={panelRef}
           role="dialog"
           aria-label={title}
+          hidden={!open}
           tabIndex={-1}
           onKeyDown={(e) => {
             if (e.key === 'Escape') closeDock();
           }}
           className={cn(
-            'fixed z-50 flex flex-col overflow-hidden border bg-card text-card-foreground shadow-2xl outline-none',
+            'fixed z-50 flex-col overflow-hidden border bg-card text-card-foreground shadow-2xl outline-none',
+            open ? 'flex' : 'hidden',
             // Phone: fills the screen under the header. Larger screens: a panel in the launcher's place.
             'inset-x-0 bottom-0 top-11 rounded-none sm:inset-x-auto sm:bottom-12 sm:right-5 sm:top-auto sm:h-[min(620px,calc(100dvh-7rem))] sm:w-[400px] sm:rounded-2xl',
           )}
