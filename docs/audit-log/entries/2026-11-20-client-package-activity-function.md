@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked for a full analytics overhaul of the client package page: where hours went, a timeline of activity, a weekly snapshot, and non-sensitive insight from Vivacity's internal notes.
 **Scope:** one new read-only function, `public.get_client_package_activity(p_tenant_id bigint, p_package_instance_id bigint)` (migration `20261120010000_get_client_package_activity.sql`), and the portal code that uses it. No table, column, policy, trigger or data change.
-**Status:** Written and dry-run in production (read-only, rolled back). **Not yet applied**: needs Carl's explicit go-ahead. Until it is applied the new analytics section on the package page shows "Couldn't load the activity analytics" and the rest of the page is unchanged.
+**Status:** Applied to production on 20 November 2026 on Carl's explicit go-ahead ("Apply it"), after a dry run. Postflight below.
 
 ## What it returns (aggregated only)
 
@@ -31,8 +31,8 @@ A source test (`PackageAnalytics.test.tsx`) also fails if the SQL ever reference
 2. `get_client_package_hours_recent` returns the staff's free-text `time_entries.notes` to the client (only notes beginning "Imported from meeting:" are hidden). It also omits the billable filter the other hours functions use.
 3. The `notes` select policy allows anyone with tenant access (`user_has_tenant_access`) to read all of that tenant's notes by direct query, which would include internal notes. Not tested with a client token; needs its own review.
 
-## To apply
+## Production
 
-Preflight (function absent), apply the exact migration SQL, postflight (one overload, authenticated-only execute), record here.
+Preflight: function absent, migration not recorded, helper `app.user_can_access_tenant` present. Applied with the exact migration SQL. Postflight: exactly one overload `(bigint, bigint)`, `SECURITY DEFINER`, execute granted to `authenticated`, not to `anon`. No table or data changed.
 
 **Rollback:** `drop function public.get_client_package_activity(bigint, bigint);` (the analytics section shows its error message; nothing else depends on it).
