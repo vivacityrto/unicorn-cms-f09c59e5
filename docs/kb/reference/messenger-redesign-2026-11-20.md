@@ -20,7 +20,7 @@ One kit, `src/components/messenger/`, fed by thread sources:
 ## Phases
 
 1. **Foundations (this PR):** conversation access migration (applied) and the kit with tests.
-2. Client Inbox rebuilt on the kit.
+2. **Client Inbox rebuilt on the kit (in review).** The Messages tab is the kit, fed by `adapters/tenantConversations.ts`; data hooks (`useClientCommunications`) are unchanged apart from carrying each conversation's read position. New in the tab: a "Sending…" bubble while a message goes, a "New messages" divider and opening at it, Seen from other participants' read positions (refreshed every 20 seconds), drafts per conversation, and attachments refreshed after upload. The All and Notifications tabs, the New message dialog, deep links (`?thread=`, `?conversation=`) and broadcast replies are unchanged. Typing indicators wait for phase 3, when both sides of a conversation use the kit.
 3. The bubble as a dock: Ask Viv, Your CSC and other threads, one realtime listener instead of several.
 4. Support tickets as threads, then Help Center removal (11 call sites repointed; `help-center-chat` and `help_threads` / `help_messages` kept until a later approved cleanup).
 5. Staff Communications and the Manage Client Messages tab on the kit.

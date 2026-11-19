@@ -10,6 +10,8 @@ import { uniqueChannelName } from "@/lib/realtimeChannel";
 export interface ConversationThread extends Tables<"tenant_conversations"> {
   // computed client-side
   isUnread: boolean;
+  /** Where this person had read up to when the list loaded (null if never). Used for the "New messages" divider. */
+  myLastReadAt: string | null;
 }
 
 export interface ConversationMessageAttachment {
@@ -105,6 +107,7 @@ export function useClientCommunications() {
 
       return convos.map((c) => ({
         ...c,
+        myLastReadAt: readMap.get(c.id) ?? null,
         isUnread: c.last_message_at
           ? !readMap.has(c.id) ||
             !readMap.get(c.id) ||

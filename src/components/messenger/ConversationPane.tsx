@@ -31,6 +31,9 @@ export interface ConversationPaneProps {
   draftScope?: string;
   composerPlaceholder?: string;
   validateFile?: (file: File) => string | null;
+  /** Passed to the file picker, e.g. ".jpg,.png,.pdf". */
+  accept?: string;
+  maxFiles?: number;
   renderAttachments?: (message: MessengerMessage) => ReactNode;
   /** Host-owned rows after the last message, such as Ask Viv's "thinking" bubble. */
   footer?: ReactNode;
@@ -42,7 +45,7 @@ export interface ConversationPaneProps {
 /** One open conversation: condensed icon header, messages, and the message box. Give it `key={thread.id}`. */
 export function ConversationPane({
   thread, messages, people, isLoading, hasOlder, onLoadOlder, typingNames, capabilities, onSend, onRetry, onMarkRead, onTyping, onBack,
-  headerActions, backClassName, draftScope = 'messenger', composerPlaceholder, validateFile, renderAttachments, footer, empty, className,
+  headerActions, backClassName, draftScope = 'messenger', composerPlaceholder, validateFile, accept, maxFiles, renderAttachments, footer, empty, className,
 }: ConversationPaneProps) {
   const caps = { ...DEFAULT_CAPABILITIES, ...capabilities };
   // Where "New messages" goes is fixed when the thread opens, so it does not jump as you read.
@@ -56,7 +59,7 @@ export function ConversationPane({
   }, [thread.unread, lastId]);
 
   return (
-    <section aria-label={thread.title} className={cn('flex min-h-0 flex-1 flex-col', className)}>
+    <section aria-label="Conversation" className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <header className="flex items-center gap-2 border-b px-3 py-2">
         {onBack && (
           <button type="button" onClick={onBack} aria-label="Back to conversations" className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', backClassName)}>
@@ -94,6 +97,8 @@ export function ConversationPane({
         placeholder={composerPlaceholder}
         attachments={caps.attachments}
         validateFile={validateFile}
+        accept={accept}
+        maxFiles={maxFiles}
         onTyping={onTyping}
         disabledReason={!caps.canSend || thread.readOnly ? 'This conversation is read only.' : undefined}
       />

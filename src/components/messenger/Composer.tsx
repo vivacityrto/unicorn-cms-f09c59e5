@@ -16,6 +16,8 @@ interface ComposerProps {
   /** Returns a message to refuse a file (wrong type, too big), or null to accept it. */
   validateFile?: (file: File) => string | null;
   maxFiles?: number;
+  /** The file picker's accept list. */
+  accept?: string;
   onTyping?: () => void;
   autoFocus?: boolean;
   className?: string;
@@ -24,7 +26,7 @@ interface ComposerProps {
 const ACCEPT = 'image/*,.pdf,.doc,.docx,.xls,.xlsx';
 
 /** Message box: Enter sends, Shift+Enter adds a line, paste a screenshot to attach it, drafts survive switching threads. */
-export function Composer({ onSend, draftKey: key, placeholder = 'Type a message', disabled, disabledReason, attachments = true, validateFile, maxFiles = 5, onTyping, autoFocus, className }: ComposerProps) {
+export function Composer({ onSend, draftKey: key, placeholder = 'Type a message', disabled, disabledReason, attachments = true, validateFile, maxFiles = 5, accept = ACCEPT, onTyping, autoFocus, className }: ComposerProps) {
   const [text, setText] = useState(() => (key ? readDraft(key) : ''));
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +109,8 @@ ${newer}` : newer) : body;
 
   const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!attachments) return;
-    const pasted = Array.from(e.clipboardData.files);
+    const fromFiles = Array.from(e.clipboardData.files);
+    const pasted = fromFiles.length > 0 ? fromFiles : Array.from(e.clipboardData.items ?? []).filter((i) => i.kind === 'file').map((i) => i.getAsFile()).filter((f): f is File => !!f);
     if (pasted.length > 0) {
       e.preventDefault();
       addFiles(pasted);
@@ -135,7 +138,7 @@ ${newer}` : newer) : body;
       <div className="flex items-end gap-1.5">
         {attachments && (
           <>
-            <input ref={picker} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => { addFiles(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
+            <input ref={picker} type="file" multiple accept={accept} className="hidden" onChange={(e) => { addFiles(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
             <button type="button" aria-label="Attach a file" disabled={disabled} onClick={() => picker.current?.click()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
               <Paperclip className="h-4 w-4" />
             </button>

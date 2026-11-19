@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -43,12 +44,19 @@ vi.mock('@/hooks/useClientInbox', () => ({
 }));
 vi.mock('@/hooks/useNotificationPrefs', () => ({ useNotificationPrefs: () => ({ categories: { tasks: true, meetings: true, obligations: true, events: true } }) }));
 vi.mock('@/components/client/NewConversationDialog', () => ({ NewConversationDialog: () => null }));
+vi.mock('@/hooks/useConversationParticipants', () => ({ useConversationParticipants: () => ({ data: [] }) }));
 vi.mock('@/components/messaging/MessageAttachments', () => ({ MessageAttachments: () => null }));
 vi.mock('@/components/messaging/AttachmentChips', () => ({ AttachmentChips: () => null }));
 
 import ClientInboxPage from './ClientInboxPage';
 
-const show = (url: string) => render(<MemoryRouter initialEntries={[url]}><ClientInboxPage /></MemoryRouter>);
+Element.prototype.scrollIntoView = () => undefined;
+
+const show = (url: string) => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter initialEntries={[url]}><ClientInboxPage /></MemoryRouter>
+  </QueryClientProvider>,
+);
 
 describe('ClientInboxPage', () => {
   it('summarises what is waiting in the banner and on the tabs', () => {
