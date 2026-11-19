@@ -9,8 +9,13 @@ import type { MessengerMessage, MessengerPerson, MessengerThread, ThreadKind } f
 
 const KINDS: readonly ThreadKind[] = ['csc', 'broadcast', 'package', 'task', 'rock', 'direct', 'general'];
 
-/** A conversation's `type`, as one of the messenger's thread kinds. Anything unknown is a general conversation. */
-export function conversationKind(type: string | null | undefined): ThreadKind {
+/**
+ * A conversation's `type` (and `topic`), as one of the messenger's thread kinds. A conversation started with the
+ * consultant is a "csc" thread whichever way it was created (the older Help Center used topic "csc" with type "direct").
+ * Anything unknown is a general conversation.
+ */
+export function conversationKind(type: string | null | undefined, topic?: string | null): ThreadKind {
+  if (topic === 'csc') return 'csc';
   return (KINDS as readonly string[]).includes(type ?? '') ? (type as ThreadKind) : 'general';
 }
 
@@ -21,7 +26,7 @@ export function conversationTitle(c: Pick<ConversationThread, 'subject' | 'topic
 export function toMessengerThread(c: ConversationThread): MessengerThread {
   return {
     id: c.id,
-    kind: conversationKind(c.type),
+    kind: conversationKind(c.type, c.topic),
     title: conversationTitle(c),
     preview: c.last_message_preview,
     lastActivityAt: c.last_message_at,

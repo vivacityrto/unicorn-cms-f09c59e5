@@ -1,7 +1,9 @@
 /**
- * ClientAskVivPanel
+ * ClientAskVivChat
  *
- * Purpose-built Ask Viv panel for CLIENT TENANT users (Admin / User).
+ * The Ask Viv conversation for CLIENT TENANT users (Admin / User), drawn as one thread inside the messenger bubble.
+ * It used to be a floating panel of its own (ClientAskVivPanel); the logic is unchanged, only the frame is.
+ * Ask Viv only ever replies to a question the person sent: nothing here runs on its own.
  * NOT a flag-toggled variant of AskVivPanel — see V4 restoration story
  * in handoffs/ask-viv-fix-procedure.md for why we keep these isolated.
  *
@@ -25,14 +27,14 @@
  *    already RLS-scoped to the caller's own rows), not client-side storage.
  */
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, type KeyboardEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { X, Send, MessageSquare, Loader2, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
+import { ChevronLeft, Send, MessageSquare, Loader2, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -70,15 +72,20 @@ interface PanelError {
   message: string;
 }
 
-interface ClientAskVivPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface ClientAskVivChatProps {
   previewTenantId?: number;
+  /** True while this thread is the one on screen, so the question box is focused when it opens. */
+  active?: boolean;
+  /** Back to the thread list. */
+  onBack?: () => void;
+  /** Icon buttons on the right of the header (open full page, close). */
+  headerActions?: ReactNode;
+  className?: string;
 }
 
 // ============= Component =============
 
-export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAskVivPanelProps) {
+export function ClientAskVivChat({ previewTenantId, active = true, onBack, headerActions, className }: ClientAskVivChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
@@ -91,10 +98,11 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+    if (active) {
+      const t = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
     }
-  }, [isOpen]);
+  }, [active]);
 
   // Resume the most recent conversation on load, so a page reload (or a
   // fresh tab) doesn't lose history that's already sitting in
@@ -153,10 +161,6 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
-
-  if (!isOpen) {
-    return null;
-  }
 
   const isRateLimited = error?.kind === "rate_limit";
   const isForbidden = error?.kind === "forbidden";
@@ -261,21 +265,22 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
   };
 
   return (
-    <div className={cn("fixed z-50 bg-card border border-border rounded-2xl shadow-2xl flex flex-col", "bottom-6 right-6 w-[420px] h-[600px] max-h-[calc(100vh-3rem)] max-w-[calc(100vw-3rem)]")}>
+    <div role="region" aria-label="Ask Viv" className={cn("flex min-h-0 flex-1 flex-col", className)}>
       {/* Header */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl bg-gradient-to-r from-primary/10 to-primary/5">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Ask Viv</h3>
-            <p className="text-xs text-muted-foreground">Your account assistant</p>
-          </div>
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+        {onBack && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full" onClick={onBack} aria-label="Back to conversations">
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7130A0] to-[#ED1878] text-white">
+          <Sparkles className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold leading-tight text-foreground">Ask Viv</h2>
+          <p className="text-[11px] leading-tight text-muted-foreground">Your account assistant</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label="Close Ask Viv">
-          <X className="h-4 w-4" />
-        </Button>
+        {headerActions && <div className="flex shrink-0 items-center gap-0.5">{headerActions}</div>}
       </div>
 
       {/* Messages */}
@@ -298,7 +303,7 @@ export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAs
       </ScrollArea>
 
       {/* Input area */}
-      <div className="shrink-0 p-3 border-t border-border bg-muted/30 rounded-b-2xl">
+      <div className="shrink-0 p-3 border-t border-border bg-muted/30">
         {error && <ErrorNotice error={error} onRetry={error.kind === "server" || error.kind === "network" ? handleRetry : undefined} />}
 
         {messages.length > 0 && !error && (

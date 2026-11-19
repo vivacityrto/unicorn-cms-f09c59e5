@@ -19,9 +19,10 @@ export function wantsBackToTop(y: number, previousY: number, viewportHeight: num
 
 /**
  * A small "Back to top" pill, not a permanent floating button. It stays out of the way until you have gone deep into
- * a long page and start scrolling back up (the moment you want it), sits at the bottom centre clear of the Ask Viv
- * launcher and the pinned footer, and fades away a few seconds after you stop. Scrolling down, reaching the top, or
- * leaving it alone all hide it. It stays while the pointer or keyboard focus is on it.
+ * a long page and start scrolling back up (the moment you want it). It then drops in at the top centre, just under the
+ * pinned header, which is where your eyes and your thumb are when you are heading up. That also keeps the bottom of the
+ * screen clear for the messenger bubble (bottom right) and the pinned footer. It fades away a few seconds after you stop.
+ * Scrolling down, reaching the top, or leaving it alone all hide it. It stays while the pointer or keyboard focus is on it.
  */
 export function ScrollToTopButton() {
   const [visible, setVisible] = useState(false);
@@ -98,9 +99,9 @@ export function ScrollToTopButton() {
       tabIndex={visible ? 0 : -1}
       aria-hidden={!visible}
       className={cn(
-        "fixed bottom-10 left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-card/95 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-lg backdrop-blur",
+        "fixed left-1/2 top-14 z-40 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-card/95 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-lg backdrop-blur",
         "transition-[opacity,transform] duration-200 motion-reduce:transition-none hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
+        visible ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0",
       )}
     >
       <ArrowUp className="h-3.5 w-3.5" aria-hidden />

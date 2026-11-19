@@ -218,12 +218,15 @@ export function useClientCommunications() {
     mutationFn: async ({
       subject,
       type = "general",
+      topic = "general",
       firstMessage,
       relatedEntity,
       relatedEntityId,
     }: {
       subject?: string;
       type?: string;
+      /** "csc" for a conversation with the primary consultant. */
+      topic?: string;
       firstMessage: string;
       relatedEntity?: string;
       relatedEntityId?: string;
@@ -235,7 +238,7 @@ export function useClientCommunications() {
         .from("tenant_conversations")
         .insert({
           tenant_id: activeTenantId,
-          topic: "general",
+          topic,
           type,
           subject: subject || null,
           related_entity: relatedEntity || null,
