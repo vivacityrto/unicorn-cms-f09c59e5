@@ -84,8 +84,30 @@ describe('PackageCheckIn', () => {
     expect(screen.getByText(/The next one is on 3 December/)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Your pulse answers: 3, 4 out of 5' })).toBeInTheDocument();
     expect(screen.getByText(/higher than the one before \(3 to 4\)/)).toBeInTheDocument();
-    expect(screen.getByText(/You have flagged 1 thing in the last 30 days/)).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: /What you have flagged/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('shows the person their own flagged items, where each stands, and any note from their consultant', () => {
+    h.state = {
+      data: {
+        ...answered,
+        my_blockers: [
+          { category: 'evidence', created_at: '2026-11-18T00:00:00Z', status: 'seen', staff_note: 'We will call you Thursday' },
+          { category: 'time', created_at: '2026-11-10T00:00:00Z', status: 'resolved', staff_note: null },
+          { category: 'people', created_at: '2026-11-19T00:00:00Z', status: 'flagged', staff_note: null },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    };
+    render(<PackageCheckIn packageInstanceId={1} />);
+    const list = screen.getByRole('list', { name: /What you have flagged/ });
+    expect(within(list).getByText('Seen by your consultant')).toBeInTheDocument();
+    expect(within(list).getByText('Resolved')).toBeInTheDocument();
+    expect(within(list).getByText('Sent to your consultant')).toBeInTheDocument();
+    expect(within(list).getByText(/From your consultant:/)).toBeInTheDocument();
+    expect(within(list).getByText('We will call you Thursday')).toBeInTheDocument();
   });
 
   it('shows the database refusal in plain words', async () => {

@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
-import { AlertTriangle, Flag, HeartPulse } from "lucide-react";
+import { AlertTriangle, Flag, HeartPulse, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTenantCheckins } from "@/hooks/use-tenant-checkins";
-import { categoryLabel, daysSinceLastPulse, hasLowStreak, packageFlags, summariseOverview, type TenantCheckinsOverview } from "./tenantCheckins";
+import { useSetBlockerStatus, type BlockerAction } from "@/hooks/use-set-blocker-status";
+import { categoryLabel, daysSinceLastPulse, hasLowStreak, packageFlags, summariseOverview, type StaffBlocker, type TenantCheckinsOverview } from "./tenantCheckins";
 
 type Pkg = TenantCheckinsOverview["packages"][number];
 
@@ -24,6 +27,61 @@ function PulseBars({ scores, name }: { scores: number[]; name: string }) {
         <span key={i} className={cn("w-3 rounded-sm", s <= 2 ? "bg-amber-500" : "bg-primary/70")} style={{ height: `${s * 5 + 4}px` }} title={`${s} out of 5`} />
       ))}
     </div>
+  );
+}
+
+const STATUS_LABEL: Record<StaffBlocker["status"], string> = { flagged: "New", seen: "Seen", resolved: "Resolved" };
+
+/** One blocker, with where it stands and the actions to move it on. A note, if left, is shown to the client. */
+function BlockerRow({ b }: { b: StaffBlocker }) {
+  const set = useSetBlockerStatus();
+  const [action, setAction] = useState<Exclude<BlockerAction, "reopen"> | null>(null);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const run = (a: BlockerAction, n?: string) => {
+    setError(null);
+    set.mutate({ id: b.id, action: a, note: n }, {
+      onSuccess: () => { setAction(null); setNote(""); },
+      onError: (e) => setError(e instanceof Error ? e.message : "Could not update this blocker."),
+    });
+  };
+
+  return (
+    <li className={cn("rounded-md border p-2.5 text-sm", b.status === "resolved" ? "bg-muted/40 opacity-80" : "border-amber-500/30 bg-amber-500/10")}>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">{categoryLabel(b.category)}</Badge>
+        <Badge variant="outline" className={cn("px-1.5 py-0 text-[10px]", b.status === "flagged" && "border-amber-500/50 text-amber-800 dark:text-amber-300")}>{STATUS_LABEL[b.status]}</Badge>
+        <span>{b.name}</span>
+        <span>· {ago(b.created_at)}</span>
+        {b.status !== "flagged" && b.seen_by && <span>· seen by {b.seen_by}</span>}
+      </div>
+      {/* Written by the client. Rendered as plain text. */}
+      {b.comment && <p className="mt-1 whitespace-pre-wrap break-words text-foreground">{b.comment}</p>}
+      {b.staff_note && <p className="mt-1 break-words text-xs text-muted-foreground"><span className="font-medium text-foreground">Note the client can see: </span>{b.staff_note}</p>}
+
+      {action ? (
+        <div className="mt-2 space-y-2" role="group" aria-label={action === "resolve" ? "Resolve this blocker" : "Mark this blocker seen"}>
+          <label className="block text-xs">
+            <span className="mb-1 block text-muted-foreground">Note for the client (optional). They will see this, so keep it to what you want them to know.</span>
+            <textarea value={note} onChange={(e) => setNote(e.target.value.slice(0, 280))} rows={2} className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          </label>
+          <div className="flex gap-2">
+            <Button size="sm" disabled={set.isPending} onClick={() => run(action === "resolve" ? "resolve" : "acknowledge", note)}>
+              {set.isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden />}{action === "resolve" ? "Resolve" : "Mark seen"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAction(null); setNote(""); }}>Cancel</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {b.status === "flagged" && <Button size="sm" variant="outline" onClick={() => setAction("acknowledge")}>Mark seen</Button>}
+          {b.status !== "resolved" && <Button size="sm" variant="outline" onClick={() => setAction("resolve")}>Resolve</Button>}
+          {b.status === "resolved" && <Button size="sm" variant="outline" disabled={set.isPending} onClick={() => run("reopen")}>Reopen</Button>}
+        </div>
+      )}
+      {error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}
+    </li>
   );
 }
 
@@ -59,17 +117,7 @@ function PackageBlock({ pkg }: { pkg: Pkg }) {
 
       {pkg.blockers.length > 0 && (
         <ul className="mt-3 space-y-2 border-t pt-3" aria-label="Blockers flagged in the last 30 days">
-          {pkg.blockers.map((b, i) => (
-            <li key={`${b.created_at}-${i}`} className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-sm">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline" className="px-1.5 py-0 text-[10px]">{categoryLabel(b.category)}</Badge>
-                <span>{b.name}</span>
-                <span>· {ago(b.created_at)}</span>
-              </div>
-              {/* Written by the client. Rendered as plain text. */}
-              {b.comment && <p className="mt-1 whitespace-pre-wrap break-words text-foreground">{b.comment}</p>}
-            </li>
-          ))}
+          {pkg.blockers.map((b) => <BlockerRow key={b.id} b={b} />)}
         </ul>
       )}
     </section>
