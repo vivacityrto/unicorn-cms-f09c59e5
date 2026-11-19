@@ -35,10 +35,10 @@ export function StaffLiveNotificationBanner() {
   };
 
   return (
-    <div className="mx-4 mb-3 flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/[0.07] px-4 py-3 shadow-sm md:mx-6" role="status">
-      <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary"><Bell className="h-4 w-4" /></div>
+    <div className="mx-4 mt-3 mb-3 flex items-start gap-3 rounded-xl border border-brand-fuchsia/30 bg-brand-fuchsia/[0.08] px-4 py-3 shadow-sm md:mx-6" role="status">
+      <div className="mt-0.5 rounded-full bg-brand-fuchsia/15 p-2 text-brand-fuchsia"><Bell className="h-4 w-4" /></div>
       <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-foreground">New staff notification</p><p className="truncate text-sm text-muted-foreground">{notification.title || stripHtml(notification.message) || "You have a new update."}</p></div>
-      <Button variant="outline" size="sm" onClick={viewNotification} className="shrink-0">View</Button>
+      <Button variant="outline" size="sm" onClick={viewNotification} className="shrink-0 border-brand-fuchsia/50 text-brand-fuchsia hover:bg-brand-fuchsia/10 hover:text-brand-fuchsia">View</Button>
       <Button variant="ghost" size="icon" onClick={() => setNotification(null)} aria-label="Dismiss notification" className="-mr-2 -mt-1 shrink-0"><X className="h-4 w-4" /></Button>
     </div>
   );
