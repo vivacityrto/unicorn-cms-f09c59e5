@@ -108,3 +108,11 @@ On the staff client page (Overview tab, under pinned notes) a "Client check-ins"
 - Two plain flags, no score: a blocker in the last 30 days, or a person's last two pulses both 2 or lower. A package with no answers reads "No check-ins yet", never as fine, and answers feed no health score.
 - Staff and super admins only; names only (no emails or ids); the client's description is shown as plain text and never sent to AI.
 - Not built yet: acknowledging or resolving a blocker, a cross-client list of what needs attention, and notifications to the consultant.
+
+## Consultant attention list (in review)
+
+The staff dashboard has a "Client check-ins needing attention" card under the six summary cards (`CheckinsAttentionCard`, function `get_checkins_attention`, audit entry `2026-11-20-checkins-attention-list`, written and dry-run, **not yet applied**). It lists live packages with a blocker flagged in the last 30 days or a person whose last two pulses are both 2 or lower (the latest within 45 days), blockers first. It opens on "My clients" (packages the signed-in consultant manages) when they have any flagged, otherwise on all clients, shows six with a "Show all" button, and each row opens the client page.
+
+- Two plain flags, no score; answers feed no health score and are never sent to AI. The client's description is clipped to 160 characters and shown as plain text.
+- Staff and super admins only; names only (no emails or ids).
+- Not built yet: acknowledging or resolving a blocker, and push notifications when a blocker arrives (the list is something to look at, not something that interrupts).

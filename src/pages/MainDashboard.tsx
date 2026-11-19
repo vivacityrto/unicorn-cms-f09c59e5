@@ -46,6 +46,7 @@ import { groupedEventHref } from "@/hooks/portfolioTimelineGrouping";
 import { EVENT_ICON_MAP, EVENT_COLOR_MAP } from "@/components/client/TimelineEventCard";
 import type { TimelineEventType } from "@/types/timeline";
 import { LegacyStageHealthUnavailable } from "@/components/client-health/LegacyStageHealthUnavailable";
+import { CheckinsAttentionCard } from "@/components/dashboard/CheckinsAttentionCard";
 import { milestoneCompletionPercent, rollupMilestones } from "@/utils/rockMilestoneRollup";
 
 /* ------------------------------ helpers ------------------------------ */
@@ -888,6 +889,9 @@ export default function MainDashboard() {
             onClick={() => navigate("/eos/rocks")}
           />
         </div>
+
+        {/* Client check-ins that need a consultant now (staff only) */}
+        {isStaff && <CheckinsAttentionCard />}
 
         {/* 3-column panel grid */}
         <div className="grid gap-3 grid-cols-1 lg:[grid-template-columns:minmax(0,34fr)_minmax(0,30fr)_minmax(0,36fr)] items-stretch">
