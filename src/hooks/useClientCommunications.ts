@@ -160,7 +160,9 @@ export function useClientCommunications() {
             created_at: m.created_at,
             sender_name: displayName(profile, fallback),
             sender_avatar_url: profile?.avatar_url ?? null,
-            sender_is_staff: !!profile?.is_staff || m.sender_type === "staff",
+            // Only the database may say someone is staff. A message's own sender_type is written by the sender, so it
+            // is never used for the badge (it is still used above as the fallback label for a name we cannot resolve).
+            sender_is_staff: profile?.is_staff === true,
             attachments: attMap.get(m.id) || [],
           };
         });

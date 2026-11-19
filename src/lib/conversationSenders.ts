@@ -5,8 +5,11 @@ export interface SenderProfile {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
-  /** Vivacity staff. Unknown (false) when only the older direct lookup could answer. */
-  is_staff: boolean;
+  /**
+   * Vivacity staff, as the database says. null when only the older direct lookup could answer, which cannot tell.
+   * Never infer this from a message's own sender_type: a client can write any value there.
+   */
+  is_staff: boolean | null;
 }
 
 /** "First Last", or the fallback when the person has no name on file. */
@@ -36,7 +39,7 @@ export async function fetchSenderProfiles(conversationId: string, senderIds: rea
     const { data, error } = await rpc('get_conversation_sender_profiles', { p_conversation_id: conversationId });
     if (!error && Array.isArray(data)) {
       for (const row of data as SenderProfile[]) {
-        if (row?.user_uuid) out.set(row.user_uuid, { user_uuid: row.user_uuid, first_name: row.first_name ?? null, last_name: row.last_name ?? null, avatar_url: row.avatar_url ?? null, is_staff: !!row.is_staff });
+        if (row?.user_uuid) out.set(row.user_uuid, { user_uuid: row.user_uuid, first_name: row.first_name ?? null, last_name: row.last_name ?? null, avatar_url: row.avatar_url ?? null, is_staff: row.is_staff === true });
       }
     }
   } catch {
@@ -47,7 +50,7 @@ export async function fetchSenderProfiles(conversationId: string, senderIds: rea
   if (missing.length > 0) {
     const { data } = await supabase.from('users').select('user_uuid, first_name, last_name, avatar_url').in('user_uuid', missing);
     for (const u of data ?? []) {
-      out.set(u.user_uuid, { user_uuid: u.user_uuid, first_name: u.first_name ?? null, last_name: u.last_name ?? null, avatar_url: u.avatar_url ?? null, is_staff: false });
+      out.set(u.user_uuid, { user_uuid: u.user_uuid, first_name: u.first_name ?? null, last_name: u.last_name ?? null, avatar_url: u.avatar_url ?? null, is_staff: null });
     }
   }
   return out;

@@ -52,6 +52,8 @@ describe('fetchSenderProfiles', () => {
     const map = await fetchSenderProfiles('conv1', ['a', 'b']);
     expect(state.userQueries).toEqual([['a', 'b']]);
     expect(map.get('a')?.first_name).toBe('Ana');
+    // The direct lookup cannot tell whether someone is staff, so it says unknown, never false or true.
+    expect(map.get('a')?.is_staff).toBeNull();
     expect(map.has('b')).toBe(false);
   });
 
