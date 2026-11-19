@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Users, UserRound } from 'lucide-react';
+import { Plus, Users, UserRound } from 'lucide-react';
 import {
   ConversationPane,
   MessengerDock,
   useMessengerDock,
+  NEW_MESSAGE_THREAD_ID,
   type DockThreadApi,
   type MessengerThread,
 } from '@/components/messenger';
+import { StaffNewMessagePane } from '@/components/staff/StaffNewMessagePane';
 import { StaffAskVivChat } from '@/components/ask-viv-assistant/StaffAskVivChat';
 import { useAskVivAssistantAccess } from '@/hooks/useAskVivAssistantAccess';
 import { useAskVivAssistantWidget } from '@/hooks/useAskVivAssistantWidget';
@@ -16,6 +18,9 @@ import { useStaffMessenger } from '@/hooks/useStaffMessenger';
 import { cn } from '@/lib/utils';
 
 const ASK_VIV_THREAD_ID = 'ask_viv';
+
+/** The compose thread: opened by the + button (or by New message on a page), never listed. */
+const NEW_MESSAGE_THREAD: MessengerThread = { id: NEW_MESSAGE_THREAD_ID, kind: 'general', title: 'New message', unread: false, hidden: true };
 
 const ASK_VIV_THREAD: MessengerThread = {
   id: ASK_VIV_THREAD_ID,
@@ -59,7 +64,11 @@ export function StaffMessengerDock() {
   // Ask Viv appears here exactly when the old bottom-left widget did: the assistant's own rollout gate (master flag, then Super
   // Admin, named beta users or all staff).
   const { enabled: askVivEnabled } = useAskVivAssistantAccess();
-  const threads = useMemo(() => (askVivEnabled ? [ASK_VIV_THREAD, ...convoThreads] : convoThreads), [askVivEnabled, convoThreads]);
+  const threads = useMemo(
+    () => (askVivEnabled ? [ASK_VIV_THREAD, ...convoThreads, NEW_MESSAGE_THREAD] : [...convoThreads, NEW_MESSAGE_THREAD]),
+    [askVivEnabled, convoThreads],
+  );
+  const { select } = useMessengerDock();
   useOldWidgetOpensTheBubble(askVivEnabled);
 
   if (!isStaff) return null;
@@ -72,13 +81,23 @@ export function StaffMessengerDock() {
       title="Messages"
       keepMounted={[ASK_VIV_THREAD_ID]}
       // Ask Viv has its own full page button inside its header (it keeps the conversation); the rest open Communications.
-      fullPageHref={(t) => (t?.id === ASK_VIV_THREAD_ID ? null : '/communications')}
+      fullPageHref={(t) => (t?.id === ASK_VIV_THREAD_ID || t?.id === NEW_MESSAGE_THREAD_ID ? null : '/communications')}
       emptyThreads={
         <p className="px-3 py-8 text-center text-xs text-muted-foreground">
           {hasScope || allClients ? 'No conversations yet.' : 'No clients are assigned to you yet. Switch to All clients to browse.'}
         </p>
       }
       listAction={
+        <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => select(NEW_MESSAGE_THREAD_ID)}
+          aria-label="New message"
+          title="New message to a client"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+        </button>
         <button
           type="button"
           onClick={() => setAllClients((v) => !v)}
@@ -92,9 +111,12 @@ export function StaffMessengerDock() {
         >
           {allClients ? <Users className="h-4 w-4" aria-hidden /> : <UserRound className="h-4 w-4" aria-hidden />}
         </button>
+        </div>
       }
       renderThread={(thread, api) =>
-        thread.id === ASK_VIV_THREAD_ID ? (
+        thread.id === NEW_MESSAGE_THREAD_ID ? (
+          <StaffNewMessagePane api={api} />
+        ) : thread.id === ASK_VIV_THREAD_ID ? (
           <StaffAskVivChat active={api.active} onBack={api.onBack} headerActions={api.headerActions} />
         ) : (
           <StaffThread thread={thread} api={api} tenantId={thread.tenantId ?? null} mine={thread.tenantId != null && scope.has(thread.tenantId)} />

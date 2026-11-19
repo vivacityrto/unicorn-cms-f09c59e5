@@ -66,11 +66,17 @@ vi.mock('@/integrations/supabase/client', () => {
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ profile: { user_uuid: 'me', first_name: 'Carl' } }) }));
 vi.mock('@/contexts/ClientTenantContext', () => ({ useClientTenant: () => ({ activeTenantId: 1, isAcademyOnly: false, isReadOnly: false }) }));
 vi.mock('@/hooks/useNotificationPrefs', () => ({ useNotificationPrefs: () => ({ categories: { tasks: true, meetings: true, obligations: true, events: true } }) }));
-vi.mock('@/components/client/NewConversationDialog', () => ({ NewConversationDialog: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="New message dialog" /> : null) }));
 vi.mock('@/components/messaging/MessageAttachments', () => ({ MessageAttachments: () => null }));
 vi.mock('@/components/messaging/AttachmentChips', () => ({ AttachmentChips: () => null }));
 
 import ClientInboxPage from './ClientInboxPage';
+import { MessengerDockProvider, useMessengerDock } from '@/components/messenger';
+
+function DockProbe() {
+  const { open, selectedId } = useMessengerDock();
+  return <output data-testid="dock">{open ? `open:${selectedId ?? ''}` : 'closed'}</output>;
+}
+
 
 function Where() {
   const loc = useLocation();
@@ -83,10 +89,13 @@ const show = (url: string) => {
   lastClient = qc;
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[url]}>
-        <ClientInboxPage />
-        <Where />
-      </MemoryRouter>
+      <MessengerDockProvider>
+        <MemoryRouter initialEntries={[url]}>
+          <ClientInboxPage />
+          <Where />
+          <DockProbe />
+        </MemoryRouter>
+      </MessengerDockProvider>
     </QueryClientProvider>,
   );
 };
@@ -228,13 +237,12 @@ describe('Inbox flows with real hooks', () => {
     clean();
   });
 
-  it('opens the new message dialog from the banner', async () => {
+  it('opens the new message in the bubble from the banner', async () => {
     const user = userEvent.setup();
     show('/client/inbox?tab=all');
     await screen.findByText('Annual Declaration opens');
     await user.click(screen.getByRole('button', { name: 'New message' }));
-    expect(screen.getByRole('dialog', { name: 'New message dialog' })).toBeInTheDocument();
-    expect(screen.getByTestId('where')).toHaveTextContent('tab=messages');
+    expect(screen.getByTestId('dock')).toHaveTextContent('open:compose:new');
     clean();
   });
 

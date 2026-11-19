@@ -28,6 +28,8 @@ vi.mock('@/components/ask-viv-assistant/StaffAskVivChat', () => ({
   },
 }));
 
+vi.mock('@/components/staff/StaffNewMessagePane', () => ({ StaffNewMessagePane: () => <p>compose pane</p> }));
+
 Element.prototype.scrollTo = vi.fn();
 Element.prototype.scrollIntoView = vi.fn();
 
@@ -105,5 +107,15 @@ describe('anything that still asks for the old widget', () => {
     act(() => useAskVivAssistantWidget.getState().openWidget());
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(useAskVivAssistantWidget.getState().isOpen).toBe(false);
+  });
+});
+
+describe('writing a new message from the staff bubble', () => {
+  it('the + button opens the compose pane inside the bubble, and it is not listed as a conversation', () => {
+    show();
+    fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
+    expect(within(list()).queryByText('New message')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'New message' }));
+    expect(screen.getByText('compose pane')).toBeVisible();
   });
 });
