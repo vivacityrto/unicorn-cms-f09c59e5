@@ -5,6 +5,8 @@ import { useClientPackageWhatsNext } from "@/hooks/use-client-package-whats-next
 import { useClientPackageHoursByType } from "@/hooks/use-client-package-hours-by-type";
 import { useClientPackageHoursRecent } from "@/hooks/use-client-package-hours-recent";
 import { useClientPackageHoursTimeline } from "@/hooks/use-client-package-hours-timeline";
+import { useClientPackageActivity } from "@/hooks/use-client-package-activity";
+import { PackageAnalytics } from "@/components/client/package-dashboard/PackageAnalytics";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
 import { PackageHoursBreakdown } from "@/components/client/package-dashboard/PackageHoursBreakdown";
 import { PackageBurndownChart } from "@/components/client/package-dashboard/PackageBurndownChart";
@@ -322,6 +324,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const hoursByType = useClientPackageHoursByType(packageInstanceId);
   const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
   const timeline = useClientPackageHoursTimeline(packageInstanceId);
+  const activity = useClientPackageActivity(packageInstanceId);
   const { options: packageTypes } = usePackageTypeOptions();
   // Only forecast once the timeline has loaded: while it is loading or has failed, an empty list would wrongly read as
   // "no hours recorded in the last four weeks".
@@ -392,6 +395,16 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
         ) : null}
 
         {dashboard && !dashboard.is_complete && <PackageInsightCard dashboard={dashboard} forecast={forecast} />}
+
+        {/* Analytics: weekly snapshot, activity timeline, hours by week and the mix of work by month. */}
+        <PackageAnalytics
+          activity={activity.data}
+          isLoading={activity.isLoading}
+          isError={activity.isError}
+          stages={stages.data ?? []}
+          hoursTotal={Number(dashboard?.hours_total ?? 0)}
+          percentUsed={Math.min(100, Math.max(0, Math.round(Number(dashboard?.hours_pct_used ?? 0) * 100)))}
+        />
 
         {/* Stat tiles */}
         {dashboardLoading ? (

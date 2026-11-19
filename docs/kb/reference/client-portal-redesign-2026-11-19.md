@@ -68,3 +68,17 @@ Findings from the council, not changed here: the view definition is not in the r
 ## Academy: one person's activity (shipped)
 
 Each row in "Your team" on the client Academy page is now a button that opens a mini page (a side panel) for that person: key numbers (courses finished, lessons done of available, learning time, certificates), a plain "at a glance" summary, their own weekly chart, and every course they chose with lesson progress, state (finished, in progress, untouched 30+ days, not started), dates and certificate. It reads from the new `get_tenant_academy_learner_detail` function (audit entry `2026-11-19-academy-learner-detail-function`), which is applied to production. Courses added another way are left out, as everywhere on this page.
+
+## Package analytics (shipped)
+
+The package page now has an analytics section under the tracking card, built from one new client-safe function (audit entry `2026-11-20-client-package-activity-function`, applied to production):
+
+- **Your week at a glance:** this week against last week in plain sentences (hours, entries, main work, touchpoints with the Vivacity team, tasks closed, documents generated), a ring for the share of the package used, and a Copy summary button.
+- **Activity timeline:** hours used as a rising line, with every active week as a dot below it. A dot's shape and colour are the main kind of work that week and its size is the number of entries; finished stages are green flags; a rule marks today. Dots are keyboard-focusable and open a week mini page; a View as table toggle gives the same data as a table.
+- **Hours by week:** a heatmap of weeks by kind of work (biggest five plus Other), every square opens that week.
+- **How the mix of work changed:** each month's hours as shares of the kinds of work.
+- **Week mini page:** hours by kind of work, plus counts of emails, calls, meetings and follow-ups, tasks closed and documents. Counts only: nothing from note text is ever shown, and the function returns no consultant names.
+
+Every figure reconciles with the existing hours functions (same window, billable only, carry-over excluded). One look per kind of work (`workTypeStyle`) is shared by every chart.
+
+**Not built yet (designed in the council review):** collecting input from clients in the package (a fortnightly one-tap pulse, confidence rating per stage, goals per stage, a blocker flag, post-consult feedback, at most one prompt per person per week, stored in a new table with tenant-scoped row security and kept out of any health score until the thresholds are signed off); and an AI-drafted weekly snapshot (draft only, built from the same deterministic facts, with the guardrails in `ai-use-principles.md`). Three existing exposures of internal data to clients are recorded in the audit entry for a decision.
