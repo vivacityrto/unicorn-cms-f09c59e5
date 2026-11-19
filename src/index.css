@@ -1035,6 +1035,39 @@
 }
 
 /* Bell ring animation for notification icon */
+/* Sidebars (client and staff): the width eases open and shut, and the words that appear fade in a moment behind it so they do not
+   pop in or re-wrap while the edge is still moving. */
+@keyframes sidebar-label-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sidebar-motion {
+  overflow-x: hidden;
+  transition-property: width, transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sidebar-motion span:not([class*="animate-"]),
+.sidebar-motion p {
+  animation: sidebar-label-in 220ms ease-out 90ms both;
+}
+.sidebar-motion nav,
+.sidebar-motion nav a,
+.sidebar-motion nav button {
+  white-space: nowrap;
+}
+.sidebar-content-motion {
+  transition-property: padding, left;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-motion,
+  .sidebar-content-motion { transition: none; }
+  .sidebar-motion span:not([class*="animate-"]),
+  .sidebar-motion p { animation: none; }
+}
+
 @keyframes bell-ring {
   0% { transform: rotate(0); }
   15% { transform: rotate(14deg); }

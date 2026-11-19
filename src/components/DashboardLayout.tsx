@@ -449,7 +449,7 @@ export const DashboardLayout = ({
       <aside
         className={cn(
           // Base styles
-          "transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30",
+          "sidebar-motion flex flex-col fixed left-0 top-0 h-screen z-30",
           // Responsive width
           sidebarOpen ? "w-64" : "w-20",
           // Mobile: slide in/out, hidden by default
@@ -696,7 +696,7 @@ export const DashboardLayout = ({
       <div
         className={cn(
           // Critical layout contract: flex-1 w-full min-w-0 for proper content sizing
-          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-clip",
+          "sidebar-content-motion flex flex-col min-h-screen w-full min-w-0 overflow-x-clip",
           // Use padding-left (not margin-left) because sidebar is fixed; prevents content shifting off-canvas
           sidebarOpen ? "md:pl-64" : "md:pl-20",
           // Mobile: no padding, full width
@@ -719,7 +719,7 @@ export const DashboardLayout = ({
         <div
           className={cn(
             // z-20 keeps the footer below the mobile sidebar (z-30), which opens over it.
-            "fixed bottom-0 left-0 right-0 z-20 transition-all duration-300 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)]",
+            "sidebar-content-motion fixed bottom-0 left-0 right-0 z-20 shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.25)]",
             sidebarOpen ? "md:left-64" : "md:left-20"
           )}
         >

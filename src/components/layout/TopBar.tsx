@@ -12,6 +12,7 @@ import {
   Lightbulb,
   LifeBuoy,
   NotebookPen,
+  Building2,
   Moon,
   Sun,
   Download,
@@ -236,6 +237,24 @@ function ThemeToggleButton() {
   );
 }
 
+/** Staff only: straight to the client list. */
+function ManageClientsButton() {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button asChild variant="ghost" size="icon" className={UTILITY_BUTTON_CLASS}>
+          <Link to="/manage-tenants" aria-label="Manage Clients">
+            <Building2 className="h-4 w-4" />
+          </Link>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Manage Clients</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function DailyNotesButton() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -388,6 +407,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
         <TooltipProvider>
           {/* Dark mode toggle */}
           <ThemeToggleButton />
+          {/* Manage Clients: staff only */}
+          {!isClientRole && <ManageClientsButton />}
           {/* Daily Notes button */}
           <DailyNotesButton />
           {/* Support Tickets button */}
