@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ClientMessageBox } from "@/components/client-portal/support-tickets/ClientMessageBox";
 import { useHelpCenter } from "./HelpCenterContext";
+import { uniqueChannelName } from '@/lib/realtimeChannel';
 
 interface Message {
   id: string;
@@ -246,7 +247,7 @@ function CscMessageTab({ channel }: { channel: "csc" }) {
     if (channel !== "csc" || !threadId) return;
     const myUuid = profile?.user_uuid;
     const ch = supabase
-      .channel(`csc-tm:${threadId}`)
+      .channel(uniqueChannelName(`csc-tm:${threadId}`))
       .on(
         "postgres_changes",
         {
