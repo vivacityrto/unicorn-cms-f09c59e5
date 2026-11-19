@@ -39,7 +39,7 @@ interface MetricReportDialogProps {
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section aria-label={title} className="space-y-2 rounded-xl border bg-card p-4">
+    <section aria-label={title} className="space-y-2 rounded-xl border bg-card p-3 sm:p-4">
       <div>
         <h3 className="text-base font-bold">{title}</h3>
         {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
@@ -111,7 +111,34 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-const names = (rows: readonly CstClientRow[]) => rows.map((r) => r.name).join(', ');
+/** The first few names, with the rest one click away, so a long list does not push everything else off the screen. */
+function NameList({ rows, empty, shown = 6 }: { rows: readonly CstClientRow[]; empty: string; shown?: number }) {
+  const [all, setAll] = useState(false);
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
+  const list = all ? rows : rows.slice(0, shown);
+  const hidden = rows.length - list.length;
+  return (
+    <p className="text-sm text-muted-foreground">
+      {list.map((r) => r.name).join(', ')}
+      {hidden > 0 && (
+        <>
+          {' '}
+          <button type="button" onClick={() => setAll(true)} className="font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            and {hidden} more
+          </button>
+        </>
+      )}
+      {all && rows.length > shown && (
+        <>
+          {' '}
+          <button type="button" onClick={() => setAll(false)} className="font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            show fewer
+          </button>
+        </>
+      )}
+    </p>
+  );
+}
 
 type ClientFilter = 'quiet' | 'active' | 'all';
 
@@ -258,7 +285,22 @@ type Step =
 
 const clientStep = (row: CstClientRow): Step => ({ key: `client:${row.tenantId}`, label: row.name, kind: 'client', row });
 
-function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string; kind: BreakdownKind }) {
+/**
+ * Two panels side by side when the report is full screen: what the number is on the left, how it compares and who to look at
+ * on the right. Each panel scrolls on its own so both stay in view; on a narrow screen they stack and the page scrolls.
+ */
+function Panels({ twoPanel, left, right }: { twoPanel: boolean; left: ReactNode; right: ReactNode }) {
+  // The same elements in both layouts, only the classes change, so switching to full screen does not reset anything inside
+  // (such as Viv's answer).
+  return (
+    <div className={twoPanel ? 'grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:overflow-hidden' : 'space-y-4'}>
+      <div className={twoPanel ? 'space-y-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1' : 'space-y-4'}>{left}</div>
+      <div className={twoPanel ? 'space-y-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1' : 'space-y-4'}>{right}</div>
+    </div>
+  );
+}
+
+function Report({ measure, weekKey, kind, top, twoPanel }: { measure: Measure; weekKey: string; kind: BreakdownKind; top: ReactNode; twoPanel: boolean }) {
   const { byWeek, current, isLoading, error } = useCstWeekRows(weekKey);
   const weekEnding = weekEndingOf(weekKey);
   const tenantIds = useMemo(() => current.map((r) => r.tenantId), [current]);
@@ -267,11 +309,12 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
   const changes = useMemo(() => (previous ? weekChanges(previous, current) : null), [previous, current]);
   const activity = kind === 'clients_active' || kind === 'clients_quiet' || kind === 'people_active';
 
-  if (isLoading) return <div className="h-48 animate-pulse rounded-xl bg-muted/50" aria-busy="true" />;
-  if (error || !breakdown) return <p className="text-sm text-destructive" role="alert">The report could not be loaded for this week.</p>;
+  if (isLoading) return <Panels twoPanel={twoPanel} left={<>{top}</>} right={<div className="h-48 animate-pulse rounded-xl bg-muted/50" aria-busy="true" />} />;
+  if (error || !breakdown) return <Panels twoPanel={twoPanel} left={<>{top}</>} right={<p className="text-sm text-destructive" role="alert">The report could not be loaded for this week.</p>} />;
 
-  return (
-    <div className="space-y-4">
+  const left = (
+    <>
+      {top}
       <Section title="What this number means">
         <p className="text-base font-medium">{breakdown.sentence}</p>
         <SplitBar split={breakdown.split} />
@@ -284,21 +327,25 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <h4 className="text-sm font-semibold">Went quiet ({changes.wentQuiet.length})</h4>
-              <p className="text-sm text-muted-foreground">{changes.wentQuiet.length > 0 ? names(changes.wentQuiet) : 'No client went quiet.'}</p>
+              <NameList rows={changes.wentQuiet} empty="No client went quiet." />
             </div>
             <div>
               <h4 className="text-sm font-semibold">Came back ({changes.cameBack.length})</h4>
-              <p className="text-sm text-muted-foreground">{changes.cameBack.length > 0 ? names(changes.cameBack) : 'No client came back.'}</p>
+              <NameList rows={changes.cameBack} empty="No client came back." />
             </div>
           </div>
         </Section>
       )}
 
+      <WhoMoved kind={kind} measure={measure} byWeek={byWeek} />
+    </>
+  );
+
+  const right = (
+    <>
       <Section title="How it compares" hint="This week against the aim, last week, the weeks before it and its best and weakest week.">
         <MeasureCompare measure={measure} weekKey={weekKey} />
       </Section>
-
-      <WhoMoved kind={kind} measure={measure} byWeek={byWeek} />
 
       <DrillCard<Step>
         title="By CSC"
@@ -348,16 +395,24 @@ function Report({ measure, weekKey, kind }: { measure: Measure; weekKey: string;
       )}
 
       {kind === 'certificates' && <CertificateSections weekKey={weekKey} tenantIds={tenantIds} />}
-    </div>
+    </>
   );
+
+  return <Panels twoPanel={twoPanel} left={left} right={right} />;
 }
 
 /** Measures people type in have no breakdown, only their own recent numbers. */
-function HistoryOnly({ measure, weekKey }: { measure: Measure; weekKey: string }) {
+function HistoryOnly({ measure, weekKey, top, twoPanel }: { measure: Measure; weekKey: string; top: ReactNode; twoPanel: boolean }) {
   return (
-    <Section title="How it compares" hint="Typed in each week by the owner. There is no breakdown behind this number, so it is compared with its own weeks and its aim.">
-      <MeasureCompare measure={measure} weekKey={weekKey} />
-    </Section>
+    <Panels
+      twoPanel={twoPanel}
+      left={<>{top}</>}
+      right={
+        <Section title="How it compares" hint="Typed in each week by the owner. There is no breakdown behind this number, so it is compared with its own weeks and its aim.">
+          <MeasureCompare measure={measure} weekKey={weekKey} />
+        </Section>
+      }
+    />
   );
 }
 
@@ -366,39 +421,41 @@ export function MetricReportDialog({ open, onOpenChange, measure, weekKey, weekL
   const kind = breakdownKind(measure.metric.metric_key);
   const [expanded, setExpanded] = useState(false);
   if (!open) return null;
+  const viv = <VivInsight measure={measure} weekKey={weekKey} autoStart={autoAsk} />;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'max-w-none gap-0 overflow-y-auto p-0 [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100',
+          'max-w-none gap-0 p-0 [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100',
           expanded
-            ? 'left-0 top-0 h-[100dvh] max-h-none w-screen translate-x-0 translate-y-0 rounded-none border-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0'
-            : 'max-h-[92dvh] w-[min(96vw,64rem)]',
+            ? 'left-0 top-0 flex h-[100dvh] max-h-none w-screen translate-x-0 translate-y-0 rounded-none border-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 flex-col overflow-y-auto lg:overflow-hidden'
+            : 'max-h-[92dvh] w-[min(96vw,64rem)] overflow-y-auto',
         )}
       >
-        <div className="relative space-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-5 py-4 pr-24 text-white">
+        <div className="relative flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-1 border-b bg-gradient-to-r from-[#44235F] to-[#7130A0] px-4 py-2.5 pr-24 text-white">
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
             aria-pressed={expanded}
             aria-label={expanded ? 'Shrink the report' : 'Make the report full screen'}
             title={expanded ? 'Shrink' : 'Full screen'}
-            className="absolute right-14 top-3 flex h-11 w-11 items-center justify-center rounded-sm text-white opacity-90 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="absolute right-14 top-2 flex h-11 w-11 items-center justify-center rounded-sm text-white opacity-90 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             {expanded ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
           </button>
-          <DialogDescription className="text-xs font-semibold uppercase tracking-wide text-white/80">Report · Week of {weekLabel}</DialogDescription>
-          <DialogTitle className="text-2xl font-bold !text-white">{measure.name}</DialogTitle>
-          <div className="flex flex-wrap items-center gap-3 pt-1">
+          <div className="min-w-0">
+            <DialogDescription className="text-xs font-semibold uppercase tracking-wide text-white/80">Report · Week of {weekLabel}</DialogDescription>
+            <DialogTitle className="text-xl font-bold !text-white sm:text-2xl">{measure.name}</DialogTitle>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-3xl font-bold tabular-nums">{formatValue(measure.unit, measure.value)}</span>
             <StatusPill status={measure.status} />
             <span className="text-sm text-white/85">{gapText(measure)}</span>
             <span className="inline-flex items-center gap-1 text-sm text-white/85">Aim: {aimText(measure)} <AimInfo measure={measure} onDark /></span>
           </div>
         </div>
-        <div className={cn('space-y-4 p-4 sm:p-5', expanded && 'mx-auto w-full max-w-7xl')}>
-          <VivInsight measure={measure} weekKey={weekKey} autoStart={autoAsk} />
-          {kind ? <Report measure={measure} weekKey={weekKey} kind={kind} /> : <HistoryOnly measure={measure} weekKey={weekKey} />}
+        <div className={cn('p-3 sm:p-4', expanded ? 'flex flex-col lg:min-h-0 lg:flex-1' : 'space-y-4')}>
+          {kind ? <Report measure={measure} weekKey={weekKey} kind={kind} top={viv} twoPanel={expanded} /> : <HistoryOnly measure={measure} weekKey={weekKey} top={viv} twoPanel={expanded} />}
         </div>
       </DialogContent>
     </Dialog>

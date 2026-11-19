@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useElementWidth } from './useElementWidth';
 import { formatValue } from '@/features/eos-scorecard/scorecardView';
 import { signedAmount, type Benchmark, type Points, type SeriesComparison, type Verdict } from '@/features/eos-scorecard/comparison';
 import type { PlainStatus } from '@/features/eos-scorecard/scorecardView';
@@ -48,13 +49,16 @@ interface TrendChartProps {
   className?: string;
 }
 
-const W = 600;
+const COMPACT_W = 600;
 
 /**
  * A line over time with the aim and the earlier average as reference lines, the latest point marked, and every number
  * written beside its point. Gaps stay gaps: a period with no number breaks the line.
  */
 export function TrendChart({ points, labels, unit, target = null, average = null, statuses, summary, compact = false, className }: TrendChartProps) {
+  // A full-size chart is drawn at its real pixel width so its text stays the same size however wide the panel is.
+  const [box, measured] = useElementWidth<HTMLElement>(COMPACT_W);
+  const W = compact ? COMPACT_W : Math.max(320, measured);
   const numbers = points.filter((v): v is number => v !== null);
   if (numbers.length === 0) return <p className="text-sm text-muted-foreground">No numbers yet.</p>;
 
@@ -94,7 +98,7 @@ export function TrendChart({ points, labels, unit, target = null, average = null
   const last = n - 1;
 
   return (
-    <figure className={className}>
+    <figure ref={box} className={className}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} className="block h-auto w-full overflow-visible">
         <line x1={padX} x2={W - padX} y1={H - bottom} y2={H - bottom} className="stroke-border" strokeWidth={1} />
         {target !== null && (
