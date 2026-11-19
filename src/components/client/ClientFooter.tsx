@@ -1,5 +1,6 @@
 import { useHelpCenter } from "@/components/help-center";
 import { RefreshButton } from "@/components/layout/RefreshButton";
+import { BuildVersion } from "@/components/layout/BuildVersion";
 
 /**
  * Client footer, pinned to the bottom of the window. Kept to one slim row so it
@@ -33,9 +34,12 @@ export function ClientFooter() {
             </button>
           )}
         </div>
-        <span className="hidden truncate text-muted-foreground/70 md:inline">
-          © {currentYear} Vivacity Coaching &amp; Consulting Pty Ltd · ABN 40 140 059 016
-        </span>
+        <div className="flex min-w-0 items-center gap-x-4">
+          <span className="hidden truncate text-muted-foreground/70 md:inline">
+            © {currentYear} Vivacity Coaching &amp; Consulting Pty Ltd · ABN 40 140 059 016
+          </span>
+          <BuildVersion />
+        </div>
       </div>
     </footer>
   );
