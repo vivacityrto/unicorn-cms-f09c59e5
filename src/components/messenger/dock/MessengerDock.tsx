@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Maximize2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -6,6 +6,10 @@ import { ThreadList } from '../ThreadList';
 import { UNREAD_BADGE_CLASS } from '../unreadBadge';
 import { VivMessengerIcon } from '../VivMessengerIcon';
 import { useMessengerDock } from './dockContext';
+import {
+  DRAG_THRESHOLD, EDGE_GAP, LAUNCHER_SIZE, clampTop, nudge, readPosition, settle, topFromRatio, writePosition,
+  type DockPosition,
+} from './dockPosition';
 import type { MessengerThread } from '../types';
 
 /* -------------------------------------------------------------------------- */
@@ -54,6 +58,75 @@ export function MessengerDock({ threads, threadsLoading, unreadTotal, renderThre
   const { open, selectedId, openDock, closeDock, select } = useMessengerDock();
   const panelRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
+
+  // Where the bubble sits. Drag it anywhere; it snaps to the nearest edge when let go and is remembered on this device. With no
+  // saved position it sits in the default corner (bottom right, above the footer).
+  const [position, setPosition] = useState<DockPosition | null>(() => readPosition());
+  const [dragAt, setDragAt] = useState<{ left: number; top: number } | null>(null);
+  const press = useRef<{ x: number; y: number; offX: number; offY: number; moved: boolean } | null>(null);
+  const justDragged = useRef(false);
+  const [, setWindowSize] = useState(0);
+  useEffect(() => {
+    // A resize re-places the bubble inside the new window.
+    const onResize = () => setWindowSize((n) => n + 1);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const move = useCallback((next: DockPosition | null) => {
+    setPosition(next);
+    writePosition(next);
+  }, []);
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    press.current = { x: e.clientX, y: e.clientY, offX: e.clientX - rect.left, offY: e.clientY - rect.top, moved: false };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const p = press.current;
+    if (!p) return;
+    if (!p.moved && Math.hypot(e.clientX - p.x, e.clientY - p.y) < DRAG_THRESHOLD) return;
+    p.moved = true;
+    setDragAt({
+      left: Math.min(Math.max(e.clientX - p.offX, 0), window.innerWidth - LAUNCHER_SIZE),
+      top: clampTop(e.clientY - p.offY, window.innerHeight),
+    });
+  };
+  const endPress = (e: ReactPointerEvent<HTMLButtonElement>, dropped: boolean) => {
+    const p = press.current;
+    press.current = null;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (p?.moved && dropped) {
+      const left = Math.min(Math.max(e.clientX - p.offX, 0), window.innerWidth - LAUNCHER_SIZE);
+      move(settle(left, e.clientY - p.offY, window.innerWidth, window.innerHeight));
+      // The click that follows a drag must not open the bubble.
+      justDragged.current = true;
+      setTimeout(() => { justDragged.current = false; }, 0);
+    }
+    setDragAt(null);
+  };
+  const onLauncherKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (!e.shiftKey) return;
+    if (e.key === 'Home') {
+      e.preventDefault();
+      move(null);
+      return;
+    }
+    const next = nudge(position, e.key, window.innerHeight);
+    if (next) {
+      e.preventDefault();
+      move(next);
+    }
+  };
+
+  const side = position?.side ?? 'right';
+  const launcherStyle = dragAt
+    ? { left: dragAt.left, top: dragAt.top }
+    : position
+      ? { top: topFromRatio(position.y, window.innerHeight), [position.side]: EDGE_GAP }
+      : undefined;
   const wasOpen = useRef(false);
   const [visited, setVisited] = useState<ReadonlySet<string>>(new Set());
 
@@ -107,14 +180,31 @@ export function MessengerDock({ threads, threadsLoading, unreadTotal, renderThre
         {unreadTotal > 0 ? `${unreadTotal} unread ${unreadTotal === 1 ? 'conversation' : 'conversations'}` : ''}
       </span>
 
+      <span id="messenger-dock-move-hint" className="sr-only">
+        Drag to move the messages button out of the way. Or hold Shift and use the arrow keys, and Shift with Home to put it back.
+      </span>
+
       {!open && (
         <button
           ref={launcherRef}
           type="button"
-          onClick={() => openDock()}
+          onClick={() => {
+            if (!justDragged.current) openDock();
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={(e) => endPress(e, true)}
+          onPointerCancel={(e) => endPress(e, false)}
+          onKeyDown={onLauncherKeyDown}
           aria-label={unreadLabel}
-          title="Messages"
-          className="fixed bottom-12 right-5 z-50 h-14 w-14 rounded-full shadow-lg shadow-primary/30 ring-1 ring-black/5 transition-transform duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none dark:ring-white/10"
+          aria-describedby="messenger-dock-move-hint"
+          title="Messages (drag to move)"
+          style={launcherStyle}
+          className={cn(
+            'fixed z-50 h-14 w-14 touch-none select-none rounded-full shadow-lg shadow-primary/30 ring-1 ring-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none dark:ring-white/10',
+            !launcherStyle && 'bottom-12 right-5',
+            dragAt ? 'cursor-grabbing scale-110 shadow-xl' : 'cursor-grab transition-transform duration-150 hover:scale-105',
+          )}
         >
           <VivMessengerIcon className="h-full w-full" />
           {unreadTotal > 0 && (
@@ -141,7 +231,9 @@ export function MessengerDock({ threads, threadsLoading, unreadTotal, renderThre
             'fixed z-50 flex-col overflow-hidden border bg-card text-card-foreground shadow-2xl outline-none',
             open ? 'flex' : 'hidden',
             // Phone: fills the screen under the header. Larger screens: a panel in the launcher's place.
-            'inset-x-0 bottom-0 top-11 rounded-none sm:inset-x-auto sm:bottom-12 sm:right-5 sm:top-auto sm:h-[min(620px,calc(100dvh-7rem))] sm:w-[400px] sm:rounded-2xl',
+            'inset-x-0 bottom-0 top-11 rounded-none sm:inset-x-auto sm:bottom-12 sm:top-auto sm:h-[min(620px,calc(100dvh-7rem))] sm:w-[400px] sm:rounded-2xl',
+            // The panel opens on the same side as the bubble.
+            side === 'left' ? 'sm:left-5 sm:right-auto' : 'sm:right-5 sm:left-auto',
           )}
         >
           {keepMounted
