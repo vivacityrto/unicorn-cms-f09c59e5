@@ -138,7 +138,10 @@ Deno.serve(async (req) => {
           );
         if (staffPartErr) throw new Error(staffPartErr.message);
 
-        // Upsert all tenant_users as client participants (full mirror of single-message flow).
+        // Upsert this tenant's RECIPIENTS as client participants, and nobody else. Recipients are
+        // already resolved by fn_resolve_broadcast_recipients (targeted by role, active members only),
+        // the same set the scheduled-delivery path adds. This used to mirror every tenant_users row,
+        // which also added inactive and untargeted people, who could then read the broadcast.
         // conversation_participants.user_id FKs to auth.users, not public.users — a stale
         // public.users row with no matching auth account (seen with seeded/fixture profiles,
         // e.g. tenant 7547's demo placeholders) makes the WHOLE batch upsert fail with a
@@ -146,10 +149,7 @@ Deno.serve(async (req) => {
         // along with it (2026-08-25 incident: Demo RTO's own account got no notification for
         // a broadcast it was correctly queued for). Falling back to a per-row upsert when the
         // batch fails means one bad row only costs that one participant, not the whole tenant.
-        const { data: tenantUsers } = await svc
-          .from("tenant_users")
-          .select("user_id")
-          .eq("tenant_id", tenantId);
+        const recipientUsers = Array.from(new Set(rows.map((r) => r.user_id)));
         // Recipients whose conversation_participants upsert was skipped (a
         // stale tenant_users row with no matching auth.users account) --
         // surfaced below instead of only console.error'd, so a partial
@@ -157,10 +157,10 @@ Deno.serve(async (req) => {
         // broadcast_recipients.failure_reason and total_failed, not just
         // Edge Function logs.
         const skippedUserIds = new Map<string, string>();
-        if (tenantUsers?.length) {
-          const clientRows = tenantUsers.map((u: { user_id: string }) => ({
+        if (recipientUsers.length) {
+          const clientRows = recipientUsers.map((userId) => ({
             conversation_id: conv.id,
-            user_id: u.user_id,
+            user_id: userId,
             role: "client",
           }));
           const { error: clientPartErr } = await svc
