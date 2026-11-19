@@ -110,6 +110,18 @@ describe('MessengerDock', () => {
     expect(mounts.viv - mountsAfterOpen).toBeLessThanOrEqual(2);
   });
 
+  it('does not keep an ordinary conversation mounted while the dock is closed, so nothing is marked read unseen', () => {
+    show();
+    fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
+    // Visit the kept-alive thread first, so the panel stays in the page after a close.
+    fireEvent.click(within(screen.getByRole('list', { name: 'Conversations' })).getByText('Ask Viv'));
+    fireEvent.click(screen.getByText('back'));
+    fireEvent.click(within(screen.getByRole('list', { name: 'Conversations' })).getByText('Package question'));
+    expect(screen.getByText('messages of c1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close messages' }));
+    expect(screen.queryByText('messages of c1')).not.toBeInTheDocument();
+  });
+
   it('closes from the close button', () => {
     show();
     fireEvent.click(screen.getByRole('button', { name: /Open messages/ }));
