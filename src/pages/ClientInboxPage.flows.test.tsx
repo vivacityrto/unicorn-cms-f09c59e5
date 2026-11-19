@@ -145,7 +145,11 @@ describe('Inbox flows with real hooks', () => {
     await screen.findByText('Annual Declaration opens');
     const press = async (group: string) => {
       const pills = within(screen.getByRole('group', { name: group })).getAllByRole('button');
-      for (const pill of pills) await user.click(pill);
+      for (const pill of pills) {
+        await user.click(pill);
+        // The type chip opens a menu; close it so the rest of the page is reachable again.
+        await user.keyboard('{Escape}');
+      }
     };
     await press('Filter the inbox');
     await user.click(screen.getByRole('tab', { name: /Messages/ }));

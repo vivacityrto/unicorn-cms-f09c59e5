@@ -133,7 +133,9 @@ export function MessengerDock({ threads, threadsLoading, unreadTotal, renderThre
           hidden={!open}
           tabIndex={-1}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') closeDock();
+            // A menu inside the panel (the Type filter) closes itself on Escape. Its content is drawn outside the panel, but React
+            // still hands the key to the panel, so ignore a key that something already handled or that did not start inside it.
+            if (e.key === 'Escape' && !e.defaultPrevented && e.currentTarget.contains(e.target as Node)) closeDock();
           }}
           className={cn(
             'fixed z-50 flex-col overflow-hidden border bg-card text-card-foreground shadow-2xl outline-none',

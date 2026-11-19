@@ -79,7 +79,9 @@ describe('ClientInboxPage', () => {
     expect(within(list).getByText('Annual Declaration')).toBeInTheDocument();
     expect(within(list).getByText('Package question')).toBeInTheDocument();
 
-    await user.click(within(list).getByRole('button', { name: 'From Vivacity', pressed: false }));
+    // Types live in one menu, so the chip row never scrolls sideways.
+    await user.click(within(list).getByRole('button', { name: 'Filter by type' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'From Vivacity' }));
     expect(within(list).queryByText('Package question')).not.toBeInTheDocument();
 
     await user.click(within(list).getByRole('button', { name: 'All', pressed: false }));
