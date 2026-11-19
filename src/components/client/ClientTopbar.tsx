@@ -162,7 +162,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             <Eye className="h-3.5 w-3.5 flex-shrink-0" />
             <span className="text-muted-foreground">Viewing as</span>
             {actingUserOptions.length > 1 ? (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
@@ -266,7 +266,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         )}
 
         {/* Profile dropdown */}
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 ml-1">
               <Avatar className="h-8 w-8 border-2 border-border transition-all group-data-[condensed=true]/topbar:h-6 group-data-[condensed=true]/topbar:w-6">

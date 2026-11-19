@@ -132,7 +132,7 @@ export function AcademyTopBar() {
           )}
 
           {/* User Avatar Dropdown */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
