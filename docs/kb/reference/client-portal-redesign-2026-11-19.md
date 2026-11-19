@@ -101,9 +101,9 @@ Each package card has a short check-in for people with full access (`PackageChec
 - Answers are a separate qualitative input: not scored, not part of any health score, and never sent to AI (a test guards this).
 - **Not built yet:** the staff side (a consultant view of answers and trends, an alert on two low pulses or a blocker), goals per stage, post-consult feedback, and button-triggered AI summaries of comments.
 
-## Staff view of client check-ins (in review)
+## Staff view of client check-ins (database applied)
 
-On the staff client page (Overview tab, under pinned notes) a "Client check-ins" card shows what the client's team has told Vivacity on each live package (`TenantCheckinsCard`, function `get_tenant_checkins_overview`, audit entry `2026-11-20-tenant-checkins-overview`, written and dry-run, **not yet applied**): each person's recent pulse and audit confidence, and any blocker flagged in the last 30 days with the category and the short description the client wrote.
+On the staff client page (Overview tab, under pinned notes) a "Client check-ins" card shows what the client's team has told Vivacity on each live package (`TenantCheckinsCard`, function `get_tenant_checkins_overview`, audit entry `2026-11-20-tenant-checkins-overview`, applied to production): each person's recent pulse and audit confidence, and any blocker flagged in the last 30 days with the category and the short description the client wrote.
 
 - Two plain flags, no score: a blocker in the last 30 days, or a person's last two pulses both 2 or lower. A package with no answers reads "No check-ins yet", never as fine, and answers feed no health score.
 - Staff and super admins only; names only (no emails or ids); the client's description is shown as plain text and never sent to AI.

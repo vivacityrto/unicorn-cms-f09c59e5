@@ -2,7 +2,7 @@
 
 **Trigger:** Carl asked to build the staff view of client check-ins, so the answers collected on the package page are visible to Vivacity.
 **Scope:** one new read-only function, `public.get_tenant_checkins_overview(p_tenant_id bigint)` (migration `20261120050000_get_tenant_checkins_overview.sql`), and a "Client check-ins" card on the staff client page's Overview tab. No table, column, policy or data change.
-**Status:** Written and dry-run in production (everything rolled back). **Not yet applied**: needs Carl's explicit go-ahead. Until it is applied the card shows "Client check-ins could not be loaded" and nothing else on the page changes.
+**Status:** Applied to production on 20 November 2026 on Carl's explicit go-ahead ("Apply it"), after a dry run. Postflight below. The card goes live when this pull request is merged.
 
 ## What it returns
 
@@ -25,6 +25,10 @@ Inside a rolled-back block: inserted two pulses (2 then 1) and a confidence rati
 - The person object held only `name`, `pulses` and `confidence`; the blocker object held only `name`, `comment`, `category` and `created_at`.
 - A client contact calling it: refused ("Not authorized"). No sign-in: refused.
 - No names, emails or answer text were printed.
+
+## Production
+
+Preflight: function absent, migration not recorded, the `package_checkins` table present. Applied with the exact migration SQL. Postflight: exactly one overload `(bigint)`, `SECURITY DEFINER`, execute granted to `authenticated`, not to `anon`; the check-in table is unchanged (empty). No table or data changed.
 
 ## Not built (follow-up)
 
