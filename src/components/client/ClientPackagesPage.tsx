@@ -323,9 +323,11 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
   const timeline = useClientPackageHoursTimeline(packageInstanceId);
   const { options: packageTypes } = usePackageTypeOptions();
+  // Only forecast once the timeline has loaded: while it is loading or has failed, an empty list would wrongly read as
+  // "no hours recorded in the last four weeks".
   const forecast = useMemo(
-    () => hoursForecast(timeline.data ?? [], Number(dashboard?.hours_total ?? 0), Number(dashboard?.hours_used ?? 0), dashboard?.end_date ?? null),
-    [timeline.data, dashboard?.hours_total, dashboard?.hours_used, dashboard?.end_date],
+    () => (timeline.isSuccess ? hoursForecast(timeline.data ?? [], Number(dashboard?.hours_total ?? 0), Number(dashboard?.hours_used ?? 0), dashboard?.end_date ?? null) : null),
+    [timeline.isSuccess, timeline.data, dashboard?.hours_total, dashboard?.hours_used, dashboard?.end_date],
   );
 
   return (
