@@ -29,13 +29,13 @@ export function HomeComingUpSection({ events, isLoading }: Props) {
             <Link
               key={event.event_uid}
               to={event.href}
-              className="flex items-center gap-3 p-3 rounded-md border border-border hover:bg-accent/40 transition-colors"
+              className="flex items-start gap-3 p-3 rounded-md border border-border hover:bg-accent/40 transition-colors"
             >
-              <CheckSquare className="h-4 w-4 text-blue-600 shrink-0" />
-              <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">
+              <CheckSquare className="mt-0.5 h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <p className="flex-1 min-w-0 text-sm font-medium text-foreground line-clamp-2">
                 {event.title}
               </p>
-              <span className="text-xs text-muted-foreground shrink-0">
+              <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
                 {formatDistanceToNow(parseISO(event.event_at), { addSuffix: true })}
               </span>
             </Link>
