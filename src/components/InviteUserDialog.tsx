@@ -422,7 +422,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
                             {u.Discriminator}
                           </span>
                           {u.Archived && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
                               Archived
                             </span>
                           )}

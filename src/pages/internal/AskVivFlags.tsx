@@ -318,7 +318,7 @@ export default function AskVivFlags() {
                       variant={flag.status === "open" ? "default" : "secondary"}
                       className={cn(
                         "gap-1",
-                        flag.status === "open" && "bg-amber-500/10 text-amber-600 border-amber-200"
+                        flag.status === "open" && "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200"
                       )}
                     >
                       {flag.status === "open" ? (

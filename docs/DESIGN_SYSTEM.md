@@ -164,6 +164,7 @@ import { chartPalette } from '@/styles/brand';
 - **Light Purple:** Never used as text in dark mode
 - **All colors reference token system**
 - **Client portal:** follows the chosen theme (light by default, toggle in the top bar, remembered per browser). It is no longer pinned to light. The Academy learner shell (`AcademyLayout`) is still light-only.
+- **Pale tints and pills:** a pale fixed surface (`bg-yellow-50`, `bg-blue-100`, `bg-white`) must carry a dark variant in the same class string (for example `dark:bg-yellow-500/15`), or theme text inside it goes light-on-light. A pill with a solid colour must set its own text colour (`text-white` on `-700` shades): the Badge variant's text colour is otherwise inherited and was unreadable on green or amber. The default Badge text uses `--badge-default-fg` (dark aqua in light mode) because the brand cyan is too pale as text. `src/test/dark-mode-guard.test.ts` fails on both mistakes anywhere in `src/`.
 - **Brand banners:** the purple gradient surfaces are dark in every theme, so put `brand-surface` on them (keeps headings white; headings otherwise follow the theme and went dark on the purple). Use theme tokens (`bg-muted`, `bg-card`, `border-border`) rather than fixed pale colours (`bg-white`, `bg-slate-100`) for surfaces. `src/test/dark-mode-guard.test.ts` fails on both mistakes in client screens.
 
 ---

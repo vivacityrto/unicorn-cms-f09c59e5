@@ -217,7 +217,7 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
         {expanded && doc.ai_status === 'complete' && (
           <div className="mt-4 space-y-3 border-t pt-3" onClick={(e) => e.stopPropagation()}>
             {doc.ai_risk_summary && (
-              <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800">
+              <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
                 {doc.ai_risk_summary}
               </div>
             )}
@@ -232,7 +232,7 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
               </div>
             ))}
             {doc.ai_recommendations?.map((r, i) => (
-              <div key={i} className="bg-blue-50 border border-blue-100 rounded p-2 text-xs space-y-1">
+              <div key={i} className="bg-blue-50 border border-blue-100 rounded p-2 text-xs space-y-1 dark:bg-blue-500/15 dark:border-blue-500/30">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px]">{r.priority}</Badge>
                   <span className="font-medium">{r.standard_reference}</span>

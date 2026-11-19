@@ -41,7 +41,7 @@ const STATUS_META: Record<ReminderStatus, StatusMeta> = {
     iconClass: "text-amber-600",
     pillLabel: "DUE SOON",
     pillVariant: "outline",
-    pillClass: "bg-amber-100 text-amber-800 border-amber-200",
+    pillClass: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
   },
   upcoming: {
     icon: Calendar,

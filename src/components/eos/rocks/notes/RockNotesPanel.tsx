@@ -275,7 +275,7 @@ function NotesPanelBody({ rock }: { rock: NotesRock }) {
           type="button"
           variant="outline"
           size="sm"
-          className={cn('h-8 gap-1.5', listeningHere && 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300')}
+          className={cn('h-8 gap-1.5', listeningHere && 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-500/20')}
           disabled={!ctx.isSupported}
           aria-pressed={listeningHere}
           title={ctx.isSupported ? undefined : 'Dictation is not available in this browser. Try Chrome or Edge.'}

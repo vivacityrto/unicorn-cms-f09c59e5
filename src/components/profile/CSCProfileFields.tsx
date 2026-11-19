@@ -160,7 +160,7 @@ export function CSCProfileFields({ user, canEdit, onSave }: CSCProfileFieldsProp
     <Card className="border-emerald-200 bg-emerald-50/30 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="bg-emerald-600">CSC</Badge>
+          <Badge variant="default" className="border-transparent text-white bg-emerald-700 hover:bg-emerald-700">CSC</Badge>
           <CardTitle>Client Success Champion Profile</CardTitle>
         </div>
         <CardDescription>

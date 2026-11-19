@@ -100,7 +100,7 @@ export const AgendaTemplateLibrary = ({ open, onOpenChange }: AgendaTemplateLibr
                   </Badge>
                 )}
                 {template.is_default && (
-                  <Badge className="text-xs bg-amber-100 text-amber-800 hover:bg-amber-100">
+                  <Badge className="text-xs bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/20 dark:text-amber-300">
                     <Star className="w-3 h-3 mr-1" />
                     Default
                   </Badge>

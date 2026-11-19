@@ -254,7 +254,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                   {getStageTypeLabel(stage.stage_type)}
                 </Badge>
                 {stage.is_certified && (
-                  <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                  <Badge className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20">
                     <ShieldCheck className="h-3 w-3 mr-1" />
                     Certified
                   </Badge>

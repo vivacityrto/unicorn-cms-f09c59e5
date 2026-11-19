@@ -109,11 +109,11 @@ export function RockCard({
   const getStatusConfig = (s: string) => {
     const configs: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline'; icon: typeof TrendingUp; label: string; className?: string }> = {
       not_started: { variant: 'outline', icon: Clock, label: 'Not Started' },
-      on_track: { variant: 'default', icon: TrendingUp, label: 'On Track', className: 'bg-green-600' },
-      off_track: { variant: 'destructive', icon: TrendingDown, label: 'Off Track' },
-      at_risk: { variant: 'destructive', icon: AlertCircle, label: 'At Risk', className: 'bg-amber-600' },
-      blocked: { variant: 'default', icon: Ban, label: 'Blocked', className: 'bg-violet-700 text-white' },
-      complete: { variant: 'secondary', icon: CheckCircle, label: 'Complete', className: 'bg-blue-600 text-white' },
+      on_track: { variant: 'default', icon: TrendingUp, label: 'On Track', className: 'border-transparent text-white bg-green-700 hover:bg-green-700' },
+      off_track: { variant: 'destructive', icon: TrendingDown, label: 'Off Track', className: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive' },
+      at_risk: { variant: 'destructive', icon: AlertCircle, label: 'At Risk', className: 'border-transparent text-white bg-amber-700 hover:bg-amber-700' },
+      blocked: { variant: 'default', icon: Ban, label: 'Blocked', className: 'border-transparent bg-violet-700 text-white hover:bg-violet-700' },
+      complete: { variant: 'secondary', icon: CheckCircle, label: 'Complete', className: 'border-transparent bg-blue-700 text-white hover:bg-blue-700' },
     };
     return configs[s] || configs.on_track;
   };

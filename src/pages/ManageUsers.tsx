@@ -790,7 +790,7 @@ export default function ManageUsers() {
                     Inactive
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-green-600 border-green-600 bg-green-600/10">
+                  <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-600 bg-green-600/10">
                     Active
                   </Badge>
                 )

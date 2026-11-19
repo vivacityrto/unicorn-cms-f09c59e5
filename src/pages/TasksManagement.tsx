@@ -67,9 +67,9 @@ interface VivacityUser {
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
 // Reused from MyWork.tsx for visual consistency across task surfaces.
 const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-600',
-  high: 'bg-orange-500/10 text-orange-600 border-orange-600',
-  normal: 'bg-blue-500/10 text-blue-600 border-blue-600',
+  urgent: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-600',
+  high: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-600',
+  normal: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-600',
   low: 'bg-gray-500/10 text-gray-600 border-gray-600',
 };
 export default function TasksManagement() {
@@ -439,19 +439,19 @@ export default function TasksManagement() {
     }> = {
       completed: {
         label: "Completed",
-        className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium"
+        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium"
       },
       overdue: {
         label: "Overdue",
-        className: "bg-red-500/10 text-red-600 border-red-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+        className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
       },
       extended: {
         label: "Extended",
-        className: "bg-blue-500/10 text-blue-600 border-blue-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+        className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
       },
       in_progress: {
         label: "In Progress",
-        className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+        className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
       },
       pending: {
         label: "Not Started",
@@ -1389,8 +1389,8 @@ export default function TasksManagement() {
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap text-center">
                       <Badge variant="outline" className={cn("text-[0.7rem]",
-                        task.source === 'action' && "bg-purple-500/10 text-purple-600 border-purple-500/30",
-                        task.source === 'ops' && "bg-blue-500/10 text-blue-600 border-blue-500/30",
+                        task.source === 'action' && "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
+                        task.source === 'ops' && "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
                         (!task.source || task.source === 'task') && "bg-muted text-muted-foreground border-border"
                       )}>
                         {task.source === 'action' ? 'Action' : task.source === 'ops' ? 'Ops' : 'Client Task'}
@@ -1658,19 +1658,19 @@ export default function TasksManagement() {
                       const statusConfig = {
                         completed: { 
                           label: "Completed", 
-                          className: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500/20" 
+                          className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20" 
                         },
                         overdue: { 
                           label: "Overdue", 
-                          className: "bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20" 
+                          className: "bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20 hover:bg-red-500/20" 
                         },
                         extended: { 
                           label: "Extended", 
-                          className: "bg-blue-500/10 text-blue-600 border border-blue-500/20 hover:bg-blue-500/20" 
+                          className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 hover:bg-blue-500/20" 
                         },
                         in_progress: { 
                           label: "In Progress", 
-                          className: "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 hover:bg-yellow-500/20" 
+                          className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border border-yellow-500/20 hover:bg-yellow-500/20" 
                         },
                         pending: { 
                           label: "Not Started", 

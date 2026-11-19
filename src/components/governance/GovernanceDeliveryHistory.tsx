@@ -78,7 +78,7 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
   const statusBadge = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge className="bg-emerald-600 text-primary-foreground">Success</Badge>;
+        return <Badge className="bg-emerald-700 text-white">Success</Badge>;
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
       case 'pending':
@@ -92,9 +92,9 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
     if (!riskLevel) return <span className="text-xs text-muted-foreground">—</span>;
     switch (riskLevel) {
       case 'complete':
-        return <Badge className="bg-emerald-600 text-primary-foreground text-xs">Complete</Badge>;
+        return <Badge className="bg-emerald-700 text-white text-xs">Complete</Badge>;
       case 'partial':
-        return <Badge className="bg-amber-500 text-primary-foreground text-xs">Partial</Badge>;
+        return <Badge className="bg-amber-700 text-white text-xs">Partial</Badge>;
       case 'incomplete':
         return <Badge variant="destructive" className="text-xs">Incomplete</Badge>;
       default:

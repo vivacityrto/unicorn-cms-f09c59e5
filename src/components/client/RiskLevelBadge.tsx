@@ -17,10 +17,10 @@ interface RiskLevelBadgeProps {
 }
 
 const RISK_LEVELS = [
-  { value: 'low', label: 'Low', className: 'bg-green-500/10 text-green-600 border-green-600' },
-  { value: 'medium', label: 'Medium', className: 'bg-yellow-500/10 text-yellow-600 border-yellow-600' },
-  { value: 'high', label: 'High', className: 'bg-orange-500/10 text-orange-600 border-orange-600' },
-  { value: 'critical', label: 'Critical', className: 'bg-red-500/10 text-red-600 border-red-600' },
+  { value: 'low', label: 'Low', className: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-600' },
+  { value: 'medium', label: 'Medium', className: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-600' },
+  { value: 'high', label: 'High', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-600' },
+  { value: 'critical', label: 'Critical', className: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-600' },
 ];
 
 export function RiskLevelBadge({ riskLevel, onUpdate, disabled, onRiskChanged }: RiskLevelBadgeProps) {

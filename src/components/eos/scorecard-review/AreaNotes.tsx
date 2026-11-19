@@ -74,7 +74,7 @@ export function AreaNotes({ category, areaName, notes, myUserId, ownerNames, onS
           type="button"
           variant="outline"
           size="sm"
-          className={cn('h-8 shrink-0 gap-1.5', listeningHere && 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300')}
+          className={cn('h-8 shrink-0 gap-1.5', listeningHere && 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-500/20')}
           disabled={!ctx || !ctx.isSupported || !meetingId}
           aria-pressed={listeningHere}
           title={ctx?.isSupported === false ? 'Dictation is not available in this browser. Try Chrome or Edge.' : 'Speak your notes. Next saves them and keeps listening for the next area.'}

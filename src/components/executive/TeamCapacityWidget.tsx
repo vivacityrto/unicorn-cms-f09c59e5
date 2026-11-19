@@ -18,10 +18,10 @@ import { cn } from '@/lib/utils';
 
 const STATUS_ORDER: Record<string, number> = { critical: 0, high: 1, elevated: 2, stable: 3 };
 const STATUS_BADGE: Record<string, string> = {
-  stable: 'bg-green-100 text-green-800',
-  elevated: 'bg-yellow-100 text-yellow-800',
-  high: 'bg-orange-100 text-orange-800',
-  critical: 'bg-red-100 text-red-800',
+  stable: 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300',
+  elevated: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/15 dark:text-yellow-300',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300',
+  critical: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300',
 };
 
 type WorkloadSnapshot = Tables<'workload_snapshots'>;

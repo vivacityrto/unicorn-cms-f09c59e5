@@ -19,7 +19,7 @@ interface Props {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    ok: 'bg-green-100 text-green-700',
+    ok: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
     pending: 'bg-[hsl(var(--brand-macaron))]/10 text-[hsl(var(--brand-macaron))]',
     overdue: 'bg-[hsl(var(--brand-fuchsia))]/10 text-[hsl(var(--brand-fuchsia))]',
     flagged: 'bg-[hsl(var(--brand-fuchsia))]/10 text-[hsl(var(--brand-fuchsia))]',

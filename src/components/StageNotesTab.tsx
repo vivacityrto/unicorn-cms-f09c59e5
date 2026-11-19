@@ -331,10 +331,10 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                   <TableCell className="border-r">
                     {note.priority ? (
                       <Badge variant="outline" className={cn("text-xs py-0.5 px-2 rounded-full",
-                        note.priority === 'urgent' && "bg-red-50 text-red-700 border-red-200",
-                        note.priority === 'high' && "bg-orange-50 text-orange-700 border-orange-200",
-                        note.priority === 'normal' && "bg-blue-50 text-blue-700 border-blue-200",
-                        note.priority === 'low' && "bg-gray-50 text-gray-700 border-gray-200"
+                        note.priority === 'urgent' && "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30",
+                        note.priority === 'high' && "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30",
+                        note.priority === 'normal' && "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30",
+                        note.priority === 'low' && "bg-gray-50 text-gray-700 border-gray-200 dark:bg-muted dark:text-foreground dark:border-border"
                       )}>
                         <span className="capitalize">{note.priority}</span>
                       </Badge>

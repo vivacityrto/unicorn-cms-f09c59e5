@@ -65,9 +65,9 @@ function SlaBadge({ value }: { value: boolean | null }) {
     return <span className="text-muted-foreground">—</span>;
   }
   return value ? (
-    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Met</Badge>
+    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/20 dark:text-emerald-300">Met</Badge>
   ) : (
-    <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">Missed</Badge>
+    <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/20 dark:text-rose-300">Missed</Badge>
   );
 }
 
@@ -315,7 +315,7 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
                 </div>
 
                 {!outbound.sentDateTime && (
-                  <div className="p-3 rounded-md border border-amber-300 bg-amber-50 text-sm text-amber-900">
+                  <div className="p-3 rounded-md border border-amber-300 bg-amber-50 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
                     This email may not be a sent item — no sent timestamp found.
                     Go back and select from your Sent Items folder.
                   </div>

@@ -25,9 +25,9 @@ import { useMyWork, MyWorkItem } from '@/hooks/useMyWork';
 import { cn } from '@/lib/utils';
 
 const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-500/10 text-red-600 border-red-600',
-  high: 'bg-orange-500/10 text-orange-600 border-orange-600',
-  normal: 'bg-blue-500/10 text-blue-600 border-blue-600',
+  urgent: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-600',
+  high: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-600',
+  normal: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-600',
   low: 'bg-gray-500/10 text-gray-600 border-gray-600'
 };
 

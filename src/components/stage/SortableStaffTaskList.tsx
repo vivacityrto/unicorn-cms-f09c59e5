@@ -78,7 +78,7 @@ function SortableTaskItem({
           {task.is_key_event && (
             <Badge
               variant="outline"
-              className="text-xs border-amber-300 bg-amber-50 text-amber-700 gap-0.5"
+              className="text-xs border-amber-300 bg-amber-50 text-amber-700 gap-0.5 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
             >
               <KeyRound className="h-2.5 w-2.5" />
               Key Event

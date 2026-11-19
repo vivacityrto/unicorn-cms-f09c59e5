@@ -121,7 +121,7 @@ const ResetPassword = () => {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
             <img src={unicornLogo} alt="Unicorn Compliance Management System" className="w-full h-auto max-w-[18rem]" />
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-2xl text-center">
+          <div className="bg-white rounded-xl p-6 shadow-2xl text-center dark:bg-card">
             <p className="text-muted-foreground">Verifying reset link...</p>
           </div>
         </div>
@@ -139,7 +139,7 @@ const ResetPassword = () => {
           <img src={unicornLogo} alt="Unicorn Compliance Management System" className="w-full h-auto max-w-[18rem]" />
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-2xl">
+        <div className="bg-white rounded-xl p-6 shadow-2xl dark:bg-card">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-foreground mb-1">Reset Your Password</h2>
             <p className="text-muted-foreground">Enter your new password below</p>

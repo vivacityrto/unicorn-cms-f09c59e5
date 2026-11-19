@@ -19,19 +19,19 @@ export function ExcelBindingStatusBadge({ documentId, compact = false }: ExcelBi
       icon: CheckCircle2,
       label: 'Excel Ready',
       tooltip: 'All merge fields and dropdowns are configured',
-      className: 'bg-green-100 text-green-700 border-green-200'
+      className: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30'
     },
     draft: {
       icon: AlertTriangle,
       label: 'Needs Binding',
       tooltip: 'Excel template has fields that need to be configured',
-      className: 'bg-amber-100 text-amber-700 border-amber-200'
+      className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
     },
     error: {
       icon: XCircle,
       label: 'Binding Error',
       tooltip: 'Excel bindings have validation errors',
-      className: 'bg-red-100 text-red-700 border-red-200'
+      className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30'
     }
   }[status] || {
     icon: HelpCircle,

@@ -1141,7 +1141,7 @@ export default function AcademyBuilderCourse() {
                 {course.status === "published" && canPublishOrDelete && (
                   <>
                     <Button size="sm" variant="outline" onClick={handleBackToDraft}>Back to Draft</Button>
-                    <Button size="sm" variant="outline" onClick={() => courseId && archiveCourse.mutate(courseId)} className="text-amber-600 border-amber-300 hover:bg-amber-50">Archive</Button>
+                    <Button size="sm" variant="outline" onClick={() => courseId && archiveCourse.mutate(courseId)} className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/20">Archive</Button>
                   </>
                 )}
                 {course.status === "archived" && canPublishOrDelete && (

@@ -228,7 +228,7 @@ export function PackageBuilderOverview() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Active</Badge>;
+        return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Active</Badge>;
       case 'archived':
         return <Badge variant="secondary" className="bg-muted text-muted-foreground"><Archive className="h-3 w-3 mr-1" />Archived</Badge>;
       default:

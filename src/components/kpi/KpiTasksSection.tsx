@@ -114,12 +114,12 @@ function StatusBadge({ status }: { status: KpiTaskStatus }) {
   const label = STATUS_LABEL[status] ?? status;
   const cls =
     status === "done_on_time"
-      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+      ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/20 dark:text-emerald-300"
       : status === "rectified"
-      ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
+      ? "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/20 dark:text-amber-300"
       : status === "delayed"
-      ? "bg-rose-100 text-rose-800 hover:bg-rose-100"
-      : "bg-slate-100 text-slate-700 hover:bg-slate-100";
+      ? "bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/20 dark:text-rose-300"
+      : "bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-muted dark:hover:bg-muted dark:text-foreground";
   return <Badge className={cls}>{label}</Badge>;
 }
 
@@ -342,7 +342,7 @@ export function KpiTasksSection({ viewerRole = null }: { viewerRole?: string | n
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                          className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-500/20"
                           onClick={() => markStatus(t.id, "delayed")}
                         >
                           Delayed

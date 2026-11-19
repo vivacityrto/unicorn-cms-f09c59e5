@@ -133,19 +133,19 @@ export function PackageReadinessBadge({ status, issues, size = 'default' }: Pack
         return {
           icon: <CheckCircle2 className={iconSize} />,
           label: 'Ready',
-          className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
+          className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
         };
       case 'incomplete':
         return {
           icon: <XCircle className={iconSize} />,
           label: 'Incomplete',
-          className: 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
+          className: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 hover:bg-amber-500/20'
         };
       case 'risk':
         return {
           icon: <AlertTriangle className={iconSize} />,
           label: 'Risk',
-          className: 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
+          className: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 hover:bg-red-500/20'
         };
     }
   }, [status, iconSize]);

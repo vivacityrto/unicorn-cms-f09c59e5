@@ -49,10 +49,10 @@ export default function AcademyTenantUserDetail() {
     const expired = status === "active" && !!expiresAt && new Date(expiresAt).getTime() <= Date.now();
     const label = expired ? "expired" : status || "—";
     let tone = "bg-muted text-muted-foreground";
-    if (expired) tone = "bg-red-100 text-red-700";
-    else if (status === "active") tone = "bg-green-100 text-green-700";
-    else if (status === "completed") tone = "bg-blue-100 text-blue-700";
-    else if (status === "revoked") tone = "bg-red-100 text-red-700";
+    if (expired) tone = "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
+    else if (status === "active") tone = "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300";
+    else if (status === "completed") tone = "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300";
+    else if (status === "revoked") tone = "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300";
     return (
       <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize", tone)}>
         {label}

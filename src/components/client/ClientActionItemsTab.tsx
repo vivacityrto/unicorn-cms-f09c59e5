@@ -51,20 +51,20 @@ const STATUS_ICON_MAP: Record<string, React.ElementType> = {
 
 const STATUS_COLOR_MAP: Record<string, string> = {
   open: 'bg-muted text-foreground',
-  in_progress: 'bg-blue-100 text-blue-700',
-  blocked: 'bg-red-100 text-red-700',
-  done: 'bg-green-100 text-green-700',
+  in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  blocked: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+  done: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
   cancelled: 'bg-muted text-muted-foreground',
   todo: 'bg-muted text-foreground',
-  waiting_client: 'bg-amber-100 text-amber-700',
+  waiting_client: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
 };
 
 const PRIORITY_COLOR_MAP: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
-  normal: 'bg-blue-100 text-blue-700',
-  medium: 'bg-blue-100 text-blue-700',
-  high: 'bg-orange-100 text-orange-700',
-  urgent: 'bg-red-100 text-red-700',
+  normal: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  medium: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  high: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+  urgent: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 };
 
 export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTabProps) {
@@ -514,7 +514,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                                title={item.item_type === 'client' ? 'Visible in client portal — click to make internal' : 'Internal only — click to make visible in portal'}
                              >
                                {item.item_type === 'client' ? (
-                                 <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200 gap-1 hover:bg-cyan-100">
+                                 <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200 gap-1 hover:bg-cyan-100 dark:bg-cyan-500/15 dark:hover:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/30">
                                    <Eye className="h-3 w-3" /> Portal
                                  </Badge>
                                ) : (

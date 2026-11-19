@@ -171,8 +171,8 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
               className={cn(
                 'whitespace-nowrap shrink-0',
                 isActive
-                  ? 'bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600'
-                  : 'bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600'
+                  ? 'bg-green-500/20 text-green-700 dark:text-green-300 hover:bg-green-500/30 border border-green-600'
+                  : 'bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-500/30 border border-red-600'
               )}
             >
               {saving ? (

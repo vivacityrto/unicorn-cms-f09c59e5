@@ -104,7 +104,7 @@ export function StageMessagesPanel({ stageId, tenantId, onSendMessage }: StageMe
                             variant="outline"
                             className={
                               isClient
-                                ? 'bg-purple-100 text-purple-700 border-purple-200'
+                                ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30'
                                 : 'bg-muted text-muted-foreground'
                             }
                           >

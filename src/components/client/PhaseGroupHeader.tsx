@@ -26,9 +26,9 @@ export function PhaseGroupHeader({ phase, children, readOnly = false }: PhaseGro
 
   const statusColor = (() => {
     switch (phase.status) {
-      case 'completed': return 'text-green-600 border-green-500/30 bg-green-500/10';
-      case 'completed_with_exceptions': return 'text-amber-600 border-amber-500/30 bg-amber-500/10';
-      case 'in_progress': return 'text-blue-600 border-blue-500/30 bg-blue-500/10';
+      case 'completed': return 'text-green-700 dark:text-green-300 border-green-500/30 bg-green-500/10';
+      case 'completed_with_exceptions': return 'text-amber-700 dark:text-amber-300 border-amber-500/30 bg-amber-500/10';
+      case 'in_progress': return 'text-blue-700 dark:text-blue-300 border-blue-500/30 bg-blue-500/10';
       case 'on_hold': return 'text-muted-foreground border-border bg-muted/50';
       default: return 'text-muted-foreground border-border';
     }

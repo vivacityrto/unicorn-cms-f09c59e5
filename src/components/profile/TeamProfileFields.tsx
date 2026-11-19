@@ -268,7 +268,7 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     <Card className="border-blue-200 bg-blue-50/30 dark:border-blue-900/50 dark:bg-blue-950/20">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="bg-blue-600">Team</Badge>
+          <Badge variant="default" className="border-transparent text-white bg-blue-700 hover:bg-blue-700">Team</Badge>
           <CardTitle>Team Profile</CardTitle>
         </div>
         <CardDescription>

@@ -139,9 +139,9 @@ export default function AcademyTenantAccessPage() {
     if (t.academy_subscription_expires_at) {
       const exp = new Date(t.academy_subscription_expires_at);
       if (isAfter(exp, now) && isBefore(exp, thirtyDaysFromNow))
-        return <Badge className="bg-orange-100 text-orange-700 border-orange-200">Expiring Soon</Badge>;
+        return <Badge className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30">Expiring Soon</Badge>;
     }
-    return <Badge className="bg-green-100 text-green-700 border-green-200">Enabled</Badge>;
+    return <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30">Enabled</Badge>;
   };
 
   const allFilteredExpanded = filtered.length > 0 &&

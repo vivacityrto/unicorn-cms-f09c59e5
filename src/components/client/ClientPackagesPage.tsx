@@ -261,7 +261,7 @@ function PackageOverview({ overview }: { overview: PackageOverviewData }) {
       </div>
 
       {overview.overdueTasks > 0 && (
-        <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-300">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>You have {overview.overdueTasks} overdue {overview.overdueTasks === 1 ? "task" : "tasks"}. Open the relevant package below to see what needs action.</span>
         </div>

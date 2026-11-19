@@ -70,17 +70,17 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; labe
     label: 'Not Linked'
   },
   pending: {
-    color: 'bg-amber-500/10 text-amber-600 border-amber-500',
+    color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500',
     icon: <Clock className="h-4 w-4" />,
     label: 'Pending'
   },
   linked: {
-    color: 'bg-green-500/10 text-green-600 border-green-500',
+    color: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500',
     icon: <CheckCircle2 className="h-4 w-4" />,
     label: 'Linked'
   },
   error: {
-    color: 'bg-red-500/10 text-red-600 border-red-500',
+    color: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500',
     icon: <AlertCircle className="h-4 w-4" />,
     label: 'Error'
   }
@@ -1123,15 +1123,15 @@ export function ClientIntegrationsTab({
                             <TableCell>
                               <div className="flex items-center gap-1.5">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                  qual.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                  qual.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  qual.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' :
+                                  qual.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' :
                                   'bg-muted text-foreground border border-border'
                                 }`}>
                                   {qual.status_label || qual.status || '-'}
                                 </span>
                                 {qual.scope_state === 'teach_out' && (
                                   <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
                                   >
                                     Teach-out
@@ -1179,15 +1179,15 @@ export function ClientIntegrationsTab({
                             <TableCell>
                               <div className="flex items-center gap-1.5">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                  skill.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                  skill.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  skill.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' :
+                                  skill.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' :
                                   'bg-muted text-foreground border border-border'
                                 }`}>
                                   {skill.status_label || skill.status || '-'}
                                 </span>
                                 {skill.scope_state === 'teach_out' && (
                                   <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
                                   >
                                     Teach-out
@@ -1234,15 +1234,15 @@ export function ClientIntegrationsTab({
                             <TableCell>
                               <div className="flex items-center gap-1.5">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                  unit.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                  unit.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  unit.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' :
+                                  unit.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' :
                                   'bg-muted text-foreground border border-border'
                                 }`}>
                                   {unit.status_label || unit.status || '-'}
                                 </span>
                                 {unit.scope_state === 'teach_out' && (
                                   <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
                                   >
                                     Teach-out
@@ -1288,15 +1288,15 @@ export function ClientIntegrationsTab({
                             <TableCell>
                               <div className="flex items-center gap-1.5">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                  course.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                  course.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  course.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' :
+                                  course.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' :
                                   'bg-muted text-foreground border border-border'
                                 }`}>
                                   {course.status_label || course.status || '-'}
                                 </span>
                                 {course.scope_state === 'teach_out' && (
                                   <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
                                   >
                                     Teach-out
@@ -1341,15 +1341,15 @@ export function ClientIntegrationsTab({
                             <TableCell>
                               <div className="flex items-center gap-1.5">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                  tp.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                  tp.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  tp.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30' :
+                                  tp.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30' :
                                   'bg-muted text-foreground border border-border'
                                 }`}>
                                   {tp.status_label || tp.status || '-'}
                                 </span>
                                 {tp.scope_state === 'teach_out' && (
                                   <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30"
                                     title="Superseded. Delivery allowed until End date. No new enrolments."
                                   >
                                     Teach-out

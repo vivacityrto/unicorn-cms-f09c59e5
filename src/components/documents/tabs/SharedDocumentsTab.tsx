@@ -68,7 +68,7 @@ export function SharedDocumentsTab({ tenantId, isClientView = false }: SharedDoc
 
   const getStatusBadge = (doc: PortalDocument) => {
     if (doc.is_client_visible) {
-      return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500">Shared</Badge>;
+      return <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500">Shared</Badge>;
     }
     return <Badge variant="outline" className="bg-muted text-muted-foreground">Draft</Badge>;
   };

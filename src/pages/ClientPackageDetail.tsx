@@ -34,31 +34,31 @@ import {
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-500/10 text-green-600 border-green-500',
-  paused: 'bg-amber-500/10 text-amber-600 border-amber-500',
+  active: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500',
+  paused: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500',
   closed: 'bg-gray-500/10 text-gray-600 border-gray-500'
 };
 
 const STAGE_STATUS_COLORS: Record<string, string> = {
   'Not Started': 'bg-gray-500/10 text-gray-600 border-gray-500',
-  'In Progress': 'bg-blue-500/10 text-blue-600 border-blue-500',
-  'Completed': 'bg-green-500/10 text-green-600 border-green-500',
-  'N/A': 'bg-amber-500/10 text-amber-600 border-amber-500',
+  'In Progress': 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500',
+  'Completed': 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500',
+  'N/A': 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500',
   not_started: 'bg-gray-500/10 text-gray-600 border-gray-500',
-  in_progress: 'bg-blue-500/10 text-blue-600 border-blue-500',
-  complete: 'bg-green-500/10 text-green-600 border-green-500',
-  skipped: 'bg-amber-500/10 text-amber-600 border-amber-500'
+  in_progress: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500',
+  complete: 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500',
+  skipped: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500'
 };
 
 const TASK_STATUS_COLORS: Record<string, string> = {
   'Not Started': 'bg-gray-500/10 text-gray-600',
-  'In Progress': 'bg-blue-500/10 text-blue-600',
-  'Completed': 'bg-green-500/10 text-green-600',
-  'N/A': 'bg-red-500/10 text-red-600',
+  'In Progress': 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  'Completed': 'bg-green-500/10 text-green-700 dark:text-green-300',
+  'N/A': 'bg-red-500/10 text-red-700 dark:text-red-300',
   open: 'bg-gray-500/10 text-gray-600',
-  in_progress: 'bg-blue-500/10 text-blue-600',
-  done: 'bg-green-500/10 text-green-600',
-  blocked: 'bg-red-500/10 text-red-600',
+  in_progress: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  done: 'bg-green-500/10 text-green-700 dark:text-green-300',
+  blocked: 'bg-red-500/10 text-red-700 dark:text-red-300',
 };
 
 // Map legacy status_id to UI status keys for select controls
@@ -590,8 +590,8 @@ export default function ClientPackageDetail() {
                       <div key={email.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
                           <Badge variant="outline" className={
-                            !email.is_sent ? 'bg-amber-500/10 text-amber-600' :
-                            'bg-green-500/10 text-green-600'
+                            !email.is_sent ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' :
+                            'bg-green-500/10 text-green-700 dark:text-green-300'
                           }>
                             {email.is_sent ? 'Sent' : 'Pending'}
                           </Badge>

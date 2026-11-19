@@ -107,7 +107,7 @@ export default function SupportTicketsPage({ startNew = false }: { startNew?: bo
         actions={
           <Button
             onClick={() => setNewOpen(true)}
-            className="min-h-11 w-full gap-1.5 bg-white font-semibold text-brand-acai hover:bg-white/90 sm:w-auto"
+            className="min-h-11 w-full gap-1.5 bg-white font-semibold text-brand-acai hover:bg-white/90 sm:w-auto dark:bg-card"
           >
             <Plus aria-hidden className="h-4 w-4" />
             New ticket

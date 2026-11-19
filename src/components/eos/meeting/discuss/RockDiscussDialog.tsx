@@ -149,7 +149,7 @@ function DiscussDeck({ open, onOpenChange: onOpenChangeProp, roots, ownerNames, 
                     onClick={() => go(index)}
                     className={cn('flex h-4 min-w-[6px] max-w-10 flex-1 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1', RAIL_COLOUR[status], current ? 'ring-2 ring-primary ring-offset-1' : 'opacity-60 hover:opacity-100')}
                   >
-                    {done && <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />}
+                    {done && <span className="h-1.5 w-1.5 rounded-full bg-white dark:bg-card" aria-hidden />}
                   </button>
                 );
               })}

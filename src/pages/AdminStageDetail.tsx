@@ -1065,7 +1065,7 @@ export default function AdminStageDetail() {
                   {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
                 </Badge>
                 {stage.is_certified && (
-                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                  <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20">
                     <ShieldCheck className="h-3 w-3 mr-1" />
                     Certified
                   </Badge>
@@ -2388,7 +2388,7 @@ export default function AdminStageDetail() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{s.title}</span>
                           {s.is_certified && (
-                            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
+                            <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 text-xs">
                               <ShieldCheck className="h-3 w-3 mr-1" />
                               Certified
                             </Badge>

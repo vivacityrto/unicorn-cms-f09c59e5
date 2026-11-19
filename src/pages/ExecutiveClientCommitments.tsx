@@ -316,10 +316,10 @@ export default function ExecutiveClientCommitments() {
                   <TableCell className="text-muted-foreground text-sm">{format(new Date(r.due_date), 'dd MMM yyyy')}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
-                      r.status === 'met' ? 'bg-green-100 text-green-700' :
+                      r.status === 'met' ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' :
                       r.status === 'missed' ? 'bg-destructive/10 text-destructive' :
-                      r.status === 'at_risk' ? 'bg-amber-100 text-amber-700' :
-                      r.status === 'pending' ? 'bg-blue-100 text-blue-700' :
+                      r.status === 'at_risk' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' :
+                      r.status === 'pending' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' :
                       'bg-muted text-muted-foreground'
                     }`}>{r.status.replace(/_/g, ' ')}</span>
                   </TableCell>
@@ -327,8 +327,8 @@ export default function ExecutiveClientCommitments() {
                     {r.impact_level && (
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
                         r.impact_level === 'critical' ? 'bg-destructive/10 text-destructive' :
-                        r.impact_level === 'high' ? 'bg-amber-100 text-amber-700' :
-                        r.impact_level === 'medium' ? 'bg-violet-100 text-violet-700' :
+                        r.impact_level === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' :
+                        r.impact_level === 'medium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' :
                         'bg-muted text-muted-foreground'
                       }`}>{r.impact_level}</span>
                     )}

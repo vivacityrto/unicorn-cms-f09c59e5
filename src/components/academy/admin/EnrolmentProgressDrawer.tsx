@@ -38,17 +38,17 @@ const fmtDuration = (seconds?: number | null) => {
 };
 
 const sourceTone = (s?: string | null) => {
-  if (s === "manual") return "bg-slate-100 text-slate-700 border-slate-200";
-  if (s === "auto_package") return "bg-purple-100 text-purple-700 border-purple-200";
-  if (s === "auto_package_backfill") return "bg-amber-100 text-amber-700 border-amber-200";
+  if (s === "manual") return "bg-slate-100 text-slate-700 border-slate-200 dark:bg-muted dark:text-foreground dark:border-border";
+  if (s === "auto_package") return "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30";
+  if (s === "auto_package_backfill") return "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30";
   return "bg-muted text-muted-foreground";
 };
 
 const statusTone = (s?: string | null, expired?: boolean) => {
-  if (expired) return "bg-red-100 text-red-700 border-red-200";
-  if (s === "completed") return "bg-blue-100 text-blue-700 border-blue-200";
-  if (s === "active") return "bg-green-100 text-green-700 border-green-200";
-  if (s === "revoked") return "bg-red-100 text-red-700 border-red-200";
+  if (expired) return "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30";
+  if (s === "completed") return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30";
+  if (s === "active") return "bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30";
+  if (s === "revoked") return "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30";
   return "bg-muted text-muted-foreground";
 };
 
@@ -337,8 +337,8 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
                                     variant="outline"
                                     className={cn(
                                       "text-[10px] capitalize flex-shrink-0",
-                                      status === "completed" && "bg-green-100 text-green-700 border-green-200",
-                                      status === "in-progress" && "bg-amber-100 text-amber-700 border-amber-200",
+                                      status === "completed" && "bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30",
+                                      status === "in-progress" && "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
                                       status === "not-started" && "bg-muted text-muted-foreground"
                                     )}
                                   >
@@ -447,7 +447,7 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
               {certificate ? (
                 <div className={cn(
                   "rounded-lg border p-3 space-y-2",
-                  certificate.revoked_at ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"
+                  certificate.revoked_at ? "bg-red-50 border-red-200 dark:bg-red-500/15 dark:border-red-500/30" : "bg-green-50 border-green-200 dark:bg-green-500/15 dark:border-green-500/30"
                 )}>
                   <div className="flex items-center gap-2">
                     <Award className={cn("h-5 w-5", certificate.revoked_at ? "text-red-600" : "text-green-600")} />
