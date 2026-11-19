@@ -125,8 +125,9 @@ export function ThreadList({ threads: allThreads, selectedId, onSelect, isLoadin
             Unread
             {unread > 0 && <span className={cn('rounded-full px-1 text-[10px] tabular-nums', filter === 'unread' ? 'bg-white/25' : 'bg-muted')}>{unread}</span>}
           </FilterChip>
+          {/* The type menu is not modal: a modal menu locks the page scroll, hiding the page scrollbar and shifting the page while open. */}
           {kinds.length > 1 && (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
