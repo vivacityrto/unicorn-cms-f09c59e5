@@ -9,6 +9,7 @@ import { useRBAC } from "@/hooks/useRBAC";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { TopBar } from "@/components/layout/TopBar";
 import { StaffSidebar } from "@/components/layout/StaffSidebar";
+import { StaffGoToSearch } from "@/components/layout/StaffGoToSearch";
 import { SIDEBAR_GRADIENT } from "@/components/layout/sidebarKit";
 import { buildStaffSections, roleLabel } from "@/components/layout/staffMenu";
 import { UtilityFooter } from "@/components/layout/UtilityFooter";
@@ -433,6 +434,7 @@ export const DashboardLayout = ({
         <AskVivPanel />
         {/* The messenger bubble for Vivacity staff (bottom right): Ask Viv, and the conversations that are yours by the routing. */}
         <StaffMessengerDock />
+        {showVivacityMenu && <StaffGoToSearch sections={staffSections} />}
         <ScrollToTopButton />
 
       </div>
