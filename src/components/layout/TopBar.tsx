@@ -279,7 +279,9 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--topbar-h", condensed ? "2.75rem" : "4rem");
-    return () => root.style.removeProperty("--topbar-h");
+    return () => {
+      root.style.removeProperty("--topbar-h");
+    };
   }, [condensed]);
 
   const userRole = profile?.unicorn_role || "User";
