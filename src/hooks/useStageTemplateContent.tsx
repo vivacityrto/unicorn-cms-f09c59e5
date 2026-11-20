@@ -488,7 +488,9 @@ export function useStageTemplateContent(stageId: number | null) {
         .from('package_stage_documents')
         .delete()
         .eq('stage_id', stageId)
-        .eq('document_id', docId);
+        .eq('document_id', docId)
+        // Package overrides are customised documents; keep them.
+        .eq('is_override', false);
 
       if (linkError) throw linkError;
     }
