@@ -474,13 +474,26 @@ export function useStageTemplateContent(stageId: number | null) {
   };
 
   const deleteDocument = async (docId: number) => {
-    // Unlink by clearing the stage column
+    // A document is listed on a stage in two places: documents.stage and
+    // package_stage_documents. Clear both, or the document stays on the stage.
     const { error } = await supabase
       .from('documents')
       .update({ stage: null })
       .eq('id', docId);
 
     if (error) throw error;
+
+    if (stageId != null) {
+      const { error: linkError } = await supabase
+        .from('package_stage_documents')
+        .delete()
+        .eq('stage_id', stageId)
+        .eq('document_id', docId)
+        // Package overrides are customised documents; keep them.
+        .eq('is_override', false);
+
+      if (linkError) throw linkError;
+    }
 
     logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'document_unlinked', document_id: docId });
 
