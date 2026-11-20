@@ -32,6 +32,13 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+/** Supabase errors are plain objects, not Error instances, so read .message directly. */
+function errorText(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : fallback;
+}
+
 interface StageDocumentsTabProps {
   packageId: number;
   stageId: number;
@@ -305,7 +312,7 @@ export function StageDocumentsTab({
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to unlink document',
+        description: errorText(error, 'Failed to unlink document'),
         variant: 'destructive'
       });
     }

@@ -26,6 +26,13 @@ import { AIConfidenceBadge, type AIStatus } from '@/components/document/AIConfid
 import { ExcelBindingStatusBadge } from '@/components/document/ExcelBindingStatusBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+/** Supabase errors are plain objects, not Error instances, so read .message directly. */
+function errorText(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : fallback;
+}
+
 interface Document {
   id: number;
   title: string;
@@ -335,7 +342,7 @@ export function StageDocumentsPanel({
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to unlink document',
+        description: errorText(error, 'Failed to unlink document'),
         variant: 'destructive'
       });
     }
