@@ -484,6 +484,15 @@ export function useStageTemplateContent(stageId: number | null) {
     if (error) throw error;
 
     if (stageId != null) {
+      // Secondary stage links (a document can sit on several stages).
+      const { error: stageLinkError } = await supabase
+        .from('document_stage_links')
+        .delete()
+        .eq('stage_id', stageId)
+        .eq('document_id', docId);
+
+      if (stageLinkError) throw stageLinkError;
+
       const { error: linkError } = await supabase
         .from('package_stage_documents')
         .delete()
