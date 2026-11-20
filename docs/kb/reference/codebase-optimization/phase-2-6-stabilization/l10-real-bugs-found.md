@@ -1333,3 +1333,24 @@ first assumed — see the correction in that item). Six more (items 3,
 Package Builder) are confirmed real and written up with enough detail to
 scope a fix, deliberately left alone because the correct fix is a
 schema/migration decision, not a type-only code change.
+
+## 2026-11-20: To-Do Edit button had no action
+
+Reported during manual Rock reconciliation: the Edit button on `/eos/todos`
+rendered but had no handler or editor. A scoped correction adds a prefilled
+accessible dialog for title and description using the existing authenticated
+`useEosTodos.updateTodo` mutation. It does not submit owner, status, completion,
+due-date or Rock-link fields and makes no schema/RLS changes. Cancellation
+loses only the unsaved draft; failed saves retain the draft and show an error;
+blank titles and duplicate submissions during a pending save are blocked.
+
+Regression evidence: `src/pages/EosTodos.test.tsx` failed all five cases before
+the correction and passes all five afterward (including the unified FormModal).
+Lint ratchet and the full frontend suite passed (271 files, 2387 tests; 43 skipped).
+KB link/size checks passed. Edge checks passed 605/606: the untouched support-ticket
+migration-shape test assumes LF (`;\n`) and fails on the Windows CRLF checkout;
+the SQL blob matches origin/main and contains the required UPDATE policy.
+Authenticated live UI verification and release remain pending. The stale 39-job snapshot To-Do
+description is a separate authorized content correction after release; no
+production row was changed by implementing or testing this code. Adjacent inert
+Add, Start and Cancel action buttons were observed but are outside this fix.

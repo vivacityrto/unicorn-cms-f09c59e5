@@ -1,4 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { FormModal } from '@/components/ui/form-modal';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import type { EosTodo } from '@/types/eos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +23,42 @@ export default function EosTodos() {
   const { todos, isLoading, updateTodo } = useEosTodos();
   const canAssignOthers = usePermission('eos.todos.others');
   const [filter, setFilter] = useState<'all' | string>('all');
+  const [editingTodo, setEditingTodo] = useState<EosTodo | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveInFlight = useRef(false);
   const { profile } = useAuth();
+
+  const openEditor = (todo: EosTodo) => {
+    if (saveInFlight.current) return;
+    setEditingTodo(todo);
+    setEditTitle(todo.title);
+    setEditDescription(todo.description ?? '');
+    setSaveError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingTodo || !editTitle.trim() || saveInFlight.current) return;
+    saveInFlight.current = true;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      // Do not send the full row: preserve ownership, links, due date and completion.
+      await updateTodo.mutateAsync({
+        id: editingTodo.id,
+        title: editTitle.trim(),
+        description: editDescription,
+      });
+      setEditingTodo(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Unable to save changes. Please try again.');
+    } finally {
+      saveInFlight.current = false;
+      setIsSaving(false);
+    }
+  };
   const isStaff = isVivacityStaffRole(profile?.unicorn_role);
   // Which Rock (if any) each To-Do is for. Staff can point a standalone To-Do at one from here.
   const rockLinks = useTodoRockLinks((todos ?? []).map(t => t.id));
@@ -77,6 +117,22 @@ export default function EosTodos() {
 
   return (
     <div className="space-y-6">
+      <FormModal open={editingTodo !== null} onOpenChange={(open) => {
+        if (!open && !saveInFlight.current) setEditingTodo(null);
+      }} title="Edit To-Do"
+        description="Update the title and description without changing its status or owner."
+        onSubmit={saveEdit} isSubmitting={isSaving} submitDisabled={!editTitle.trim()}
+        submitText="Save changes" cancelText="Cancel editing" size="md">
+        <div className="space-y-2">
+          <Label htmlFor="todo-edit-title">Title</Label>
+          <Input id="todo-edit-title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} disabled={isSaving} required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="todo-edit-description">Description</Label>
+          <Textarea id="todo-edit-description" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} disabled={isSaving} rows={6} />
+        </div>
+        {saveError && <p role="alert" className="text-sm text-destructive break-words">{saveError}</p>}
+      </FormModal>
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
@@ -215,7 +271,7 @@ export default function EosTodos() {
                     </div>
 
                     <div className="flex gap-2 mt-3">
-                      <Button variant="outline" size="sm">Edit</Button>
+                      <Button variant="outline" size="sm" onClick={() => openEditor(todo)}>Edit</Button>
                       {todo.status?.toLowerCase() === 'open' && (
                         <Button size="sm" variant="secondary">Start</Button>
                       )}
