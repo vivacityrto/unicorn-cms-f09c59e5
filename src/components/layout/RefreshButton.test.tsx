@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -19,13 +19,17 @@ describe('RefreshButton', () => {
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
-  it('reloads the page by default', async () => {
-    const reload = vi.fn();
+  it('hard-refreshes by default: clears service workers and caches, then loads a new URL', async () => {
+    const replace = vi.fn();
     const original = window.location;
-    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, reload } });
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, href: 'https://unicorn-cms.au/dashboard?tab=1', replace } });
     render(<RefreshButton />);
     await userEvent.click(screen.getByRole('button', { name: 'Refresh the page' }));
-    expect(reload).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
+    const target = new URL(replace.mock.calls[0][0] as string);
+    expect(target.pathname).toBe('/dashboard');
+    expect(target.searchParams.get('tab')).toBe('1');
+    expect(target.searchParams.get('_refresh')).not.toBeNull();
     Object.defineProperty(window, 'location', { configurable: true, value: original });
   });
 
